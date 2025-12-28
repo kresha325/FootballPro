@@ -1,0 +1,18 @@
+{
+  "welcome": "Welcome",
+  "login": "Login",
+  "register": "Register",
+  "home": "Home",
+  "profile": "Profile",
+  "settings": "Settings",
+  "logout": "Logout",
+  "feed": "Feed",
+  "search": "Search",
+  "notifications": "Notifications",
+  "messages": "Messages",
+  "tournaments": "Tournaments",
+  "streams": "Streams",
+  "gallery": "Gallery",
+  "scouting": "Scouting",
+  "marketplace": "Marketplace"
+}

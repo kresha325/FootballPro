@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------- GLOBAL BASE ---------------- */
+@layer base {
+  body {
+    @apply bg-gray-100 dark:bg-gray-900 text-black dark:text-white font-sans transition-colors;
+  }
+
+  h1 {
+    @apply text-3xl font-bold;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold;
+  }
+
+  h3 {
+    @apply text-lg font-semibold;
+  }
+}
+
+/* ---------------- COMPONENTS ---------------- */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-xl font-medium transition;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+  }
+
+  .btn-outline {
+    @apply border border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-light dark:text-primary-light dark:hover:bg-primary-light dark:hover:text-black;
+  }
+
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400;
+  }
+
+  .label {
+    @apply text-sm text-gray-600 dark:text-gray-400;
+  }
+}
+
+/* ---------------- ANIMATIONS ---------------- */
+@layer utilities {
+  @keyframes pulse-once {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  .animate-pulse-once {
+    animation: pulse-once 1s ease-in-out 2;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .card {
+    background: white !important;
+    border: 2px solid black !important;
+  }
+
+  .input {
+    background: white !important;
+    border: 2px solid black !important;
+    color: black !important;
+  }
+
+  .btn-primary {
+    background: black !important;
+    color: white !important;
+    border: 2px solid black !important;
+  }
+
+  .btn-outline {
+    border: 2px solid black !important;
+    color: black !important;
+  }
+
+  nav {
+    background: white !important;
+    border-bottom: 2px solid black !important;
+  }
+
+  a {
+    color: black !important;
+  }
+
+  /* Ensure focus indicators are visible */
+  *:focus {
+    outline: 3px solid black !important;
+    outline-offset: 2px !important;
+  }
+}
