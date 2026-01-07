@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -15,9 +17,15 @@ import {
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 
 const Gamification = () => {
+    // Mbajme arritjet/badges e fituara per te detektuar te rejat
+    const prevAchievements = useRef([]);
+    const prevBadges = useRef([]);
+    const prevLevel = useRef(null);
   const { user } = useAuth();
   const { userId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
+  // Book view: shko direkt te arritjet
+  const goToBook = () => setActiveTab('achievements');
   const [gamificationData, setGamificationData] = useState(null);
   const [achievements, setAchievements] = useState([]);
   const [badges, setBadges] = useState([]);
@@ -29,6 +37,29 @@ const Gamification = () => {
   useEffect(() => {
     fetchData();
   }, [userId]);
+
+  // Detekto arritje/badge/level te reja dhe shfaq toast
+  useEffect(() => {
+    if (!gamificationData) return;
+    const { user: profileUser, achievements: userAchievements, badges: userBadges } = gamificationData;
+    // Level up
+    if (prevLevel.current !== null && profileUser.level > prevLevel.current) {
+      toast.success(`🎉 Level Up! You reached level ${profileUser.level}`);
+    }
+    prevLevel.current = profileUser.level;
+    // Achievements
+    if (userAchievements && prevAchievements.current.length) {
+      const newAch = userAchievements.filter(a => a.unlocked && !prevAchievements.current.some(pa => pa.id === a.id && pa.unlocked));
+      newAch.forEach(a => toast.info(`🏆 Achievement Unlocked: ${a.name}`));
+    }
+    prevAchievements.current = userAchievements || [];
+    // Badges
+    if (userBadges && prevBadges.current.length) {
+      const newBadges = userBadges.filter(b => b.earned && !prevBadges.current.some(pb => pb.id === b.id && pb.earned));
+      newBadges.forEach(b => toast(`🔓 Badge Unlocked: ${b.name}`, { type: 'success' }));
+    }
+    prevBadges.current = userBadges || [];
+  }, [gamificationData]);
 
   const fetchData = async () => {
     try {
@@ -89,6 +120,8 @@ const Gamification = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      <ToastContainer position="top-center" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+      {/* Book Button do të vendoset pranë emrit */}
       {/* Header with Level & XP */}
       <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white p-6">
         <div className="max-w-7xl mx-auto">
@@ -104,11 +137,21 @@ const Gamification = () => {
                 {profileUser.firstName?.[0]}
               </div>
             )}
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold">
-                {profileUser.firstName} {profileUser.lastName}
-              </h1>
-              <p className="text-purple-100">
+            <div className="flex-1 flex flex-col md:flex-row md:items-center md:gap-4">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold">
+                  {profileUser.firstName} {profileUser.lastName}
+                </h1>
+                <button
+                  onClick={goToBook}
+                  className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-full shadow font-bold transition text-base md:text-lg"
+                  title="Open Achievements Book"
+                >
+                  <SparklesIcon className="h-5 w-5" />
+                  Book
+                </button>
+              </div>
+              <p className="text-purple-100 md:ml-2">
                 {profileUser.Profile?.position} {profileUser.Profile?.club && `• ${profileUser.Profile.club}`}
               </p>
             </div>
@@ -206,7 +249,7 @@ const Gamification = () => {
                   <FireIcon className="h-8 w-8 text-blue-600" />
                   <div>
                     <p className="text-2xl font-bold text-blue-900">
-                      {profileUser.recentActivity.posts}
+                      {profileUser.recentActivity?.posts ?? 0}
                     </p>
                     <p className="text-sm text-blue-700">Posts Created</p>
                   </div>
@@ -215,7 +258,7 @@ const Gamification = () => {
                   <StarIcon className="h-8 w-8 text-red-600" />
                   <div>
                     <p className="text-2xl font-bold text-red-900">
-                      {profileUser.recentActivity.likesReceived}
+                      {profileUser.recentActivity?.likesReceived ?? 0}
                     </p>
                     <p className="text-sm text-red-700">Likes Received</p>
                   </div>
@@ -272,7 +315,15 @@ const Gamification = () => {
         {/* Achievements Tab */}
         {activeTab === 'achievements' && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">All Achievements</h2>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <SparklesIcon className="h-7 w-7 text-yellow-400" /> Achievements Book
+            </h2>
+            {/* Summary */}
+            <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+              <span className="font-bold text-yellow-700">
+                You have unlocked {achievements.filter(a => a.unlocked).length} out of {achievements.length} achievements!
+              </span>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {achievements.map((achievement) => (
                 <div

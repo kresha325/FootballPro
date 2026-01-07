@@ -1,15 +1,4 @@
-const User = require('../models/User');
-const Achievement = require('../models/Achievement');
-const Badge = require('../models/Badge');
-const Reward = require('../models/Reward');
-const UserAchievement = require('../models/UserAchievement');
-const UserBadge = require('../models/UserBadge');
-const UserReward = require('../models/UserReward');
-const Post = require('../models/Post');
-const Like = require('../models/Like');
-const Comment = require('../models/Comment');
-const Subscription = require('../models/Subscription');
-const Profile = require('../models/Profile');
+const { User, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Profile } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
