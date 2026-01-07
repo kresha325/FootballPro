@@ -1,14 +1,39 @@
-const ProfileView = require('../models/ProfileView');
-const PostAnalytics = require('../models/PostAnalytics');
-const EngagementMetrics = require('../models/EngagementMetrics');
-const User = require('../models/User');
-const Post = require('../models/Post');
-const Profile = require('../models/Profile');
-const Like = require('../models/Like');
-const Comment = require('../models/Comment');
-const Subscription = require('../models/Subscription');
+const db = require('../models');
+const { ProfileView, PostAnalytics, EngagementMetrics, User, Post, Profile, Like, Comment, Subscription } = db;
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
+const ClubMember = require('../models/ClubRosterRequest');
+const ClubShortlist = require('../models/ClubShortlist');
+const ClubOffer = require('../models/ClubOffer');
+
+// Club analytics summary for club panel
+exports.getClubAnalytics = async (req, res) => {
+  try {
+    const clubId = req.params.clubId;
+    // Total approved athletes
+    const totalAthletes = await ClubMember.count({ where: { clubId, status: 'approved' } });
+    // Pending requests
+    const pendingRequests = await ClubMember.count({ where: { clubId, status: 'pending' } });
+    // Shortlist count
+    const shortlistCount = await ClubShortlist.count({ where: { clubId } });
+    // Offers sent
+    const offersSent = await ClubOffer.count({ where: { clubId } });
+    // Offers accepted
+    const offersAccepted = await ClubOffer.count({ where: { clubId, status: 'accepted' } });
+    // Offers rejected
+    const offersRejected = await ClubOffer.count({ where: { clubId, status: 'rejected' } });
+    res.json({
+      totalAthletes,
+      pendingRequests,
+      shortlistCount,
+      offersSent,
+      offersAccepted,
+      offersRejected,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // Track profile view
 exports.trackProfileView = async (req, res) => {
@@ -177,150 +202,113 @@ exports.getPostAnalytics = async (req, res) => {
 
 // Get comprehensive dashboard analytics
 exports.getDashboardAnalytics = async (req, res) => {
+    // LOGGING për debug (moved after variable declarations)
+      const userId = req.user.id;
+
+      // Statistikat kryesore
+      const totalPosts = await Post.count({ where: { userId } });
+      const totalFollowers = await Subscription.count({ where: { subscribedToId: userId } });
+      const totalFollowing = await Subscription.count({ where: { subscriberId: userId } });
+
+      // Merr id-të e postimeve të userit
+      const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });
+      const userPostIds = userPosts.map(p => p.id);
+
+      // Numëro pëlqimet dhe komentet për këto postime
+      let totalLikes = 0;
+      let totalComments = 0;
+      if (userPostIds.length > 0) {
+        totalLikes = await Like.count({ where: { postId: { [Op.in]: userPostIds } } });
+        totalComments = await Comment.count({ where: { postId: { [Op.in]: userPostIds } } });
+      }
+
+      // Numëro shikimet e profilit
+      const profileViews = await ProfileView.count({ where: { profileId: userId } });
+
+      // LOGGING pas llogaritjeve
+      console.log('DashboardAnalytics userId:', userId);
+      console.log('userPostIds:', userPostIds);
+      console.log('totalPosts:', totalPosts);
+      console.log('totalLikes:', totalLikes);
+      console.log('totalComments:', totalComments);
+      console.log('profileViews:', profileViews);
   try {
     const userId = req.user.id;
-    const { period = '30' } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-    const today = new Date().toISOString().split('T')[0];
 
-    // Overview stats
+    // Statistikat kryesore
     const totalPosts = await Post.count({ where: { userId } });
     const totalFollowers = await Subscription.count({ where: { subscribedToId: userId } });
     const totalFollowing = await Subscription.count({ where: { subscriberId: userId } });
-    
-    const totalLikes = await Like.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
-    
-    const totalComments = await Comment.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
 
-    const profileViews = await ProfileView.count({
-      where: {
-        profileId: userId,
-        viewedAt: { [Op.gte]: startDate },
-      },
-    });
+    // Merr id-të e postimeve të userit
+    const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });
+    const userPostIds = userPosts.map(p => p.id);
 
-    // Recent growth (last 7 days vs previous 7 days)
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-    const previous14Days = new Date();
-    previous14Days.setDate(previous14Days.getDate() - 14);
+    // Numëro pëlqimet dhe komentet për këto postime
+    let totalLikes = 0;
+    let totalComments = 0;
+    if (userPostIds.length > 0) {
+      totalLikes = await Like.count({ where: { postId: { [Op.in]: userPostIds } } });
+      totalComments = await Comment.count({ where: { postId: { [Op.in]: userPostIds } } });
+    }
 
-    const followersLast7 = await Subscription.count({
-      where: { subscribedToId: userId, createdAt: { [Op.gte]: last7Days } },
-    });
-    const followersPrevious7 = await Subscription.count({
-      where: {
-        subscribedToId: userId,
-        createdAt: { [Op.between]: [previous14Days, last7Days] },
-      },
-    });
+    // Numëro shikimet e profilit
+    const profileViews = await ProfileView.count({ where: { profileId: userId } });
 
-    const likesLast7 = await Like.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-      where: { createdAt: { [Op.gte]: last7Days } },
-    });
-    const likesPrevious7 = await Like.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-      where: { createdAt: { [Op.between]: [previous14Days, last7Days] } },
-    });
-
-    // Engagement over time
-    const engagementOverTime = await EngagementMetrics.findAll({
-      where: {
-        userId,
-        date: { [Op.gte]: startDate },
-      },
-      order: [['date', 'ASC']],
-    });
-
-    // Top posts
-    const topPosts = await Post.findAll({
+    // Top 5 postimet me të dhënat e plota të postit dhe autorit/profilit
+    const topPostsRaw = await Post.findAll({
       where: { userId },
-      attributes: [
-        'id',
-        'content',
-        'imageUrl',
-        'createdAt',
-        [sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "postId" = "Post"."id")'), 'likesCount'],
-        [sequelize.literal('(SELECT COUNT(*) FROM "Comments" WHERE "postId" = "Post"."id")'), 'commentsCount'],
-      ],
-      order: [[sequelize.literal('likesCount'), 'DESC']],
-      limit: 5,
-    });
-
-    // Engagement by post type (with/without image)
-    const postsWithImage = await Post.count({
-      where: { userId, imageUrl: { [Op.ne]: null } },
-    });
-    const postsWithoutImage = await Post.count({
-      where: { userId, imageUrl: null },
-    });
-
-    const likesOnImagePosts = await Like.count({
+      attributes: {
+        include: [
+          [sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "postId" = "Post"."id")'), 'likesCount'],
+          [sequelize.literal('(SELECT COUNT(*) FROM "Comments" WHERE "postId" = "Post"."id")'), 'commentsCount'],
+        ]
+      },
       include: [
         {
-          model: Post,
-          where: { userId, imageUrl: { [Op.ne]: null } },
-          attributes: [],
-        },
+          model: User,
+          as: 'author',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'photo'],
+          include: [
+            {
+              model: Profile,
+              attributes: ['country', 'profilePhoto']
+            }
+          ]
+        }
       ],
-    });
-    const likesOnTextPosts = await Like.count({
-      include: [
-        {
-          model: Post,
-          where: { userId, imageUrl: null },
-          attributes: [],
-        },
-      ],
-    });
-
-    // Activity by hour
-    const postsByHour = await Post.findAll({
-      where: { userId, createdAt: { [Op.gte]: startDate } },
-      attributes: [
-        [sequelize.fn('EXTRACT', sequelize.literal('HOUR FROM "createdAt"')), 'hour'],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-      ],
-      group: [sequelize.fn('EXTRACT', sequelize.literal('HOUR FROM "createdAt"'))],
-      order: [[sequelize.fn('EXTRACT', sequelize.literal('HOUR FROM "createdAt"')), 'ASC']],
+      order: [[sequelize.literal('"likesCount"'), 'DESC']],
+      limit: 5
     });
 
-    // Audience demographics (followers with profiles)
-    const followersWithPosition = await User.findAll({
-      include: [
-        {
-          model: Subscription,
-          as: 'subscriptions',
-          where: { subscribedToId: userId },
-          attributes: [],
-        },
-        {
-          model: Profile,
-          attributes: ['position', 'city', 'country'],
-        },
-      ],
-      attributes: ['id'],
-    });
-
-    const positionDistribution = {};
-    const locationDistribution = {};
-    followersWithPosition.forEach(follower => {
-      if (follower.Profile?.position) {
-        positionDistribution[follower.Profile.position] = 
-          (positionDistribution[follower.Profile.position] || 0) + 1;
+    // Shto likesCount, commentsCount, isLiked (nëse ka user në req)
+    const postsWithCounts = await Promise.all(topPostsRaw.map(async (post) => {
+      let isLiked = false;
+      if (req.user) {
+        const userLiked = await Like.findOne({ where: { postId: post.id, userId: req.user.id } });
+        isLiked = !!userLiked;
       }
-      if (follower.Profile?.country) {
-        locationDistribution[follower.Profile.country] = 
-          (locationDistribution[follower.Profile.country] || 0) + 1;
-      }
-    });
+      return {
+        ...post.toJSON(),
+        likesCount: parseInt(post.get('likesCount')) || 0,
+        commentsCount: parseInt(post.get('commentsCount')) || 0,
+        isLiked
+      };
+    }));
 
+    // Performanca e postimeve me/pa foto
+    const postsWithImage = await Post.count({ where: { userId, imageUrl: { [Op.ne]: null } } });
+    const postsWithoutImage = await Post.count({ where: { userId, imageUrl: null } });
+    let likesOnImagePosts = 0;
+    let likesOnTextPosts = 0;
+    if (userPostIds.length > 0) {
+      const imagePostIds = (await Post.findAll({ where: { userId, imageUrl: { [Op.ne]: null } }, attributes: ['id'], raw: true })).map(p => p.id);
+      const textPostIds = (await Post.findAll({ where: { userId, imageUrl: null }, attributes: ['id'], raw: true })).map(p => p.id);
+      if (imagePostIds.length > 0) likesOnImagePosts = await Like.count({ where: { postId: { [Op.in]: imagePostIds } } });
+      if (textPostIds.length > 0) likesOnTextPosts = await Like.count({ where: { postId: { [Op.in]: textPostIds } } });
+    }
+
+    // Përgjigja
     res.json({
       overview: {
         totalPosts,
@@ -331,28 +319,7 @@ exports.getDashboardAnalytics = async (req, res) => {
         profileViews,
         engagementRate: totalPosts > 0 ? ((totalLikes + totalComments) / totalPosts).toFixed(2) : 0,
       },
-      growth: {
-        followers: {
-          current: followersLast7,
-          previous: followersPrevious7,
-          change: followersPrevious7 > 0 
-            ? (((followersLast7 - followersPrevious7) / followersPrevious7) * 100).toFixed(1)
-            : 0,
-        },
-        likes: {
-          current: likesLast7,
-          previous: likesPrevious7,
-          change: likesPrevious7 > 0
-            ? (((likesLast7 - likesPrevious7) / likesPrevious7) * 100).toFixed(1)
-            : 0,
-        },
-      },
-      engagementOverTime,
-      topPosts: topPosts.map(p => ({
-        ...p.toJSON(),
-        likesCount: parseInt(p.dataValues.likesCount) || 0,
-        commentsCount: parseInt(p.dataValues.commentsCount) || 0,
-      })),
+      topPosts: postsWithCounts,
       postTypePerformance: {
         withImage: {
           count: postsWithImage,
@@ -362,14 +329,6 @@ exports.getDashboardAnalytics = async (req, res) => {
           count: postsWithoutImage,
           avgLikes: postsWithoutImage > 0 ? (likesOnTextPosts / postsWithoutImage).toFixed(1) : 0,
         },
-      },
-      activityByHour: postsByHour.map(item => ({
-        hour: parseInt(item.dataValues.hour),
-        count: parseInt(item.dataValues.count),
-      })),
-      audience: {
-        positions: positionDistribution,
-        locations: locationDistribution,
       },
     });
   } catch (err) {

@@ -350,21 +350,53 @@ const Analytics = () => {
           <div className="space-y-4">
             {analytics.topPosts.map((post, index) => (
               <div
-                key={post.id}
+                key={post.customId ? `analyticspost-${post.customId}` : `analyticspost-${post.id}-${post.createdAt}`}
                 className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                   {index + 1}
                 </div>
-                {post.imageUrl && (
+                {/* Show image if present and not a video file */}
+                {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
                     src={`http://localhost:5000${post.imageUrl}`}
                     alt="Post"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
                 )}
+                {/* Show video if present */}
+                {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
+                  <video
+                    src={`http://localhost:5000${post.videoUrl || post.imageUrl}`}
+                    controls
+                    className="w-20 h-20 object-cover rounded-lg"
+                  />
+                )}
                 <div className="flex-1">
-                  <p className="text-gray-900 line-clamp-2">{post.content}</p>
+                  {/* Show content if exists, otherwise only show (pa përmbajtje) if no image/video */}
+                  <div className="mb-2">
+                    {post.content && post.content.trim() ? (
+                      <p className="text-gray-900 whitespace-pre-line">{post.content}</p>
+                    ) : (!post.imageUrl && !post.videoUrl) ? (
+                      <p className="italic text-gray-400">(pa përmbajtje)</p>
+                    ) : null}
+                  </div>
+                  {/* Show image if present and not a video file */}
+                  {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
+                    <img
+                      src={`http://localhost:5000${post.imageUrl}`}
+                      alt="Post"
+                      className="w-full h-auto object-cover rounded mb-4"
+                    />
+                  )}
+                  {/* Show video if present */}
+                  {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
+                    <video
+                      src={`http://localhost:5000${post.videoUrl || post.imageUrl}`}
+                      controls
+                      className="w-full h-auto object-cover rounded mb-4"
+                    />
+                  )}
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                     <span className="flex items-center">
                       <HeartIcon className="h-4 w-4 mr-1 text-red-500" />
@@ -377,10 +409,56 @@ const Analytics = () => {
                     <span className="text-gray-500">
                       {new Date(post.createdAt).toLocaleDateString()}
                     </span>
+                    {/* Show post URL if available */}
+                    <span className="text-xs text-blue-700 break-all">
+                      {post.id && (
+                        <a href={`/post/${post.id}`} target="_blank" rel="noopener noreferrer" className="underline">/post/{post.id}</a>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
+          <Modal
+            isOpen={showModal}
+            onRequestClose={() => setShowModal(false)}
+            contentLabel="Post Details"
+            ariaHideApp={false}
+            className="fixed inset-0 flex items-center justify-center z-50"
+            overlayClassName="fixed inset-0 bg-black bg-opacity-50 z-40"
+          >
+            {selectedPost && (
+              <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full relative">
+                <button
+                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+                  onClick={() => setShowModal(false)}
+                >
+                  &times;
+                </button>
+                <h3 className="text-lg font-semibold mb-2">Post i plotë</h3>
+                {selectedPost.imageUrl && !selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
+                  <img
+                    src={`http://localhost:5000${selectedPost.imageUrl}`}
+                    alt="Post"
+                    className="w-full h-auto object-cover rounded mb-4"
+                  />
+                )}
+                {(selectedPost.videoUrl || (selectedPost.imageUrl && selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
+                  <video
+                    src={`http://localhost:5000${selectedPost.videoUrl || selectedPost.imageUrl}`}
+                    controls
+                    className="w-full h-auto object-cover rounded mb-4"
+                  />
+                )}
+                <p className="mb-2">{selectedPost.content || <span className="italic text-gray-400">(pa përmbajtje)</span>}</p>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <span><HeartIcon className="h-4 w-4 mr-1 text-red-500 inline" /> {selectedPost.likesCount} likes</span>
+                  <span><ChatBubbleLeftIcon className="h-4 w-4 mr-1 text-blue-500 inline" /> {selectedPost.commentsCount} comments</span>
+                  <span className="text-gray-500">{new Date(selectedPost.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            )}
+          </Modal>
           </div>
         </div>
       </div>

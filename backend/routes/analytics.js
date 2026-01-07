@@ -8,8 +8,12 @@ const {
   getPostAnalytics,
   getDashboardAnalytics,
   getFollowerGrowth,
-  getEngagementRate
+  getEngagementRate,
+  getClubAnalytics
 } = require('../controllers/analytics');
+
+// Club analytics summary
+router.get('/club/:clubId', getClubAnalytics);
 
 // Track interactions
 router.post('/profile/:profileId/view', auth, trackProfileView);
