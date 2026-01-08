@@ -1,3 +1,32 @@
+/* =========================
+   SPONSORS
+========================= */
+export const sponsorAPI = {
+  getSponsorsByUser: (userId) => API.get(`/sponsors/user/${userId}`),
+  createSponsor: (data) => {
+    // If FormData, set multipart headers
+    if (data instanceof FormData) {
+      return API.post('/sponsors', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    }
+    return API.post('/sponsors', data);
+  },
+  updateSponsor: (id, data) => API.put(`/sponsors/${id}`, data),
+  deleteSponsor: (id) => API.delete(`/sponsors/${id}`),
+};
+/* =========================
+   ADS
+========================= */
+export const adsAPI = {
+  getAds: () => API.get('/ads'),
+  createAd: (data) => {
+    // data: FormData (title, text, color, days, image)
+    return API.post('/ads', data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+};
 import axios from 'axios';
 
 const API = axios.create({

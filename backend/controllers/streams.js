@@ -104,7 +104,7 @@ exports.getMyStreamInfo = async (req, res) => {
     // Konfiguro këtu IP ose domain të serverit tënd RTMP/HLS
     const serverIp = process.env.RTMP_SERVER_IP || 'localhost';
     const rtmpUrl = `rtmp://${serverIp}:1935/live`;
-    const hlsUrl = `https://${serverIp}:5000/hls/${stream.streamKey}.m3u8`;
+    const hlsUrl = `https://${serverIp}:5098/hls/${stream.streamKey}.m3u8`;
     res.json({
       streamKey: stream.streamKey,
       rtmpUrl,
@@ -178,7 +178,7 @@ exports.getStreams = async (req, res) => {
         s.streamer = { firstName: 'Unknown', lastName: '', photoUrl: '/default-avatar.png' };
       } else if (s.streamer.Profile && s.streamer.Profile.profilePhoto) {
         s.streamer.photoUrl = s.streamer.Profile.profilePhoto.startsWith('/uploads/')
-          ? `https://localhost:5000${s.streamer.Profile.profilePhoto}`
+          ? `https://localhost:5098${s.streamer.Profile.profilePhoto}`
           : s.streamer.Profile.profilePhoto;
       } else {
         s.streamer.photoUrl = '/default-avatar.png';
@@ -234,8 +234,7 @@ exports.startStream = async (req, res) => {
     await stream.save();
 
     // Award XP for starting a stream
-    const gamificationController = require('./gamification');
-    await gamificationController.awardPoints(req.user.id, 15, 'Started a live stream');
+    // Gamification u largua
 
     res.json({ message: 'Stream started', stream });
   } catch (error) {

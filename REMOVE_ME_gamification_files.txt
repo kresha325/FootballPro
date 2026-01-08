@@ -1,0 +1,8 @@
+Fshij manualisht këto file/foldera për të larguar plotësisht gamification:
+
+- backend/controllers/gamification.js
+- backend/routes/gamification.js
+- Çdo migrim që ka lidhje me gamification (nëse ekziston)
+- Çdo seed që ka lidhje me gamification (nëse ekziston)
+
+Këto janë të sigurta për t'u fshirë pasi janë tërësisht të shkëputura nga projekti.

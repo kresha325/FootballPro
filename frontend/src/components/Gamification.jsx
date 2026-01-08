@@ -128,7 +128,7 @@ const Gamification = () => {
           <div className="flex items-center gap-4 mb-6">
             {profileUser.Profile?.profilePicture ? (
               <img
-                src={`http://localhost:5000${profileUser.Profile.profilePicture}`}
+                src={`http://localhost:5098${profileUser.Profile.profilePicture}`}
                 alt={profileUser.firstName}
                 className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
               />
@@ -484,7 +484,7 @@ const Gamification = () => {
                         <div className="flex items-center gap-3">
                           {player.Profile?.profilePicture ? (
                             <img
-                              src={`http://localhost:5000${player.Profile.profilePicture}`}
+                              src={`http://localhost:5098${player.Profile.profilePicture}`}
                               alt={player.firstName}
                               className="w-10 h-10 rounded-full"
                             />

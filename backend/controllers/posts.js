@@ -1,6 +1,7 @@
 const Post = require('../models/Post');
 const multer = require('multer');
 const path = require('path');
+const { Gallery } = require('../models');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -198,7 +199,16 @@ exports.createPost = async (req, res) => {
       location: location || null,
       mentions: mentionsParsed,
     });
-    
+    // Shto ne gallery nese ka image
+    if (imageUrl) {
+      await Gallery.create({
+        userId: req.user.id,
+        imageUrl,
+        type: 'photo',
+        title: content ? content.substring(0, 100) : '',
+      });
+    }
+
     console.log('✅ Post created:', post.id);
 
     // Create notifications for mentioned users
@@ -223,13 +233,7 @@ exports.createPost = async (req, res) => {
       }
     }
     
-    // Award points for posting
-    try {
-      const gamificationController = require('./gamification');
-      await gamificationController.awardPoints(req.user.id, 10, 'Created a post');
-    } catch (gamErr) {
-      console.log('⚠️ Gamification error (non-critical):', gamErr.message);
-    }
+      // Gamification u largua
     
     res.json(post);
   } catch (err) {

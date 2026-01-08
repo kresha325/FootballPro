@@ -266,7 +266,7 @@ exports.getDashboardAnalytics = async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'photo'],
+            attributes: ['id', 'firstName', 'lastName', 'email'],
           include: [
             {
               model: Profile,

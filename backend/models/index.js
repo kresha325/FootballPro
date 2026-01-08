@@ -1,5 +1,7 @@
 const User = require('./User');
 const Match = require('./Match');
+const Sponsor = require('./Sponsor');
+const Ad = require('./Ad');
 // Centralized model import and association setup for Sequelize
 const Profile = require('./Profile');
 const Achievement = require('./Achievement');
@@ -9,17 +11,23 @@ const UserAchievement = require('./UserAchievement');
 const Like = require('./Like');
 const Comment = require('./Comment');
 const Post = require('./Post');
+const Gallery = require('./Gallery');
 
 const Subscription = require('./Subscription');
 const UserReward = require('./UserReward');
 const Reward = require('./Reward');
 const Follow = require('./Follow');
+
 // User/Reward
 User.hasMany(UserReward, { foreignKey: 'userId' });
 UserReward.belongsTo(User, { foreignKey: 'userId' });
 Reward.hasMany(UserReward, { foreignKey: 'rewardId' });
 UserReward.belongsTo(Reward, { foreignKey: 'rewardId' });
 Reward.belongsTo(Badge, { foreignKey: 'badgeId' });
+
+// User/Sponsor
+User.hasMany(Sponsor, { foreignKey: 'userId' });
+Sponsor.belongsTo(User, { foreignKey: 'userId' });
 
 // Follow associations
 Follow.belongsTo(User, { as: 'following', foreignKey: 'followingId' });
@@ -41,13 +49,18 @@ const path = require('path');
 const basename = path.basename(__filename);
 const db = {};
 
-fs.readdirSync(__dirname)
-  .filter(file => file.indexOf('.') !== 0 && file !== basename && file.slice(-3) === '.js')
-  .forEach(file => {
-    const model = require(path.join(__dirname, file));
-    const name = file.replace('.js', '');
-    db[name] = model;
-  });
+
+// fs.readdirSync(__dirname)
+//   .filter(file => file.indexOf('.') !== 0 && file !== basename && file.slice(-3) === '.js')
+//   .forEach(file => {
+//     const model = require(path.join(__dirname, file));
+//     const name = file.replace('.js', '');
+//     db[name] = model;
+//   });
+
+db.Sponsor = Sponsor;
+db.Ad = Ad;
+db.Gallery = Gallery;
 
 module.exports = db;
 Like.belongsTo(User, { foreignKey: 'userId' });

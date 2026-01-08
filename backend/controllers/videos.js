@@ -70,8 +70,7 @@ exports.uploadVideo = async (req, res) => {
     }, 5000);
 
     // Award XP for video upload
-    const gamificationController = require('./gamification');
-    await gamificationController.awardPoints(req.user.id, 20, 'Uploaded a video');
+    // Gamification u largua
 
     res.status(201).json(video);
   } catch (error) {
@@ -184,8 +183,7 @@ exports.likeVideo = async (req, res) => {
 
     // Award XP to video owner
     if (video.userId !== req.user.id) {
-      const gamificationController = require('./gamification');
-      await gamificationController.awardPoints(video.userId, 5, 'Video received a like');
+      // Gamification u largua
     }
 
     res.json({ likes: video.likes });

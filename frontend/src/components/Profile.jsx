@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI } from '../services/api';
 import { usePosts } from '../contexts/PostsContext';
@@ -14,6 +14,8 @@ import { ClubBadge } from '../utils/clubLogos';
 import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../utils/cropImage';
 
 const Profile = () => {
   const { id } = useParams();
@@ -45,6 +47,15 @@ const Profile = () => {
     followers: 0,
     following: 0,
   });
+  // Shtojme state per modalin e fotos full screen
+  const [fullScreenImage, setFullScreenImage] = useState(null);
+
+  // State for cover crop modal
+  const [showCoverCrop, setShowCoverCrop] = useState(false);
+  const [coverCropImage, setCoverCropImage] = useState(null);
+  const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
+  const [coverZoom, setCoverZoom] = useState(1);
+  const [coverCroppedArea, setCoverCroppedArea] = useState(null);
 
   // Set gallery image as profile or cover photo
   const setAsProfilePhoto = async (imageUrl, type) => {
@@ -163,6 +174,56 @@ const Profile = () => {
     }
   };
 
+  // Helper functions for role logic
+  const ENTE_ROLES = ['business', 'federation', 'media', 'club'];
+  const INDIVID_ROLES = ['athlete', 'coach', 'scout', 'manager'];
+
+  function isEnte(role) {
+    return ENTE_ROLES.includes(role);
+  }
+  function isIndivid(role) {
+    return INDIVID_ROLES.includes(role);
+  }
+  function isAdmin(role) {
+    return role === 'admin';
+  }
+
+  const onCoverCropChange = useCallback((crop) => setCoverCrop(crop), []);
+  const onCoverZoomChange = useCallback((zoom) => setCoverZoom(zoom), []);
+  const onCoverCropComplete = useCallback((_, croppedAreaPixels) => setCoverCroppedArea(croppedAreaPixels), []);
+
+  // Handler for file input change (cover)
+  const handleCoverFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setCoverCropImage(ev.target.result);
+        setShowCoverCrop(true);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  // Save cropped cover image
+  const handleSaveCoverCrop = async () => {
+    try {
+      if (!coverCropImage || !coverCroppedArea) return;
+      // Krijo imazhin e crop-uar si blob
+      const croppedBlob = await getCroppedImg(coverCropImage, coverCroppedArea);
+      const formData = new FormData();
+      formData.append('coverPhoto', croppedBlob, 'cover.jpg');
+      await profileAPI.updateProfile(formData);
+      // Rifresko profilin
+      const res = await profileAPI.getProfile(id);
+      setProfile(res.data);
+      setShowCoverCrop(false);
+      setCoverCropImage(null);
+    } catch (err) {
+      alert('Nuk u ruajt fotoja!');
+      setShowCoverCrop(false);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -245,28 +306,72 @@ const Profile = () => {
       </div>
 
       {/* Cover Photo */}
-      <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative">
+      <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative flex items-center justify-center overflow-hidden">
         {profile.coverPhoto && (
           <img
             src={`http://192.168.100.57:5098${profile.coverPhoto}`}
-            alt="Cover" 
-            className="w-full h-full object-cover"
+            alt="Cover"
+            className="w-full h-full object-cover bg-white rounded-md"
+            style={{ background: '#f3f4f6' }}
           />
+        )}
+        {/* Upload cover photo button (only for owner) */}
+        {isOwner && (
+          <div className="absolute bottom-4 right-4">
+            <input type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" id="cover-upload-input" />
+            <label htmlFor="cover-upload-input" className="cursor-pointer bg-blue-500 text-white px-3 py-1 rounded text-sm shadow">Ndrysho Cover</label>
+          </div>
         )}
       </div>
 
+      {/* Modal for cropping cover photo */}
+      {showCoverCrop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white p-6 rounded shadow-lg relative w-[90vw] max-w-3xl h-[60vh] flex flex-col items-center">
+            <h2 className="mb-2 font-bold">Poziciono Cover-in</h2>
+            <div className="relative w-full h-full flex-1">
+              <Cropper
+                image={coverCropImage}
+                crop={coverCrop}
+                zoom={coverZoom}
+                aspect={3.5/1}
+                onCropChange={onCoverCropChange}
+                onZoomChange={onCoverZoomChange}
+                onCropComplete={onCoverCropComplete}
+                cropShape="rect"
+                showGrid={false}
+              />
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={coverZoom}
+              onChange={e => setCoverZoom(Number(e.target.value))}
+              className="w-full mt-2"
+            />
+            <div className="flex gap-4 mt-4">
+              <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={handleSaveCoverCrop}>Ruaj</button>
+              <button className="bg-gray-300 px-4 py-2 rounded" onClick={() => setShowCoverCrop(false)}>Anulo</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Profile Header */}
-      <div className="bg-white dark:bg-gray-800 shadow">
+      <div className="bg-white dark:bg-gray-800 shadow mt-28">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
                 {profile.profilePhoto ? (
                   <img
                     src={`http://192.168.100.57:5098${profile.profilePhoto}`}
                     alt={`${profile.firstName} ${profile.lastName}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover bg-white"
+                    style={{ background: '#f3f4f6' }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
@@ -337,7 +442,7 @@ const Profile = () => {
               </div>
 
               {/* Stats */}
-              <div className="flex items-center justify-center md:justify-start gap-6 mt-4">
+              <div className="flex items-center justify-center md:justify-start gap-6 mt-10">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.posts}</div>
                   <div className="text-sm text-gray-500">Posts</div>
@@ -399,7 +504,7 @@ const Profile = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-4 md:mt-0">
+            <div className="mt-8 md:mt-4">
               {isOwner ? (
                 <button
                   onClick={() => setEditOpen(true)}
@@ -492,6 +597,7 @@ const Profile = () => {
                             src={`http://192.168.100.57:5098${post.imageUrl}`}
                             alt="Post" 
                             className="w-full h-auto object-cover"
+                            onDoubleClick={() => setFullScreenImage(post.imageUrl)}
                           />
                         </div>
                       )}
@@ -891,6 +997,54 @@ const Profile = () => {
           }}
           onClose={() => setShowVideoCall(false)}
         />
+      )}
+
+      {/* Full Screen Image Modal */}
+      {fullScreenImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullScreenImage(null)}>
+          <img src={fullScreenImage} alt="Full Screen" className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl" />
+          <button
+            className="absolute top-6 right-8 text-white text-3xl font-bold bg-black bg-opacity-40 rounded-full px-4 py-2"
+            onClick={() => setFullScreenImage(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Modal for cropping cover photo */}
+      {showCoverCrop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white p-6 rounded shadow-lg relative w-[90vw] max-w-3xl h-[60vh] flex flex-col items-center">
+            <h2 className="mb-2 font-bold">Poziciono Cover-in</h2>
+            <div className="relative w-full h-full flex-1">
+              <Cropper
+                image={coverCropImage}
+                crop={coverCrop}
+                zoom={coverZoom}
+                aspect={3.5/1} // Typical cover ratio
+                onCropChange={onCoverCropChange}
+                onZoomChange={onCoverZoomChange}
+                onCropComplete={onCoverCropComplete}
+                cropShape="rect"
+                showGrid={false}
+              />
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={coverZoom}
+              onChange={e => setCoverZoom(Number(e.target.value))}
+              className="w-full mt-2"
+            />
+            <div className="flex gap-4 mt-4">
+              <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={handleSaveCoverCrop}>Ruaj</button>
+              <button className="bg-gray-300 px-4 py-2 rounded" onClick={() => setShowCoverCrop(false)}>Anulo</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

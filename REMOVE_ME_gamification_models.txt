@@ -1,0 +1,10 @@
+Nëse dëshiron të pastrosh plotësisht gamification, mund të fshish edhe modelet:
+
+- backend/models/Achievement.js
+- backend/models/Badge.js
+- backend/models/UserAchievement.js
+- backend/models/UserBadge.js
+- backend/models/Reward.js
+- backend/models/UserReward.js
+
+Fshiji vetëm nëse nuk përdoren më askund në projekt.

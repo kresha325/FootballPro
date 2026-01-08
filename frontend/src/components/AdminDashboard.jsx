@@ -607,7 +607,7 @@ export default function AdminDashboard() {
                   <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
                   {post.image && (
                     <img
-                      src={`http://localhost:5000${post.image}`}
+                      src={`http://localhost:5098${post.image}`}
                       alt="Post"
                       className="mt-4 rounded-lg max-h-96 object-cover"
                     />

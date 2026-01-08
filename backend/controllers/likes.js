@@ -63,8 +63,7 @@ exports.likePost = async (req, res) => {
       }
       
       // Award points to post owner for receiving a like
-      const gamificationController = require('./gamification');
-      await gamificationController.awardPoints(post.userId, 5, 'Post received a like');
+      // Gamification u largua
     }
     res.json(like);
   } catch (err) {

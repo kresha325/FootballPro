@@ -63,13 +63,11 @@ exports.createComment = async (req, res) => {
         }
         
         // Award points to post owner for receiving a comment
-        const gamificationController = require('./gamification');
-        await gamificationController.awardPoints(post.userId, 8, 'Post received a comment');
+        // Gamification u largua
       }
 
       // Award points to commenter
-      const gamificationController = require('./gamification');
-      await gamificationController.awardPoints(req.user.id, 8, 'Created a comment');
+      // Gamification u largua
     }
 
     res.json(comment);

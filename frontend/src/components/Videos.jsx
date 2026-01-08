@@ -83,7 +83,7 @@ const Videos = () => {
       <div className="relative aspect-video bg-gray-900">
         {video.thumbnailUrl ? (
           <img
-            src={`http://localhost:5000${video.thumbnailUrl}`}
+            src={`http://localhost:5098${video.thumbnailUrl}`}
             alt={video.title}
             className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
           />
@@ -121,7 +121,7 @@ const Videos = () => {
         <div className="flex items-center gap-2 mb-2">
           {video.User?.Profile?.profilePicture ? (
             <img
-              src={`http://localhost:5000${video.User.Profile.profilePicture}`}
+              src={`http://localhost:5098${video.User.Profile.profilePicture}`}
               alt={video.User.firstName}
               className="w-8 h-8 rounded-full"
             />

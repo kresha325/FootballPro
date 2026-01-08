@@ -192,6 +192,7 @@ function Navbar() {
               </Link>
             )}
 
+
             {/* Premium */}
             <Link 
               to="/premium" 
@@ -201,6 +202,18 @@ function Navbar() {
               <span className="text-2xl">👑</span>
               <span className="font-medium">Go Premium</span>
             </Link>
+
+            {/* Shto Reklamë */}
+            <button
+              onClick={() => {
+                // Dërgo event custom për të hapur modalin në AdSlider
+                window.dispatchEvent(new CustomEvent('open-ad-modal'));
+              }}
+              className="flex items-center gap-3 p-3 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors mt-2 w-full"
+            >
+              <span className="text-2xl">📢</span>
+              <span className="font-medium">Shto reklamë</span>
+            </button>
 
             {/* Settings */}
             <Link 

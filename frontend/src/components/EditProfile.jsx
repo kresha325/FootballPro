@@ -16,6 +16,10 @@ const EditProfile = ({ onClose }) => {
 
   const { user } = useAuth();
 
+  // Helper for ente roles
+  const ENTE_ROLES = ['business', 'federation', 'media', 'club'];
+  const isEnte = ENTE_ROLES.includes(user.role);
+
   const [form, setForm] = useState({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
@@ -36,6 +40,15 @@ const EditProfile = ({ onClose }) => {
     jerseyNumber: user.stats?.jerseyNumber || '',
     coachAffiliation: user.coachAffiliation || '',
     coachCategory: user.coachCategory || '',
+
+    // Ente/business fields
+    industry: user.stats?.industry || '',
+    founded: user.stats?.founded || '',
+    companySize: user.stats?.companySize || '',
+    revenue: user.stats?.revenue || '',
+    employees: user.stats?.employees || '',
+    partnerships: user.stats?.partnerships || '',
+    countries: user.stats?.countries || '',
   });
   
   const [profilePhoto, setProfilePhoto] = useState(null);
@@ -81,7 +94,6 @@ const EditProfile = ({ onClose }) => {
 
   const saveProfile = async () => {
     if (!validateForm()) return;
-    
     setLoading(true);
     try {
       const formData = new FormData();
@@ -117,6 +129,15 @@ const EditProfile = ({ onClose }) => {
         weight: form.weight,
         preferredFoot: form.preferredFoot,
         jerseyNumber: form.jerseyNumber,
+
+        // Ente/business fields
+        industry: form.industry,
+        founded: form.founded,
+        companySize: form.companySize,
+        revenue: form.revenue,
+        employees: form.employees,
+        partnerships: form.partnerships,
+        countries: form.countries,
       };
       formData.append('stats', JSON.stringify(stats));
       
@@ -505,6 +526,94 @@ const EditProfile = ({ onClose }) => {
               </div>
             </div>
           </div>
+
+          {/* Business/Ente Information */}
+          {isEnte && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Business/Organization Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Industry</label>
+                  <input
+                    name="industry"
+                    value={form.industry}
+                    onChange={handleChange}
+                    placeholder="Industry"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Founded</label>
+                  <input
+                    name="founded"
+                    value={form.founded}
+                    onChange={handleChange}
+                    placeholder="Year founded"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Company Size</label>
+                  <input
+                    name="companySize"
+                    value={form.companySize}
+                    onChange={handleChange}
+                    placeholder="Company size"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Key Metrics for ente */}
+          {isEnte && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Key Metrics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Annual Revenue</label>
+                  <input
+                    name="revenue"
+                    value={form.revenue}
+                    onChange={handleChange}
+                    placeholder="Annual revenue"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Employees</label>
+                  <input
+                    name="employees"
+                    value={form.employees}
+                    onChange={handleChange}
+                    placeholder="Number of employees"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Partnerships</label>
+                  <input
+                    name="partnerships"
+                    value={form.partnerships}
+                    onChange={handleChange}
+                    placeholder="Number of partnerships"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Countries</label>
+                  <input
+                    name="countries"
+                    value={form.countries}
+                    onChange={handleChange}
+                    placeholder="Countries present in"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">

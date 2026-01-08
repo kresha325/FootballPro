@@ -2,7 +2,7 @@
 
 ## Serverat po punojnë! ✅
 
-- **Backend:** http://192.168.100.57:5000 ✅
+- **Backend:** http://192.168.100.57:5098 ✅
 - **Frontend:** http://192.168.100.57:5174 ✅
 
 ---

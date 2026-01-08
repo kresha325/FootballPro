@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { postsAPI } from '../services/api';
+import { postsAPI, sponsorAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../contexts/PostsContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from 'react-share';
+import AdSlider from './AdSlider';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -38,21 +39,29 @@ const Feed = () => {
   // Sponsor state per post
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [activeSponsorPost, setActiveSponsorPost] = useState(null);
-  // sponsorData: { [postId]: { name, link, image, imagePreview } }
-  const [sponsorData, setSponsorData] = useState(() => {
-    try {
-      const data = localStorage.getItem('sponsorData');
-      return data ? JSON.parse(data) : {};
-    } catch {
-      return {};
-    }
-  });
-    // Ruaj sponsorData në localStorage sa herë ndryshon
-    useEffect(() => {
-      try {
-        localStorage.setItem('sponsorData', JSON.stringify(sponsorData));
-      } catch {}
-    }, [sponsorData]);
+  // sponsorData: { [userId]: [sponsor, ...] }
+  const [sponsorData, setSponsorData] = useState({});
+  useEffect(() => {
+    if (!user) return;
+    sponsorAPI.getSponsorsByUser(user.id)
+      .then(res => {
+        // Group by userId for compatibility with rendering logic
+        const grouped = {};
+        res.data.forEach(s => {
+          if (!grouped[s.userId]) grouped[s.userId] = [];
+          grouped[s.userId].push({
+            name: s.name,
+            link: s.link,
+            image: s.image, // TODO: handle image preview if needed
+            imagePreview: s.image, // For now, use image as preview
+            id: s.id,
+            startDate: s.startDate,
+            endDate: s.endDate
+          });
+        });
+        setSponsorData(grouped);
+      });
+  }, [user]);
   const [tempSponsor, setTempSponsor] = useState({ name: '', link: '', image: null, imagePreview: null });
 
   const handleSponsorImage = (e) => {
@@ -81,18 +90,43 @@ const Feed = () => {
     setTempSponsor({ name: '', link: '', image: null, imagePreview: null });
   };
 
-  const saveSponsorData = () => {
-  if (!activeSponsorPost) return;
-  const userId = typeof activeSponsorPost === 'object' && activeSponsorPost.userId
-    ? activeSponsorPost.userId
-    : activeSponsorPost; // për rastet e vjetra
-  setSponsorData(prev => {
-    const arr = prev[userId] ? [...prev[userId]] : [];
-    if (arr.length < 3) arr.push({ ...tempSponsor });
-    return { ...prev, [userId]: arr };
-  });
-  closeSponsorModal();
-};
+  const saveSponsorData = async () => {
+    if (!activeSponsorPost || !user) return;
+    // Always use the logged-in user's id for sponsor creation
+    const userId = user.id;
+    // Set startDate now, endDate +365 days
+    const now = new Date();
+    const end = new Date(now);
+    end.setDate(now.getDate() + 365);
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('name', tempSponsor.name);
+    formData.append('link', tempSponsor.link);
+    formData.append('startDate', now.toISOString());
+    formData.append('endDate', end.toISOString());
+    if (tempSponsor.image instanceof File) {
+      formData.append('image', tempSponsor.image);
+    }
+    try {
+      const res = await sponsorAPI.createSponsor(formData);
+      setSponsorData(prev => {
+        const arr = prev[userId] ? [...prev[userId]] : [];
+        if (arr.length < 3) arr.push({
+          name: tempSponsor.name,
+          link: tempSponsor.link,
+          image: res.data.image,
+          imagePreview: res.data.image,
+          id: res.data.id,
+          startDate: res.data.startDate,
+          endDate: res.data.endDate
+        });
+        return { ...prev, [userId]: arr };
+      });
+    } catch (err) {
+      // handle error
+    }
+    closeSponsorModal();
+  };
   useEffect(() => {
     fetchPosts();
     // Auto-refresh është hequr për performancë më të mirë
@@ -353,7 +387,11 @@ const Feed = () => {
                           title={sponsor.name}
                         >
                           {sponsor.imagePreview ? (
-                            <img src={sponsor.imagePreview} alt="Sponsor" className="w-20 h-12 rounded-lg object-cover mb-1 border border-orange-300 shadow" />
+                            <img
+                              src={sponsor.imagePreview?.startsWith('/uploads/') ? `http://192.168.100.57:5098${sponsor.imagePreview}` : sponsor.imagePreview}
+                              alt="Sponsor"
+                              className="w-20 h-12 rounded-lg object-cover mb-1 border border-orange-300 shadow"
+                            />
                           ) : (
                             <span className="text-2xl mb-1">🎯</span>
                           )}
@@ -433,21 +471,21 @@ const Feed = () => {
                     )}
               {/* Post Content */}
               <div className={`flex-1 rounded-lg shadow-md p-6 border 
-                ${sponsorData[post.id] 
+                ${sponsorData[post.userId] 
                   ? '' 
                   : 'bg-white dark:bg-gray-800'}
                 ${highlightedPostId === String(post.id) 
                   ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900' 
-                  : sponsorData[post.id] ? '' : 'border-gray-200 dark:border-gray-700'}
+                  : sponsorData[post.userId] ? '' : 'border-gray-200 dark:border-gray-700'}
               `}
-              style={sponsorData[post.id] ? {
+              style={sponsorData[post.userId] ? {
                 background: 'repeating-linear-gradient(180deg, #166534 20px,#14532d 60px )',
                 border: '2px solid #22c55e',
                 boxShadow: '0 0 16px 2px #22c55e, 0 2px 8px #14532d',
                 color: '#fff',
               } : {}}
             >
-                {sponsorData[post.id] && (
+                {sponsorData[post.userId] && (
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #22c55e, 0 0 2px #fff' }}>Sponsored</span>
                   </div>
@@ -647,12 +685,7 @@ const Feed = () => {
             )}
             {/* Ad space between posts */}
             {(index + 1) % 3 === 0 && (
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mt-6 text-center border border-gray-200 dark:border-gray-600">
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Advertisement</p>
-                <div className="h-20 bg-gray-200 dark:bg-gray-600 rounded mt-2 flex items-center justify-center">
-                  <span className="text-gray-500 dark:text-gray-400">Ad Space</span>
-                </div>
-              </div>
+              <AdSlider />
             )}
           </div>
         ))}

@@ -1,3 +1,4 @@
+import Modal from './Modal';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -36,6 +37,8 @@ const Analytics = () => {
   const [engagementRate, setEngagementRate] = useState([]);
   const [period, setPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -104,20 +107,24 @@ const Analytics = () => {
     );
   }
 
-  const positionData = Object.entries(analytics.audience.positions).map(([name, value]) => ({
-    name,
-    value,
-  }));
 
-  const locationData = Object.entries(analytics.audience.locations)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, value]) => ({ name, value }));
+  const positionData = analytics?.audience?.positions
+    ? Object.entries(analytics.audience.positions).map(([name, value]) => ({ name, value }))
+    : [];
 
-  const activityData = analytics.activityByHour.map(item => ({
-    hour: `${item.hour}:00`,
-    posts: item.count,
-  }));
+  const locationData = analytics?.audience?.locations
+    ? Object.entries(analytics.audience.locations)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, value]) => ({ name, value }))
+    : [];
+
+  const activityData = Array.isArray(analytics.activityByHour)
+    ? analytics.activityByHour.map(item => ({
+        hour: `${item.hour}:00`,
+        posts: item.count,
+      }))
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -151,14 +158,14 @@ const Analytics = () => {
             icon={UserGroupIcon}
             label="Followers"
             value={analytics.overview.totalFollowers}
-            change={analytics.growth.followers.change}
+            change={analytics.growth?.followers?.change ?? 0}
             color="bg-blue-500"
           />
           <StatCard
             icon={HeartIcon}
             label="Total Likes"
             value={analytics.overview.totalLikes}
-            change={analytics.growth.likes.change}
+            change={analytics.growth?.likes?.change ?? 0}
             color="bg-red-500"
           />
           <StatCard
@@ -359,7 +366,7 @@ const Analytics = () => {
                 {/* Show image if present and not a video file */}
                 {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`http://localhost:5000${post.imageUrl}`}
+                    src={`http://localhost:5098${post.imageUrl}`}
                     alt="Post"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -367,7 +374,7 @@ const Analytics = () => {
                 {/* Show video if present */}
                 {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`http://localhost:5000${post.videoUrl || post.imageUrl}`}
+                    src={`http://localhost:5098${post.videoUrl || post.imageUrl}`}
                     controls
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -384,7 +391,7 @@ const Analytics = () => {
                   {/* Show image if present and not a video file */}
                   {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                     <img
-                      src={`http://localhost:5000${post.imageUrl}`}
+                      src={`http://localhost:5098${post.imageUrl}`}
                       alt="Post"
                       className="w-full h-auto object-cover rounded mb-4"
                     />
@@ -392,7 +399,7 @@ const Analytics = () => {
                   {/* Show video if present */}
                   {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                     <video
-                      src={`http://localhost:5000${post.videoUrl || post.imageUrl}`}
+                      src={`http://localhost:5098${post.videoUrl || post.imageUrl}`}
                       controls
                       className="w-full h-auto object-cover rounded mb-4"
                     />
@@ -438,14 +445,14 @@ const Analytics = () => {
                 <h3 className="text-lg font-semibold mb-2">Post i plotë</h3>
                 {selectedPost.imageUrl && !selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`http://localhost:5000${selectedPost.imageUrl}`}
+                    src={`http://localhost:5098${selectedPost.imageUrl}`}
                     alt="Post"
                     className="w-full h-auto object-cover rounded mb-4"
                   />
                 )}
                 {(selectedPost.videoUrl || (selectedPost.imageUrl && selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`http://localhost:5000${selectedPost.videoUrl || selectedPost.imageUrl}`}
+                    src={`http://localhost:5098${selectedPost.videoUrl || selectedPost.imageUrl}`}
                     controls
                     className="w-full h-auto object-cover rounded mb-4"
                   />
