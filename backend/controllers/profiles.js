@@ -193,22 +193,27 @@ exports.updateProfile = async (req, res) => {
 
 exports.getAllProfiles = async (req, res) => {
   try {
-    const { role, search } = req.query;
-    
-    // Build where clause for filtering
+    const { role, search, random, limit } = req.query;
     let whereClause = {};
-    
-    const profiles = await Profile.findAll({
-      include: [{
-        model: User,
-        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
-        where: role ? { role } : {}
-      }],
+    if (role) whereClause.role = role;
+
+    // Exclude current user
+    const excludeUserId = req.user?.id;
+
+    // Build include for User model
+    const userInclude = {
+      model: User,
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
+      where: role ? { role } : {},
+    };
+
+    let profiles = await Profile.findAll({
+      include: [userInclude],
       order: [['createdAt', 'DESC']]
     });
-    
+
     // Merge user data into each profile
-    const profilesWithUserData = profiles.map(profile => ({
+    let profilesWithUserData = profiles.map(profile => ({
       ...profile.toJSON(),
       id: profile.userId,
       firstName: profile.User.firstName,
@@ -217,20 +222,36 @@ exports.getAllProfiles = async (req, res) => {
       role: profile.User.role,
       verified: profile.User.verified
     }));
-    
+
+    // Exclude current user
+    if (excludeUserId) {
+      profilesWithUserData = profilesWithUserData.filter(p => p.id !== excludeUserId);
+    }
+
     // Apply search filter if provided
-    let filteredProfiles = profilesWithUserData;
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredProfiles = profilesWithUserData.filter(p => 
+      profilesWithUserData = profilesWithUserData.filter(p => 
         `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchLower) ||
         p.club?.toLowerCase().includes(searchLower) ||
         p.position?.toLowerCase().includes(searchLower) ||
         p.city?.toLowerCase().includes(searchLower)
       );
     }
-    
-    res.json(filteredProfiles);
+
+    // Randomize and limit if requested
+    if (random === 'true') {
+      // Shuffle array
+      for (let i = profilesWithUserData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [profilesWithUserData[i], profilesWithUserData[j]] = [profilesWithUserData[j], profilesWithUserData[i]];
+      }
+    }
+    if (limit) {
+      profilesWithUserData = profilesWithUserData.slice(0, parseInt(limit));
+    }
+
+    res.json(profilesWithUserData);
   } catch (err) {
     console.error('Get all profiles error:', err);
     res.status(500).json({ msg: 'Server error' });

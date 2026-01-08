@@ -1,4 +1,5 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
+const stripe = require('stripe')(stripeKey);
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 const Product = require('../models/Product');

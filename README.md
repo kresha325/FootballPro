@@ -1,3 +1,8 @@
+# Stripe API Key Development Note
+
+Aktualisht, backend-i është i konfiguruar që të përdorë një çelës dummy për Stripe (`sk_test_dummy`) nëse variabla e ambientit `STRIPE_SECRET_KEY` nuk është e vendosur. Kjo lejon që serveri të startojë edhe pa një çelës të vërtetë Stripe, por funksionalitetet që lidhen me pagesat nuk do të funksionojnë realisht pa një çelës valid.
+
+Për prodhim, sigurohuni të vendosni `STRIPE_SECRET_KEY` në ambientin tuaj.
 # FootballPro (JonSport)
 
 ⚽ Global Football Talent & Ecosystem Platform

@@ -35,6 +35,64 @@ const Feed = () => {
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletingComment, setDeletingComment] = useState(null);
 
+  // Sponsor state per post
+  const [showSponsorModal, setShowSponsorModal] = useState(false);
+  const [activeSponsorPost, setActiveSponsorPost] = useState(null);
+  // sponsorData: { [postId]: { name, link, image, imagePreview } }
+  const [sponsorData, setSponsorData] = useState(() => {
+    try {
+      const data = localStorage.getItem('sponsorData');
+      return data ? JSON.parse(data) : {};
+    } catch {
+      return {};
+    }
+  });
+    // Ruaj sponsorData në localStorage sa herë ndryshon
+    useEffect(() => {
+      try {
+        localStorage.setItem('sponsorData', JSON.stringify(sponsorData));
+      } catch {}
+    }, [sponsorData]);
+  const [tempSponsor, setTempSponsor] = useState({ name: '', link: '', image: null, imagePreview: null });
+
+  const handleSponsorImage = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setTempSponsor(prev => ({ ...prev, image: file, imagePreview: reader.result }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const openSponsorModal = (postId) => {
+    setActiveSponsorPost(postId);
+    setShowSponsorModal(true);
+    // Prefill if exists
+    if (sponsorData[postId]) {
+      setTempSponsor({ ...sponsorData[postId] });
+    } else {
+      setTempSponsor({ name: '', link: '', image: null, imagePreview: null });
+    }
+  };
+
+  const closeSponsorModal = () => {
+    setShowSponsorModal(false);
+    setActiveSponsorPost(null);
+    setTempSponsor({ name: '', link: '', image: null, imagePreview: null });
+  };
+
+  const saveSponsorData = () => {
+  if (!activeSponsorPost) return;
+  const userId = typeof activeSponsorPost === 'object' && activeSponsorPost.userId
+    ? activeSponsorPost.userId
+    : activeSponsorPost; // për rastet e vjetra
+  setSponsorData(prev => {
+    const arr = prev[userId] ? [...prev[userId]] : [];
+    if (arr.length < 3) arr.push({ ...tempSponsor });
+    return { ...prev, [userId]: arr };
+  });
+  closeSponsorModal();
+};
   useEffect(() => {
     fetchPosts();
     // Auto-refresh është hequr për performancë më të mirë
@@ -181,7 +239,6 @@ const Feed = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Feed Content */}
         <div className="lg:col-span-2">
-          <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Feed</h1>
 
       {/* Banner Ad */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 mb-6 text-white text-center">
@@ -274,24 +331,152 @@ const Feed = () => {
             ref={(el) => postRefs.current[post.id] = el}
             className={highlightedPostId === String(post.id) ? 'animate-pulse-once' : ''}
           >
-            <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border ${
-              highlightedPostId === String(post.id) 
-                ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900' 
-                : 'border-gray-200 dark:border-gray-700'
-            }`}>
+            <div className="flex flex-row gap-4">
+              {/* Sponsor Zone (left of post) */}
+              <div className="w-28 min-w-[7rem] flex flex-col items-center justify-start pt-2 gap-2">
+                {[0,1,2].map(i => {
+                  const arr = sponsorData[post.userId] || [];
+                  const sponsor = arr[i];
+                  const greenShades = [
+                    'from-green-200 to-green-300',
+                    'from-green-300 to-green-400',
+                    'from-green-400 to-green-500'
+                  ];
+                  return (
+                    <div key={i} className={`bg-gradient-to-br ${greenShades[i]} rounded-lg shadow-md p-2 w-full flex flex-col items-center`}>
+                      {sponsor ? (
+                        <a
+                          href={sponsor.link || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full flex flex-col items-center cursor-pointer hover:scale-105 transition"
+                          title={sponsor.name}
+                        >
+                          {sponsor.imagePreview ? (
+                            <img src={sponsor.imagePreview} alt="Sponsor" className="w-20 h-12 rounded-lg object-cover mb-1 border border-orange-300 shadow" />
+                          ) : (
+                            <span className="text-2xl mb-1">🎯</span>
+                          )}
+                          <span className="font-bold text-xs text-gray-800 mb-1 text-center break-words">
+                            {sponsor.name}
+                          </span>
+                        </a>
+                      ) : (
+                        <>
+                          <span className="text-2xl mb-1">🎯</span>
+                          <span className="font-bold text-xs text-gray-800 mb-1">Sponsor {i+1}</span>
+                          <span className="text-[10px] text-gray-700 text-center">Promote your brand here!</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                <button
+                  className="mt-2 bg-orange-500 text-white text-xs px-2 py-1 rounded hover:bg-orange-600 transition"
+                  onClick={() => openSponsorModal(post.id, post.userId)}
+                  disabled={(sponsorData[post.userId]?.length || 0) >= 3}
+                >
+                  Advertise
+                </button>
+              </div>
+                    {/* Sponsor Modal */}
+                    {showSponsorModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md relative">
+                          <button
+                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl"
+                            onClick={closeSponsorModal}
+                            aria-label="Close sponsor modal"
+                          >
+                            ×
+                          </button>
+                          <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Sponsor Your Business</h2>
+                          <form className="space-y-4" onSubmit={e => { e.preventDefault(); saveSponsorData(); }}>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emri i Biznesit</label>
+                              <input
+                                type="text"
+                                value={tempSponsor.name}
+                                onChange={e => setTempSponsor(prev => ({ ...prev, name: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="Shkruani emrin e biznesit"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ngarko Foto</label>
+                              <input type="file" accept="image/*" onChange={handleSponsorImage} />
+                              {tempSponsor.imagePreview && (
+                                <img src={tempSponsor.imagePreview} alt="Preview" className="mt-2 max-h-32 rounded" />
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Linku i Biznesit</label>
+                              <input
+                                type="url"
+                                value={tempSponsor.link}
+                                onChange={e => setTempSponsor(prev => ({ ...prev, link: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="https://example.com"
+                                required
+                              />
+                            </div>
+                            <button
+                              type="submit"
+                              className="w-full bg-orange-500 text-white py-2 rounded-md font-semibold hover:bg-orange-600 transition"
+                            >
+                              Dergo (Simuluar)
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    )}
+              {/* Post Content */}
+              <div className={`flex-1 rounded-lg shadow-md p-6 border 
+                ${sponsorData[post.id] 
+                  ? '' 
+                  : 'bg-white dark:bg-gray-800'}
+                ${highlightedPostId === String(post.id) 
+                  ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900' 
+                  : sponsorData[post.id] ? '' : 'border-gray-200 dark:border-gray-700'}
+              `}
+              style={sponsorData[post.id] ? {
+                background: 'repeating-linear-gradient(180deg, #166534 20px,#14532d 60px )',
+                border: '2px solid #22c55e',
+                boxShadow: '0 0 16px 2px #22c55e, 0 2px 8px #14532d',
+                color: '#fff',
+              } : {}}
+            >
+                {sponsorData[post.id] && (
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #22c55e, 0 0 2px #fff' }}>Sponsored</span>
+                  </div>
+                )}
               <div className="flex items-center justify-between mb-4">
                 <div 
                   className="flex items-center cursor-pointer hover:opacity-80 transition-opacity" 
                   onClick={(e) => {
                     e.preventDefault();
-                    console.log('Navigating to profile:', post.userId);
                     navigate(`/profile/${post.userId}`);
                   }}
                   style={{ touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {post.author?.firstName?.charAt(0).toUpperCase() || 'U'}
-                  </div>
+                  {(post.author?.profilePhoto || (user && post.userId === user.id && user.profilePhoto)) ? (
+                    <img
+                      src={
+                        post.author?.profilePhoto
+                          ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `http://192.168.100.57:5098${post.author.profilePhoto}`)
+                          : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `http://192.168.100.57:5098${user.profilePhoto}`)
+                      }
+                      alt={post.author?.firstName || user?.firstName || 'User'}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                      onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                      {post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                  )}
                   <div className="ml-3">
                     <p className="font-semibold text-gray-900 dark:text-white hover:underline">
                       {post.author?.firstName && post.author?.lastName 
@@ -366,6 +551,7 @@ const Feed = () => {
                     <span>Share</span>
                   </button>
                 </div>
+              </div>
               </div>
             </div>
             {/* Share Modal */}

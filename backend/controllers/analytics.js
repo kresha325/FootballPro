@@ -3,8 +3,6 @@ const { ProfileView, PostAnalytics, EngagementMetrics, User, Post, Profile, Like
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const ClubMember = require('../models/ClubRosterRequest');
-const ClubShortlist = require('../models/ClubShortlist');
-const ClubOffer = require('../models/ClubOffer');
 
 // Club analytics summary for club panel
 exports.getClubAnalytics = async (req, res) => {
@@ -15,13 +13,13 @@ exports.getClubAnalytics = async (req, res) => {
     // Pending requests
     const pendingRequests = await ClubMember.count({ where: { clubId, status: 'pending' } });
     // Shortlist count
-    const shortlistCount = await ClubShortlist.count({ where: { clubId } });
+      const shortlistCount = 0; // ClubShortlist model nuk ekziston
     // Offers sent
-    const offersSent = await ClubOffer.count({ where: { clubId } });
+    const offersSent = 0; // ClubOffer model nuk ekziston
     // Offers accepted
-    const offersAccepted = await ClubOffer.count({ where: { clubId, status: 'accepted' } });
+    const offersAccepted = 0;
     // Offers rejected
-    const offersRejected = await ClubOffer.count({ where: { clubId, status: 'rejected' } });
+    const offersRejected = 0;
     res.json({
       totalAthletes,
       pendingRequests,

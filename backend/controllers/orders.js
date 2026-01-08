@@ -1,7 +1,8 @@
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Product = require('../models/Product');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
+const stripe = require('stripe')(stripeKey);
 
 exports.getOrders = async (req, res) => {
   try {

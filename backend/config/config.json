@@ -1,0 +1,10 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "",
+    "database": "footballpro_dev",
+    "host": "127.0.0.1",
+    "port": 5435,
+    "dialect": "postgres"
+  }
+}

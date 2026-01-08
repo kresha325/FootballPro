@@ -238,8 +238,6 @@ UserReward.belongsTo(Reward, { foreignKey: 'rewardId' });
 Reward.belongsTo(Badge, { foreignKey: 'badgeId' });
 
 // Follow associations
-Follow.belongsTo(User, { as: 'follower', foreignKey: 'followerId' });
-Follow.belongsTo(User, { as: 'following', foreignKey: 'followingId' });
 User.hasMany(Follow, { as: 'followers', foreignKey: 'followingId' });
 User.hasMany(Follow, { as: 'following', foreignKey: 'followerId' });
 
@@ -252,9 +250,11 @@ sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connected');
     // Run migrations
-    const runMigrations = require('./migrations/add-password-reset');
+    const migration = require('./migrations/add-password-reset');
     const updateNotificationLinks = require('./migrations/update-notification-links');
-    return runMigrations().then(() => updateNotificationLinks());
+    const { Sequelize } = require('sequelize');
+    return migration.up(sequelize.getQueryInterface(), Sequelize)
+      .then(() => updateNotificationLinks());
   })
   .catch(err => console.error('❌ Database connection error:', err));
 

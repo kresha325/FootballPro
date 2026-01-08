@@ -59,9 +59,18 @@ function BottomNav() {
           }
           aria-label="Profile"
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
-            {user?.firstName?.[0]}
-          </div>
+          {user?.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
+            <img
+              src={user.profilePhoto.startsWith('http') ? user.profilePhoto : `http://192.168.100.57:5098${user.profilePhoto}`}
+              alt="Profile"
+              className="w-8 h-8 rounded-full object-cover shadow-md border-2 border-blue-500"
+              onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
+              {user?.firstName?.[0]}
+            </div>
+          )}
           <span className="text-xs md:hidden">Profile</span>
         </NavLink>
 

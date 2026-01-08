@@ -44,6 +44,10 @@ exports.register = async (req, res) => {
     console.log('BACKEND: Creating profile for user:', user.id);
     await Profile.create({
       userId: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      // Mund të shtosh edhe fusha të tjera bazë nëse duhen
     });
 
     console.log('BACKEND: User created successfully:', user.id);
