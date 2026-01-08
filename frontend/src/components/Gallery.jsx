@@ -167,7 +167,7 @@ const Gallery = () => {
             
             {item.imageUrl ? (
               <img
-                src={`http://localhost:5098${item.imageUrl}`}
+                src={`https://192.168.100.57:5098${item.imageUrl}`}
                 alt={item.title || 'Gallery item'}
                 className="w-full h-48 object-cover"
                 onError={(e) => {
@@ -179,7 +179,7 @@ const Gallery = () => {
               />
             ) : item.videoUrl ? (
               <video
-                src={`http://localhost:5098${item.videoUrl}`}
+                src={`https://192.168.100.57:5098${item.videoUrl}`}
                 controls
                 className="w-full h-48 object-cover"
               />
@@ -229,7 +229,7 @@ const Gallery = () => {
               ✕
             </button>
             <img
-              src={`http://localhost:5098${selectedImage.imageUrl}`}
+              src={`https://192.168.100.57:5098${selectedImage.imageUrl}`}
               alt={selectedImage.title}
               className="max-w-full max-h-screen object-contain"
             />

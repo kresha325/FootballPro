@@ -53,7 +53,7 @@ export default function Messaging() {
   const fetchUsers = async () => {
     try {
       console.log('📞 CALLING profileAPI.getAllProfiles...');
-      console.log('API base URL:', 'http://192.168.100.57:5098/api');
+      console.log('API base URL:', 'https://192.168.100.57:5098/api');
       
       // Merr followers dhe following
       const [followersRes, followingRes] = await Promise.all([

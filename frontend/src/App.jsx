@@ -33,8 +33,13 @@ import VideoCallManager from './components/VideoCallManager';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import { useEffect } from 'react';
 function App() {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    document.title = 'FootballPro';
+  }, []);
 
   if (loading) {
     return (

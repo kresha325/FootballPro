@@ -30,7 +30,7 @@ export const adsAPI = {
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://192.168.100.57:5098/api',
+  baseURL: 'https://192.168.100.57:5098/api',
 });
 /**
  * Attach JWT token automatically

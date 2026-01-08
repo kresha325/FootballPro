@@ -21,7 +21,7 @@ Duhet të shikosh: `✅ Database connected`
 cd C:\Users\Urim\Desktop\FootballPro\frontend
 npm run dev
 ```
-Duhet të shikosh: `Network: http://192.168.100.57:5174/`
+Duhet të shikosh: `Network: https://192.168.100.57:5174/`
 
 ---
 
@@ -33,7 +33,7 @@ Duhet të shikosh: `Network: http://192.168.100.57:5174/`
 
 3. **Shkruaj në URL:**
    ```
-   http://192.168.100.57:5174
+   https://192.168.100.57:5174
    ```
 
 4. **Login** me një user (p.sh. user1@test.com)
@@ -43,7 +43,7 @@ Duhet të shikosh: `Network: http://192.168.100.57:5174/`
    - Safari iOS: Settings > Safari > Advanced > Web Inspector
 
 6. **Kontrollo në console:**
-   - Duhet të shikosh: `🔗 Backend URL: http://192.168.100.57:5098`
+   - Duhet të shikosh: `🔗 Backend URL: https://192.168.100.57:5098`
    - Duhet të shikosh: `✅ Socket connected: [ID]`
 
 ---
@@ -52,7 +52,7 @@ Duhet të shikosh: `Network: http://192.168.100.57:5174/`
 
 1. **Hap browser** (Chrome rekomandohet)
 
-2. **Shko në:** `http://192.168.100.57:5174` (ose `http://localhost:5174`)
+2. **Shko në:** `https://192.168.100.57:5174` (ose `https://localhost:5174`)
 
 3. **Login** me user tjetër (p.sh. user2@test.com)
 
@@ -101,8 +101,8 @@ Duhet të shikosh: `Network: http://192.168.100.57:5174/`
 **Hapi 1: Kontrollo Console në telefon**
 Duhet të shikosh:
 ```
-🔗 Backend URL: http://192.168.100.57:5098
-🔗 Connecting to Socket.IO: http://192.168.100.57:5098
+🔗 Backend URL: https://192.168.100.57:5098
+🔗 Connecting to Socket.IO: https://192.168.100.57:5098
 ✅ Socket connected: [ID]
 ```
 

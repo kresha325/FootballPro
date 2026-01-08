@@ -242,13 +242,13 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # URLs
-FRONTEND_URL=http://192.168.100.57:5174
+FRONTEND_URL=https://192.168.100.57:5174
 PORT=5098
 ```
 
 ### Frontend (.env)
 ```env
-VITE_API_URL=http://192.168.100.57:5098/api
+VITE_API_URL=https://192.168.100.57:5098/api
 ```
 
 ---
@@ -448,7 +448,7 @@ Proprietary - All rights reserved
 
 ## 📞 Contact & Support
 
-- **Website:** [footballpro.al](http://footballpro.al)
+- **Website:** [footballpro.al](https://footballpro.al)
 - **Email:** support@footballpro.al
 - **Documentation:** `/docs` directory
 

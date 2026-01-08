@@ -2,21 +2,21 @@
 
 ## Serverat po punojnë! ✅
 
-- **Backend:** http://192.168.100.57:5098 ✅
-- **Frontend:** http://192.168.100.57:5174 ✅
+- **Backend:** https://192.168.100.57:5098 ✅
+- **Frontend:** https://192.168.100.57:5174 ✅
 
 ---
 
 ## 🎯 Testing Setup
 
 ### PC (Desktop Browser)
-1. Hap browser: http://192.168.100.57:5174
+1. Hap browser: https://192.168.100.57:5174
 2. Login me nje user (p.sh. athlete@test.com)
 3. Krijo post, follow users, etj.
 
 ### Mobile (Telefon në të njëjtin WiFi)
 1. Hap browser në telefon (Chrome/Safari)
-2. Shko te: http://192.168.100.57:5174
+2. Shko te: https://192.168.100.57:5174
 3. Login me një user tjetër (p.sh. club@test.com)
 4. Testo features
 
@@ -164,7 +164,7 @@
 ## 🔧 Common Issues & Fixes
 
 ### Mobile can't access site
-**Problem:** http://192.168.100.57:5174 not loading
+**Problem:** https://192.168.100.57:5174 not loading
 **Solution:**
 1. Verify phone is on same WiFi network
 2. Check Windows Firewall:
@@ -188,7 +188,7 @@
 ### Images not loading
 **Problem:** Image URLs pointing to localhost
 **Solution:**
-- Backend serves from: http://192.168.100.57:5098/uploads/...
+- Backend serves from: https://192.168.100.57:5098/uploads/...
 - Check API base URL in frontend .env
 
 ### Notifications not updating

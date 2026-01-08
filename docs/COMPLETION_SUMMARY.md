@@ -300,12 +300,12 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # URLs
-FRONTEND_URL=http://192.168.100.57:5174
+FRONTEND_URL=https://192.168.100.57:5174
 ```
 
 ### Network Configuration
-- Frontend: http://192.168.100.57:5174
-- Backend: http://192.168.100.57:5098
+- Frontend: https://192.168.100.57:5174
+- Backend: https://192.168.100.57:5098
 
 ### Database Models (New/Updated)
 - ClubRosterRequest (NEW)

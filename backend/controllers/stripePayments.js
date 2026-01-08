@@ -29,7 +29,7 @@ exports.createCheckoutSession = async (req, res) => {
             product_data: {
               name: product.name,
               description: product.description,
-              images: product.imageUrl ? [`${process.env.FRONTEND_URL || 'http://localhost:5174'}${product.imageUrl}`] : [],
+              images: product.imageUrl ? [`${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}${product.imageUrl}`] : [],
             },
             unit_amount: Math.round(product.price * 100), // Convert to cents
           },
@@ -37,8 +37,8 @@ exports.createCheckoutSession = async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/marketplace?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/marketplace?canceled=true`,
+      success_url: `${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/marketplace?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/marketplace?canceled=true`,
       metadata: {
         userId: req.user.id,
         productId: product.id,

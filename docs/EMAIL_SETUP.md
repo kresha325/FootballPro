@@ -20,7 +20,7 @@
    ```env
    EMAIL_USER=your-email@gmail.com
    EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
-   FRONTEND_URL=http://192.168.100.57:5174
+   FRONTEND_URL=https://192.168.100.57:5174
    ```
 
 ## Email Templates Available

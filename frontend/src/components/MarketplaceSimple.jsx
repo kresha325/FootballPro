@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
 
-const API = axios.create({ baseURL: 'http://192.168.100.57:5098/api' });
+const API = axios.create({ baseURL: 'https://192.168.100.57:5098/api' });
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;

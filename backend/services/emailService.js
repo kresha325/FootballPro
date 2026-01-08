@@ -18,7 +18,7 @@ const emailTemplates = {
         <h1 style="color: #2563eb;">Welcome to FootballPro, ${firstName}!</h1>
         <p>Thank you for joining our global football community.</p>
         <p>Start building your profile, connect with players, scouts, and clubs worldwide.</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Get Started
         </a>
@@ -32,7 +32,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>${followerName} is now following you on FootballPro</h2>
         <p>Check out their profile and connect!</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/profile/${userId}" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/profile/${userId}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Profile
         </a>
@@ -46,7 +46,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>${likerName} liked your post</h2>
         <p>Your content is getting noticed!</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/feed?post=${postId}" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/feed?post=${postId}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Post
         </a>
@@ -60,7 +60,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>${commenterName} commented:</h2>
         <p style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 20px 0;">"${comment}"</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/feed?post=${postId}" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/feed?post=${postId}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Comment
         </a>
@@ -74,7 +74,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>New message from ${senderName}</h2>
         <p style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 20px 0;">${preview}</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/messaging" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/messaging"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Reply Now
         </a>
@@ -89,7 +89,7 @@ const emailTemplates = {
         <h2>You've been scouted!</h2>
         <p><strong>${scoutName}</strong> from <strong>${clubName}</strong> has shown interest in your profile.</p>
         <p>This could be your big opportunity!</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/scouting" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/scouting"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Details
         </a>
@@ -103,7 +103,7 @@ const emailTemplates = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Tournament Invitation</h2>
         <p>You've been invited to participate in <strong>${tournamentName}</strong></p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/tournaments" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/tournaments"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Tournament
         </a>
@@ -119,7 +119,7 @@ const emailTemplates = {
         <p>Hi ${firstName},</p>
         <p>Your Premium subscription will expire in <strong>${daysLeft} days</strong>.</p>
         <p>Renew now to keep your premium features!</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/premium" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/premium"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Renew Premium
         </a>
@@ -135,7 +135,7 @@ const emailTemplates = {
         <p>Hi ${data.clubName},</p>
         <p><strong>${data.athleteName}</strong> wants to join your roster as <strong>${data.position}</strong>.</p>
         ${data.message ? `<p style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 20px 0;">Message: "${data.message}"</p>` : ''}
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/roster/requests" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/roster/requests"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Review Request
         </a>
@@ -151,7 +151,7 @@ const emailTemplates = {
         <p>Hi ${data.athleteName},</p>
         <p><strong>${data.clubName}</strong> has approved your roster request as <strong>${data.position}</strong>!</p>
         ${data.message ? `<p style="background: #dcfce7; padding: 12px; border-radius: 6px; margin: 20px 0;">${data.message}</p>` : ''}
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/roster/my-requests" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/roster/my-requests"
            style="background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           View Details
         </a>
@@ -168,7 +168,7 @@ const emailTemplates = {
         <p><strong>${data.clubName}</strong> has reviewed your roster request for <strong>${data.position}</strong>.</p>
         ${data.message ? `<p style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 20px 0;">${data.message}</p>` : ''}
         <p>Keep improving and try again later!</p>
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5174'}/search?role=club" 
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/search?role=club"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Find Other Clubs
         </a>

@@ -10,11 +10,11 @@ const getBackendURL = () => {
   
   // If accessing from network IP, use the same IP for backend
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return `http://${hostname}:5098`;
+    return `https://192.168.100.57:5098`;
   }
   
   // Default to localhost for local development
-  return 'http://localhost:5098';
+  return 'https://192.168.100.57:5098';
 };
 
 export const BACKEND_URL = getBackendURL();

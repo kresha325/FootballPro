@@ -19,7 +19,7 @@ const VideoCall = ({ receiverId, onClose }) => {
   const connectionRef = useRef();
 
   useEffect(() => {
-    const newSocket = io('http://192.168.100.57:5098');
+    const newSocket = io('https://192.168.100.57:5098');
     setSocket(newSocket);
 
     newSocket.emit('join', user.id);

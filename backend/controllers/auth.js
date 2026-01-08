@@ -156,7 +156,7 @@ exports.forgotPassword = async (req, res) => {
 
     // In production, send email with reset link
     // For now, return the token in response (only for development)
-    const resetUrl = `http://localhost:5174/reset-password/${resetToken}`;
+    const resetUrl = `https://192.168.100.57:5174/reset-password/${resetToken}`;
     
     console.log('Password reset URL:', resetUrl);
     

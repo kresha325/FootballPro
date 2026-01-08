@@ -36,7 +36,7 @@ Video calls tani funksionojnë në:
 
 1. **Sigurohu që telefoni është në të njëjtin WiFi** me laptop-in
 
-2. **Hap në telefon**: `http://192.168.100.57:5174`
+2. **Hap në telefon**: `https://192.168.100.57:5174`
 
 3. **Login** me një user
 

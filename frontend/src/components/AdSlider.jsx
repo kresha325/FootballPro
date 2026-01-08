@@ -143,7 +143,7 @@ export default function AdSlider() {
                     ads[active].imageUrl.startsWith('blob:')
                       ? ads[active].imageUrl
                       : ads[active].imageUrl.startsWith('/uploads/')
-                        ? `http://192.168.100.57:5098${ads[active].imageUrl}`
+                        ? `https://192.168.100.57:5098${ads[active].imageUrl}`
                         : ads[active].imageUrl
                   }
                   alt="Ad"

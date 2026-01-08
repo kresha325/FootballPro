@@ -46,6 +46,18 @@ export default defineConfig({
       'localhost',
       '192.168.100.57'
     ],
+    https: {
+      key: (() => {
+        try {
+          return require('fs').readFileSync('../backend/certs/server.key');
+        } catch (e) { return undefined; }
+      })(),
+      cert: (() => {
+        try {
+          return require('fs').readFileSync('../backend/certs/server.cert');
+        } catch (e) { return undefined; }
+      })(),
+    },
     hmr: {
       host: '192.168.100.57',
       protocol: 'ws',

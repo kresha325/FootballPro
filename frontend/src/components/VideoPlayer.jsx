@@ -148,7 +148,7 @@ const VideoPlayer = () => {
           <div className="relative max-w-5xl mx-auto">
             <video
               ref={videoRef}
-              src={`http://localhost:5098${video.videoUrl}`}
+              src={`https://192.168.100.57:5098${video.videoUrl}`}
               className="w-full aspect-video"
               onTimeUpdate={handleTimeUpdate}
               onEnded={() => setPlaying(false)}
@@ -253,7 +253,7 @@ const VideoPlayer = () => {
               <div className="flex items-center gap-4 pb-6 border-b border-gray-200">
                 {video.User?.Profile?.profilePicture ? (
                   <img
-                    src={`http://localhost:5098${video.User.Profile.profilePicture}`}
+                    src={`https://192.168.100.57:5098${video.User.Profile.profilePicture}`}
                     alt={video.User.firstName}
                     className="w-12 h-12 rounded-full"
                   />
@@ -313,7 +313,7 @@ const VideoPlayer = () => {
                 <div className="w-40 aspect-video bg-gray-900 flex-shrink-0">
                   {relatedVideo.thumbnailUrl ? (
                     <img
-                      src={`http://localhost:5098${relatedVideo.thumbnailUrl}`}
+                      src={`https://192.168.100.57:5098${relatedVideo.thumbnailUrl}`}
                       alt={relatedVideo.title}
                       className="w-full h-full object-cover"
                     />

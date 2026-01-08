@@ -7,6 +7,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const socketIo = require('socket.io');
 const passport = require('./config/passport');
 // const sequelize = require('./config/database');
@@ -31,8 +33,23 @@ const Message = require('./models/Message');
 const sequelize = require('./config/database');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, {
+let server;
+let io;
+const PORT = process.env.PORT || 5098;
+const sslKeyPath = './certs/server.key';
+const sslCertPath = './certs/server.cert';
+if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
+  const sslOptions = {
+    key: fs.readFileSync(sslKeyPath),
+    cert: fs.readFileSync(sslCertPath)
+  };
+  server = https.createServer(sslOptions, app);
+  console.log('🔒 HTTPS enabled');
+} else {
+  server = http.createServer(app);
+  console.log('⚠️  HTTPS certs not found, running in HTTP');
+}
+io = socketIo(server, {
   cors: {
     origin: "*", // Allow all origins for development/testing
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -265,7 +282,7 @@ sequelize.authenticate()
   .catch(err => console.error('❌ Database connection error:', err));
 
 
-const PORT = process.env.PORT || 5098;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  const proto = (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) ? 'https' : 'http';
+  console.log(`Server running on ${proto}://localhost:${PORT}`);
 });

@@ -388,7 +388,7 @@ const Feed = () => {
                         >
                           {sponsor.imagePreview ? (
                             <img
-                              src={sponsor.imagePreview?.startsWith('/uploads/') ? `http://192.168.100.57:5098${sponsor.imagePreview}` : sponsor.imagePreview}
+                              src={sponsor.imagePreview?.startsWith('/uploads/') ? `https://192.168.100.57:5098${sponsor.imagePreview}` : sponsor.imagePreview}
                               alt="Sponsor"
                               className="w-20 h-12 rounded-lg object-cover mb-1 border border-orange-300 shadow"
                             />
@@ -503,8 +503,8 @@ const Feed = () => {
                     <img
                       src={
                         post.author?.profilePhoto
-                          ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `http://192.168.100.57:5098${post.author.profilePhoto}`)
-                          : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `http://192.168.100.57:5098${user.profilePhoto}`)
+                          ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `https://192.168.100.57:5098${post.author.profilePhoto}`)
+                          : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `https://192.168.100.57:5098${user.profilePhoto}`)
                       }
                       alt={post.author?.firstName || user?.firstName || 'User'}
                       className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
@@ -540,7 +540,7 @@ const Feed = () => {
               <p className="text-gray-800 dark:text-gray-200 mb-4">{post.content}</p>
               {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                 <img 
-                  src={`http://192.168.100.57:5098${post.imageUrl}`}
+                  src={`https://192.168.100.57:5098${post.imageUrl}`}
                   alt="Post content" 
                   className="w-full rounded-lg mb-4 max-h-96 object-cover"
                   onError={(e) => {
@@ -551,7 +551,7 @@ const Feed = () => {
               )}
               {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                 <video 
-                  src={`http://192.168.100.57:5098${post.videoUrl || post.imageUrl}`}
+                  src={`https://192.168.100.57:5098${post.videoUrl || post.imageUrl}`}
                   controls 
                   className="w-full rounded-lg mb-4 max-h-96"
                   onError={(e) => {

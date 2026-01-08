@@ -158,7 +158,7 @@ await navigator.mediaDevices.getUserMedia({
 
 ## Testing
 
-1. Open http://192.168.100.57:5174 in **two different browsers**
+1. Open https://192.168.100.57:5174 in **two different browsers**
 2. Login with different users
 3. Navigate to a user's profile
 4. Click "Video Call" button

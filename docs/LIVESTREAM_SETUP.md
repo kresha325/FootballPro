@@ -5,7 +5,7 @@
    - **RTMP URL:** Merr nga faqja "Transmetimi yt Live" (p.sh. rtmp://your-server-ip:1935/live)
    - **Stream Key:** Merr nga faqja "Transmetimi yt Live"
 3. Fillo transmetimin nga aplikacioni yt.
-4. Shikuesit mund të shohin livestream në web/mobile me HLS URL (p.sh. http://your-server-ip:8080/hls/streamkey.m3u8)
+4. Shikuesit mund të shohin livestream në web/mobile me HLS URL (p.sh. https://your-server-ip:8080/hls/streamkey.m3u8)
 
 **Shënim:**
 - Për mobile streaming, përdor Larix Broadcaster (Android/iOS), vendos RTMP URL dhe stream key.
