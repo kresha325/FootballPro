@@ -36,18 +36,25 @@ const app = express();
 let server;
 let io;
 const PORT = process.env.PORT || 5098;
-const sslKeyPath = './certs/server.key';
-const sslCertPath = './certs/server.cert';
-if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
-  const sslOptions = {
-    key: fs.readFileSync(sslKeyPath),
-    cert: fs.readFileSync(sslCertPath)
-  };
-  server = https.createServer(sslOptions, app);
-  console.log('🔒 HTTPS enabled');
-} else {
+if (process.env.NODE_ENV === 'production') {
+  // On Render, always use HTTP (Render handles HTTPS)
   server = http.createServer(app);
-  console.log('⚠️  HTTPS certs not found, running in HTTP');
+  console.log('HTTP enabled (Render production)');
+} else {
+  // For local development, use HTTPS if certs exist
+  const sslKeyPath = './certs/server.key';
+  const sslCertPath = './certs/server.cert';
+  if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
+    const sslOptions = {
+      key: fs.readFileSync(sslKeyPath),
+      cert: fs.readFileSync(sslCertPath)
+    };
+    server = https.createServer(sslOptions, app);
+    console.log('🔒 HTTPS enabled (local)');
+  } else {
+    server = http.createServer(app);
+    console.log('⚠️  HTTPS certs not found, running in HTTP (local)');
+  }
 }
 io = socketIo(server, {
   cors: {
