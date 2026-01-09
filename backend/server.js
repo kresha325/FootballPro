@@ -35,7 +35,7 @@ const sequelize = require('./config/database');
 const app = express();
 let server;
 let io;
-const PORT = process.env.PORT || 5098;
+const PORT = process.env.PORT;
 if (process.env.NODE_ENV === 'production') {
   // On Render, always use HTTP (Render handles HTTPS)
   server = http.createServer(app);
@@ -289,7 +289,10 @@ sequelize.authenticate()
   .catch(err => console.error('❌ Database connection error:', err));
 
 
+if (!PORT) {
+  console.error('❌ PORT environment variable is not set.');
+  process.exit(1);
+}
 server.listen(PORT, '0.0.0.0', () => {
-  const proto = (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) ? 'https' : 'http';
-  console.log(`Server running on ${proto}://0.0.0.0:${PORT}`);
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
