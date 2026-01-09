@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
+    { "source": "/favicon.ico", "destination": "/favicon.ico" },
+    { "source": "/vite.svg", "destination": "/vite.svg" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
