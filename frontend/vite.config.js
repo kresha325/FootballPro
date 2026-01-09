@@ -20,9 +20,7 @@ export default defineConfig({
     strictPort: false,
     allowedHosts: [
       '.loca.lt',
-      'small-trees-stare.loca.lt',
-      'localhost',
-      '192.168.100.57'
+      'small-trees-stare.loca.lt'
     ],
     https: {
       key: (() => {
@@ -37,7 +35,6 @@ export default defineConfig({
       })(),
     },
     hmr: {
-      host: '192.168.100.57',
       protocol: 'ws',
       overlay: false
     },
