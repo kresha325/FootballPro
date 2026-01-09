@@ -1,0 +1,9 @@
+{
+  "name": "FootballPro",
+  "short_name": "FootballPro",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "description": "FootballPro web app",
+  "icons": []
+}
