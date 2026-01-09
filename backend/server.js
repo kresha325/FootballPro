@@ -282,7 +282,7 @@ sequelize.authenticate()
   .catch(err => console.error('❌ Database connection error:', err));
 
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   const proto = (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) ? 'https' : 'http';
-  console.log(`Server running on ${proto}://localhost:${PORT}`);
+  console.log(`Server running on ${proto}://0.0.0.0:${PORT}`);
 });
