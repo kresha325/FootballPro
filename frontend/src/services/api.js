@@ -1,3 +1,9 @@
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: 'https://footballpro.onrender.com/api',
+});
+
 /* =========================
    SPONSORS
 ========================= */
@@ -27,11 +33,7 @@ export const adsAPI = {
     });
   },
 };
-import axios from 'axios';
 
-const API = axios.create({
-  baseURL: 'https://footballpro.onrender.com/api',
-});
 /**
  * Attach JWT token automatically
  */
