@@ -58,14 +58,18 @@ if (process.env.NODE_ENV === 'production') {
 }
 io = socketIo(server, {
   cors: {
-    origin: "*", // Allow all origins for development/testing
+    origin: [
+      "https://football-xxjk.onrender.com"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
 });
 
 app.use(cors({
-  origin: "*", // Allow all origins for development/testing
+  origin: [
+    "https://football-xxjk.onrender.com"
+  ],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
