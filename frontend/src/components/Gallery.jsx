@@ -167,7 +167,7 @@ const Gallery = () => {
             
             {item.imageUrl ? (
               <img
-                src={`https://192.168.100.57:5098${item.imageUrl}`}
+                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
                 alt={item.title || 'Gallery item'}
                 className="w-full h-48 object-cover"
                 onError={(e) => {
@@ -179,7 +179,7 @@ const Gallery = () => {
               />
             ) : item.videoUrl ? (
               <video
-                src={`https://192.168.100.57:5098${item.videoUrl}`}
+                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}
                 controls
                 className="w-full h-48 object-cover"
               />
@@ -229,7 +229,7 @@ const Gallery = () => {
               ✕
             </button>
             <img
-              src={`https://192.168.100.57:5098${selectedImage.imageUrl}`}
+              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedImage.imageUrl}`}
               alt={selectedImage.title}
               className="max-w-full max-h-screen object-contain"
             />

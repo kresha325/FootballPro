@@ -366,7 +366,7 @@ const Analytics = () => {
                 {/* Show image if present and not a video file */}
                 {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`https://192.168.100.57:5098${post.imageUrl}`}
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
                     alt="Post"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -374,7 +374,7 @@ const Analytics = () => {
                 {/* Show video if present */}
                 {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`https://192.168.100.57:5098${post.videoUrl || post.imageUrl}`}
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.videoUrl || post.imageUrl}`}
                     controls
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -391,7 +391,7 @@ const Analytics = () => {
                   {/* Show image if present and not a video file */}
                   {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                     <img
-                      src={`https://192.168.100.57:5098${post.imageUrl}`}
+                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
                       alt="Post"
                       className="w-full h-auto object-cover rounded mb-4"
                     />
@@ -399,7 +399,7 @@ const Analytics = () => {
                   {/* Show video if present */}
                   {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                     <video
-                      src={`https://192.168.100.57:5098${post.videoUrl || post.imageUrl}`}
+                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.videoUrl || post.imageUrl}`}
                       controls
                       className="w-full h-auto object-cover rounded mb-4"
                     />
@@ -445,14 +445,14 @@ const Analytics = () => {
                 <h3 className="text-lg font-semibold mb-2">Post i plotë</h3>
                 {selectedPost.imageUrl && !selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`https://192.168.100.57:5098${selectedPost.imageUrl}`}
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedPost.imageUrl}`}
                     alt="Post"
                     className="w-full h-auto object-cover rounded mb-4"
                   />
                 )}
                 {(selectedPost.videoUrl || (selectedPost.imageUrl && selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`https://192.168.100.57:5098${selectedPost.videoUrl || selectedPost.imageUrl}`}
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedPost.videoUrl || selectedPost.imageUrl}`}
                     controls
                     className="w-full h-auto object-cover rounded mb-4"
                   />

@@ -61,7 +61,7 @@ function BottomNav() {
         >
           {user?.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
             <img
-              src={user.profilePhoto.startsWith('http') ? user.profilePhoto : `https://192.168.100.57:5098${user.profilePhoto}`}
+              src={user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`}
               alt="Profile"
               className="w-8 h-8 rounded-full object-cover shadow-md border-2 border-blue-500"
               onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}

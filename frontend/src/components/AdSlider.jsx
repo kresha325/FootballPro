@@ -143,7 +143,7 @@ export default function AdSlider() {
                     ads[active].imageUrl.startsWith('blob:')
                       ? ads[active].imageUrl
                       : ads[active].imageUrl.startsWith('/uploads/')
-                        ? `https://192.168.100.57:5098${ads[active].imageUrl}`
+                        ? `${import.meta.env.VITE_API_URL.replace('/api','')}${ads[active].imageUrl}`
                         : ads[active].imageUrl
                   }
                   alt="Ad"

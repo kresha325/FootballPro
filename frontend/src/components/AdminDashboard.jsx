@@ -607,7 +607,7 @@ export default function AdminDashboard() {
                   <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
                   {post.image && (
                     <img
-                      src={`https://192.168.100.57:5098${post.image}`}
+                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.image}`}
                       alt="Post"
                       className="mt-4 rounded-lg max-h-96 object-cover"
                     />

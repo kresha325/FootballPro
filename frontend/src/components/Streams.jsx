@@ -17,7 +17,7 @@ const Streams = () => {
 
   useEffect(() => {
     fetchStreams();
-    socketRef.current = io('http://localhost:5098');
+    socketRef.current = io(import.meta.env.VITE_API_URL.replace('/api',''));
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();

@@ -19,7 +19,7 @@ const VideoCall = ({ receiverId, onClose }) => {
   const connectionRef = useRef();
 
   useEffect(() => {
-    const newSocket = io('https://192.168.100.57:5098');
+    const newSocket = io(import.meta.env.VITE_API_URL.replace('/api',''));
     setSocket(newSocket);
 
     newSocket.emit('join', user.id);

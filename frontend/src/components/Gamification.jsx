@@ -128,7 +128,7 @@ const Gamification = () => {
           <div className="flex items-center gap-4 mb-6">
             {profileUser.Profile?.profilePicture ? (
               <img
-                src={`https://192.168.100.57:5098${profileUser.Profile.profilePicture}`}
+                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${profileUser.Profile.profilePicture}`}
                 alt={profileUser.firstName}
                 className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
               />
@@ -484,7 +484,7 @@ const Gamification = () => {
                         <div className="flex items-center gap-3">
                           {player.Profile?.profilePicture ? (
                             <img
-                              src={`https://192.168.100.57:5098${player.Profile.profilePicture}`}
+                              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${player.Profile.profilePicture}`}
                               alt={player.firstName}
                               className="w-10 h-10 rounded-full"
                             />

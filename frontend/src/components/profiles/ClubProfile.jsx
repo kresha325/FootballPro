@@ -51,7 +51,7 @@ const ClubProfile = ({ profile, stats, isOwner }) => {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold flex-shrink-0">
                   {membership.athlete?.Profile?.profilePhoto ? (
                     <img
-                      src={`http://localhost:5098${membership.athlete.Profile.profilePhoto}`}
+                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${membership.athlete.Profile.profilePhoto}`}
                       alt={membership.athlete.firstName}
                       className="w-full h-full rounded-full object-cover"
                     />
