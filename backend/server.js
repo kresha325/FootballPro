@@ -71,6 +71,7 @@ app.use('/api/posts', require('./routes/posts'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/likes', require('./routes/likes'));
 app.use('/api/messaging', require('./routes/messaging'));
+app.use('/api/messaging', require('./routes/messagingUnread'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/search', require('./routes/search'));
