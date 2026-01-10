@@ -32,6 +32,7 @@ const PostAnalytics = require('./models/PostAnalytics');
 const ProfileView = require('./models/ProfileView');
 const EngagementMetrics = require('./models/EngagementMetrics');
 const Video = require('./models/Video');
+const Follow = require('./models/Follow');
 
 console.log('🔄 Starting database sync...\n');
 
