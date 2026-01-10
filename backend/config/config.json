@@ -1,10 +1,11 @@
 {
   "development": {
-    "username": "Kreshnik",
-    "password": "kresha325.Gashi",
-    "database": "footballpro_dev",
-    "host": "127.0.0.1",
-    "port": 5435,
-    "dialect": "postgres"
+    "username": "${DB_USER}",
+    "password": "${DB_PASS}",
+    "database": "${DB_NAME}",
+    "host": "${DB_HOST}",
+    "port": "${DB_PORT}",
+    "dialect": "postgres",
+    "ssl": "${DB_SSL}"
   }
 }
