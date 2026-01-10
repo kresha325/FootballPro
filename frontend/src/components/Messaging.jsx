@@ -317,7 +317,7 @@ export default function Messaging() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-[calc(100vh-64px)] relative">
       {/* Conversations List */}
       <div className="w-80 border-r bg-white dark:bg-gray-800 overflow-y-auto">
         <div className="p-4 border-b dark:border-gray-700">
@@ -381,7 +381,7 @@ export default function Messaging() {
 
       {/* Messages Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
+        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 relative">
           {/* Header */}
           <div className="p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-3">
             {(() => {
@@ -406,7 +406,7 @@ export default function Messaging() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900" style={{ paddingBottom: '6rem' }}>
             {messages.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -473,7 +473,20 @@ export default function Messaging() {
           </div>
 
           {/* Input */}
-          <form onSubmit={sendMessage} className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+          <form
+            onSubmit={sendMessage}
+            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full"
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 30,
+              maxWidth: '100vw',
+              // Only fixed on small screens
+              ...(window.innerWidth < 768 ? {} : { position: 'static' })
+            }}
+          >
             {replyTo && (
               <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded flex justify-between items-center">
                 <div className="text-sm dark:text-gray-200">

@@ -126,6 +126,7 @@ export const messagingAPI = {
   // Legacy endpoints (keep for backwards compatibility)
   getMessages: (id) => API.get(`/messaging/${id}`),
   sendMessage: (id, data) => API.post(`/messaging/${id}`, data),
+  getUnreadCount: () => API.get('/messaging/unread-count'),
 };
 
 /* =========================
