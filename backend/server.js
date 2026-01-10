@@ -35,50 +35,25 @@ const sequelize = require('./config/database');
 const app = express();
 let server;
 let io;
-const PORT = process.env.PORT;
-if (process.env.NODE_ENV === 'production') {
-  // On Render, always use HTTP (Render handles HTTPS)
-  server = http.createServer(app);
-  console.log('HTTP enabled (Render production)');
-} else {
-  // For local development, use HTTPS if certs exist
-  const sslKeyPath = './certs/server.key';
-  const sslCertPath = './certs/server.cert';
-  if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
-    const sslOptions = {
-      key: fs.readFileSync(sslKeyPath),
-      cert: fs.readFileSync(sslCertPath)
-    };
-    server = https.createServer(sslOptions, app);
-    console.log('🔒 HTTPS enabled (local)');
-  } else {
-    server = http.createServer(app);
-    console.log('⚠️  HTTPS certs not found, running in HTTP (local)');
-  }
-}
-io = socketIo(server, {
-  cors: {
-    origin: "https://football-xxjk.onrender.com",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-  }
-});
+const PORT = process.env.PORT || 10000;
 
+// CORS configuration
+const allowedOrigin = process.env.CORS_ORIGIN || '*'; // Vendos URL-n e frontend-it në .env për prodhim
 app.use(cors({
-  origin: "https://football-xxjk.onrender.com",
+  origin: allowedOrigin,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   credentials: true
 }));
+app.options('*', cors());
 
-// Explicit CORS headers for all requests (including OPTIONS)
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://football-xxjk.onrender.com");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+// Socket.io CORS
+io = socketIo(server, {
+  cors: {
+    origin: allowedOrigin,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
   }
-  next();
 });
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
