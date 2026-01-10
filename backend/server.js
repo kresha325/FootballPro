@@ -33,7 +33,7 @@ const Message = require('./models/Message');
 const sequelize = require('./config/database');
 
 const app = express();
-let server;
+let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
 
