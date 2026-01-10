@@ -5,23 +5,21 @@ import { useState, useEffect } from 'react';
 import { notificationsAPI } from '../services/api';
 
 
-import { messagingAPI } from '../services/api';
+
 
 function Navbar() {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0); // notifications
-  const [unreadMessages, setUnreadMessages] = useState(0);
+
 
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      fetchUnreadMessages();
-      // Poll for new notifications/messages every 30 seconds
+      // Poll for new notifications every 30 seconds
       const interval = setInterval(() => {
         fetchUnreadCount();
-        fetchUnreadMessages();
       }, 30000);
       return () => clearInterval(interval);
     }
@@ -36,14 +34,7 @@ function Navbar() {
     }
   };
 
-  const fetchUnreadMessages = async () => {
-    try {
-      const response = await messagingAPI.getUnreadCount();
-      setUnreadMessages(response.data.count || 0);
-    } catch (error) {
-      console.error('Error fetching unread messages:', error);
-    }
-  };
+
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-50">
@@ -117,15 +108,10 @@ function Navbar() {
             <Link 
               to="/messaging" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">💬</span>
               <span className="font-medium">Messages</span>
-              {unreadMessages > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center absolute right-2">
-                  {unreadMessages > 99 ? '99+' : unreadMessages}
-                </span>
-              )}
             </Link>
 
             {/* Browse Profiles */}
