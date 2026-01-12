@@ -108,20 +108,23 @@ const Feed = () => {
       formData.append('image', tempSponsor.image);
     }
     try {
-      const res = await sponsorAPI.createSponsor(formData);
-      setSponsorData(prev => {
-        const arr = prev[userId] ? [...prev[userId]] : [];
-        if (arr.length < 3) arr.push({
-          name: tempSponsor.name,
-          link: tempSponsor.link,
-          image: res.data.image,
-          imagePreview: res.data.image,
-          id: res.data.id,
-          startDate: res.data.startDate,
-          endDate: res.data.endDate
+      await sponsorAPI.createSponsor(formData);
+      // Rifresko sponsorat nga backend pas shtimit
+      const res = await sponsorAPI.getSponsorsByUser(userId);
+      const grouped = {};
+      res.data.forEach(s => {
+        if (!grouped[s.userId]) grouped[s.userId] = [];
+        grouped[s.userId].push({
+          name: s.name,
+          link: s.link,
+          image: s.image,
+          imagePreview: s.image,
+          id: s.id,
+          startDate: s.startDate,
+          endDate: s.endDate
         });
-        return { ...prev, [userId]: arr };
       });
+      setSponsorData(grouped);
     } catch (err) {
       // handle error
     }
@@ -471,21 +474,39 @@ const Feed = () => {
                     )}
               {/* Post Content */}
               <div className={`flex-1 rounded-lg shadow-md p-6 border 
-                ${sponsorData[post.userId] 
-                  ? '' 
-                  : 'bg-white dark:bg-gray-800'}
-                ${highlightedPostId === String(post.id) 
-                  ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900' 
-                  : sponsorData[post.userId] ? '' : 'border-gray-200 dark:border-gray-700'}
+                ${highlightedPostId === String(post.id)
+                  ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900'
+                  : 'border-gray-200 dark:border-gray-700'}
               `}
-              style={sponsorData[post.userId] ? {
-                background: 'repeating-linear-gradient(180deg, #166534 20px,#14532d 60px )',
-                border: '2px solid #22c55e',
-                boxShadow: '0 0 16px 2px #22c55e, 0 2px 8px #14532d',
-                color: '#fff',
-              } : {}}
+              style={(() => {
+                const sponsorCount = sponsorData[post.userId]?.length || 0;
+                if (sponsorCount === 1) {
+                  return {
+                    background: '#bbf7d0', // Tailwind bg-green-100
+                    border: '2px solid #86efac', // Tailwind border-green-300
+                  };
+                }
+                if (sponsorCount === 2) {
+                  return {
+                    background: '#166534', // Tailwind bg-green-700
+                    border: '2px solid #14532d', // Tailwind border-green-900
+                    color: '#fff',
+                  };
+                }
+                if (sponsorCount === 3) {
+                  return {
+                    background: 'repeating-linear-gradient(180deg, #166534 20px,#14532d 60px )',
+                    border: '2px solid #22c55e',
+                    boxShadow: '0 0 16px 2px #22c55e, 0 2px 8px #14532d',
+                    color: '#fff',
+                  };
+                }
+                return {
+                  background: '',
+                };
+              })()}
             >
-                {sponsorData[post.userId] && (
+                {sponsorData[post.userId]?.length === 3 && (
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #22c55e, 0 0 2px #fff' }}>Sponsored</span>
                   </div>

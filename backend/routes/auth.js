@@ -1,3 +1,19 @@
+/**
+ * ============================
+ * VERIFY JWT TOKEN (for mediasoup-server)
+ * GET /api/auth/verify
+ * ============================
+ */
+router.get('/verify', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.json({ valid: false });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ valid: true, user: decoded.user });
+  } catch (err) {
+    res.json({ valid: false });
+  }
+});
 const express = require('express');
 const router = express.Router();
 const passport = require('../config/passport');

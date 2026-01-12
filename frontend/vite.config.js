@@ -22,18 +22,18 @@ export default defineConfig({
       '.loca.lt',
       'small-trees-stare.loca.lt'
     ],
-    https: {
-      key: (() => {
-        try {
-          return require('fs').readFileSync('../backend/certs/server.key');
-        } catch (e) { return undefined; }
-      })(),
-      cert: (() => {
-        try {
-          return require('fs').readFileSync('../backend/certs/server.cert');
-        } catch (e) { return undefined; }
-      })(),
-    },
+    // https: {
+    //   key: (() => {
+    //     try {
+    //       return require('fs').readFileSync('../backend/certs/server.key');
+    //     } catch (e) { return undefined; }
+    //   })(),
+    //   cert: (() => {
+    //     try {
+    //       return require('fs').readFileSync('../backend/certs/server.cert');
+    //     } catch (e) { return undefined; }
+    //   })(),
+    // },
     hmr: {
       protocol: 'ws',
       overlay: false

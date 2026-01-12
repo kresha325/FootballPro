@@ -53,6 +53,10 @@ const Message = sequelize.define('Message', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  isRead: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });

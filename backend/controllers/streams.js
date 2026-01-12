@@ -1,3 +1,22 @@
+// Përditëson viewer count nga mediasoup-server
+exports.updateViewers = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { viewers } = req.body;
+    // Siguri: kontrollo token admin në header nëse është setuar
+    const adminToken = process.env.MEDIASOUP_ADMIN_TOKEN || '';
+    if (adminToken && req.headers['authorization'] !== `Bearer ${adminToken}`) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    const stream = await Stream.findByPk(id);
+    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    stream.viewers = viewers;
+    await stream.save();
+    res.json({ message: 'Viewer count updated', viewers });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 // Fshin stream-in dhe videon e lidhur (nëse ka videoUrl)
 exports.deleteStream = async (req, res) => {
   try {

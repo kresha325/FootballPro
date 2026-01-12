@@ -54,6 +54,9 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     // Listen for call end
     socket.on('call:ended', handleRemoteCallEnd);
 
+    // Listen for incoming call offer
+    socket.on('call:incoming', handleIncomingCall);
+
     startLocalStream();
     
     return () => {
@@ -61,9 +64,44 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       socket.off('call:ice-candidate');
       socket.off('call:rejected');
       socket.off('call:ended');
+      socket.off('call:incoming');
       cleanup();
     };
   }, [socket, connected]);
+  // Handler for incoming call offer
+  const handleIncomingCall = async ({ from, callerName, offer }) => {
+    if (!user || !from || !offer) return;
+    // Accept the call automatically if idle, otherwise reject
+    if (callStatus !== 'idle') {
+      socket.emit('call:reject', { to: from });
+      return;
+    }
+    setCallStatus('ringing');
+    // Create peer connection
+    const pc = createPeerConnection();
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      // Add local stream if not already
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          pc.addTrack(track, localStream);
+        });
+      }
+      // Create answer
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      // Send answer back to caller
+      socket.emit('call:answer', {
+        to: from,
+        answer,
+      });
+      setCallStatus('connected');
+    } catch (err) {
+      console.error('Error handling incoming call:', err);
+      socket.emit('call:reject', { to: from });
+      setCallStatus('idle');
+    }
+  };
 
   const startLocalStream = async () => {
     try {

@@ -38,6 +38,11 @@ const Stream = sequelize.define('Stream', {
     type: DataTypes.STRING,
     unique: true,
   },
+  rtmpUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'RTMP ingest URL for YouTube/Twitch/other',
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
