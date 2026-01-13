@@ -63,6 +63,7 @@ app.use(passport.initialize());
 app.use('/uploads', express.static('uploads'));
 
 // Routes
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/profiles', require('./routes/profiles'));
@@ -94,6 +95,17 @@ app.use('/api/transfer-history', require('./routes/transferHistory'));
 app.use('/api/sponsors', require('./routes/sponsor'));
 app.use('/api/club-staff', require('./routes/clubStaff'));
 app.use('/api/national-teams', require('./routes/nationalTeams'));
+
+// Role-based profile routes
+app.use('/api/athletes', require('./routes/athlete'));
+app.use('/api/coaches', require('./routes/coach'));
+app.use('/api/scouts', require('./routes/scout'));
+app.use('/api/managers', require('./routes/manager'));
+app.use('/api/clubs', require('./routes/club'));
+app.use('/api/federations', require('./routes/federation'));
+app.use('/api/medias', require('./routes/media'));
+app.use('/api/businesses', require('./routes/business'));
+app.use('/api/ligas', require('./routes/liga'));
 
 app.get('/', (req, res) => {
   res.send('JONSPORT Backend API');

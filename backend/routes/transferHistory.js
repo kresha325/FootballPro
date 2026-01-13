@@ -1,3 +1,4 @@
+console.log('[TransferHistory] Route file loaded');
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
@@ -8,17 +9,34 @@ const Profile = require('../models/Profile');
 // Get user's transfer history
 router.get('/user/:userId', async (req, res) => {
   try {
+    console.log('[TransferHistory] Route HIT: /user/:userId');
     const { userId } = req.params;
-    
-    const transfers = await TransferHistory.findAll({
-      where: { userId: parseInt(userId) },
-      order: [['transferDate', 'DESC']],
-    });
-
+    console.log('[TransferHistory] userId param:', userId, 'type:', typeof userId);
+    if (!userId || isNaN(Number(userId))) {
+      console.error('[TransferHistory] Invalid userId param:', userId);
+      return res.status(400).json({ msg: 'Invalid userId parameter' });
+    }
+    let transfers;
+    try {
+      transfers = await TransferHistory.findAll({
+        where: { userId: parseInt(userId) },
+        order: [['transferDate', 'DESC']],
+      });
+      console.log('[TransferHistory] Query result:', transfers);
+    } catch (dbError) {
+      console.error('[TransferHistory] DB Query Error:', dbError);
+      if (dbError && dbError.stack) {
+        console.error('[TransferHistory] DB Error Stack:', dbError.stack);
+      }
+      return res.status(500).json({ msg: 'DB error', error: dbError.message });
+    }
     res.json(transfers);
   } catch (error) {
-    console.error('Get transfer history error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    console.error('[TransferHistory] Route Handler Error:', error);
+    if (error && error.stack) {
+      console.error('[TransferHistory] Handler Error Stack:', error.stack);
+    }
+    res.status(500).json({ msg: 'Server error', error: error.message });
   }
 });
 

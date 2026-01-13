@@ -1,3 +1,12 @@
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
+require('../config/passport');
+const { register, login, forgotPassword, resetPassword } = require('../controllers/auth');
+const auth = require('../middleware/auth');
+const User = require('../models/User');
+
 /**
  * ============================
  * VERIFY JWT TOKEN (for mediasoup-server)
@@ -14,14 +23,6 @@ router.get('/verify', async (req, res) => {
     res.json({ valid: false });
   }
 });
-const express = require('express');
-const router = express.Router();
-const passport = require('../config/passport');
-const jwt = require('jsonwebtoken');
-
-const { register, login, forgotPassword, resetPassword } = require('../controllers/auth');
-const auth = require('../middleware/auth');
-const User = require('../models/User');
 
 /**
  * ============================
@@ -30,6 +31,9 @@ const User = require('../models/User');
  */
 router.post('/register', register);
 router.post('/login', login);
+// Example route setup (replace/add as needed):
+// router.post('/login', passport.authenticate('local'), authController.login);
+// router.post('/register', authController.register);
 
 /**
  * ============================

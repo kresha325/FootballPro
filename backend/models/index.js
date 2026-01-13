@@ -4,6 +4,7 @@ const Sponsor = require('./Sponsor');
 const Ad = require('./Ad');
 // Centralized model import and association setup for Sequelize
 const Profile = require('./Profile');
+const Liga = require('./Liga');
 const Achievement = require('./Achievement');
 const Badge = require('./Badge');
 const UserAchievement = require('./UserAchievement');
@@ -35,6 +36,10 @@ Follow.belongsTo(User, { as: 'following', foreignKey: 'followingId' });
 // User/Profile
 User.hasOne(Profile, { foreignKey: 'userId' });
 Profile.belongsTo(User, { foreignKey: 'userId' });
+
+// User/Liga
+User.hasOne(Liga, { foreignKey: 'userId' });
+Liga.belongsTo(User, { foreignKey: 'userId' });
 
 // User/Achievement
 User.hasMany(UserAchievement, { foreignKey: 'userId' });
