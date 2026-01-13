@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { profileAPI, clubMembersAPI } from '../services/api';
+import { profileAPI, clubMembersAPI, ligaAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import EditAthleteProfile from './profiles/edit/EditAthleteProfile';
+import EditCoachProfile from './profiles/edit/EditCoachProfile';
+import EditLigaProfile from './profiles/edit/EditLigaProfile';
+import EditFederationProfile from './profiles/edit/EditFederationProfile';
+import EditClubProfile from './profiles/edit/EditClubProfile';
+import EditBusinessProfile from './profiles/edit/EditBusinessProfile';
+import EditManagerProfile from './profiles/edit/EditManagerProfile';
+import EditScoutProfile from './profiles/edit/EditScoutProfile';
 
 const EditProfile = ({ onClose }) => {
   const location = useLocation();
@@ -56,125 +64,50 @@ const EditProfile = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: null });
-    }
-  };
-
-  const handleFileChange = (e, type) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 100000000) { // 100MB limit
-        setErrors({ ...errors, [type]: 'File size must be less than 100MB' });
-        return;
-      }
-      if (type === 'profilePhoto') setProfilePhoto(file);
-      else setCoverPhoto(file);
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!form.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!form.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (form.phone && !/^\+?[0-9\s-()]+$/.test(form.phone)) {
-      newErrors.phone = 'Invalid phone number';
-    }
-    if (form.height && (isNaN(form.height) || form.height < 0)) {
-      newErrors.height = 'Invalid height';
-    }
-    if (form.weight && (isNaN(form.weight) || form.weight < 0)) {
-      newErrors.weight = 'Invalid weight';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const saveProfile = async () => {
-    if (!validateForm()) return;
+  // Role-based save handler
+  const handleSave = async (form) => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      
-      // Basic info
-      formData.append('firstName', form.firstName);
-      formData.append('lastName', form.lastName);
-      if (form.dateOfBirth) {
-        formData.append('dateOfBirth', form.dateOfBirth);
+      let api;
+      switch (user.role) {
+        case 'athlete':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'coach':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'liga':
+          api = ligaAPI;
+          await api.updateLiga(form);
+          break;
+        case 'federation':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'club':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'business':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'manager':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        case 'scout':
+          api = profileAPI;
+          await api.updateProfile(form);
+          break;
+        default:
+          api = profileAPI;
+          await api.updateProfile(form);
       }
-      if (form.gender) {
-        formData.append('gender', form.gender);
-      }
-      formData.append('bio', form.bio);
-      formData.append('position', form.position);
-      formData.append('club', form.club);
-      formData.append('city', form.city);
-      formData.append('country', form.country);
-      
-      // Coach specific fields
-      if (user.role === 'coach') {
-        if (form.coachAffiliation) {
-          formData.append('coachAffiliation', form.coachAffiliation);
-        }
-        if (form.coachCategory) {
-          formData.append('coachCategory', form.coachCategory);
-        }
-      }
-      
-      // Stats
-      const stats = {
-        height: form.height,
-        weight: form.weight,
-        preferredFoot: form.preferredFoot,
-        jerseyNumber: form.jerseyNumber,
-
-        // Ente/business fields
-        industry: form.industry,
-        founded: form.founded,
-        companySize: form.companySize,
-        revenue: form.revenue,
-        employees: form.employees,
-        partnerships: form.partnerships,
-        countries: form.countries,
-      };
-      formData.append('stats', JSON.stringify(stats));
-      
-      // Contact
-      const contact = {
-        phone: form.phone,
-        instagram: form.instagram,
-        twitter: form.twitter,
-        facebook: form.facebook,
-      };
-      formData.append('contact', JSON.stringify(contact));
-      
-      // Photos
-      if (profilePhoto) formData.append('profilePhoto', profilePhoto);
-      if (coverPhoto) formData.append('coverPhoto', coverPhoto);
-      
-      // Update profile (will create if doesn't exist)
-      await profileAPI.updateProfile(formData);
-
-      // If athlete and club changed, send membership request
-      if (user.role === 'athlete' && form.club && form.club !== user.club) {
-        try {
-          await clubMembersAPI.requestMembership({
-            clubName: form.club,
-            position: form.position,
-            jerseyNumber: form.jerseyNumber,
-          });
-          console.log('Club membership request sent');
-        } catch (err) {
-          console.error('Membership request error:', err);
-          // Don't fail the whole save if this fails
-        }
-      }
-
       window.location.reload();
     } catch (err) {
-      console.error('Save profile error:', err);
       setErrors({ general: err.response?.data?.msg || 'Error saving profile' });
     } finally {
       setLoading(false);
@@ -192,430 +125,37 @@ const EditProfile = ({ onClose }) => {
             </svg>
           </button>
         </div>
-
         {errors.general && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {errors.general}
           </div>
         )}
-
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-          {/* Profile & Cover Photos */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Photos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Profile Photo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, 'profilePhoto')}
-                  className="w-full text-sm"
-                />
-                {errors.profilePhoto && <p className="text-red-500 text-xs mt-1">{errors.profilePhoto}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Cover Photo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, 'coverPhoto')}
-                  className="w-full text-sm"
-                />
-                {errors.coverPhoto && <p className="text-red-500 text-xs mt-1">{errors.coverPhoto}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Basic Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">First Name *</label>
-                <input
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  placeholder="First name"
-                  required
-                />
-                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Last Name *</label>
-                <input
-                  name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  placeholder="Last name"
-                  required
-                />
-                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date of Birth</label>
-                <input
-                  name="dateOfBirth"
-                  type="date"
-                  value={form.dateOfBirth}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Gender</label>
-                <select
-                  name="gender"
-                  value={form.gender || ''}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">First Name</label>
-              <input
-                type="text"
-                name="firstName"
-                value={form.firstName}
-                onChange={handleChange}
-                className={`w-full p-2 border rounded ${errors.firstName ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Last Name *</label>
-              <input
-                type="text"
-                name="lastName"
-                value={form.lastName}
-                onChange={handleChange}
-                className={`w-full p-2 border rounded ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">Bio</label>
-            <textarea
-              name="bio"
-              value={form.bio}
-                onChange={handleChange}
-                placeholder="Tell us about yourself..."
-                rows={4}
-                maxLength={500}
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-              <p className="text-xs text-gray-500 mt-1">{form.bio.length}/500 characters</p>
-            </div>
-
-          {/* Football Info */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Football Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Position</label>
-                <select
-                  name="position"
-                  value={form.position}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="">Select Position</option>
-                  <option value="Goalkeeper">Goalkeeper</option>
-                  <option value="Defender">Defender</option>
-                  <option value="Midfielder">Midfielder</option>
-                  <option value="Forward">Forward</option>
-                  <option value="Winger">Winger</option>
-                  <option value="Striker">Striker</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Club</label>
-                <input
-                  name="club"
-                  value={form.club}
-                  onChange={handleChange}
-                  placeholder="Current club"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Jersey Number</label>
-                <input
-                  name="jerseyNumber"
-                  value={form.jerseyNumber}
-                  onChange={handleChange}
-                  type="number"
-                  min="1"
-                  max="99"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Preferred Foot</label>
-                <select
-                  name="preferredFoot"
-                  value={form.preferredFoot}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="right">Right</option>
-                  <option value="left">Left</option>
-                  <option value="both">Both</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Coach Specific Fields */}
+          {user.role === 'athlete' && (
+            <EditAthleteProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          )}
           {user.role === 'coach' && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Coach Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Affiliation</label>
-                  <select
-                    name="coachAffiliation"
-                    value={form.coachAffiliation || ''}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  >
-                    <option value="">Select Affiliation</option>
-                    <option value="club">Club Trainer</option>
-                    <option value="independent">Independent</option>
-                    <option value="personal_trainer">Personal Trainer</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Category</label>
-                  <select
-                    name="coachCategory"
-                    value={form.coachCategory || ''}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  >
-                    <option value="">Select Category</option>
-                    <option value="general_trainer">General Trainer</option>
-                    <option value="assistant_trainer">Assistant Trainer</option>
-                    <option value="fitness_trainer">Fitness/Conditional Trainer</option>
-                    <option value="goalkeeper_trainer">Goalkeeper Trainer</option>
-                    <option value="technical_trainer">Technical Trainer</option>
-                    <option value="tactical_trainer">Tactical Trainer</option>
-                    <option value="psychological_trainer">Psychological Trainer</option>
-                    <option value="youth_trainer">Youth Trainer</option>
-                    <option value="rehabilitation_trainer">Rehabilitation Trainer</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <EditCoachProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
           )}
-
-          {/* Physical Stats */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Physical Stats</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Height (cm)</label>
-                <input
-                  name="height"
-                  value={form.height}
-                  onChange={handleChange}
-                  type="number"
-                  placeholder="175"
-                  className={`w-full p-2 border rounded ${errors.height ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.height && <p className="text-red-500 text-xs mt-1">{errors.height}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Weight (kg)</label>
-                <input
-                  name="weight"
-                  value={form.weight}
-                  onChange={handleChange}
-                  type="number"
-                  placeholder="70"
-                  className={`w-full p-2 border rounded ${errors.weight ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.weight && <p className="text-red-500 text-xs mt-1">{errors.weight}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Location</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">City</label>
-                <input
-                  name="city"
-                  value={form.city}
-                  onChange={handleChange}
-                  placeholder="Prishtina"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Country</label>
-                <input
-                  name="country"
-                  value={form.country}
-                  onChange={handleChange}
-                  placeholder="Kosovo"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contact & Social */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Contact & Social Media</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
-                <input
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  type="tel"
-                  placeholder="+383 XX XXX XXX"
-                  className={`w-full p-2 border rounded ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Instagram</label>
-                <input
-                  name="instagram"
-                  value={form.instagram}
-                  onChange={handleChange}
-                  placeholder="@username"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Twitter</label>
-                <input
-                  name="twitter"
-                  value={form.twitter}
-                  onChange={handleChange}
-                  placeholder="@username"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Facebook</label>
-                <input
-                  name="facebook"
-                  value={form.facebook}
-                  onChange={handleChange}
-                  placeholder="facebook.com/username"
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Business/Ente Information */}
-          {isEnte && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Business/Organization Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Industry</label>
-                  <input
-                    name="industry"
-                    value={form.industry}
-                    onChange={handleChange}
-                    placeholder="Industry"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Founded</label>
-                  <input
-                    name="founded"
-                    value={form.founded}
-                    onChange={handleChange}
-                    placeholder="Year founded"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Company Size</label>
-                  <input
-                    name="companySize"
-                    value={form.companySize}
-                    onChange={handleChange}
-                    placeholder="Company size"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-              </div>
-            </div>
+          {user.role === 'liga' && (
+            <EditLigaProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
           )}
-
-          {/* Key Metrics for ente */}
-          {isEnte && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Key Metrics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Annual Revenue</label>
-                  <input
-                    name="revenue"
-                    value={form.revenue}
-                    onChange={handleChange}
-                    placeholder="Annual revenue"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Employees</label>
-                  <input
-                    name="employees"
-                    value={form.employees}
-                    onChange={handleChange}
-                    placeholder="Number of employees"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Partnerships</label>
-                  <input
-                    name="partnerships"
-                    value={form.partnerships}
-                    onChange={handleChange}
-                    placeholder="Number of partnerships"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Countries</label>
-                  <input
-                    name="countries"
-                    value={form.countries}
-                    onChange={handleChange}
-                    placeholder="Countries present in"
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-              </div>
-            </div>
+          {user.role === 'federation' && (
+            <EditFederationProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          )}
+          {user.role === 'club' && (
+            <EditClubProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          )}
+          {user.role === 'business' && (
+            <EditBusinessProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          )}
+          {user.role === 'manager' && (
+            <EditManagerProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          )}
+          {user.role === 'scout' && (
+            <EditScoutProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
           )}
         </div>
-
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
           <button
             onClick={onClose}
@@ -623,13 +163,6 @@ const EditProfile = ({ onClose }) => {
             disabled={loading}
           >
             Cancel
-          </button>
-          <button
-            onClick={saveProfile}
-            disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Gallery = () => {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
+  const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -82,6 +83,27 @@ const Gallery = () => {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Gallery</h1>
+      {/* Tabs for All/Photos/Videos */}
+      <div className="flex gap-4 mb-6">
+        <button
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}
+          onClick={() => setActiveTab('all')}
+        >
+          All
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'photos' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}
+          onClick={() => setActiveTab('photos')}
+        >
+          Photos
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'videos' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}
+          onClick={() => setActiveTab('videos')}
+        >
+          Videos
+        </button>
+      </div>
 
       {/* Upload Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
@@ -145,68 +167,78 @@ const Gallery = () => {
         </div>
       </div>
 
-      {/* Gallery Grid */}
+      {/* Gallery Grid with Tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {items.map((item) => (
-          <div 
-            key={item.id} 
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition border border-gray-200 dark:border-gray-700 cursor-pointer relative group"
-            onClick={() => item.imageUrl && setSelectedImage(item)}
-          >
-            {/* Delete button - only show for owner */}
-            {user && item.userId === user.id && (
-              <button
-                onClick={(e) => handleDelete(item.id, e)}
-                disabled={deletingItem === item.id}
-                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 z-10"
-                title="Delete item"
-              >
-                {deletingItem === item.id ? '⏳' : '🗑️'}
-              </button>
-            )}
-            
-            {item.imageUrl ? (
-              <img
-                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
-                alt={item.title || 'Gallery item'}
-                className="w-full h-48 object-cover"
-                onError={(e) => {
-                  console.error('❌ Image failed to load:', item.imageUrl);
-                  console.error('Full item:', item);
-                  e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
-                }}
-                onLoad={() => console.log('✅ Image loaded:', item.imageUrl)}
-              />
-            ) : item.videoUrl ? (
-              <video
-                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}
-                controls
-                className="w-full h-48 object-cover"
-              />
-            ) : (
-              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                <span className="text-gray-400 text-4xl">📁</span>
-              </div>
-            )}
-            
-            {(item.title || item.description) && (
-              <div className="p-3">
-                {item.title && (
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{item.title}</h3>
-                )}
-                {item.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{item.description}</p>
-                )}
-                {item.type && (
-                  <span className="inline-block mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
-                    {item.type}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        {items.length === 0 && (
+        {items
+          .filter((item) => {
+            if (activeTab === 'all') return true;
+            if (activeTab === 'photos') return item.imageUrl;
+            if (activeTab === 'videos') return item.videoUrl;
+            return true;
+          })
+          .map((item) => (
+            <div 
+              key={item.id} 
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition border border-gray-200 dark:border-gray-700 cursor-pointer relative group"
+              onClick={() => item.imageUrl && setSelectedImage(item)}
+            >
+              {/* Delete button - only show for owner */}
+              {user && item.userId === user.id && (
+                <button
+                  onClick={(e) => handleDelete(item.id, e)}
+                  disabled={deletingItem === item.id}
+                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 z-10"
+                  title="Delete item"
+                >
+                  {deletingItem === item.id ? '⏳' : '🗑️'}
+                </button>
+              )}
+              {item.imageUrl ? (
+                <img
+                  src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
+                  alt={item.title || 'Gallery item'}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    console.error('❌ Image failed to load:', item.imageUrl);
+                    console.error('Full item:', item);
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\"%3E%3Crect fill=\"%23ddd\" width=\"200\" height=\"200\"/%3E%3Ctext fill=\"%23999\" x=\"50%25\" y=\"50%25\" text-anchor=\"middle\" dy=\".3em\"%3ENo Image%3C/text%3E%3C/svg%3E';
+                  }}
+                  onLoad={() => console.log('✅ Image loaded:', item.imageUrl)}
+                />
+              ) : item.videoUrl ? (
+                <video
+                  src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}
+                  controls
+                  className="w-full h-48 object-cover"
+                />
+              ) : (
+                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <span className="text-gray-400 text-4xl">📁</span>
+                </div>
+              )}
+              {(item.title || item.description) && (
+                <div className="p-3">
+                  {item.title && (
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{item.title}</h3>
+                  )}
+                  {item.description && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{item.description}</p>
+                  )}
+                  {item.type && (
+                    <span className="inline-block mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
+                      {item.type}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        {items.filter((item) => {
+          if (activeTab === 'all') return true;
+          if (activeTab === 'photos') return item.imageUrl;
+          if (activeTab === 'videos') return item.videoUrl;
+          return true;
+        }).length === 0 && (
           <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-12">
             <div className="text-6xl mb-4">📸</div>
             <p className="text-lg">No items in gallery yet.</p>

@@ -1,3 +1,16 @@
+/* =========================
+   LIGA
+========================= */
+export const ligaAPI = {
+  getAllLigas: (params) => API.get('/ligas', { params }),
+  getLiga: (id) => API.get(`/ligas/${id}`),
+  createLiga: (data) => API.post('/ligas', data, {
+    headers: { 'Content-Type': 'application/json' }
+  }),
+  updateLiga: (data) => API.put('/ligas/me', data, {
+    headers: { 'Content-Type': 'application/json' }
+  }),
+};
 import axios from 'axios';
 
 const API = axios.create({

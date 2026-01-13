@@ -10,6 +10,9 @@ import ScoutProfile from './profiles/ScoutProfile';
 import ClubProfile from './profiles/ClubProfile';
 import ManagerProfile from './profiles/ManagerProfile';
 import BusinessProfile from './profiles/BusinessProfile';
+import LigaProfile from './profiles/LigaProfile';
+import FederationProfile from './profiles/FederationProfile';
+import ProfileSelector from './profiles/ProfileSelector';
 import { ClubBadge } from '../utils/clubLogos';
 import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
@@ -56,6 +59,7 @@ const Profile = () => {
   const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverCroppedArea, setCoverCroppedArea] = useState(null);
+
 
   // Set gallery image as profile or cover photo
   const setAsProfilePhoto = async (imageUrl, type) => {
@@ -153,26 +157,8 @@ const Profile = () => {
 
   // Role-based profile component renderer
   const renderProfileContent = () => {
-    switch (profile.role) {
-      case 'athlete':
-        return <PlayerProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      case 'coach':
-        return <CoachProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      case 'scout':
-        return <ScoutProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      case 'club':
-        return <ClubProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      case 'manager':
-        return <ManagerProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      case 'business':
-        return <BusinessProfile profile={profile} stats={stats} isOwner={isOwner} />;
-      default:
-        return (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            No specialized profile view for this role
-          </div>
-        );
-    }
+    if (!profile) return null;
+    return <ProfileSelector user={profile.User ? profile.User : profile} profile={profile} />;
   };
 
   // Helper functions for role logic
@@ -290,21 +276,6 @@ const Profile = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Top Marketing Banner */}
-      <div className="mb-4 bg-gradient-to-r from-green-500 to-teal-600 rounded-lg p-4 text-white text-center shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h3 className="text-lg font-bold">🏆 Boost Your Football Career!</h3>
-            <p className="text-sm mt-1">Get noticed by scouts worldwide - Premium Profile Features</p>
-          </div>
-          <button 
-            onClick={() => window.location.href = '/premium'}
-            className="bg-white text-teal-600 px-6 py-2 rounded-md font-semibold hover:bg-gray-100 transition"
-          >
-            Upgrade Now
-          </button>
-        </div>
-      </div>
 
       {/* Cover Photo */}
       <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative flex items-center justify-center overflow-hidden">
@@ -361,7 +332,7 @@ const Profile = () => {
       )}
 
       {/* Profile Header */}
-      <div className="bg-white dark:bg-gray-800 shadow mt-28">
+      <div className={`shadow mt-28 ${sponsorList.length > 0 ? 'bg-green-100 border-green-300 border-2' : 'bg-white dark:bg-gray-800'}` }>
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
             {/* Avatar */}
@@ -393,18 +364,18 @@ const Profile = () => {
             {/* Name and Stats */}
             <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {profile.firstName} {profile.lastName}
-                </h1>
-                {profile.verified && (
-                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                )}
-                {isUserSponsored(profile.id) && (
-                  <span className="text-xs font-bold" style={{ color: '#FFD700', letterSpacing: '1px' }}>Sponsored</span>
-                )}
-              </div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {profile.firstName} {profile.lastName}
+                  </h1>
+                  {profile.verified && (
+                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {sponsorList.length > 0 && (
+                    <span className="text-xs font-bold animate-pulse" style={{ color: '#22c55e', letterSpacing: '1px', textShadow: '0 0 8px #bbf7d0, 0 0 2px #fff' }}>Sponsored</span>
+                  )}
+                </div>
               
               {/* Bio */}
               {profile.bio && (
@@ -780,7 +751,7 @@ const Profile = () => {
               <div className="space-y-6">
                 {/* Transfer History */}
                 {(profile.role === 'athlete' || profile.role === 'coach') && (
-                  <TransferHistory userId={profile.id} isOwner={isOwner} />
+                  <TransferHistory userId={profile.userId || profile.id} isOwner={isOwner} />
                 )}
 
                 {profile.bio && (
@@ -886,51 +857,6 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Sidebar - Marketing Spaces */}
-      <div className="lg:col-span-1 space-y-4">
-        {/* Ad Space 1 - Featured Product */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-          <div className="text-center">
-            <div className="text-4xl mb-2">⚽</div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-2">Pro Training Gear</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Get 30% off on professional football equipment</p>
-            <button className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition text-sm">
-              Shop Now
-            </button>
-          </div>
-        </div>
-
-        {/* Ad Space 2 - Sponsor Banner */}
-        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg p-4 text-white text-center shadow-lg">
-          <h4 className="font-bold mb-2">🎯 Your Ad Here</h4>
-          <p className="text-xs mb-3">Reach thousands of football enthusiasts</p>
-          <button className="bg-white text-orange-600 px-4 py-1 rounded text-xs font-semibold hover:bg-gray-100 transition">
-            Advertise
-          </button>
-        </div>
-
-        {/* Ad Space 3 - Tournament Banner */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 text-white text-center">
-            <h4 className="font-bold">🏆 Tournament</h4>
-          </div>
-          <div className="p-4 text-center">
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Join the next championship</p>
-            <button className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition text-sm">
-              Register Now
-            </button>
-          </div>
-        </div>
-
-        {/* Ad Space 4 - Sponsored Content */}
-        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-600">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">SPONSORED</p>
-          <div className="bg-white dark:bg-gray-600 h-32 rounded flex items-center justify-center mb-2">
-            <span className="text-4xl">📢</span>
-          </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">Advertisement Space</p>
-        </div>
-      </div>
     </div>
   </div>
 

@@ -22,10 +22,19 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
-  
+
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerConnectionRef = useRef(null);
+
+  // Nis automatikisht thirrjen kur hapet modali nëse targetUser ekziston
+  useEffect(() => {
+    if (callStatus === 'idle' && targetUser && socket && connected) {
+      console.log('[AutoStart] Nis thirrjen automatikisht për', targetUser);
+      startCall();
+    }
+    // eslint-disable-next-line
+  }, [targetUser, socket, connected]);
 
   // ICE servers configuration
   const iceServers = {
@@ -176,11 +185,19 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
     // Handle incoming tracks
     pc.ontrack = (event) => {
-      console.log('📥 Received remote track');
+      console.log('📥 [ontrack] Remote track event:', event);
       const [stream] = event.streams;
-      setRemoteStream(stream);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = stream;
+      if (stream) {
+        console.log('📥 [ontrack] Remote stream ekziston:', stream);
+        setRemoteStream(stream);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+          console.log('📥 [ontrack] remoteVideoRef.current.srcObject u vendos');
+        } else {
+          console.warn('⚠️ [ontrack] remoteVideoRef.current është null');
+        }
+      } else {
+        console.warn('⚠️ [ontrack] Nuk ka stream në event.streams');
       }
     };
 

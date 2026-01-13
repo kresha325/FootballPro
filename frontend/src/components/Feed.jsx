@@ -449,15 +449,86 @@ const Feed = () => {
                   )}
                 </div>
                 {user && post.userId === user.id && (
-                  <button
-                    onClick={() => handleDeletePost(post.id)}
-                    disabled={deletingPost === post.id}
-                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
-                    title="Delete post"
-                  >
-                    {deletingPost === post.id ? '⏳' : '🗑️'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openSponsorModal(post.id)}
+                      className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 border border-orange-300 rounded px-2 py-1 text-xs"
+                      title="Sponsorizo këtë post"
+                    >
+                      Sponsorizo
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      disabled={deletingPost === post.id}
+                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                      title="Delete post"
+                    >
+                      {deletingPost === post.id ? '⏳' : '🗑️'}
+                    </button>
+                  </div>
                 )}
+                    {/* Sponsor Modal */}
+                    {showSponsorModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+                        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+                          <button
+                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
+                            onClick={closeSponsorModal}
+                            aria-label="Mbyll"
+                          >
+                            &times;
+                          </button>
+                          <h2 className="text-xl font-bold mb-4 text-orange-600">Shto Sponsor për Postin</h2>
+                          <form
+                            onSubmit={e => {
+                              e.preventDefault();
+                              saveSponsorData();
+                              closeSponsorModal();
+                            }}
+                            className="space-y-4"
+                          >
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Emri i Firmës</label>
+                              <input
+                                type="text"
+                                className="w-full border rounded px-3 py-2"
+                                value={tempSponsor.name}
+                                onChange={e => setTempSponsor({ ...tempSponsor, name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Linku</label>
+                              <input
+                                type="url"
+                                className="w-full border rounded px-3 py-2"
+                                value={tempSponsor.link}
+                                onChange={e => setTempSponsor({ ...tempSponsor, link: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Logo/Fotografia</label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="w-full"
+                                onChange={handleSponsorImage}
+                              />
+                              {tempSponsor.imagePreview && (
+                                <img src={tempSponsor.imagePreview} alt="Preview" className="mt-2 h-16 object-contain rounded border" />
+                              )}
+                            </div>
+                            <button
+                              type="submit"
+                              className="w-full bg-orange-600 text-white py-2 rounded font-semibold hover:bg-orange-700 transition"
+                            >
+                              Ruaj Sponsorin
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    )}
               </div>
               <p className="text-gray-800 dark:text-gray-200 mb-4">{post.content}</p>
               {post.location && (
