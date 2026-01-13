@@ -5,7 +5,7 @@ import { usePosts } from '../contexts/PostsContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from 'react-share';
 import AdSlider from './AdSlider';
-import SponsorBanner from './SponsorBanner';
+import SponsorBanner from './SponsorBanner.jsx';
 
 const Feed = () => {
   const { user } = useAuth();
