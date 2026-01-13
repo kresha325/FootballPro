@@ -14,6 +14,9 @@ export default defineConfig({
     }),
     // VitePWA plugin temporarily removed for Vercel build compatibility
   ],
+  build: {
+    chunkSizeWarningLimit: 2000 // default është 500kb, rritet në 2000kb
+  },
   server: {
     port: 5174,
     host: '0.0.0.0',
