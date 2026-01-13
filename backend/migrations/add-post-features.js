@@ -7,6 +7,8 @@ async function migrate() {
     await sequelize.query(`
       ALTER TABLE "Posts"
       ADD COLUMN IF NOT EXISTS "location" VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS "locationLat" DOUBLE PRECISION,
+      ADD COLUMN IF NOT EXISTS "locationLng" DOUBLE PRECISION,
       ADD COLUMN IF NOT EXISTS "mentions" JSON DEFAULT '[]'
     `);
     

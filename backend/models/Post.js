@@ -19,6 +19,8 @@ const Post = sequelize.define('Post', {
   imageUrl: DataTypes.STRING,
   videoUrl: DataTypes.STRING,
   location: DataTypes.STRING,
+  locationLat: DataTypes.DOUBLE,
+  locationLng: DataTypes.DOUBLE,
   mentions: {
     type: DataTypes.JSON,
     defaultValue: [],

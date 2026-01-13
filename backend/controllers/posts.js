@@ -162,7 +162,7 @@ exports.createPost = async (req, res) => {
     console.log('📝 CREATE POST - Body:', req.body);
     console.log('📁 CREATE POST - File:', req.file);
     
-    const { content, location, mentions } = req.body;
+    const { content, location, locationLat, locationLng, mentions } = req.body;
     let imageUrl = null;
     let videoUrl = null;
     
@@ -197,6 +197,8 @@ exports.createPost = async (req, res) => {
       imageUrl,
       videoUrl,
       location: location || null,
+      locationLat: locationLat || null,
+      locationLng: locationLng || null,
       mentions: mentionsParsed,
     });
     // Shto ne gallery nese ka image

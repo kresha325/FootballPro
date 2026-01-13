@@ -5,6 +5,7 @@ import { usePosts } from '../contexts/PostsContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from 'react-share';
 import AdSlider from './AdSlider';
+import SponsorBanner from './SponsorBanner';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -31,6 +32,8 @@ const Feed = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [location, setLocation] = useState('');
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentInputs, setCommentInputs] = useState({});
   const [deletingPost, setDeletingPost] = useState(null);
@@ -232,11 +235,15 @@ const Feed = () => {
       if (selectedFile) {
         formData.append('image', selectedFile);
       }
-      
+      if (location.trim()) {
+        formData.append('location', location.trim());
+      }
       await postsAPI.createPost(formData);
       setNewPost('');
       setSelectedFile(null);
       setFilePreview(null);
+      setLocation('');
+      setShowLocationInput(false);
       fetchPosts(); // Refresh to get new post with counts
     } catch (error) {
       console.error('Error creating post:', error);
@@ -337,14 +344,25 @@ const Feed = () => {
                 <span className="text-xl">😊</span>
               </button>
               
-              {/* Location (placeholder) */}
+              {/* Location */}
               <button
                 type="button"
                 className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                 title="Add location"
+                onClick={() => setShowLocationInput((prev) => !prev)}
               >
                 <span className="text-xl">📍</span>
               </button>
+              {showLocationInput && (
+                <input
+                  type="text"
+                  value={location}
+                  onChange={e => setLocation(e.target.value)}
+                  placeholder="Vendndodhja (p.sh. Prishtinë, Stadiumi X...)"
+                  className="ml-2 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ minWidth: 180 }}
+                />
+              )}
             </div>
             
             <button
@@ -366,186 +384,69 @@ const Feed = () => {
           <div 
             key={post.id}
             ref={(el) => postRefs.current[post.id] = el}
-            className={highlightedPostId === String(post.id) ? 'animate-pulse-once' : ''}
+            className={
+              [
+                highlightedPostId === String(post.id) ? 'animate-pulse-once' : ''
+              ].join(' ')
+            }
           >
-            <div className="flex flex-row gap-4">
-              {/* Sponsor Zone (left of post) */}
-              <div className="w-28 min-w-[7rem] flex flex-col items-center justify-start pt-2 gap-2">
-                {[0,1,2].map(i => {
-                  const arr = sponsorData[post.userId] || [];
-                  const sponsor = arr[i];
-                  const greenShades = [
-                    'from-green-200 to-green-300',
-                    'from-green-300 to-green-400',
-                    'from-green-400 to-green-500'
-                  ];
-                  return (
-                    <div key={i} className={`bg-gradient-to-br ${greenShades[i]} rounded-lg shadow-md p-2 w-full flex flex-col items-center`}>
-                      {sponsor ? (
-                        <a
-                          href={sponsor.link || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full flex flex-col items-center cursor-pointer hover:scale-105 transition"
-                          title={sponsor.name}
-                        >
-                          {sponsor.imagePreview ? (
-                            <img
-                              src={sponsor.imagePreview?.startsWith('/uploads/') ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview}` : sponsor.imagePreview}
-                              alt="Sponsor"
-                              className="w-20 h-12 rounded-lg object-cover mb-1 border border-orange-300 shadow"
-                            />
-                          ) : (
-                            <span className="text-2xl mb-1">🎯</span>
-                          )}
-                          <span className="font-bold text-xs text-gray-800 mb-1 text-center break-words">
-                            {sponsor.name}
-                          </span>
-                        </a>
-                      ) : (
-                        <>
-                          <span className="text-2xl mb-1">🎯</span>
-                          <span className="font-bold text-xs text-gray-800 mb-1">Sponsor {i+1}</span>
-                          <span className="text-[10px] text-gray-700 text-center">Promote your brand here!</span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-                <button
-                  className="mt-2 bg-orange-500 text-white text-xs px-2 py-1 rounded hover:bg-orange-600 transition"
-                  onClick={() => openSponsorModal(post.id, post.userId)}
-                  disabled={(sponsorData[post.userId]?.length || 0) >= 3}
-                >
-                  Advertise
-                </button>
-              </div>
-                    {/* Sponsor Modal */}
-                    {showSponsorModal && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md relative">
-                          <button
-                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl"
-                            onClick={closeSponsorModal}
-                            aria-label="Close sponsor modal"
-                          >
-                            ×
-                          </button>
-                          <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Sponsor Your Business</h2>
-                          <form className="space-y-4" onSubmit={e => { e.preventDefault(); saveSponsorData(); }}>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emri i Biznesit</label>
-                              <input
-                                type="text"
-                                value={tempSponsor.name}
-                                onChange={e => setTempSponsor(prev => ({ ...prev, name: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="Shkruani emrin e biznesit"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ngarko Foto</label>
-                              <input type="file" accept="image/*" onChange={handleSponsorImage} />
-                              {tempSponsor.imagePreview && (
-                                <img src={tempSponsor.imagePreview} alt="Preview" className="mt-2 max-h-32 rounded" />
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Linku i Biznesit</label>
-                              <input
-                                type="url"
-                                value={tempSponsor.link}
-                                onChange={e => setTempSponsor(prev => ({ ...prev, link: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="https://example.com"
-                                required
-                              />
-                            </div>
-                            <button
-                              type="submit"
-                              className="w-full bg-orange-500 text-white py-2 rounded-md font-semibold hover:bg-orange-600 transition"
-                            >
-                              Dergo (Simuluar)
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    )}
+            {/* Post Content */}
               {/* Post Content */}
               <div className={`flex-1 rounded-lg shadow-md p-6 border 
                 ${highlightedPostId === String(post.id)
                   ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900'
                   : 'border-gray-200 dark:border-gray-700'}
               `}
-              style={(() => {
-                const sponsorCount = sponsorData[post.userId]?.length || 0;
-                if (sponsorCount === 1) {
-                  return {
-                    background: '#bbf7d0', // Tailwind bg-green-100
-                    border: '2px solid #86efac', // Tailwind border-green-300
-                  };
-                }
-                if (sponsorCount === 2) {
-                  return {
-                    background: '#166534', // Tailwind bg-green-700
-                    border: '2px solid #14532d', // Tailwind border-green-900
-                    color: '#fff',
-                  };
-                }
-                if (sponsorCount === 3) {
-                  return {
-                    background: 'repeating-linear-gradient(180deg, #166534 20px,#14532d 60px )',
-                    border: '2px solid #22c55e',
-                    boxShadow: '0 0 16px 2px #22c55e, 0 2px 8px #14532d',
-                    color: '#fff',
-                  };
-                }
-                return {
-                  background: '',
-                };
-              })()}
+              style={{}}
             >
-                {sponsorData[post.userId]?.length === 3 && (
+                {sponsorData[post.userId]?.length > 0 && (
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #22c55e, 0 0 2px #fff' }}>Sponsored</span>
+                    <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #FFD700, 0 0 2px #fff' }}>Sponsored</span>
                   </div>
                 )}
               <div className="flex items-center justify-between mb-4">
-                <div 
-                  className="flex items-center cursor-pointer hover:opacity-80 transition-opacity" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate(`/profile/${post.userId}`);
-                  }}
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  {(post.author?.profilePhoto || (user && post.userId === user.id && user.profilePhoto)) ? (
-                    <img
-                      src={
-                        post.author?.profilePhoto
-                          ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${post.author.profilePhoto}`)
-                          : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`)
-                      }
-                      alt={post.author?.firstName || user?.firstName || 'User'}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                      onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                      {post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}
+                <div className="flex items-center">
+                  <div 
+                    className="flex items-center cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(`/profile/${post.userId}`);
+                    }}
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    {(post.author?.profilePhoto || (user && post.userId === user.id && user.profilePhoto)) ? (
+                      <img
+                        src={
+                          post.author?.profilePhoto
+                            ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${post.author.profilePhoto}`)
+                            : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`)
+                        }
+                        alt={post.author?.firstName || user?.firstName || 'User'}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                        onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                    <div className="ml-3">
+                      <p className="font-semibold text-gray-900 dark:text-white hover:underline">
+                        {post.author?.firstName && post.author?.lastName 
+                          ? `${post.author.firstName} ${post.author.lastName}` 
+                          : 'Unknown'}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Sponsor Banner inline with user info */}
+                  {sponsorData[post.userId]?.length > 0 && (
+                    <div className="ml-4">
+                      <SponsorBanner sponsors={sponsorData[post.userId] || []} compact />
                     </div>
                   )}
-                  <div className="ml-3">
-                    <p className="font-semibold text-gray-900 dark:text-white hover:underline">
-                      {post.author?.firstName && post.author?.lastName 
-                        ? `${post.author.firstName} ${post.author.lastName}` 
-                        : 'Unknown'}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
                 </div>
                 {user && post.userId === user.id && (
                   <button
@@ -559,6 +460,30 @@ const Feed = () => {
                 )}
               </div>
               <p className="text-gray-800 dark:text-gray-200 mb-4">{post.content}</p>
+              {post.location && (
+                <div className="flex items-center text-blue-600 dark:text-blue-400 mb-2 gap-1">
+                  <span className="text-lg">📍</span>
+                  {post.locationLat && post.locationLng ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${post.locationLat},${post.locationLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium underline hover:text-blue-800 dark:hover:text-blue-200"
+                    >
+                      {post.location}
+                    </a>
+                  ) : (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.location)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium underline hover:text-blue-800 dark:hover:text-blue-200"
+                    >
+                      {post.location}
+                    </a>
+                  )}
+                </div>
+              )}
               {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                 <img 
                   src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
@@ -611,8 +536,8 @@ const Feed = () => {
                   </button>
                 </div>
               </div>
-              </div>
             </div>
+            
             {/* Share Modal */}
             {sharingPost === post.id && (
               <div className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4" role="dialog" aria-labelledby="share-dialog-title" aria-describedby="share-dialog-desc">
