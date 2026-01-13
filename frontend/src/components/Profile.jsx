@@ -22,6 +22,8 @@ import getCroppedImg from '../utils/cropImage';
 
 const Profile = () => {
   const { id } = useParams();
+  // Fix ReferenceError: sponsorList is not defined
+  const [sponsorList, setSponsorList] = useState([]);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
