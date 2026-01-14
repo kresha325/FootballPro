@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "migrate": "npx sequelize-cli db:migrate"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
