@@ -1,18 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+
 const { 
   getProfile, 
   createProfile, 
   updateProfile, 
   getAllProfiles, 
-  upload,
   followUser,
   unfollowUser,
   getFollowers,
   getFollowing,
   checkFollowStatus
 } = require('../controllers/profiles');
+const uploadCloud = require('../middleware/uploadCloudinary');
 
 /**
  * GET ALL PROFILES (with optional filters)
@@ -36,7 +37,7 @@ router.post('/me', auth, createProfile);
  * UPDATE MY PROFILE
  * PUT /api/profiles/me
  */
-router.put('/me', auth, upload.fields([
+router.put('/me', auth, uploadCloud.fields([
   { name: 'profilePhoto', maxCount: 1 },
   { name: 'coverPhoto', maxCount: 1 }
 ]), updateProfile);

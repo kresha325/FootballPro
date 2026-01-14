@@ -132,8 +132,9 @@ exports.updateProfile = async (req, res) => {
     // Handle file uploads and add to gallery
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));
-      if (req.files.profilePhoto) {
-        updateData.profilePhoto = '/uploads/profiles/' + req.files.profilePhoto[0].filename;
+         if (req.files.profilePhoto) {
+           // Cloudinary: req.files.profilePhoto[0].path is the public URL
+           updateData.profilePhoto = req.files.profilePhoto[0].path;
         console.log('✅ profilePhoto set to:', updateData.profilePhoto);
         
         // Add profile photo to gallery
@@ -145,8 +146,8 @@ exports.updateProfile = async (req, res) => {
           type: 'photo'
         });
       }
-      if (req.files.coverPhoto) {
-        updateData.coverPhoto = '/uploads/profiles/' + req.files.coverPhoto[0].filename;
+         if (req.files.coverPhoto) {
+           updateData.coverPhoto = req.files.coverPhoto[0].path;
         console.log('✅ coverPhoto set to:', updateData.coverPhoto);
         
         // Add cover photo to gallery
