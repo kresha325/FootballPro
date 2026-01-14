@@ -7,5 +7,14 @@
     "port": 5435,
     "dialect": "postgres",
     "ssl": false
+  },
+  "production": {
+    "username": "kresha325",
+    "password": "FJALËKALIMI_YT_RENDER",
+    "database": "footballpro_dev",
+    "host": "dpg-d5g3pj7gi27c73cjajm0-a",
+    "port": 5432,
+    "dialect": "postgres",
+    "ssl": true
   }
 }
