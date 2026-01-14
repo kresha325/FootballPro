@@ -1,44 +1,34 @@
-const sequelize = require('../config/database');
-const { DataTypes } = require('sequelize');
-
-async function addReceiverIdColumn() {
-  try {
-    const queryInterface = sequelize.getQueryInterface();
-    
-    // Check if column exists
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
     const tableDescription = await queryInterface.describeTable('Messages');
-    
     if (!tableDescription.receiverId) {
-      console.log('Adding receiverId column to Messages table...');
       await queryInterface.addColumn('Messages', 'receiverId', {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'Users',
           key: 'id',
         },
       });
-      console.log('✓ receiverId column added successfully');
-    } else {
-      console.log('receiverId column already exists');
     }
-
-    // Make conversationId nullable
+    // Make conversationId nullable if not already
     if (tableDescription.conversationId && tableDescription.conversationId.allowNull === false) {
-      console.log('Making conversationId nullable...');
       await queryInterface.changeColumn('Messages', 'conversationId', {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         allowNull: true,
       });
-      console.log('✓ conversationId is now nullable');
     }
-
-    console.log('Migration completed successfully!');
-    process.exit(0);
-  } catch (error) {
-    console.error('Migration error:', error);
-    process.exit(1);
+  },
+  down: async (queryInterface, Sequelize) => {
+    // Remove receiverId column if exists
+    const tableDescription = await queryInterface.describeTable('Messages');
+    if (tableDescription.receiverId) {
+      await queryInterface.removeColumn('Messages', 'receiverId');
+    }
+    // Optionally revert conversationId to NOT NULL (if needed)
+    // await queryInterface.changeColumn('Messages', 'conversationId', {
+    //   type: Sequelize.INTEGER,
+    //   allowNull: false,
+    // });
   }
-}
-
-addReceiverIdColumn();
+};

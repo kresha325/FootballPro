@@ -2,10 +2,13 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Profiles', 'profilePhoto', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
+    const desc = await queryInterface.describeTable('Profiles');
+    if (!desc['profilePhoto']) {
+      await queryInterface.addColumn('Profiles', 'profilePhoto', {
+        type: Sequelize.STRING,
+        allowNull: true,
+      });
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
