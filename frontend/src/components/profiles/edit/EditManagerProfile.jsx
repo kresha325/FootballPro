@@ -16,13 +16,38 @@ const EditManagerProfile = ({ user, onSave, loading, errors }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [preview, setPreview] = useState(user.profilePhoto || '');
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setProfilePhoto(file);
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    const formData = new FormData();
+    Object.entries(form).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    if (profilePhoto) {
+      formData.append('profilePhoto', profilePhoto);
+    }
+    onSave(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        {preview && (
+          <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
+        )}
+        <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+      </div>
       <h3 className="text-lg font-semibold mb-3">Manager Profile</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

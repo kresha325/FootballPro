@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+
 const EditBusinessProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
     industry: user.stats?.industry || '',
@@ -15,30 +16,52 @@ const EditBusinessProfile = ({ user, onSave, loading, errors }) => {
     twitter: user.contact?.twitter || '',
     facebook: user.contact?.facebook || '',
   });
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [preview, setPreview] = useState(user.profilePhoto || '');
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setProfilePhoto(file);
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Build contact object from individual fields
     const contact = {
       phone: form.phone,
       instagram: form.instagram,
       twitter: form.twitter,
       facebook: form.facebook,
     };
-    const submitData = {
-      ...form,
-      contact,
-    };
-    onSave(submitData);
+    const formData = new FormData();
+    Object.entries(form).forEach(([key, value]) => {
+      if (!['phone','instagram','twitter','facebook'].includes(key)) {
+        formData.append(key, value);
+      }
+    });
+    formData.append('contact', JSON.stringify(contact));
+    if (profilePhoto) {
+      formData.append('profilePhoto', profilePhoto);
+    }
+    onSave(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <h3 className="text-lg font-semibold mb-3">Business Profile</h3>
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        {preview && (
+          <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
+        )}
+        <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Industry</label>

@@ -245,8 +245,16 @@ export default function MessagingSimple() {
             </div>
 
             {/* Message Input */}
+            {/* Shto padding-bottom për të lënë hapësirë për BottomNav në mobile */}
+            <style>{`
+              @media (max-width: 768px) {
+                .messages-wrapper {
+                  padding-bottom: 70px !important;
+                }
+              }
+            `}</style>
             <form onSubmit={sendMessage} className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 messages-wrapper">
                 <input
                   type="text"
                   value={newMessage}
