@@ -281,10 +281,8 @@ sequelize.authenticate()
     console.log('✅ Database connected');
     // Run migrations
     const migration = require('./migrations/add-password-reset');
-    const updateNotificationLinks = require('./migrations/update-notification-links');
     const { Sequelize } = require('sequelize');
-    return migration.up(sequelize.getQueryInterface(), Sequelize)
-      .then(() => updateNotificationLinks());
+    return migration.up(sequelize.getQueryInterface(), Sequelize);
   })
   .catch(err => console.error('❌ Database connection error:', err));
 
