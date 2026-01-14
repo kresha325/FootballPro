@@ -31,8 +31,11 @@ const Bracket = require('./models/Bracket');
 const PostAnalytics = require('./models/PostAnalytics');
 const ProfileView = require('./models/ProfileView');
 const EngagementMetrics = require('./models/EngagementMetrics');
+
 const Video = require('./models/Video');
 const Follow = require('./models/Follow');
+const Ad = require('./models/Ad');
+const Sponsor = require('./models/Sponsor');
 
 console.log('🔄 Starting database sync...\n');
 
