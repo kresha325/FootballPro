@@ -279,10 +279,7 @@ User.hasMany(Follow, { as: 'following', foreignKey: 'followerId' });
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connected');
-    // Run migrations
-    const migration = require('./migrations/add-password-reset');
-    const { Sequelize } = require('sequelize');
-    return migration.up(sequelize.getQueryInterface(), Sequelize);
+    // Migrimet ekzekutohen vetëm me CLI, jo nga kodi.
   })
   .catch(err => console.error('❌ Database connection error:', err));
 
