@@ -1,30 +1,5 @@
 const Post = require('../models/Post');
-const multer = require('multer');
-const path = require('path');
-const { Gallery } = require('../models');
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/posts/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  },
-});
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
-  fileFilter: (req, file, cb) => {
-    // Accept all image and video types
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
-      return cb(null, true);
-    }
-    cb(new Error('Only images and videos are allowed'));
-  }
-});
-
-exports.upload = upload;
+// ...existing code...
 
 exports.getPosts = async (req, res) => {
   try {
@@ -33,6 +8,7 @@ exports.getPosts = async (req, res) => {
     const Like = require('../models/Like');
     const Comment = require('../models/Comment');
     
+    const Sponsor = require('../models/Sponsor');
     const posts = await Post.findAll({ 
       include: [{ 
         model: User, 
@@ -45,23 +21,23 @@ exports.getPosts = async (req, res) => {
       }],
       order: [['createdAt', 'DESC']]
     });
-    
-    // Add like and comment counts, and check if user liked each post
+    // Add like, comment counts, userLiked, and sponsors for each post
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       const likesCount = await Like.count({ where: { postId: post.id } });
       const commentsCount = await Comment.count({ where: { postId: post.id } });
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      
+      // Get sponsors for post author
+      const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
       return {
         ...post.toJSON(),
         likes: likesCount,
         comments: commentsCount,
-        isLiked: !!userLiked
+        isLiked: !!userLiked,
+        sponsors: sponsors.map(s => s.toJSON())
       };
     }));
-    
     res.json(postsWithCounts);
   } catch (err) {
     console.error('Get posts error:', err);
@@ -77,6 +53,7 @@ exports.getUserPosts = async (req, res) => {
     const Comment = require('../models/Comment');
     const { userId } = req.params;
     
+    const Sponsor = require('../models/Sponsor');
     const posts = await Post.findAll({ 
       where: { userId },
       include: [{ 
@@ -90,23 +67,23 @@ exports.getUserPosts = async (req, res) => {
       }],
       order: [['createdAt', 'DESC']]
     });
-    
-    // Add like and comment counts, and check if user liked each post
+    // Add like, comment counts, userLiked, and sponsors for each post
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       const likesCount = await Like.count({ where: { postId: post.id } });
       const commentsCount = await Comment.count({ where: { postId: post.id } });
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      
+      // Get sponsors for post author
+      const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
       return {
         ...post.toJSON(),
         likes: likesCount,
         comments: commentsCount,
-        isLiked: !!userLiked
+        isLiked: !!userLiked,
+        sponsors: sponsors.map(s => s.toJSON())
       };
     }));
-    
     res.json(postsWithCounts);
   } catch (err) {
     console.error('Get user posts error:', err);
@@ -167,13 +144,11 @@ exports.createPost = async (req, res) => {
     let videoUrl = null;
     
     if (req.file) {
-      const filePath = '/uploads/posts/' + req.file.filename;
-      const isVideo = req.file.mimetype.startsWith('video/');
-      
+      const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video/');
       if (isVideo) {
-        videoUrl = filePath;
+        videoUrl = req.file.path || req.file.url;
       } else {
-        imageUrl = filePath;
+        imageUrl = req.file.path || req.file.url;
       }
     }
     

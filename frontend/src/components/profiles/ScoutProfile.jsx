@@ -3,8 +3,25 @@ import React from 'react';
 const ScoutProfile = ({ profile, stats, isOwner }) => {
   const scoutData = profile.stats || {};
 
+  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="space-y-6">
+      {/* Profile Photo */}
+      <div className="flex justify-center mb-6">
+        <img
+          src={
+            scout.profilePhoto
+              ? (isAbsoluteUrl(scout.profilePhoto)
+                  ? scout.profilePhoto
+                  : `${apiRoot}${scout.profilePhoto}`)
+              : '/default-profile.png'
+          }
+          alt="Profile"
+          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
+          data-userid={scout.userId}
+        />
+      </div>
       {/* Scouting Experience */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Scouting Experience</h3>

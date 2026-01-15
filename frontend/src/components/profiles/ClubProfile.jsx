@@ -13,66 +13,28 @@ const ClubProfile = ({ profile, stats, isOwner }) => {
     }
   }, [profile.userId]);
 
-  const fetchClubMembers = async () => {
-    try {
-      const response = await clubMembersAPI.getClubMembers(profile.userId, 'approved');
-      setClubMembers(response.data || []);
-    } catch (error) {
-      console.error('Error fetching club members:', error);
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
+
+  // Helper for absolute/relative URL
+  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 
   return (
-    <div className="space-y-6">{/* Club Squad */}
-      {!loadingMembers && clubMembers.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span>👥</span> Squad ({clubMembers.length})
-            </h3>
-            {isOwner && (
-              <Link
-                to="/club-roster"
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                Manage Roster →
-              </Link>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clubMembers.map((membership) => (
-              <Link
-                key={membership.id}
-                to={`/profile/${membership.athleteId}`}
-                className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold flex-shrink-0">
-                  {membership.athlete?.Profile?.profilePhoto ? (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${membership.athlete.Profile.profilePhoto}`}
-                      alt={membership.athlete.firstName}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    `${membership.athlete?.firstName?.[0] || '?'}${membership.athlete?.lastName?.[0] || ''}`
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                    {membership.athlete?.firstName} {membership.athlete?.lastName}
-                  </h4>
-                  <div className="flex gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    {membership.position && <span>⚽ {membership.position}</span>}
-                    {membership.jerseyNumber && <span>#{membership.jerseyNumber}</span>}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="space-y-6">
+      {/* Profile Photo */}
+      <div className="flex justify-center mb-6">
+        <img
+          src={
+            profile.profilePhoto
+              ? (isAbsoluteUrl(profile.profilePhoto)
+                  ? profile.profilePhoto
+                  : `${apiRoot}${profile.profilePhoto}`)
+              : '/default-profile.png'
+          }
+          alt="Profile"
+          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
+          data-userid={profile.userId}
+        />
+      </div>
 
       {/* Club Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
@@ -205,6 +167,6 @@ const ClubProfile = ({ profile, stats, isOwner }) => {
       )}
     </div>
   );
-};
+}
 
 export default ClubProfile;

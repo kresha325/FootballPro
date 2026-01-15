@@ -2,11 +2,33 @@ import React from 'react';
 
 const LigaProfile = ({ liga }) => {
   if (!liga) return <div>No Liga data available.</div>;
+  // Helper to check if url is absolute
+  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
+      {/* Profile Photo */}
+      <div className="flex justify-center mb-6">
+        <img
+          src={
+            liga.profilePhoto
+              ? (isAbsoluteUrl(liga.profilePhoto)
+                  ? liga.profilePhoto
+                  : `${apiRoot}${liga.profilePhoto}`)
+              : '/default-profile.png'
+          }
+          alt="Profile"
+          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
+          data-userid={liga.userId}
+        />
+      </div>
       <div className="flex items-center mb-4">
         {liga.logo && (
-          <img src={liga.logo} alt="Liga Logo" className="w-20 h-20 rounded-full mr-4" />
+          <img
+            src={isAbsoluteUrl(liga.logo) ? liga.logo : `${apiRoot}${liga.logo}`}
+            alt="Liga Logo"
+            className="w-20 h-20 rounded-full mr-4"
+          />
         )}
         <div>
           <h2 className="text-2xl font-bold">{liga.name}</h2>

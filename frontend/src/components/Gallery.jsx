@@ -1,8 +1,24 @@
 import { useState, useEffect } from 'react';
-import { galleryAPI } from '../services/api';
+import { galleryAPI, profileAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const Gallery = () => {
+    const [settingProfilePhoto, setSettingProfilePhoto] = useState(null);
+    // Set as profile photo handler
+    const handleSetProfilePhoto = async (imageUrl, itemId) => {
+      if (!user) return;
+      setSettingProfilePhoto(itemId);
+      try {
+        await profileAPI.updateProfile({ profilePhoto: imageUrl });
+        alert('Profile photo updated!');
+        // Optionally, refresh user context/profile here if needed
+      } catch (error) {
+        alert('Failed to set profile photo');
+        console.error(error);
+      } finally {
+        setSettingProfilePhoto(null);
+      }
+    };
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
@@ -194,17 +210,30 @@ const Gallery = () => {
                 </button>
               )}
               {item.imageUrl ? (
-                <img
-                  src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
-                  alt={item.title || 'Gallery item'}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    console.error('❌ Image failed to load:', item.imageUrl);
-                    console.error('Full item:', item);
-                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\"%3E%3Crect fill=\"%23ddd\" width=\"200\" height=\"200\"/%3E%3Ctext fill=\"%23999\" x=\"50%25\" y=\"50%25\" text-anchor=\"middle\" dy=\".3em\"%3ENo Image%3C/text%3E%3C/svg%3E';
-                  }}
-                  onLoad={() => console.log('✅ Image loaded:', item.imageUrl)}
-                />
+                <>
+                  <img
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
+                    alt={item.title || 'Gallery item'}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      console.error('❌ Image failed to load:', item.imageUrl);
+                      console.error('Full item:', item);
+                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\"%3E%3Crect fill=\"%23ddd\" width=\"200\" height=\"200\"/%3E%3Ctext fill=\"%23999\" x=\"50%25\" y=\"50%25\" text-anchor=\"middle\" dy=\".3em\"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    }}
+                    onLoad={() => console.log('✅ Image loaded:', item.imageUrl)}
+                  />
+                  {/* Set as profile photo button - only for owner and type photo */}
+                  {user && item.userId === user.id && item.type === 'photo' && (
+                    <button
+                      onClick={e => { e.stopPropagation(); handleSetProfilePhoto(item.imageUrl, item.id); }}
+                      disabled={settingProfilePhoto === item.id}
+                      className="absolute bottom-2 left-2 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1 text-xs font-semibold shadow-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 z-10"
+                      title="Set as profile photo"
+                    >
+                      {settingProfilePhoto === item.id ? 'Saving...' : 'Set as profile photo'}
+                    </button>
+                  )}
+                </>
               ) : item.videoUrl ? (
                 <video
                   src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}

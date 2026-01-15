@@ -77,6 +77,7 @@ app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/gamification', require('./routes/gamification'));
 app.use('/api/scouting', require('./routes/scouting'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ads', require('./routes/ads'));

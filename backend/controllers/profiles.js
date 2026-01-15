@@ -61,6 +61,8 @@ exports.createProfile = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
+    console.log('🔎 [getProfile] req.user:', req.user);
+    console.log('🔎 [getProfile] req.params.id:', req.params.id);
     const userId = req.params.id || req.user.id;
     const profile = await Profile.findOne({ 
       where: { userId }, 
@@ -129,6 +131,10 @@ exports.updateProfile = async (req, res) => {
       contact: parsedContact,
     };
     
+    // Allow profilePhoto update from body (URL or string)
+    if (req.body.profilePhoto) {
+      updateData.profilePhoto = req.body.profilePhoto;
+    }
     // Handle file uploads and add to gallery
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));

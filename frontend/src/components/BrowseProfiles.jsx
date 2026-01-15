@@ -261,10 +261,10 @@ const BrowseProfiles = () => {
                     </p>
                   )}
                   {profile.club && (
-                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <div className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <ClubBadge clubName={profile.club} size="sm" />
                       <span>{profile.club}</span>
-                    </p>
+                    </div>
                   )}
                   {profile.city && (
                     <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1">

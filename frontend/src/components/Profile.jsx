@@ -67,25 +67,27 @@ const Profile = () => {
   const setAsProfilePhoto = async (imageUrl, type) => {
     try {
       const formData = new FormData();
-      // Fetch the image as blob and append to FormData
+      // Only prepend apiRoot if imageUrl is relative
+      const isAbsoluteUrl = url => /^https?:\/\//.test(url);
       const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-      const response = await fetch(`${apiRoot}${imageUrl}`);
+      const fetchUrl = isAbsoluteUrl(imageUrl) ? imageUrl : `${apiRoot}${imageUrl}`;
+      const response = await fetch(fetchUrl);
       const blob = await response.blob();
       const filename = imageUrl.split('/').pop();
       const file = new File([blob], filename, { type: blob.type });
-      
+
       if (type === 'profile') {
         formData.append('profilePhoto', file);
       } else {
         formData.append('coverPhoto', file);
       }
-      
+
       await profileAPI.updateProfile(formData);
-      
+
       // Refresh profile
       const res = await profileAPI.getProfile(id);
       setProfile(res.data);
-      
+
       setSelectedGalleryImage(null);
       alert(`${type === 'profile' ? 'Profile' : 'Cover'} photo updated!`);
     } catch (error) {
@@ -283,7 +285,11 @@ const Profile = () => {
       <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative flex items-center justify-center overflow-hidden">
         {profile.coverPhoto && (
           <img
-            src={`${import.meta.env.VITE_API_URL.replace('/api','')}${profile.coverPhoto}`}
+            src={
+              /^https?:\/\//.test(profile.coverPhoto)
+                ? profile.coverPhoto
+                : `${import.meta.env.VITE_API_URL.replace('/api','')}${profile.coverPhoto}`
+            }
             alt="Cover"
             className="w-full h-full object-cover bg-white rounded-md"
             style={{ background: '#f3f4f6' }}
@@ -342,7 +348,11 @@ const Profile = () => {
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
                 {profile.profilePhoto ? (
                   <img
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${profile.profilePhoto}`}
+                    src={
+                      /^https?:\/\//.test(profile.profilePhoto)
+                        ? profile.profilePhoto
+                        : `${import.meta.env.VITE_API_URL.replace('/api','')}${profile.profilePhoto}`
+                    }
                     alt={`${profile.firstName} ${profile.lastName}`}
                     className="w-full h-full object-cover bg-white"
                     style={{ background: '#f3f4f6' }}

@@ -27,8 +27,25 @@ const CoachProfile = ({ profile, stats, isOwner }) => {
     return labels[category] || category;
   };
 
+  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="space-y-6">
+      {/* Profile Photo */}
+      <div className="flex justify-center mb-6">
+        <img
+          src={
+            coach.profilePhoto
+              ? (isAbsoluteUrl(coach.profilePhoto)
+                  ? coach.profilePhoto
+                  : `${apiRoot}${coach.profilePhoto}`)
+              : '/default-profile.png'
+          }
+          alt="Profile"
+          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
+          data-userid={coach.userId}
+        />
+      </div>
       {/* Coach Type & Category */}
       {(profile.coachAffiliation || profile.coachCategory) && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">

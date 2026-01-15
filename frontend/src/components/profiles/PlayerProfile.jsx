@@ -4,8 +4,25 @@ import { ClubBadge } from '../../utils/clubLogos';
 const PlayerProfile = ({ profile, stats, isOwner }) => {
   const playerStats = profile.stats || {};
 
+  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="space-y-6">
+      {/* Profile Photo */}
+      <div className="flex justify-center mb-6">
+        <img
+          src={
+            profile.profilePhoto
+              ? (isAbsoluteUrl(profile.profilePhoto)
+                  ? profile.profilePhoto
+                  : `${apiRoot}${profile.profilePhoto}`)
+              : '/default-profile.png'
+          }
+          alt="Profile"
+          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
+          data-userid={profile.userId}
+        />
+      </div>
       {/* Player Statistics */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
         <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Player Statistics</h3>
