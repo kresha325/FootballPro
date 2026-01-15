@@ -557,7 +557,7 @@ const Feed = () => {
               )}
               {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                 <img 
-                  src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
+                  src={/^https?:\/\//.test(post.imageUrl) ? post.imageUrl : `${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
                   alt="Post content" 
                   className="w-full rounded-lg mb-4 max-h-96 object-cover"
                   onError={(e) => {
