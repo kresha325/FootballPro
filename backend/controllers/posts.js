@@ -1,3 +1,22 @@
+// Set sponsors for a post
+exports.setPostSponsors = async (req, res) => {
+  try {
+    const { sponsorIds } = req.body; // expects array of sponsor IDs
+    const { postId } = req.params;
+    if (!Array.isArray(sponsorIds)) {
+      return res.status(400).json({ msg: 'sponsorIds must be an array' });
+    }
+    const post = await Post.findOne({ where: { id: postId, userId: req.user.id } });
+    if (!post) return res.status(404).json({ msg: 'Post not found or not owned by user' });
+    // Set sponsors (replace all existing)
+    await post.setSponsors(sponsorIds);
+    const sponsors = await post.getSponsors();
+    res.json({ sponsors: sponsors.map(s => s.toJSON()) });
+  } catch (err) {
+    console.error('Set post sponsors error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
 const Post = require('../models/Post');
 // ...existing code...
 
@@ -28,7 +47,7 @@ exports.getPosts = async (req, res) => {
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      // Get sponsors for post author
+      // Get all sponsors of the post author
       const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
       return {
         ...post.toJSON(),
@@ -74,7 +93,7 @@ exports.getUserPosts = async (req, res) => {
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      // Get sponsors for post author
+      // Get all sponsors of the post author
       const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
       return {
         ...post.toJSON(),

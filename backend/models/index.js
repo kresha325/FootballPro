@@ -70,6 +70,7 @@ fs.readdirSync(__dirname)
 db.Sponsor = Sponsor;
 db.Ad = Ad;
 db.Gallery = Gallery;
+db.PostSponsor = require('./PostSponsor');
 
 module.exports = db;
 Like.belongsTo(User, { foreignKey: 'userId' });
