@@ -1,5 +1,5 @@
 const db = require('../models');
-const { ProfileView, PostAnalytics, EngagementMetrics, User, Post, Profile, Like, Comment, Subscription } = db;
+const { ProfileView, PostAnalytics, EngagementMetrics, User, Post, Profile, Like, Comment, Subscription, Follow } = db;
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const ClubMember = require('../models/ClubRosterRequest');
@@ -152,8 +152,16 @@ exports.getUserAnalytics = async (req, res) => {
     });
 
     // Follower growth - assuming there's a followers relationship
-    // For now, placeholder
-    const followersGained = 0; // TODO: implement followers
+    // Followers gained in the last 30 days
+    const days = 30;
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - days);
+    const followersGained = await Follow.count({
+      where: {
+        followingId: req.user.id,
+        createdAt: { [Op.gte]: sinceDate }
+      }
+    });
 
     res.json({
       profileViews,
@@ -205,8 +213,8 @@ exports.getDashboardAnalytics = async (req, res) => {
 
       // Statistikat kryesore
       const totalPosts = await Post.count({ where: { userId } });
-      const totalFollowers = await Subscription.count({ where: { subscribedToId: userId } });
-      const totalFollowing = await Subscription.count({ where: { subscriberId: userId } });
+      const totalFollowers = await Follow.count({ where: { followingId: userId } });
+      const totalFollowing = await Follow.count({ where: { followerId: userId } });
 
       // Merr id-të e postimeve të userit
       const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });
@@ -343,9 +351,9 @@ exports.getFollowerGrowth = async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
-    const subscriptions = await Subscription.findAll({
+    const follows = await Follow.findAll({
       where: {
-        subscribedToId: userId,
+        followingId: userId,
         createdAt: { [Op.gte]: startDate },
       },
       attributes: [
@@ -354,17 +362,18 @@ exports.getFollowerGrowth = async (req, res) => {
       ],
       group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
       order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+      raw: true,
     });
 
     // Calculate cumulative count
-    let cumulative = await Subscription.count({
-      where: { subscribedToId: userId, createdAt: { [Op.lt]: startDate } },
+    let cumulative = await Follow.count({
+      where: { followingId: userId, createdAt: { [Op.lt]: startDate } },
     });
 
-    const growthData = subscriptions.map(item => {
-      cumulative += parseInt(item.dataValues.count);
+    const growthData = follows.map(item => {
+      cumulative += parseInt(item.count);
       return {
-        date: item.dataValues.date,
+        date: item.date,
         count: cumulative,
       };
     });
