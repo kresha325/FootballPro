@@ -93,25 +93,37 @@ exports.getUserGallery = async (req, res) => {
 };
 
 exports.createGalleryItem = async (req, res) => {
+  const cloudinary = require('../utils/cloudinary');
+  const fs = require('fs');
   try {
     const { title, description, type } = req.body;
-    
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });
     }
-    
-    const fileUrl = '/uploads/' + req.file.filename;
     const isVideo = req.file.mimetype.startsWith('video/');
-    
+    let cloudRes;
+    if (isVideo) {
+      cloudRes = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: 'video',
+        folder: 'gallery',
+      });
+    } else {
+      cloudRes = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: 'image',
+        folder: 'gallery',
+      });
+    }
+    // Fshi file lokal pas upload
+    fs.unlink(req.file.path, () => {});
     const item = await Gallery.create({
       userId: req.user.id,
       title: title || 'Untitled',
       description: description || '',
-      imageUrl: isVideo ? null : fileUrl,
-      videoUrl: isVideo ? fileUrl : null,
-      type: type || (isVideo ? 'video' : 'photo')
+      imageUrl: isVideo ? null : cloudRes.secure_url,
+      videoUrl: isVideo ? cloudRes.secure_url : null,
+      type: type || (isVideo ? 'video' : 'photo'),
+      publicId: cloudRes.public_id,
     });
-    
     console.log('✅ Gallery item created:', item.id);
     res.json(item);
   } catch (err) {

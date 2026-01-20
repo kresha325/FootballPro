@@ -42,35 +42,39 @@ exports.upload = upload;
 
 // Upload video
 exports.uploadVideo = async (req, res) => {
+  const cloudinary = require('../utils/cloudinary');
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No video file provided' });
     }
 
     const { title, description, category, tags, isPremium } = req.body;
-    const videoUrl = '/' + req.file.path.replace(/\\/g, '/');
+
+    // Upload video to Cloudinary
+    const cloudRes = await cloudinary.uploader.upload(req.file.path, {
+      resource_type: 'video',
+      folder: 'videos',
+    });
+
+    const videoUrl = cloudRes.secure_url;
+    const publicId = cloudRes.public_id;
 
     const video = await Video.create({
       userId: req.user.id,
       title,
       description,
       videoUrl,
+      publicId,
       category,
       tags: tags ? tags.split(',').map(t => t.trim()) : [],
       isPremium: isPremium === 'true',
-      isProcessing: true,
-      processingStatus: 'processing',
+      isProcessing: false,
+      processingStatus: 'completed',
     });
 
-    // Simulate processing (in real app, use ffmpeg or cloud service)
-    setTimeout(async () => {
-      video.isProcessing = false;
-      video.processingStatus = 'completed';
-      await video.save();
-    }, 5000);
-
-    // Award XP for video upload
-    // Gamification u largua
+    // Fshi file lokal pas upload
+    const fs = require('fs');
+    fs.unlink(req.file.path, () => {});
 
     res.status(201).json(video);
   } catch (error) {

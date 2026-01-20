@@ -27,6 +27,10 @@ const Video = sequelize.define('Video', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  publicId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   thumbnailUrl: {
     type: DataTypes.STRING,
   },
