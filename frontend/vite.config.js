@@ -23,7 +23,8 @@ export default defineConfig({
     strictPort: false,
     allowedHosts: [
       '.loca.lt',
-      'small-trees-stare.loca.lt'
+      'small-trees-stare.loca.lt',
+      'footballpro-1.onrender.com'
     ],
     // https: {
     //   key: (() => {
