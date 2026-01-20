@@ -8,18 +8,7 @@ const FederationProfile = ({ federation }) => {
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
       {/* Profile Photo */}
       <div className="flex justify-center mb-6">
-        <img
-          src={
-            federation.profilePhoto
-              ? (isAbsoluteUrl(federation.profilePhoto)
-                  ? federation.profilePhoto
-                  : `${apiRoot}${federation.profilePhoto}`)
-              : '/default-profile.png'
-          }
-          alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
-          data-userid={federation.userId}
-        />
+          {/* Profile photo removed from overview as per requirements */}
       </div>
       <div className="flex items-center mb-4">
         {federation.profilePhoto && (

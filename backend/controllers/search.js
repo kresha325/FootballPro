@@ -1,8 +1,52 @@
-const Post = require('../models/Post');
-const User = require('../models/User');
-const Profile = require('../models/Profile');
+// Universal search: returns users, tournaments, posts, etc.
 const { Op } = require('sequelize');
-const sequelize = require('../config/database');
+const { User, Profile, Tournament, Post } = require('../models');
+exports.searchEverything = async (req, res) => {
+  const { q } = req.query;
+  try {
+    // Users
+    const users = await User.findAll({
+      where: q ? {
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${q}%` } },
+          { lastName: { [Op.iLike]: `%${q}%` } },
+          { email: { [Op.iLike]: `%${q}%` } },
+        ]
+      } : {},
+      include: [
+        {
+          model: Profile,
+          attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
+        }
+      ],
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'createdAt'],
+      limit: 20
+    });
+
+    // Tournaments
+    const tournaments = await Tournament.findAll({
+      where: q ? {
+        name: { [Op.iLike]: `%${q}%` }
+      } : {},
+      attributes: ['id', 'name', 'description', 'type', 'startDate', 'endDate', 'status'],
+      limit: 20
+    });
+
+    // Posts
+    const posts = await Post.findAll({
+      where: q ? {
+        content: { [Op.iLike]: `%${q}%` }
+      } : {},
+      attributes: ['id', 'content', 'createdAt', 'userId'],
+      limit: 20
+    });
+
+    res.json({ users, tournaments, posts });
+  } catch (err) {
+    console.error('Universal search error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
 
 // Advanced search with filters
 exports.searchUsers = async (req, res) => {

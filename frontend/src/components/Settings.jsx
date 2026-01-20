@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { applyBackgroundStyle } from '../utils/applyBackgroundStyle';
 import { useAuth } from '../contexts/AuthContext';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
+
 const Settings = () => {
+  // Heq kodin e background-it, mbetet vetëm darkMode, notifications, profile
   const { user } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
+  const [notifications, setNotifications] = useState(false);
   const [profile, setProfile] = useState({
-    name: user?.name || '',
+    name: user?.firstName || '',
     email: user?.email || '',
     bio: user?.bio || ''
   });
 
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setDarkMode(isDark);
-  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -38,6 +37,9 @@ const Settings = () => {
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Settings</h1>
+
+
+
 
       {/* Dark Mode Toggle */}
       <div className="mb-8">

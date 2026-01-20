@@ -14,8 +14,9 @@ import {
   VideoCameraIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
+import PropTypes from 'prop-types';
 
-const Videos = () => {
+const Videos = ({ userId, onlyUserVideos }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
@@ -29,9 +30,14 @@ const Videos = () => {
   const categories = ['Highlights', 'Skills', 'Training', 'Matches', 'Interviews', 'Behind the Scenes'];
 
   useEffect(() => {
-    fetchVideos();
-    fetchTrendingVideos();
-  }, [category, search]);
+    if (onlyUserVideos && userId) {
+      fetchUserVideos();
+    } else {
+      fetchVideos();
+      fetchTrendingVideos();
+    }
+    // eslint-disable-next-line
+  }, [category, search, userId, onlyUserVideos]);
 
   const fetchVideos = async () => {
     try {
@@ -39,11 +45,22 @@ const Videos = () => {
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (search) params.append('search', search);
-      
       const response = await api.get(`/videos?${params.toString()}`);
       setVideos(response.data);
     } catch (error) {
       console.error('Failed to fetch videos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserVideos = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/videos/user/${userId}`);
+      setVideos(response.data);
+    } catch (error) {
+      console.error('Failed to fetch user videos:', error);
     } finally {
       setLoading(false);
     }

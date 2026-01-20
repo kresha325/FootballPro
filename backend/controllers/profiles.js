@@ -10,7 +10,7 @@ const path = require('path');
 // Configure multer for profile photos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/profiles/');
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -71,36 +71,51 @@ exports.getProfile = async (req, res) => {
         attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender']
       }]
     });
-    
+
     if (!profile) {
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
     // Calculate age and age group
     const user = profile.User;
-    const age = user.getAge ? user.getAge() : null;
-    const ageGroup = user.getAgeGroup ? user.getAgeGroup() : null;
-    
+    const age = user && user.getAge ? user.getAge() : null;
+    const ageGroup = user && user.getAgeGroup ? user.getAgeGroup() : null;
+
     // Get followers and following counts
     const followersCount = await Follow.count({ where: { followingId: userId } });
     const followingCount = await Follow.count({ where: { followerId: userId } });
-    
+
+    // Clean profile object (avoid cyclic references)
+    const plainProfile = profile.get({ plain: true });
+    // Remove User object to avoid cycles
+    delete plainProfile.User;
+
     // Merge user data into profile response
+    // Add matches, achievements, media (dummy for now, replace with real fetch if needed)
     const response = {
-      ...profile.toJSON(),
-      id: profile.userId,
-      firstName: profile.User.firstName,
-      lastName: profile.User.lastName,
-      email: profile.User.email,
-      dateOfBirth: profile.User.dateOfBirth,
-      gender: profile.User.gender,
+      ...plainProfile,
+      id: plainProfile.userId,
+      firstName: user ? user.firstName : null,
+      lastName: user ? user.lastName : null,
+      email: user ? user.email : null,
+      dateOfBirth: user ? user.dateOfBirth : null,
+      gender: user ? user.gender : null,
       age,
       ageGroup,
-      role: profile.User.role,
+      role: user ? user.role : null,
       followers: followersCount,
-      following: followingCount
+      following: followingCount,
+      matches: plainProfile.matches || [],
+      achievements: plainProfile.achievements || [],
+      media: plainProfile.media || [],
+      performanceTrend: plainProfile.performanceTrend || [],
     };
-    
+    // Standardize profilePhoto path for avatar
+    if (response.profilePhoto) {
+      const filename = response.profilePhoto.split('/').pop();
+      response.profilePhoto = `/uploads/${filename}`;
+    }
+
     res.json(response);
   } catch (err) {
     console.error('Get profile error:', err);
@@ -113,34 +128,42 @@ exports.updateProfile = async (req, res) => {
     console.log('📝 UPDATE PROFILE - Body:', req.body);
     console.log('📁 UPDATE PROFILE - Files:', req.files);
     
-    const { bio, city, country, club, position, stats, careerHistory, contact } = req.body;
-    
-    // Parse JSON strings if they exist
-    const parsedStats = typeof stats === 'string' ? JSON.parse(stats) : stats;
-    const parsedContact = typeof contact === 'string' ? JSON.parse(contact) : contact;
-    const parsedCareerHistory = typeof careerHistory === 'string' ? JSON.parse(careerHistory) : careerHistory;
-    
-    const updateData = {
-      bio,
-      city,
-      country,
-      club,
-      position,
-      stats: parsedStats,
-      careerHistory: parsedCareerHistory,
-      contact: parsedContact,
-    };
+    // Build updateData dynamically from req.body for Profile fields
+    const profileFields = [
+      'bio', 'city', 'country', 'club', 'position', 'stats', 'careerHistory', 'contact',
+      // add more profile fields here if needed
+    ];
+    let updateData = {};
+    for (const key in req.body) {
+      if (profileFields.includes(key)) {
+        // Parse JSON fields if needed
+        if ((key === 'stats' || key === 'careerHistory' || key === 'contact') && typeof req.body[key] === 'string' && req.body[key].trim() !== '') {
+          try {
+            updateData[key] = JSON.parse(req.body[key]);
+          } catch {
+            updateData[key] = undefined;
+          }
+        } else {
+          updateData[key] = req.body[key];
+        }
+      }
+    }
     
     // Allow profilePhoto update from body (URL or string)
     if (req.body.profilePhoto) {
       updateData.profilePhoto = req.body.profilePhoto;
     }
+    // Allow coverPhoto update from body (URL or string)
+    if (req.body.coverPhoto) {
+      updateData.coverPhoto = req.body.coverPhoto;
+    }
     // Handle file uploads and add to gallery
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));
          if (req.files.profilePhoto) {
-           // Cloudinary: req.files.profilePhoto[0].path is the public URL
-           updateData.profilePhoto = req.files.profilePhoto[0].path;
+           // Store only the filename in /uploads
+           const filename = req.files.profilePhoto[0].filename;
+           updateData.profilePhoto = `/uploads/${filename}`;
         console.log('✅ profilePhoto set to:', updateData.profilePhoto);
         
         // Add profile photo to gallery
@@ -153,7 +176,8 @@ exports.updateProfile = async (req, res) => {
         });
       }
          if (req.files.coverPhoto) {
-           updateData.coverPhoto = req.files.coverPhoto[0].path;
+           const filename = req.files.coverPhoto[0].filename;
+           updateData.coverPhoto = `/uploads/${filename}`;
         console.log('✅ coverPhoto set to:', updateData.coverPhoto);
         
         // Add cover photo to gallery
@@ -180,14 +204,28 @@ exports.updateProfile = async (req, res) => {
       await profile.update(updateData);
     }
     
-    // Also update user's basic info if provided
-    if (req.body.firstName || req.body.lastName) {
+    // Update all user base info if provided
+    if (req.body.firstName || req.body.lastName || req.body.dateOfBirth || req.body.gender) {
       const user = await User.findByPk(req.user.id);
       if (user) {
         await user.update({
           firstName: req.body.firstName || user.firstName,
           lastName: req.body.lastName || user.lastName,
+          dateOfBirth: req.body.dateOfBirth || user.dateOfBirth,
+          gender: req.body.gender || user.gender,
         });
+      }
+    }
+    
+    // Standardizo path-et për profilePhoto dhe coverPhoto
+    if (profile) {
+      if (profile.profilePhoto) {
+        const filename = profile.profilePhoto.split('/').pop();
+        profile.profilePhoto = `/uploads/${filename}`;
+      }
+      if (profile.coverPhoto) {
+        const filename = profile.coverPhoto.split('/').pop();
+        profile.coverPhoto = `/uploads/${filename}`;
       }
     }
     
@@ -210,7 +248,7 @@ exports.getAllProfiles = async (req, res) => {
     // Build include for User model
     const userInclude = {
       model: User,
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
       where: role ? { role } : {},
     };
 
@@ -219,16 +257,29 @@ exports.getAllProfiles = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // Merge user data into each profile
-    let profilesWithUserData = profiles.map(profile => ({
-      ...profile.toJSON(),
-      id: profile.userId,
-      firstName: profile.User.firstName,
-      lastName: profile.User.lastName,
-      email: profile.User.email,
-      role: profile.User.role,
-      verified: profile.User.verified
-    }));
+
+    // Merge user data into each profile dhe standardizo path-in e profilePhoto
+    let profilesWithUserData = profiles.map(profile => {
+      const obj = {
+        ...profile.toJSON(),
+        id: profile.userId,
+        firstName: profile.User.firstName,
+        lastName: profile.User.lastName,
+        email: profile.User.email,
+        role: profile.User.role,
+        verified: profile.User.verified
+      };
+      // Standardizo path-in e profilePhoto si në getProfile
+      let photo = obj.profilePhoto;
+      if (!photo && profile.profilePhoto) photo = profile.profilePhoto;
+      if (photo) {
+        const filename = photo.split('/').pop();
+        obj.profilePhoto = `/uploads/${filename}`;
+      } else {
+        obj.profilePhoto = null;
+      }
+      return obj;
+    });
 
     // Exclude current user
     if (excludeUserId) {

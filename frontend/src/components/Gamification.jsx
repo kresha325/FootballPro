@@ -1,86 +1,86 @@
-import { useState, useEffect, useRef } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams } from 'react-router-dom';
-import api from '../services/api';
-import {
-  TrophyIcon,
-  StarIcon,
-  FireIcon,
-  UserGroupIcon,
-  ChartBarIcon,
-  SparklesIcon,
-  LockClosedIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
-import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
+import { gamificationAPI } from '../services/api';
+import { TrophyIcon } from '@heroicons/react/24/outline';
+import { useEffect, useState, useRef } from 'react';
+    // DEBUG LOGS (vendosen jashtë JSX)
 
 const Gamification = () => {
-    // Mbajme arritjet/badges e fituara per te detektuar te rejat
-    const prevAchievements = useRef([]);
-    const prevBadges = useRef([]);
-    const prevLevel = useRef(null);
   const { user } = useAuth();
   const { userId } = useParams();
+  const isOwnProfile = !userId || userId === String(user.id);
   const [activeTab, setActiveTab] = useState('overview');
-  // Book view: shko direkt te arritjet
-  const goToBook = () => setActiveTab('achievements');
   const [gamificationData, setGamificationData] = useState(null);
-  const [achievements, setAchievements] = useState([]);
-  const [badges, setBadges] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const prevAchievements = useRef([]);
+  const prevBadges = useRef([]);
+  const prevLevel = useRef(null);
 
-  const isOwnProfile = !userId || parseInt(userId) === user?.id;
+  // Make these available everywhere
+  const profileUser = gamificationData?.user;
+  const userAchievements = gamificationData?.achievements;
+  const userBadges = gamificationData?.badges;
+  // Llogarit XP bar progresin (0-100%)
+  const xpProgress = profileUser?.points ? ((profileUser.points % 1000) / 10) : 0;
 
-  useEffect(() => {
-    fetchData();
-  }, [userId]);
 
-  // Detekto arritje/badge/level te reja dhe shfaq toast
-  useEffect(() => {
-    if (!gamificationData) return;
-    const { user: profileUser, achievements: userAchievements, badges: userBadges } = gamificationData;
-    // Level up
-    if (prevLevel.current !== null && profileUser.level > prevLevel.current) {
-      toast.success(`🎉 Level Up! You reached level ${profileUser.level}`);
-    }
-    prevLevel.current = profileUser.level;
-    // Achievements
-    if (userAchievements && prevAchievements.current.length) {
-      const newAch = userAchievements.filter(a => a.unlocked && !prevAchievements.current.some(pa => pa.id === a.id && pa.unlocked));
-      newAch.forEach(a => toast.info(`🏆 Achievement Unlocked: ${a.name}`));
-    }
-    prevAchievements.current = userAchievements || [];
-    // Badges
-    if (userBadges && prevBadges.current.length) {
-      const newBadges = userBadges.filter(b => b.earned && !prevBadges.current.some(pb => pb.id === b.id && pb.earned));
-      newBadges.forEach(b => toast(`🔓 Badge Unlocked: ${b.name}`, { type: 'success' }));
-    }
-    prevBadges.current = userBadges || [];
-  }, [gamificationData]);
-
+  // Fetch gamification data from API
   const fetchData = async () => {
     try {
       setLoading(true);
       const [gamifRes, achievementsRes, badgesRes, leaderboardRes] = await Promise.all([
-        api.get(`/gamification/user${userId ? `/${userId}` : ''}`),
-        isOwnProfile ? api.get('/gamification/achievements') : Promise.resolve({ data: [] }),
-        isOwnProfile ? api.get('/gamification/badges') : Promise.resolve({ data: [] }),
-        api.get('/gamification/leaderboard?limit=50'),
+        gamificationAPI.getUserStatus(userId),
+        isOwnProfile ? gamificationAPI.getAchievements() : Promise.resolve({ data: [] }),
+        isOwnProfile ? gamificationAPI.getBadges() : Promise.resolve({ data: [] }),
+        gamificationAPI.getLeaderboard(),
       ]);
-
       setGamificationData(gamifRes.data);
-      setAchievements(achievementsRes.data);
-      setBadges(badgesRes.data);
-      setLeaderboard(leaderboardRes.data.leaderboard);
+      setLeaderboard(leaderboardRes.data.leaderboard || leaderboardRes.data);
     } catch (error) {
       console.error('Failed to fetch gamification data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [userId]);
+
+  useEffect(() => {
+    if (gamificationData) {
+      console.log('GAMIFICATION DATA:', gamificationData);
+    }
+  }, [gamificationData]);
+
+  // Detekto arritje/badge/level te reja dhe shfaq toast
+  useEffect(() => {
+    if (!gamificationData) return;
+    // Level up
+    if (prevLevel.current !== null && profileUser.level > prevLevel.current) {
+      toast.success(`🎉 Level Up! You reached level ${profileUser.level}`);
+    }
+    prevLevel.current = profileUser.level;
+    // Achievements
+    if (userAchievements) {
+      const newAch = userAchievements.filter(
+        a => a.unlocked && !prevAchievements.current.some(pa => pa.id === a.id && pa.unlocked)
+      );
+      newAch.forEach(a => toast.info(`🏆 Achievement Unlocked: ${a.name}`));
+      prevAchievements.current = userAchievements;
+    }
+    // Badges
+    if (userBadges) {
+      const newBadges = userBadges.filter(
+        b => b.earned && !prevBadges.current.some(pb => pb.id === b.id && pb.earned)
+      );
+      newBadges.forEach(b => toast.success(`🔓 Badge Unlocked: ${b.name}`));
+      prevBadges.current = userBadges;
+    }
+  }, [gamificationData]);
 
   const getRarityColor = (rarity) => {
     switch (rarity) {
@@ -116,197 +116,66 @@ const Gamification = () => {
     );
   }
 
-  const { user: profileUser, achievements: userAchievements, badges: userBadges } = gamificationData;
+  // Already destructured above if present, remove duplicate
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <ToastContainer position="top-center" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
-      {/* Book Button do të vendoset pranë emrit */}
-      {/* Header with Level & XP */}
-      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            {profileUser.Profile?.profilePicture ? (
-              <img
-                src={`${import.meta.env.VITE_API_URL.replace('/api','')}${profileUser.Profile.profilePicture}`}
-                alt={profileUser.firstName}
-                className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-white text-purple-600 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-lg">
-                {profileUser.firstName?.[0]}
-              </div>
-            )}
-            <div className="flex-1 flex flex-col md:flex-row md:items-center md:gap-4">
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold">
-                  {profileUser.firstName} {profileUser.lastName}
-                </h1>
-                <button
-                  onClick={goToBook}
-                  className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-full shadow font-bold transition text-base md:text-lg"
-                  title="Open Achievements Book"
-                >
-                  <SparklesIcon className="h-5 w-5" />
-                  Book
-                </button>
-              </div>
-              <p className="text-purple-100 md:ml-2">
-                {profileUser.Profile?.position} {profileUser.Profile?.club && `• ${profileUser.Profile.club}`}
-              </p>
-            </div>
-          </div>
-
-          {/* Level & XP Bar */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-400 rounded-lg">
-                  <TrophyIcon className="h-8 w-8 text-yellow-900" />
-                </div>
-                <div>
-                  <p className="text-sm text-purple-100">Level</p>
-                  <p className="text-4xl font-bold">{profileUser.level}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-purple-100">Total XP</p>
-                <p className="text-2xl font-bold">{profileUser.experience.toLocaleString()}</p>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mt-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span>Progress to Level {profileUser.level + 1}</span>
-                <span>{profileUser.progressToNextLevel}%</span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${profileUser.progressToNextLevel}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <StarIcon className="h-6 w-6 mx-auto mb-2" />
-              <p className="text-2xl font-bold">{profileUser.points.toLocaleString()}</p>
-              <p className="text-sm text-purple-100">Points</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <TrophyIcon className="h-6 w-6 mx-auto mb-2" />
-              <p className="text-2xl font-bold">#{profileUser.rank}</p>
-              <p className="text-sm text-purple-100">Rank</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <SparklesIcon className="h-6 w-6 mx-auto mb-2" />
-              <p className="text-2xl font-bold">{userAchievements.length}</p>
-              <p className="text-sm text-purple-100">Achievements</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <StarSolid className="h-6 w-6 mx-auto mb-2" />
-              <p className="text-2xl font-bold">{userBadges.length}</p>
-              <p className="text-sm text-purple-100">Badges</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 z-10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-6 overflow-x-auto">
-            {['overview', 'achievements', 'badges', 'leaderboard'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 border-b-2 font-medium transition-colors capitalize whitespace-nowrap ${
-                  activeTab === tab
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+      {/* Header & Tabs */}
       <div className="max-w-7xl mx-auto p-6">
+        <div className="flex gap-4 mb-6">
+          <button onClick={() => setActiveTab('overview')} className={activeTab==='overview' ? 'font-bold underline' : ''}>Overview</button>
+          <button onClick={() => setActiveTab('achievements')} className={activeTab==='achievements' ? 'font-bold underline' : ''}>Achievements</button>
+          <button onClick={() => setActiveTab('badges')} className={activeTab==='badges' ? 'font-bold underline' : ''}>Badges</button>
+          <button onClick={() => setActiveTab('leaderboard')} className={activeTab==='leaderboard' ? 'font-bold underline' : ''}>Leaderboard</button>
+        </div>
+
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Recent Activity (Last 7 Days)</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-                  <FireIcon className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">
-                      {profileUser.recentActivity?.posts ?? 0}
-                    </p>
-                    <p className="text-sm text-blue-700">Posts Created</p>
-                  </div>
+          <div className="bg-gradient-to-br from-green-100 via-blue-50 to-purple-100 rounded-2xl shadow-xl p-10 mb-10 border border-green-200 animate-fade-in">
+            <h2 className="text-3xl font-extrabold mb-2 text-green-700 flex items-center gap-2">
+              <span>🎮</span> Welcome to your gamification dashboard!
+            </h2>
+            <p className="mb-8 text-lg text-gray-600">Track your progress, unlock achievements, and climb the leaderboard!</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⭐</span>
+                  <span className="text-lg font-semibold">XP:</span>
+                  <span className="font-bold text-blue-700 text-xl">{profileUser.xp}</span>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
-                  <StarIcon className="h-8 w-8 text-red-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-red-900">
-                      {profileUser.recentActivity?.likesReceived ?? 0}
-                    </p>
-                    <p className="text-sm text-red-700">Likes Received</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🏅</span>
+                  <span className="text-lg font-semibold">Level:</span>
+                  <span className="font-bold text-purple-700 text-xl">{profileUser.level}</span>
+                </div>
+                <div className="mb-2">
+                  <span className="text-lg font-semibold">Progress to next level:</span>
+                  <div className="w-full bg-gray-200 rounded-full h-5 mt-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 h-5 rounded-full transition-all duration-700"
+                      style={{ width: `${xpProgress}%` }}
+                    />
                   </div>
+                  <span className="text-xs text-gray-500">{xpProgress}%</span>
                 </div>
               </div>
-            </div>
-
-            {/* Recent Achievements */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Recent Achievements</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userAchievements.slice(0, 6).map((achievement) => (
-                  <div
-                    key={achievement.id}
-                    className="flex items-start gap-3 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
-                  >
-                    <div className="text-4xl">{achievement.icon}</div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{achievement.name}</h3>
-                      <p className="text-sm text-gray-600">{achievement.description}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
-                          +{achievement.experience} XP
-                        </span>
-                        <span>
-                          {new Date(achievement.unlockedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Badges */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Recent Badges</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {userBadges.slice(0, 6).map((badge) => (
-                  <div
-                    key={badge.id}
-                    className={`p-4 bg-gradient-to-br ${getRarityColor(badge.rarity)} rounded-lg text-white text-center border-2 ${getRarityBorder(badge.rarity)} shadow-lg`}
-                  >
-                    <div className="text-4xl mb-2">{badge.icon}</div>
-                    <p className="font-semibold text-sm">{badge.name}</p>
-                    <p className="text-xs opacity-90 capitalize">{badge.rarity}</p>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⚽</span>
+                  <span className="text-lg font-semibold">Matches played:</span>
+                  <span className="font-bold text-gray-800">{gamificationData.matchesCount ?? '-'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🏆</span>
+                  <span className="text-lg font-semibold">Wins:</span>
+                  <span className="font-bold text-gray-800">{gamificationData.winsCount ?? '-'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔓</span>
+                  <span className="text-lg font-semibold">Unlocked achievements:</span>
+                  <span className="font-bold text-green-700">{userAchievements?.filter(a => a.unlocked).length ?? 0}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -314,124 +183,58 @@ const Gamification = () => {
 
         {/* Achievements Tab */}
         {activeTab === 'achievements' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <SparklesIcon className="h-7 w-7 text-yellow-400" /> Achievements Book
-            </h2>
-            {/* Summary */}
-            <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-              <span className="font-bold text-yellow-700">
-                You have unlocked {achievements.filter(a => a.unlocked).length} out of {achievements.length} achievements!
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {achievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className={`relative p-4 rounded-lg border-2 transition-all ${
-                    achievement.unlocked
-                      ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 shadow'
-                      : 'bg-gray-50 border-gray-200 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`text-5xl ${!achievement.unlocked && 'grayscale opacity-50'}`}>
-                      {achievement.icon}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Achievements</h2>
+            {(!userAchievements || userAchievements.length === 0) ? (
+              <p className="text-gray-500">No achievements found.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {userAchievements.map((ach) => (
+                  <div key={ach.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-start">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">🏆</span>
+                      <span className="font-bold">{ach.name}</span>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-bold text-lg text-gray-900">
-                            {achievement.name}
-                          </h3>
-                          <p className="text-sm text-gray-600">{achievement.description}</p>
-                        </div>
-                        {achievement.unlocked && (
-                          <CheckCircleIcon className="h-6 w-6 text-green-500" />
-                        )}
-                        {!achievement.unlocked && (
-                          <LockClosedIcon className="h-6 w-6 text-gray-400" />
-                        )}
-                      </div>
-
-                      {/* Progress Bar for Locked Achievements */}
-                      {!achievement.unlocked && achievement.progress > 0 && (
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs text-gray-600 mb-1">
-                            <span>
-                              {achievement.current} / {achievement.required}
-                            </span>
-                            <span>{achievement.progress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all"
-                              style={{ width: `${achievement.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-3 mt-3">
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
-                          +{achievement.experience} XP
-                        </span>
-                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
-                          +{achievement.points} Points
-                        </span>
-                        {achievement.unlocked && (
-                          <span className="text-xs text-gray-500">
-                            {new Date(achievement.unlockedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-sm text-gray-500 mb-1">{ach.description}</p>
+                    <span className={`text-xs mt-1 ${ach.unlocked ? 'text-green-600' : 'text-gray-400'}`}>{ach.unlocked ? 'Unlocked' : 'Locked'}</span>
+                    {ach.unlocked && ach.unlockedAt && (
+                      <p className="text-xs mt-1 opacity-75">{new Date(ach.unlockedAt).toLocaleDateString()}</p>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Badges Tab */}
         {activeTab === 'badges' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Badge Collection</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {badges.map((badge) => (
-                <div
-                  key={badge.id}
-                  className={`relative p-6 rounded-lg text-center border-2 transition-all ${
-                    badge.earned
-                      ? `bg-gradient-to-br ${getRarityColor(badge.rarity)} text-white ${getRarityBorder(badge.rarity)} shadow-lg transform hover:scale-105`
-                      : 'bg-gray-100 border-gray-200 opacity-50'
-                  }`}
-                >
-                  {!badge.earned && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <LockClosedIcon className="h-12 w-12 text-gray-400" />
-                    </div>
-                  )}
-                  <div className={`text-5xl mb-2 ${!badge.earned && 'opacity-20'}`}>
-                    {badge.icon}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Badges</h2>
+            {(!userBadges || userBadges.length === 0) ? (
+              <p className="text-gray-500">No badges found.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {userBadges.map((badge) => (
+                  <div key={badge.id} className={`bg-white rounded-lg shadow p-4 flex flex-col items-center ${getRarityBorder(badge.rarity)}`}>
+                    <span className="text-5xl mb-2">{badge.icon}</span>
+                    <p className="font-bold">{badge.name}</p>
+                    <p className="text-sm text-gray-500">{badge.description}</p>
+                    <p className="text-xs mt-2 font-medium capitalize">{badge.rarity}</p>
+                    {badge.earned ? (
+                      <span className="text-green-600 text-xs mt-2">Earned</span>
+                    ) : (
+                      <span className="text-gray-400 text-xs mt-2">Locked</span>
+                    )}
+                    {badge.earned && badge.earnedAt && (
+                      <p className="text-xs mt-1 opacity-75">
+                        {new Date(badge.earnedAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
-                  <p className={`font-bold ${!badge.earned && 'text-gray-500'}`}>
-                    {badge.name}
-                  </p>
-                  <p className={`text-xs mt-1 ${badge.earned ? 'opacity-90' : 'text-gray-500'}`}>
-                    {badge.description}
-                  </p>
-                  <p className={`text-xs mt-2 font-medium capitalize ${!badge.earned && 'text-gray-500'}`}>
-                    {badge.rarity}
-                  </p>
-                  {badge.earned && badge.earnedAt && (
-                    <p className="text-xs mt-1 opacity-75">
-                      {new Date(badge.earnedAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

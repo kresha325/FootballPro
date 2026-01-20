@@ -1,3 +1,14 @@
+// GET all sponsors (public)
+exports.getAllSponsors = async (req, res) => {
+  try {
+    const sponsors = await Sponsor.findAll({
+      order: [['startDate', 'DESC']]
+    });
+    res.json(sponsors);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const db = require('../models');
 const Sponsor = db.Sponsor;
 

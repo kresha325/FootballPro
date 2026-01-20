@@ -1,7 +1,5 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const { Tournament } = require('./Tournament');
-const User = require('./User');
 
 const Match = sequelize.define('Match', {
   id: {
@@ -11,33 +9,53 @@ const Match = sequelize.define('Match', {
   },
   tournamentId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
     references: {
-      model: Tournament,
+      model: 'Tournaments',
       key: 'id',
     },
   },
   homeUserId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
     references: {
-      model: User,
+      model: 'Users',
       key: 'id',
     },
   },
   awayUserId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
     references: {
-      model: User,
+      model: 'Users',
       key: 'id',
     },
   },
   scoreHome: DataTypes.INTEGER,
   scoreAway: DataTypes.INTEGER,
-  matchDate: DataTypes.DATE,
+  matchDate: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
   status: {
     type: DataTypes.ENUM('scheduled', 'ongoing', 'finished'),
     defaultValue: 'scheduled',
   },
   round: DataTypes.INTEGER, // For knockout rounds
+  minutesPlayed: {
+    type: DataTypes.STRING, // shembull: "90+", "40"
+    allowNull: true,
+  },
+  goals: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+  },
+  assists: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
@@ -45,16 +63,12 @@ const Match = sequelize.define('Match', {
   updatedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-  },
+  }
+}, {
+  tableName: 'Matches',
 });
 
+
+const Tournament = require('./Tournament').Tournament;
 Match.belongsTo(Tournament, { foreignKey: 'tournamentId' });
-Tournament.hasMany(Match, { foreignKey: 'tournamentId' });
-
-Match.belongsTo(User, { foreignKey: 'homeUserId', as: 'homeUser' });
-Match.belongsTo(User, { foreignKey: 'awayUserId', as: 'awayUser' });
-
-User.hasMany(Match, { foreignKey: 'homeUserId' });
-User.hasMany(Match, { foreignKey: 'awayUserId' });
-
 module.exports = Match;

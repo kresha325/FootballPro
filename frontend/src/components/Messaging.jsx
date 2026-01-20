@@ -3,11 +3,46 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
+import { FiPhone, FiVideo } from 'react-icons/fi';
+import VideoCallSimple from './VideoCallSimple';
+import ForwardButton from './ForwardButton';
 
-export default function Messaging() {
+// Modal për shfaqjen e fotove të mëdha
+function ImageModal({ src, alt, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
+      <div className="relative" onClick={e => e.stopPropagation()}>
+        <img
+          src={src}
+          alt={alt}
+          className="max-h-[90vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
+        />
+        <a
+          href={src}
+          download
+          className="absolute top-2 right-2 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 px-4 py-2 rounded shadow border border-gray-300 text-sm font-semibold transition"
+          onClick={e => e.stopPropagation()}
+        >
+          Save photo
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function Messaging() {
+  // Ngarko bisedat sapo hapet komponenti
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+  const [modalImage, setModalImage] = useState(null);
   const { user } = useAuth();
-  const socket = useSocket();
+  const { socket } = useSocket();
   const location = useLocation();
+  // Lexo userId dhe conversationId nga query me URLSearchParams
+  const query = new URLSearchParams(location.search);
+  const userId = query.get('userId');
+  const conversationId = query.get('conversationId');
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -20,27 +55,57 @@ export default function Messaging() {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
+  // Video/audio call state
+  const [showCall, setShowCall] = useState(false);
+  const [callType, setCallType] = useState('video'); // 'video' or 'audio'
 
+  // Auto-open conversation if userId or conversationId is in query
   useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // Handle conversation selection from navigation
-  useEffect(() => {
-    if (location.state?.conversationId && conversations.length > 0) {
-      const convId = location.state.conversationId;
-      const conv = conversations.find(c => c.id === convId);
+    if (conversationId && conversations.length > 0 && !selectedConversation) {
+      // Hap bisedën sipas conversationId
+      const conv = conversations.find(c => c.id === conversationId || c.id === parseInt(conversationId));
       if (conv) {
         setSelectedConversation(conv);
       } else {
-        // If conversation not found in list, fetch it directly or refetch list
-        fetchConversations().then(() => {
-          const updatedConv = conversations.find(c => c.id === convId);
-          if (updatedConv) {
-            setSelectedConversation(updatedConv);
-          }
-        });
+        // Merr bisedën nga backend nëse nuk është në listë
+        api.get(`/messaging/conversations/${conversationId}`)
+          .then(res => {
+            if (res.data && res.data.id) {
+              setSelectedConversation(res.data);
+              setConversations(prev => {
+                if (prev.some(c => c.id === res.data.id)) return prev;
+                return [res.data, ...prev];
+              });
+            }
+          })
+          .catch(err => {
+            console.error('[Messaging] Error fetching conversation by id:', err);
+          });
       }
+    } else if (userId && conversations.length > 0 && !selectedConversation) {
+      // Kontrollo nëse ekziston biseda
+      const existing = conversations.find(c => c.members.some(m => m.id === parseInt(userId)));
+      if (existing) {
+        setSelectedConversation(existing);
+      } else {
+        // Krijo ose merr bisedën nga backend
+        api.get(`/messaging/conversations/user/${userId}`)
+          .then(res => {
+            if (res.data && res.data.id) {
+              setSelectedConversation(res.data);
+              setConversations(prev => {
+                if (prev.some(c => c.id === res.data.id)) return prev;
+                return [res.data, ...prev];
+              });
+            }
+          })
+          .catch(err => {
+            console.error('[Messaging] Auto-open conversation error:', err);
+          });
+      }
+    } else if (!userId && !conversationId && conversations.length > 0 && !selectedConversation) {
+      // Asnjë query param, zgjidh automatikisht të parën
+      setSelectedConversation(conversations[0]);
     }
   }, [location.state, conversations]);
 
@@ -159,6 +224,7 @@ export default function Messaging() {
 
   const sendMessage = async (e) => {
     e.preventDefault();
+    if (sending) return; // Parandalon dërgimin e dyfishtë
     if ((!messageContent.trim() && !file) || !selectedConversation) return;
 
     setSending(true);
@@ -182,13 +248,7 @@ export default function Messaging() {
         }
       );
 
-      // Emit via socket for real-time delivery
-      if (socket) {
-        socket.emit('sendMessage', {
-          conversationId: selectedConversation.id,
-          message: response.data,
-        });
-      }
+
 
       setMessages(prev => [...prev, response.data]);
       setMessageContent('');
@@ -265,32 +325,44 @@ export default function Messaging() {
     if (message.deleted) {
       return <span className="italic text-gray-400">Message deleted</span>;
     }
-
     return (
       <>
         {message.replyTo && (
           <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500">
-            <p className="font-medium">{message.replyTo.sender.firstName}</p>
+            <p className="font-medium">
+              {message.replyTo.sender && message.replyTo.sender.firstName
+                ? message.replyTo.sender.firstName
+                : 'Unknown'}
+            </p>
             <p className="truncate">{message.replyTo.content}</p>
           </div>
         )}
-        {message.type === 'image' && (
+        {message.type === 'image' && message.fileUrl && (
           <img
-            src={`${import.meta.env.VITE_API_URL}${message.fileUrl}`}
-            alt="Shared"
-            className="max-w-xs rounded mb-2"
+            src={message.fileUrl.startsWith('/uploads/')
+              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+            alt={message.fileName || 'Shared'}
+            className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
+            onClick={() => setModalImage(message.fileUrl.startsWith('/uploads/')
+              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`)}
           />
         )}
-        {message.type === 'video' && (
+        {message.type === 'video' && message.fileUrl && (
           <video
-            src={`${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+            src={message.fileUrl.startsWith('/uploads/')
+              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
             controls
             className="max-w-xs rounded mb-2"
           />
         )}
-        {message.type === 'file' && (
+        {message.type === 'file' && message.fileUrl && (
           <a
-            href={`${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+            href={message.fileUrl.startsWith('/uploads/')
+              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
             download={message.fileName}
             className="flex items-center gap-2 text-blue-500 hover:underline mb-2"
           >
@@ -302,11 +374,17 @@ export default function Messaging() {
         )}
         {message.content && <p>{message.content}</p>}
         {message.edited && <span className="text-xs text-gray-400 ml-2">(edited)</span>}
+        <ForwardButton message={message} />
       </>
     );
   };
-
   const typingDisplay = Object.values(typingUsers).join(', ');
+
+  // --- WebRTC/Call logic ---
+  function startCall(isVideo) {
+    setCallType(isVideo ? 'video' : 'audio');
+    setShowCall(true);
+  }
 
   if (loading) {
     return (
@@ -315,9 +393,21 @@ export default function Messaging() {
       </div>
     );
   }
-
   return (
     <div className="flex h-[calc(100vh-64px)] relative">
+      {modalImage && <ImageModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
+      {showCall && selectedConversation && (
+        <VideoCallSimple
+          targetUser={{
+            id: getOtherMember(selectedConversation).id || getOtherMember(selectedConversation)._id,
+            firstName: getOtherMember(selectedConversation).name?.split(' ')[0] || '',
+            lastName: getOtherMember(selectedConversation).name?.split(' ')[1] || '',
+            profilePhoto: getOtherMember(selectedConversation).profilePhoto
+          }}
+          audioOnly={callType === 'audio'}
+          onClose={() => setShowCall(false)}
+        />
+      )}
       {/* Conversations List */}
       <div className="w-80 border-r bg-white dark:bg-gray-800 overflow-y-auto">
         <div className="p-4 border-b dark:border-gray-700">
@@ -383,61 +473,68 @@ export default function Messaging() {
       {selectedConversation ? (
         <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 relative">
           {/* Header */}
-          <div className="p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-3">
-            {(() => {
-              const other = getOtherMember(selectedConversation);
-              return (
-                <>
-                  {other.profilePhoto ? (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}${other.profilePhoto}`}
-                      alt={other.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-                      {other.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <h3 className="font-semibold dark:text-white">{other.name}</h3>
-                </>
-              );
-            })()}
+          <div className="p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-3 justify-between">
+            <div className="flex items-center gap-3">
+              {(() => {
+                const other = getOtherMember(selectedConversation);
+                return (
+                  <>
+                    {other.profilePhoto ? (
+                      <img
+                        src={`${import.meta.env.VITE_API_URL}${other.profilePhoto}`}
+                        alt={other.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
+                        {other.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <h3 className="font-semibold dark:text-white">{other.name}</h3>
+                  </>
+                );
+              })()}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                title="Audio Call"
+                className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
+                onClick={() => startCall(false)}
+              >
+                <FiPhone className="w-6 h-6 text-blue-500" />
+              </button>
+              <button
+                title="Video Call"
+                className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
+                onClick={() => startCall(true)}
+              >
+                <FiVideo className="w-6 h-6 text-blue-500" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900" style={{ paddingBottom: '6rem' }}>
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Start the conversation!</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((message) => {
-                  const isMine = message.senderId === user.id;
-                  return (
-                    <div
-                      key={message.id}
-                      className={`mb-4 flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-lg p-3 ${
-                          isMine
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700'
-                        }`}
-                      >
-                        {!isMine && selectedConversation.isGroup && (
-                          <p className="text-xs font-semibold mb-1">
-                            {message.sender.firstName} {message.sender.lastName}
-                          </p>
-                        )}
+          {/* Messages List */}
+          <div className="flex-1 overflow-y-auto px-4 pb-32">
+            {messages.map((message, idx) => {
+              const isMine = message.sender && user && message.sender.id === user.id;
+              return (
+                <div
+                  key={message.id || idx}
+                  className={`mb-4 flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-lg p-3 ${
+                      isMine
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700'
+                    }`}
+                  >
+                    {/* Show sender name for group messages if not mine */}
+                    {!isMine && selectedConversation.isGroup && message && message.sender && (
+                      <p className="text-xs font-semibold mb-1">
+                        {message.sender.firstName} {message.sender.lastName}
+                      </p>
+                    )}
                     {renderMessageContent(message)}
                     <div className="flex items-center justify-between mt-1 gap-2">
                       <span className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -468,8 +565,6 @@ export default function Messaging() {
               <p className="text-sm text-gray-500 dark:text-gray-400 italic">{typingDisplay} is typing...</p>
             )}
             <div ref={messagesEndRef} />
-              </>
-            )}
           </div>
 
           {/* Input */}
@@ -561,9 +656,12 @@ export default function Messaging() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
             <p className="text-gray-500 dark:text-gray-400 text-lg">Select a conversation to start messaging</p>
+            <p className="text-red-500 font-bold mt-2">(Debug) Nuk ka bisedë të hapur! Kontrollo nëse conversationId ose userId është në URL dhe nëse API kthen bisedën.</p>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+export default Messaging;

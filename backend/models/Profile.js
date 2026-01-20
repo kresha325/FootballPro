@@ -25,6 +25,10 @@ const Profile = sequelize.define('Profile', {
   contact: DataTypes.JSON,
   coverPhoto: DataTypes.STRING,
   profilePhoto: DataTypes.STRING,
+  achievements: DataTypes.JSON,
+  matches: DataTypes.JSON,
+  media: DataTypes.JSON,
+  performanceTrend: DataTypes.JSON,
   coachAffiliation: {
     type: DataTypes.ENUM('club', 'independent', 'personal_trainer'),
     allowNull: true,

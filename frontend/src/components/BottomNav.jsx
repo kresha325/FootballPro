@@ -41,16 +41,7 @@ function BottomNav() {
           <span className="text-xs md:hidden">Cups</span>
         </NavLink>
 
-        <NavLink
-          to="/streams"
-          className={({ isActive }) =>
-            `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-          }
-          aria-label="Streams"
-        >
-          <span className="text-2xl">📺</span>
-          <span className="text-xs md:hidden">Live</span>
-        </NavLink>
+
 
         <NavLink
           to={`/profile/${user?.id}`}

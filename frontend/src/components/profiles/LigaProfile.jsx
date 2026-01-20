@@ -5,22 +5,12 @@ const LigaProfile = ({ liga }) => {
   // Helper to check if url is absolute
   const isAbsoluteUrl = url => /^https?:\/\//.test(url);
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const stats = liga.stats || {};
   return (
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
       {/* Profile Photo */}
       <div className="flex justify-center mb-6">
-        <img
-          src={
-            liga.profilePhoto
-              ? (isAbsoluteUrl(liga.profilePhoto)
-                  ? liga.profilePhoto
-                  : `${apiRoot}${liga.profilePhoto}`)
-              : '/default-profile.png'
-          }
-          alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
-          data-userid={liga.userId}
-        />
+          {/* Profile photo removed from overview as per requirements */}
       </div>
       <div className="flex items-center mb-4">
         {liga.logo && (

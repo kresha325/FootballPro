@@ -89,6 +89,10 @@ const TournamentParticipant = sequelize.define('TournamentParticipant', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
+  status: {
+    type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
+    defaultValue: 'pending',
+  },
 });
 
 Tournament.belongsToMany(User, { through: TournamentParticipant, foreignKey: 'tournamentId', as: 'participants' });

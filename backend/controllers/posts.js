@@ -18,6 +18,7 @@ exports.setPostSponsors = async (req, res) => {
   }
 };
 const Post = require('../models/Post');
+const Gallery = require('../models/Gallery');
 // ...existing code...
 
 exports.getPosts = async (req, res) => {
@@ -28,16 +29,12 @@ exports.getPosts = async (req, res) => {
     const Comment = require('../models/Comment');
     
     const Sponsor = require('../models/Sponsor');
+    const PostSponsor = require('../models/PostSponsor');
     const posts = await Post.findAll({ 
-      include: [{ 
-        model: User, 
-        as: 'author',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
-        include: [{
-          model: Profile,
-          attributes: ['country', 'profilePhoto']
-        }]
-      }],
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+        { model: Sponsor, through: { attributes: [] } }
+      ],
       order: [['createdAt', 'DESC']]
     });
     // Add like, comment counts, userLiked, and sponsors for each post
@@ -47,14 +44,39 @@ exports.getPosts = async (req, res) => {
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      // Get all sponsors of the post author
-      const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
+      // Get sponsors linked to this post
+      const postSponsors = post.Sponsors || [];
+      // Get all sponsors of the user
+      const userSponsors = await Sponsor.findAll({ where: { userId: post.userId } });
+      // Bashko pa duplikate
+      const allSponsors = [
+        ...postSponsors,
+        ...userSponsors.filter(us => !postSponsors.some(ps => ps.id === us.id))
+      ];
+      // Standardizo path-in për imazhe dhe video të postimeve
+      const postObj = post.toJSON();
+      if (postObj.imageUrl) {
+        const filename = postObj.imageUrl.split('/').pop();
+        postObj.imageUrl = `/uploads/${filename}`;
+      }
+      if (postObj.videoUrl) {
+        const filename = postObj.videoUrl.split('/').pop();
+        postObj.videoUrl = `/uploads/${filename}`;
+      }
+      // Standardizo path-in e profilePhoto të author-it në çdo post
+      if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
+        const filename = postObj.author.Profile.profilePhoto.split('/').pop();
+        postObj.author.profilePhoto = `/uploads/${filename}`;
+      } else {
+        postObj.author = postObj.author || {};
+        postObj.author.profilePhoto = null;
+      }
       return {
-        ...post.toJSON(),
+        ...postObj,
         likes: likesCount,
         comments: commentsCount,
         isLiked: !!userLiked,
-        sponsors: sponsors.map(s => s.toJSON())
+        sponsors: allSponsors.map(s => s.toJSON ? s.toJSON() : s)
       };
     }));
     res.json(postsWithCounts);
@@ -73,17 +95,13 @@ exports.getUserPosts = async (req, res) => {
     const { userId } = req.params;
     
     const Sponsor = require('../models/Sponsor');
+    const PostSponsor = require('../models/PostSponsor');
     const posts = await Post.findAll({ 
       where: { userId },
-      include: [{ 
-        model: User, 
-        as: 'author',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
-        include: [{
-          model: Profile,
-          attributes: ['country', 'profilePhoto']
-        }]
-      }],
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+        { model: Sponsor, through: { attributes: [] } }
+      ],
       order: [['createdAt', 'DESC']]
     });
     // Add like, comment counts, userLiked, and sponsors for each post
@@ -93,14 +111,32 @@ exports.getUserPosts = async (req, res) => {
       const userLiked = req.user ? await Like.findOne({ 
         where: { postId: post.id, userId: req.user.id } 
       }) : null;
-      // Get all sponsors of the post author
-      const sponsors = await Sponsor.findAll({ where: { userId: post.userId } });
+      // Get sponsors linked to this post
+      const sponsors = post.Sponsors || [];
+      // Standardizo path-in për imazhe dhe video të postimeve
+      const postObj = post.toJSON();
+      if (postObj.imageUrl) {
+        const filename = postObj.imageUrl.split('/').pop();
+        postObj.imageUrl = `/uploads/${filename}`;
+      }
+      if (postObj.videoUrl) {
+        const filename = postObj.videoUrl.split('/').pop();
+        postObj.videoUrl = `/uploads/${filename}`;
+      }
+      // Standardizo path-in e profilePhoto të author-it në çdo post
+      if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
+        const filename = postObj.author.Profile.profilePhoto.split('/').pop();
+        postObj.author.profilePhoto = `/uploads/${filename}`;
+      } else {
+        postObj.author = postObj.author || {};
+        postObj.author.profilePhoto = null;
+      }
       return {
-        ...post.toJSON(),
+        ...postObj,
         likes: likesCount,
         comments: commentsCount,
         isLiked: !!userLiked,
-        sponsors: sponsors.map(s => s.toJSON())
+        sponsors: sponsors.map(s => s.toJSON ? s.toJSON() : s)
       };
     }));
     res.json(postsWithCounts);
@@ -161,13 +197,13 @@ exports.createPost = async (req, res) => {
     const { content, location, locationLat, locationLng, mentions } = req.body;
     let imageUrl = null;
     let videoUrl = null;
-    
-    if (req.file) {
-      const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video/');
-      if (isVideo) {
-        videoUrl = req.file.path || req.file.url;
-      } else {
-        imageUrl = req.file.path || req.file.url;
+    // Merr path-in për imazh dhe video nga req.files
+    if (req.files) {
+      if (req.files['image'] && req.files['image'][0]) {
+        imageUrl = `/uploads/${req.files['image'][0].filename}`;
+      }
+      if (req.files['video'] && req.files['video'][0]) {
+        videoUrl = `/uploads/${req.files['video'][0].filename}`;
       }
     }
     
@@ -195,12 +231,19 @@ exports.createPost = async (req, res) => {
       locationLng: locationLng || null,
       mentions: mentionsParsed,
     });
-    // Shto ne gallery nese ka image
+    // Shto ne gallery nese ka image ose video
     if (imageUrl) {
       await Gallery.create({
         userId: req.user.id,
         imageUrl,
         type: 'photo',
+        title: content ? content.substring(0, 100) : '',
+      });
+    } else if (videoUrl) {
+      await Gallery.create({
+        userId: req.user.id,
+        videoUrl,
+        type: 'video',
         title: content ? content.substring(0, 100) : '',
       });
     }

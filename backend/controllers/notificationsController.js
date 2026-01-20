@@ -189,12 +189,20 @@ exports.notifyFollow = async (followedId, followerId) => {
 
 exports.notifyMessage = async (recipientId, senderId, message) => {
   const sender = await User.findByPk(senderId);
+  let preview = '';
+  if (typeof message === 'string' && message) {
+    preview = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+  } else if (message && message.fileName) {
+    preview = `[Media] ${message.fileName}`;
+  } else {
+    preview = '[Media message]';
+  }
   return exports.createNotification({
     userId: recipientId,
     actorId: senderId,
     type: 'message',
     title: 'New Message',
-    message: `${sender.firstName} ${sender.lastName}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`,
+    message: `${sender.firstName} ${sender.lastName}: ${preview}`,
     link: `/messages/${senderId}`,
     entityType: 'message',
     entityId: senderId,

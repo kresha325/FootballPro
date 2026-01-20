@@ -23,6 +23,11 @@ const Like = sequelize.define('Like', {
       key: 'id',
     },
   },
+  emoji: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

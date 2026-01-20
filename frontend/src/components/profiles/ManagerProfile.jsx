@@ -9,18 +9,7 @@ const ManagerProfile = ({ profile, stats, isOwner }) => {
     <div className="space-y-6">
       {/* Profile Photo */}
       <div className="flex justify-center mb-6">
-        <img
-          src={
-            manager.profilePhoto
-              ? (isAbsoluteUrl(manager.profilePhoto)
-                  ? manager.profilePhoto
-                  : `${apiRoot}${manager.profilePhoto}`)
-              : '/default-profile.png'
-          }
-          alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
-          data-userid={manager.userId}
-        />
+          {/* Profile photo removed from overview as per requirements */}
       </div>
       {/* Management Experience */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">

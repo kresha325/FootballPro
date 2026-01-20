@@ -7,6 +7,16 @@ const Product = sequelize.define('Product', {
     primaryKey: true,
     autoIncrement: true,
   },
+  sellerId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id',
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE',
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false,

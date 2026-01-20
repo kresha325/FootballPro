@@ -1,3 +1,9 @@
+// Debug: Log Match model attributes and associations at startup
+const db = require('./models');
+if (db.Match) {
+  console.log('Match model attributes:', Object.keys(db.Match.rawAttributes));
+  console.log('Match model associations:', Object.keys(db.Match.associations));
+}
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
 setInterval(deleteExpiredAds, 60 * 60 * 1000);
@@ -28,6 +34,7 @@ const Follow = require('./models/Follow');
 const Profile = require('./models/Profile');
 const { Conversation, ConversationMember } = require('./models/Conversation');
 const Message = require('./models/Message');
+const { VideoCallHistory } = require('./models');
 // Add other models as needed
 
 const sequelize = require('./config/database');
@@ -59,8 +66,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static('uploads'));
+// Serve static files from uploads directory (now from 'uploads' at project root)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 
@@ -82,10 +90,12 @@ app.use('/api/scouting', require('./routes/scouting'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/video-calls', require('./routes/videoCalls'));
-app.use('/api/streams', require('./routes/streams'));
+// ...existing code...
 app.use('/api/videos', require('./routes/videos'));
 app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/matches', require('./routes/matches'));
+app.use('/api/matches', require('./routes/matchScorers'));
+app.use('/api/user-matches', require('./routes/matchesUser'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 
@@ -117,6 +127,30 @@ app.get('/', (req, res) => {
 const userSockets = new Map(); // userId -> socketId
 
 io.on('connection', (socket) => {
+    // Multi-user call: join room and log call start
+    socket.on('call:join-room', async (data) => {
+      const { roomId, userId } = data;
+      socket.join(roomId);
+      // Find or create call history for this room
+      let call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
+      if (!call) {
+        call = await VideoCallHistory.create({
+          roomId,
+          participants: [userId],
+          startedAt: new Date(),
+          status: 'completed',
+        });
+      } else {
+        // Add user to participants if not already present
+        const participants = Array.isArray(call.participants) ? call.participants : [];
+        if (!participants.includes(userId)) {
+          participants.push(userId);
+          call.participants = participants;
+          await call.save();
+        }
+      }
+      io.to(roomId).emit('call:user-joined', { userId });
+    });
   console.log('✅ User connected:', socket.id);
 
   // Store user authentication from handshake
@@ -218,7 +252,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('call:end', (data) => {
+  socket.on('call:end', async (data) => {
     const { to } = data;
     console.log(`📴 Call ended by user ${socket.userId}`);
     if (to) {
@@ -226,23 +260,18 @@ io.on('connection', (socket) => {
         from: socket.userId,
       });
     }
+    // Mark call as ended in DB (for all rooms this user is in)
+    const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+    for (const roomId of rooms) {
+      const call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
+      if (call) {
+        call.endedAt = new Date();
+        await call.save();
+      }
+    }
   });
 
-  // Live streaming
-  socket.on('joinStream', (streamId) => {
-    socket.join(`stream-${streamId}`);
-    io.to(`stream-${streamId}`).emit('viewerJoined', socket.id);
-  });
-
-  socket.on('leaveStream', (streamId) => {
-    socket.leave(`stream-${streamId}`);
-    io.to(`stream-${streamId}`).emit('viewerLeft', socket.id);
-  });
-
-  socket.on('streamData', (data) => {
-    const { streamId, streamData } = data;
-    socket.to(`stream-${streamId}`).emit('streamData', streamData);
-  });
+  // ...existing code...
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
@@ -268,10 +297,6 @@ UserReward.belongsTo(Reward, { foreignKey: 'rewardId' });
 
 Reward.belongsTo(Badge, { foreignKey: 'badgeId' });
 
-// Follow associations
-User.hasMany(Follow, { as: 'followers', foreignKey: 'followingId' });
-User.hasMany(Follow, { as: 'following', foreignKey: 'followerId' });
-
 /*sequelize.sync({alter: true}).then(() => {
   console.log('Database synced');
 }).catch(err => console.log('DB sync error:', err));*/
@@ -291,4 +316,10 @@ if (!PORT) {
 }
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+});
+
+// Error handling middleware (duhet të jetë në fund të file-it)
+app.use((err, req, res, next) => {
+  console.error('❌ Express error:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });

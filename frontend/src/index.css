@@ -5,7 +5,7 @@
 /* ---------------- GLOBAL BASE ---------------- */
 @layer base {
   body {
-    @apply bg-gray-100 dark:bg-gray-900 text-black dark:text-white font-sans transition-colors;
+    @apply text-black dark:text-white font-sans transition-colors;
   }
 
   h1 {

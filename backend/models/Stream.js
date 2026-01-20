@@ -34,6 +34,11 @@ const Stream = sequelize.define('Stream', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+    type: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
   streamKey: {
     type: DataTypes.STRING,
     unique: true,
@@ -52,5 +57,4 @@ const Stream = sequelize.define('Stream', {
     defaultValue: DataTypes.NOW,
   },
 });
-
-module.exports = Stream;
+module.exports = null; // Stream/livestream model removed

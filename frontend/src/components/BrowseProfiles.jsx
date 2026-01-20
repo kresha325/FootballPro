@@ -1,3 +1,6 @@
+// Helper për URL absolute/relative të fotos
+const isAbsoluteUrl = url => /^https?:\/\//.test(url);
+const apiRoot = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : '';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI } from '../services/api';
@@ -183,109 +186,39 @@ const BrowseProfiles = () => {
 
       {/* Profiles Grid */}
       {filteredProfiles.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProfiles.map((profile) => (
-            <Link
-              key={profile.id}
-              to={`/profile/${profile.id}`}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 hover:scale-105"
-            >
-              {/* Cover Photo */}
-              <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 relative">
-                {profile.coverPhoto && (
-                  <img 
-                    src={profile.coverPhoto} 
-                    alt="Cover" 
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                {/* Category Badge */}
-                <div className="absolute top-2 right-2">
-                  <span className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-900 dark:text-white flex items-center gap-1">
-                    {categories.find(c => c.role === profile.role)?.icon}
-                    {categories.find(c => c.role === profile.role)?.label}
-                  </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredProfiles.map(profile => (
+            <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col">
+              <div className="relative h-48 w-full overflow-hidden">
+                <img
+                  src={profile.profilePhoto
+                    ? (isAbsoluteUrl(profile.profilePhoto)
+                        ? profile.profilePhoto
+                        : apiRoot + (profile.profilePhoto.startsWith('/') ? profile.profilePhoto : '/' + profile.profilePhoto))
+                    : '/default-avatar.png'}
+                  alt={profile.firstName + ' ' + profile.lastName}
+                  className="object-cover w-full h-full"
+                  onError={e => { e.target.src = '/default-avatar.png'; }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                  <div className="text-xl font-bold text-white drop-shadow-lg">{profile.firstName} {profile.lastName}</div>
+                  <div className="text-white text-sm font-medium drop-shadow">{profile.position || '—'}</div>
                 </div>
               </div>
-
-              {/* Profile Content */}
-              <div className="p-5 -mt-10">
-                {/* Avatar */}
-                <div className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden mb-4 shadow-lg">
-                  {profile.profilePhoto ? (
-                    <img 
-                      src={profile.profilePhoto} 
-                      alt={`${profile.firstName} ${profile.lastName}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-2xl font-bold">
-                      {profile.firstName?.[0]}{profile.lastName?.[0]}
-                    </div>
-                  )}
+              <div className="flex-1 flex flex-col justify-between p-4 bg-gray-900/90 text-white">
+                <div className="mb-2">
+                  <div className="text-sm opacity-80">Datëlindja: {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('sq-AL') : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
                 </div>
-
-                {/* Name */}
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
-                    {profile.firstName} {profile.lastName}
-                  </h3>
-                  {profile.verified && (
-                    <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  )}
+                <div className="flex gap-2 mt-auto">
+                  <button
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 rounded-md transition"
+                    onClick={() => window.location.href = `/profile/${profile.id}`}
+                  >
+                    SHIKO PROFILIN
+                  </button>
                 </div>
-
-                {/* Info */}
-                <div className="space-y-1 text-sm mb-4">
-                  {profile.age && profile.ageGroup && (
-                    <p className="text-purple-600 dark:text-purple-400 flex items-center gap-1 font-medium">
-                      <span>🎂</span> {profile.age} years ({profile.ageGroup})
-                    </p>
-                  )}
-                  {profile.role === 'coach' && profile.coachCategory && (
-                    <p className="text-blue-600 dark:text-blue-400 flex items-center gap-1 font-medium">
-                      <span>📋</span> {profile.coachCategory.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </p>
-                  )}
-                  {profile.role === 'coach' && profile.coachAffiliation && (
-                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <span>{profile.coachAffiliation === 'club' ? '🏟️' : profile.coachAffiliation === 'personal_trainer' ? '👤' : '⚡'}</span> 
-                      {profile.coachAffiliation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </p>
-                  )}
-                  {profile.position && (
-                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <span>⚽</span> {profile.position}
-                    </p>
-                  )}
-                  {profile.club && (
-                    <div className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ClubBadge clubName={profile.club} size="sm" />
-                      <span>{profile.club}</span>
-                    </div>
-                  )}
-                  {profile.city && (
-                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <span>📍</span> {profile.city}
-                    </p>
-                  )}
-                </div>
-
-                {/* Bio Preview */}
-                {profile.bio && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">
-                    {profile.bio}
-                  </p>
-                )}
-
-                {/* View Profile Button */}
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition">
-                  View Profile
-                </button>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (

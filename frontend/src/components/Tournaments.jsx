@@ -1,10 +1,219 @@
 import { useState, useEffect } from 'react';
+// Modal for creating a new match
+function CreateMatchModal({ isOpen, onClose, onCreate, participants }) {
+  const [homeUserId, setHomeUserId] = useState('');
+  const [awayUserId, setAwayUserId] = useState('');
+  const [matchDate, setMatchDate] = useState('');
+  const [round, setRound] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!homeUserId || !awayUserId || !matchDate || !round) {
+      setError('Të gjitha fushat janë të detyrueshme.');
+      return;
+    }
+    if (homeUserId === awayUserId) {
+      setError('Nuk mund të zgjedhësh të njëjtin lojtar për të dy ekipet.');
+      return;
+    }
+    setError('');
+    onCreate({ homeUserId, awayUserId, matchDate, round });
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHomeUserId('');
+      setAwayUserId('');
+      setMatchDate('');
+      setRound('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <h2 className="text-xl font-bold mb-4">Krijo Ndeshje të Re</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-2">
+          <label className="block mb-1 font-medium">Ekipi vendas</label>
+          <select
+            className="border px-2 py-1 rounded w-full"
+            value={homeUserId}
+            onChange={e => setHomeUserId(e.target.value)}
+            required
+          >
+            <option value="">Zgjidh lojtarin</option>
+            {participants?.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.firstName} {p.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-2">
+          <label className="block mb-1 font-medium">Ekipi mysafir</label>
+          <select
+            className="border px-2 py-1 rounded w-full"
+            value={awayUserId}
+            onChange={e => setAwayUserId(e.target.value)}
+            required
+          >
+            <option value="">Zgjidh lojtarin</option>
+            {participants?.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.firstName} {p.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-2">
+          <label className="block mb-1 font-medium">Data e ndeshjes</label>
+          <input
+            type="datetime-local"
+            className="border px-2 py-1 rounded w-full"
+            value={matchDate}
+            onChange={e => setMatchDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="mb-2">
+          <label className="block mb-1 font-medium">Raundi</label>
+          <input
+            type="text"
+            className="border px-2 py-1 rounded w-full"
+            value={round}
+            onChange={e => setRound(e.target.value)}
+            required
+          />
+        </div>
+        {error && <div className="text-red-500 mb-2">{error}</div>}
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={onClose} className="px-4 py-1 rounded bg-gray-200">Anulo</button>
+          <button type="submit" className="px-4 py-1 rounded bg-green-500 text-white">Krijo</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+import Modal from './Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import api from '../services/api';
+import api, { matchScorersAPI } from '../services/api';
 import { TrophyIcon, CalendarIcon, UsersIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 export default function Tournaments() {
+    // Golashënuesit modal state
+    const [showScorersModal, setShowScorersModal] = useState(false);
+    const [scorersMatch, setScorersMatch] = useState(null);
+    const [scorers, setScorers] = useState([]); // [{userId, name, goals}]
+    const [scorerInput, setScorerInput] = useState('');
+    const [scorerGoals, setScorerGoals] = useState(1);
+    const [scorerSuggestions, setScorerSuggestions] = useState([]);
+    // Sugjerimet autocomplete nga pjesëmarrësit
+    useEffect(() => {
+      if (!scorersMatch || !selectedTournament) return;
+      const participants = selectedTournament.participants || [];
+      if (scorerInput.length > 0) {
+        setScorerSuggestions(
+          participants.filter(p =>
+            (`${p.firstName} ${p.lastName}`.toLowerCase().includes(scorerInput.toLowerCase()))
+          )
+        );
+      } else {
+        setScorerSuggestions([]);
+      }
+    }, [scorerInput, scorersMatch, selectedTournament]);
+    // Shto golashënues në listë
+    const handleAddScorer = () => {
+      if (!scorerInput || !scorerGoals) return;
+      const participant = (selectedTournament.participants || []).find(
+        p => `${p.firstName} ${p.lastName}`.toLowerCase() === scorerInput.toLowerCase()
+      );
+      if (!participant) return;
+      setScorers(prev => [
+        ...prev,
+        { userId: participant.id, name: `${participant.firstName} ${participant.lastName}`, goals: scorerGoals }
+      ]);
+      setScorerInput('');
+      setScorerGoals(1);
+      setScorerSuggestions([]);
+    };
+    // Ruaj golashënuesit në backend (implemento endpoint sipas nevojës)
+    const handleSaveScorers = async () => {
+      if (!scorersMatch) return;
+      try {
+        await matchScorersAPI.saveMatchScorers(scorersMatch.id, scorers.map(s => ({ userId: s.userId, goals: s.goals })));
+      } catch (err) {
+        alert('Nuk u ruajtën golashënuesit!');
+      }
+      setShowScorersModal(false);
+      setScorersMatch(null);
+      setScorers([]);
+    };
+    // Modal për vendosje golashënuesish
+    const renderScorersModal = () => (
+      <Modal isOpen={showScorersModal} onClose={() => { setShowScorersModal(false); setScorersMatch(null); setScorers([]); }}>
+        <h2 className="text-xl font-bold mb-4">Vendos Golashënuesit</h2>
+        <div className="mb-2">
+          <input
+            type="text"
+            placeholder="Emri i lojtarit"
+            className="border px-2 py-1 rounded w-full"
+            value={scorerInput}
+            onChange={e => setScorerInput(e.target.value)}
+            autoFocus
+          />
+          {scorerSuggestions.length > 0 && (
+            <div className="border rounded bg-white shadow mt-1 max-h-32 overflow-y-auto">
+              {scorerSuggestions.map(s => (
+                <div
+                  key={s.id}
+                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer"
+                  onClick={() => { setScorerInput(`${s.firstName} ${s.lastName}`); setScorerSuggestions([]); }}
+                >
+                  {s.firstName} {s.lastName}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="mb-2 flex gap-2 items-center">
+          <input
+            type="number"
+            min="1"
+            value={scorerGoals}
+            onChange={e => setScorerGoals(Number(e.target.value))}
+            className="border px-2 py-1 rounded w-20"
+          />
+          <span>gola</span>
+          <button onClick={handleAddScorer} className="bg-blue-500 text-white px-3 py-1 rounded">Shto</button>
+        </div>
+        <div className="mb-4">
+          <h3 className="font-semibold mb-2">Golashënuesit:</h3>
+          <ul>
+            {scorers.map((s, idx) => (
+              <li key={idx} className="flex gap-2 items-center mb-1">
+                <a
+                  href={`/profiles/${s.userId}`}
+                  className="text-blue-600 hover:underline font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {s.name}
+                </a>
+                <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{s.goals} gola</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => { setShowScorersModal(false); setScorersMatch(null); setScorers([]); }} className="px-4 py-1 rounded bg-gray-200">Anulo</button>
+          <button onClick={handleSaveScorers} className="px-4 py-1 rounded bg-green-500 text-white">Ruaj</button>
+        </div>
+      </Modal>
+    );
   const [tournaments, setTournaments] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [view, setView] = useState('list'); // list, details, bracket, leaderboard, matches
@@ -12,6 +221,26 @@ export default function Tournaments() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [bracket, setBracket] = useState({});
   const [matches, setMatches] = useState([]);
+  const [showCreateMatchModal, setShowCreateMatchModal] = useState(false);
+  const [creatingMatch, setCreatingMatch] = useState(false);
+    // Create match handler
+    const handleCreateMatch = async ({ homeUserId, awayUserId, matchDate, round }) => {
+      setCreatingMatch(true);
+      try {
+        await api.post('/matches', {
+          tournamentId: selectedTournament.id,
+          homeUserId,
+          awayUserId,
+          matchDate,
+          round
+        });
+        setShowCreateMatchModal(false);
+        fetchMatches(selectedTournament.id);
+      } catch (err) {
+        alert('Nuk u krijua ndeshja!');
+      }
+      setCreatingMatch(false);
+    };
   const [stats, setStats] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -576,9 +805,27 @@ export default function Tournaments() {
       {view === 'bracket' && renderBracket()}
 
       {view === 'matches' && (
-        <div className="space-y-4">
-          {matches.map(match => (
-            <div key={match.id} className="bg-white rounded-lg shadow p-4">
+        <div>
+          {/* Only admin/creator can create matches */}
+          {isCreator(selectedTournament) && (
+            <div className="mb-4 flex justify-end">
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                onClick={() => setShowCreateMatchModal(true)}
+              >
+                Krijo Ndeshje
+              </button>
+            </div>
+          )}
+          <CreateMatchModal
+            isOpen={showCreateMatchModal}
+            onClose={() => setShowCreateMatchModal(false)}
+            onCreate={handleCreateMatch}
+            participants={selectedTournament.participants}
+          />
+          <div className="space-y-4">
+            {matches.map(match => (
+              <div key={match.id} className="bg-white rounded-lg shadow p-4">
               <div className="grid grid-cols-3 gap-4 items-center">
                 {/* Home */}
                 <div className="text-right">
@@ -633,42 +880,69 @@ export default function Tournaments() {
                 </div>
               </div>
 
-              {(isCreator(selectedTournament) || match.homeUserId === user?.id || match.awayUserId === user?.id) &&
-                match.status !== 'finished' && (
-                  <div className="mt-4 flex gap-2 items-center justify-center">
-                    <input
-                      type="number"
-                      placeholder="Home"
-                      defaultValue={match.scoreHome ?? 0}
-                      id={`home-${match.id}`}
-                      className="w-20 px-2 py-1 border rounded text-center"
-                      min="0"
-                    />
-                    <span>:</span>
-                    <input
-                      type="number"
-                      placeholder="Away"
-                      defaultValue={match.scoreAway ?? 0}
-                      id={`away-${match.id}`}
-                      className="w-20 px-2 py-1 border rounded text-center"
-                      min="0"
-                    />
-                    <button
-                      onClick={() => {
-                        const homeScore = document.getElementById(`home-${match.id}`).value;
-                        const awayScore = document.getElementById(`away-${match.id}`).value;
-                        handleUpdateScore(match.id, homeScore, awayScore, 'finished');
-                      }}
-                      className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
-                    >
-                      Update Score
-                    </button>
-                  </div>
-                )}
+              {/* Golashënuesit */}
+              {Array.isArray(match.MatchScorers) && match.MatchScorers.length > 0 && (
+                <div className="mt-2 text-sm text-gray-700">
+                  <span className="font-semibold">Golashënuesit: </span>
+                  {match.MatchScorers.map((sc, idx) => (
+                    <span key={sc.id} className="inline-block mr-2">
+                      <a
+                        href={`/profiles/${sc.userId}`}
+                        className="text-blue-600 hover:underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {sc.User ? `${sc.User.firstName} ${sc.User.lastName}` : `ID:${sc.userId}`}
+                      </a>
+                      <span className="bg-gray-100 px-2 py-0.5 rounded text-xs ml-1">{sc.goals} gola</span>
+                      {idx < match.MatchScorers.length - 1 && <span>,</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {(isCreator(selectedTournament) || match.homeUserId === user?.id || match.awayUserId === user?.id) && match.status !== 'finished' && (
+                <div className="mt-4 flex gap-2 items-center justify-center">
+                  <input
+                    type="number"
+                    placeholder="Home"
+                    defaultValue={match.scoreHome ?? 0}
+                    id={`home-${match.id}`}
+                    className="w-20 px-2 py-1 border rounded text-center"
+                    min="0"
+                  />
+                  <span>:</span>
+                  <input
+                    type="number"
+                    placeholder="Away"
+                    defaultValue={match.scoreAway ?? 0}
+                    id={`away-${match.id}`}
+                    className="w-20 px-2 py-1 border rounded text-center"
+                    min="0"
+                  />
+                  <button
+                    onClick={() => {
+                      const homeScore = document.getElementById(`home-${match.id}`).value;
+                      const awayScore = document.getElementById(`away-${match.id}`).value;
+                      handleUpdateScore(match.id, homeScore, awayScore, 'finished');
+                    }}
+                    className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
+                  >
+                    Update Score
+                  </button>
+                  <button
+                    onClick={() => { setShowScorersModal(true); setScorersMatch(match); }}
+                    className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+                  >
+                    Vendos Golashënuesit
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+      {renderScorersModal()}
     </div>
   );
 }

@@ -1,6 +1,32 @@
+  // Fshi item nga galeria
+  const handleDeleteGalleryItem = async (itemId, e) => {
+    e?.stopPropagation && e.stopPropagation();
+    if (!window.confirm('A jeni i sigurt që doni ta fshini këtë media?')) return;
+    try {
+      const res = await galleryAPI.deleteMedia(itemId);
+      if (res.status === 200) {
+        setGallery(gallery => gallery.filter(item => item.id !== itemId));
+        alert('Media u fshi me sukses!');
+      } else {
+        alert('Fshirja dështoi!');
+      }
+    } catch (err) {
+      alert('Fshirja dështoi!');
+    }
+  };
+
 import React, { useEffect, useState, useCallback } from 'react';
+// Helper to get full URL for images/videos
+const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+const getFullUrl = (url) => {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  return apiRoot + (url.startsWith('/') ? url : '/' + url);
+};
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI } from '../services/api';
+// import userStreamsAPI from '../services/userStreamsAPI';
+import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';
 import EditProfile from './EditProfile';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +47,8 @@ import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 
 const Profile = () => {
+    // const [streams, setStreams] = useState([]);
+    // const [streamsLoading, setStreamsLoading] = useState(true);
   const { id } = useParams();
   // Fix ReferenceError: sponsorList is not defined
   const [sponsorList, setSponsorList] = useState([]);
@@ -64,6 +92,7 @@ const Profile = () => {
 
 
   // Set gallery image as profile or cover photo
+
   const setAsProfilePhoto = async (imageUrl, type) => {
     try {
       const formData = new FormData();
@@ -87,47 +116,88 @@ const Profile = () => {
       // Refresh profile
       const res = await profileAPI.getProfile(id);
       setProfile(res.data);
-
-      setSelectedGalleryImage(null);
-      alert(`${type === 'profile' ? 'Profile' : 'Cover'} photo updated!`);
     } catch (error) {
       console.error('Error setting photo:', error);
       alert('Failed to update photo');
     }
   };
 
-  // Comment handlers
-  const toggleComments = (postId) => {
-    const expanded = new Set(expandedComments);
-    if (expanded.has(postId)) {
-      expanded.delete(postId);
-    } else {
-      expanded.add(postId);
-      if (!postComments[postId]) {
-        fetchComments(postId);
+  // Funksion për butonin e mesazheve (duhet të jetë brenda komponentit që të përdorë state profile)
+  const handleMessage = async () => {
+    if (profile && profile.id) {
+      try {
+        // Thirr API për të marrë ose krijuar bisedën
+        const res = await messagingAPI.getOrCreateConversation(profile.id);
+        const conversation = res.data;
+        if (conversation && conversation.id) {
+          navigate(`/messaging?conversationId=${conversation.id}`);
+        } else {
+          alert('Could not start conversation.');
+        }
+      } catch (err) {
+        console.error('Error opening/creating conversation:', err);
+        alert('Failed to open or create conversation.');
       }
     }
-    setExpandedComments(expanded);
   };
+  // Fetch streams for user (removed)
+  // useEffect(() => {
+  //   if (!id) return;
+  //   setStreamsLoading(true);
+  //   userStreamsAPI.getUserStreams(id)
+  //     .then(setStreams)
+  //     .catch(() => setStreams([]))
+  //     .finally(() => setStreamsLoading(false));
+  // }, [id]);
 
-  const handleComment = async (postId) => {
-    const content = commentInputs[postId];
-    if (!content?.trim()) return;
-    
-    await addComment(postId, content);
-    setCommentInputs({ ...commentInputs, [postId]: '' });
-  };
+  // Fetch profile and related data
+  useEffect(() => {
+    if (!id) return;
 
-  // Message handler
-  const handleMessage = async () => {
-    try {
-      const response = await messagingAPI.getOrCreateConversation(id);
-      navigate('/messaging', { state: { conversationId: response.data.id } });
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      alert('Failed to start conversation');
-    }
-  };
+    const fetchProfile = async () => {
+      try {
+        const res = await profileAPI.getProfile(id);
+        setProfile(res.data);
+
+        // Fetch user posts using context
+        await fetchUserPosts(id);
+        // Filter posts for this user
+        const userPostsData = allPosts.filter(post => post.userId === parseInt(id));
+
+        // Fetch user gallery
+        try {
+          const galleryRes = await galleryAPI.getUserGallery(id);
+          setGallery(galleryRes.data);
+        } catch (err) {
+          console.log('Gallery fetch error:', err);
+          setGallery([]);
+        }
+
+        // Set stats
+        setStats({
+          posts: userPostsData.length,
+          followers: res.data.followers || 0,
+          following: res.data.following || 0,
+        });
+
+        // Check follow status if viewing another user's profile
+        if (user && user.id !== parseInt(id)) {
+          try {
+            const followStatusRes = await profileAPI.checkFollowStatus(id);
+            setIsFollowing(followStatusRes.data.isFollowing);
+          } catch (err) {
+            console.error('Error checking follow status:', err);
+          }
+        }
+      } catch (err) {
+        console.error('PROFILE FETCH ERROR:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [id, fetchUserPosts, allPosts]);
 
   // Follow/Unfollow handlers
   const handleFollow = async () => {
@@ -143,7 +213,6 @@ const Profile = () => {
         setIsFollowing(true);
         setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
-      
       // Refresh profile to get accurate counts from server
       const res = await profileAPI.getProfile(id);
       setStats({
@@ -215,58 +284,12 @@ const Profile = () => {
     }
   };
 
-  useEffect(() => {
-    if (!id) return;
 
-    const fetchProfile = async () => {
-      try {
-        const res = await profileAPI.getProfile(id);
-        setProfile(res.data);
-        
-        // Fetch user posts using context
-        await fetchUserPosts(id);
-        
-        // Filter posts for this user
-        const userPostsData = allPosts.filter(post => post.userId === parseInt(id));
-        
-        // Fetch user gallery
-        try {
-          const galleryRes = await galleryAPI.getUserGallery(id);
-          setGallery(galleryRes.data);
-        } catch (err) {
-          console.log('Gallery fetch error:', err);
-          setGallery([]);
-        }
-        
-        // Set stats
-        setStats({
-          posts: userPostsData.length,
-          followers: res.data.followers || 0,
-          following: res.data.following || 0,
-        });
-
-        // Check follow status if viewing another user's profile
-        if (user && user.id !== parseInt(id)) {
-          try {
-            const followStatusRes = await profileAPI.checkFollowStatus(id);
-            setIsFollowing(followStatusRes.data.isFollowing);
-          } catch (err) {
-            console.error('Error checking follow status:', err);
-          }
-        }
-      } catch (err) {
-        console.error('PROFILE FETCH ERROR:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [id, fetchUserPosts, allPosts]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+
     </div>
   );
   
@@ -544,17 +567,24 @@ const Profile = () => {
               {/* Tab Navigation */}
               <div className="border-b border-gray-200 dark:border-gray-700">
             <div className="flex gap-8 px-6 overflow-x-auto">
-              {['overview', 'posts', 'gallery', 'about', 'contact'].map((tab) => (
+              {[
+                { key: 'overview', label: '🏠 Overview' },
+                { key: 'posts', label: '📝 Posts' },
+                { key: 'gallery', label: '🖼️ Gallery' },
+                { key: 'videos', label: '🎥 Videos' },
+                { key: 'about', label: 'ℹ️ About' },
+                { key: 'contact', label: '✉️ Contact' }
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
                   className={`py-4 font-medium capitalize transition whitespace-nowrap ${
-                    activeTab === tab
+                    activeTab === tab.key
                       ? 'border-b-2 border-blue-600 text-blue-600'
                       : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
                   }`}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -571,7 +601,16 @@ const Profile = () => {
                     <div key={post.id} className="border dark:border-gray-700 rounded-lg p-4">
                       {/* Post Content */}
                       {post.content && (
-                        <p className="text-gray-900 dark:text-white mb-3">{post.content}</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <p className="text-gray-900 dark:text-white">{post.content}</p>
+                          <button
+                            title="Fun emoji action"
+                            className="ml-2 text-xl hover:scale-125 transition-transform"
+                            onClick={() => alert('🎉 Emoji fun!')}
+                          >
+                            🎉
+                          </button>
+                        </div>
                       )}
                       
                       {/* Post Image */}
@@ -602,7 +641,7 @@ const Profile = () => {
                         <button
                           onClick={() => toggleLike(post.id)}
                           className={`flex items-center space-x-1 px-3 py-1 rounded-md transition ${
-                            likedPosts.has(post.id) 
+                            likedPosts.has(post.id)
                               ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' 
                               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
@@ -693,10 +732,11 @@ const Profile = () => {
                         className="group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition cursor-pointer"
                         onClick={() => item.imageUrl && setSelectedGalleryImage(item)}
                       >
-                        {item.imageUrl ? (
+                        {/* Show image only for image extensions */}
+                        {item.imageUrl && item.imageUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
                           <div className="aspect-video relative">
                             <img
-                              src={item.imageUrl.startsWith('http') ? item.imageUrl : `${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
+                              src={getFullUrl(item.imageUrl)}
                               alt={item.title || 'Gallery item'}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -713,11 +753,21 @@ const Profile = () => {
                                 )}
                               </div>
                             )}
+                            {/* Butoni Fshi - vetëm për pronarin */}
+                            {isOwner && (
+                              <button
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg z-10"
+                                title="Fshi këtë media"
+                                onClick={(e) => handleDeleteGalleryItem(item.id, e)}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
-                        ) : item.videoUrl ? (
+                        ) : item.imageUrl && item.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) ? (
                           <div className="aspect-video relative">
                             <video
-                              src={item.videoUrl.startsWith('http') ? item.videoUrl : `${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}
+                              src={getFullUrl(item.imageUrl)}
                               controls
                               className="w-full h-full object-cover"
                             />
@@ -729,10 +779,56 @@ const Profile = () => {
                                 )}
                               </div>
                             )}
+                            {/* Butoni Fshi - vetëm për pronarin */}
+                            {isOwner && (
+                              <button
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg z-10"
+                                title="Fshi këtë media"
+                                onClick={(e) => handleDeleteGalleryItem(item.id, e)}
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        ) : item.videoUrl ? (
+                          <div className="aspect-video relative">
+                            <video
+                              src={getFullUrl(item.videoUrl)}
+                              controls
+                              className="w-full h-full object-cover"
+                            />
+                            {item.title && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 pointer-events-none">
+                                <h4 className="text-white font-semibold">{item.title}</h4>
+                                {item.description && (
+                                  <p className="text-white/80 text-sm mt-1 line-clamp-2">{item.description}</p>
+                                )}
+                              </div>
+                            )}
+                            {/* Butoni Fshi - vetëm për pronarin */}
+                            {isOwner && (
+                              <button
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg z-10"
+                                title="Fshi këtë media"
+                                onClick={(e) => handleDeleteGalleryItem(item.id, e)}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div className="aspect-video flex items-center justify-center bg-gray-200 dark:bg-gray-600">
                             <span className="text-gray-400">📁</span>
+                            {/* Butoni Fshi - vetëm për pronarin */}
+                            {isOwner && (
+                              <button
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg z-10"
+                                title="Fshi këtë media"
+                                onClick={(e) => handleDeleteGalleryItem(item.id, e)}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         )}
                         
@@ -756,6 +852,12 @@ const Profile = () => {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'videos' && (
+              <div>
+                <Videos userId={id} onlyUserVideos />
               </div>
             )}
 
@@ -920,10 +1022,22 @@ const Profile = () => {
         </div>
       )}
 
-      {editOpen && (
-        <EditProfile
-          onClose={() => setEditOpen(false)}
-        />
+      {editOpen && profile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
+              onClick={() => setEditOpen(false)}
+              aria-label="Mbyll"
+            >
+              &times;
+            </button>
+            <EditProfile
+              user={profile}
+              onClose={() => setEditOpen(false)}
+            />
+          </div>
+        </div>
       )}
 
       {showVideoCall && profile && (
@@ -987,6 +1101,5 @@ const Profile = () => {
       )}
     </div>
   );
-};
-
+}
 export default Profile;

@@ -11,8 +11,20 @@ API.interceptors.request.use((config) => {
 });
 
 export default function MarketplaceSimple() {
+    // ...existing code...
+    const deleteProduct = async (productId) => {
+      if (!window.confirm('A je i sigurt që do ta fshish këtë produkt?')) return;
+      try {
+        await API.delete(`/products/${productId}`);
+        setSelectedProduct(null);
+        fetchProducts();
+      } catch (error) {
+        alert('Nuk u fshi produkti!');
+      }
+    };
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+    const [imageFile, setImageFile] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,7 +35,7 @@ export default function MarketplaceSimple() {
     name: '',
     description: '',
     price: '',
-    category: 'equipment',
+    category: 'gear',
     condition: 'new',
   });
 
@@ -46,10 +58,12 @@ export default function MarketplaceSimple() {
 
   const fetchProducts = async () => {
     try {
-      const response = await API.get('/products', {
-        params: category !== 'all' ? { category } : {},
-      });
-      setProducts(response.data || []);
+      const response = await API.get('/products');
+      let allProducts = response.data || [];
+      if (category !== 'all') {
+        allProducts = allProducts.filter(p => p.category === category);
+      }
+      setProducts(allProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -60,15 +74,30 @@ export default function MarketplaceSimple() {
   const createProduct = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/products', newProduct);
+      const formData = new FormData();
+      formData.append('name', newProduct.name);
+      formData.append('description', newProduct.description);
+      formData.append('price', newProduct.price);
+      formData.append('category', newProduct.category);
+      formData.append('condition', newProduct.condition);
+      if (user?.id) {
+        formData.append('sellerId', user.id);
+      }
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+      await API.post('/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setShowCreateModal(false);
       setNewProduct({
         name: '',
         description: '',
         price: '',
-        category: 'equipment',
+        category: 'gear',
         condition: 'new',
       });
+      setImageFile(null);
       fetchProducts();
     } catch (error) {
       console.error('Error creating product:', error);
@@ -97,11 +126,9 @@ export default function MarketplaceSimple() {
 
   const categories = [
     { value: 'all', label: 'Të gjitha', icon: '📦' },
-    { value: 'equipment', label: 'Pajisje', icon: '⚽' },
-    { value: 'apparel', label: 'Veshje', icon: '👕' },
-    { value: 'footwear', label: 'Këpucë', icon: '👟' },
-    { value: 'accessories', label: 'Aksesorë', icon: '🎽' },
-    { value: 'training', label: 'Trajnim', icon: '🏃' },
+    { value: 'gear', label: 'Pajisjet', icon: '⚽' },
+    { value: 'tickets', label: 'Biletat', icon: '🎫' },
+    { value: 'merchandise', label: 'Merchendiset', icon: '🛍️' },
   ];
 
   const getCategoryIcon = (cat) => {
@@ -163,8 +190,16 @@ export default function MarketplaceSimple() {
               className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-gray-200 dark:border-gray-700 overflow-hidden"
             >
               {/* Image */}
-              <div className="relative aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center">
-                <span className="text-6xl">{getCategoryIcon(product.category)}</span>
+              <div className="relative aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center overflow-hidden">
+                {product.imageUrl ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${product.imageUrl}`}
+                    alt={product.name}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <span className="text-6xl">{getCategoryIcon(product.category)}</span>
+                )}
                 {isSold && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="bg-red-600 text-white px-4 py-2 rounded-full font-bold text-lg">
@@ -195,10 +230,20 @@ export default function MarketplaceSimple() {
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs border-2 border-white dark:border-gray-800">
                     {product.Seller?.firstName?.[0]}
                   </div>
-                  <span>{product.Seller?.firstName} {product.Seller?.lastName}</span>
+                  {product.Seller?.id ? (
+                    <a
+                      href={`/profile/${product.Seller.id}`}
+                      className="hover:underline text-blue-600 dark:text-blue-400"
+                      onClick={e => { e.stopPropagation(); }}
+                    >
+                      {product.Seller?.firstName} {product.Seller?.lastName}
+                    </a>
+                  ) : (
+                    <span>{product.Seller?.firstName} {product.Seller?.lastName}</span>
+                  )}
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
@@ -249,6 +294,17 @@ export default function MarketplaceSimple() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Shto Produkt të Ri</h2>
             
             <form onSubmit={createProduct} className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Foto e Produktit
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => setImageFile(e.target.files[0])}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Emri i Produktit
@@ -362,6 +418,15 @@ export default function MarketplaceSimple() {
 
             <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-xl flex items-center justify-center mb-6">
               <span className="text-9xl">{getCategoryIcon(selectedProduct.category)}</span>
+                {selectedProduct.imageUrl ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedProduct.imageUrl}`}
+                    alt={selectedProduct.name}
+                    className="object-contain h-48 w-48"
+                  />
+                ) : (
+                  <span className="text-9xl">{getCategoryIcon(selectedProduct.category)}</span>
+                )}
             </div>
 
             <div className="space-y-4">
@@ -376,7 +441,15 @@ export default function MarketplaceSimple() {
 
               <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg">
-                  {selectedProduct.Seller?.firstName?.[0]}
+                  {selectedProduct.Seller?.Profile?.profilePhoto ? (
+                    <img
+                      src={selectedProduct.Seller.Profile.profilePhoto}
+                      alt={selectedProduct.Seller?.firstName}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    selectedProduct.Seller?.firstName?.[0]
+                  )}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">
@@ -417,6 +490,16 @@ export default function MarketplaceSimple() {
                   className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
                 >
                   🛒 Bli Tani - €{selectedProduct.price}
+                </button>
+              )}
+
+              {/* Butoni për fshirje vetëm për pronarin */}
+              {selectedProduct.sellerId === user?.id && (
+                <button
+                  onClick={() => deleteProduct(selectedProduct.id)}
+                  className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold text-lg mt-2"
+                >
+                  🗑️ Fshi Produktin
                 </button>
               )}
             </div>

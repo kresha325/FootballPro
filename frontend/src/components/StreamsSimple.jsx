@@ -1,25 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import userStreamsAPI from '../services/userStreamsAPI';
+import { API } from '../services/api';
 
-const API = axios.create({ baseURL: import.meta.env.VITE_API_URL }); 
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// ...existing code...
 
 export default function StreamsSimple() {
+  const { user } = useAuth();
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStreams = async () => {
+      if (!user) return;
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/streams/live`);
-        setStreams(res.data);
+        const userStreams = await userStreamsAPI.getUserStreams(user.id);
+        setStreams(userStreams);
       } catch (err) {
-        console.error('Error fetching streams:', err);
+        console.error('Error fetching user streams:', err);
+        setStreams([]);
       } finally {
         setLoading(false);
       }

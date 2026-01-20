@@ -675,3 +675,60 @@ exports.updateMatchResultForTournament = async (req, res) => {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
+
+// Accept participant (creator only)
+exports.acceptParticipant = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    if (tournament.creatorId !== req.user.id) {
+      return res.status(403).json({ msg: 'Only creator can accept participants' });
+    }
+    const participant = await TournamentParticipant.findOne({
+      where: { tournamentId: req.params.id, userId: req.params.userId },
+    });
+    if (!participant) return res.status(404).json({ msg: 'Participant not found' });
+    participant.status = 'accepted';
+    await participant.save();
+    res.json({ msg: 'Participant accepted' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Reject participant (creator only)
+exports.rejectParticipant = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    if (tournament.creatorId !== req.user.id) {
+      return res.status(403).json({ msg: 'Only creator can reject participants' });
+    }
+    const participant = await TournamentParticipant.findOne({
+      where: { tournamentId: req.params.id, userId: req.params.userId },
+    });
+    if (!participant) return res.status(404).json({ msg: 'Participant not found' });
+    participant.status = 'rejected';
+    await participant.save();
+    res.json({ msg: 'Participant rejected' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Remove participant (creator only)
+exports.removeParticipant = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    if (tournament.creatorId !== req.user.id) {
+      return res.status(403).json({ msg: 'Only creator can remove participants' });
+    }
+    await TournamentParticipant.destroy({
+      where: { tournamentId: req.params.id, userId: req.params.userId },
+    });
+    res.json({ msg: 'Participant removed' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};

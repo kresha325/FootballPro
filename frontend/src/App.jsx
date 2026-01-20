@@ -1,6 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import { PostsProvider } from './contexts/PostsContext';
+import PostsProvider from './contexts/PostsContext';
 import Navbar from './components/Navbar';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -11,18 +11,19 @@ import BrowseProfiles from './components/BrowseProfiles';
 import Gallery from './components/Gallery';
 import Feed from './components/Feed';
 import Search from './components/SearchSimple';
-import Messaging from './components/MessagingSimple';
+import Messaging from './components/Messaging';
 import Marketplace from './components/MarketplaceSimple';
 import Notifications from './components/Notifications';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
 import Scouting from './components/Scouting';
 import ErrorBoundary from './components/ErrorBoundary';
-import Streams from './components/StreamsSimple';
+// import StreamsPage from './components/StreamsPage';
 import Tournaments from './components/TournamentSimple';
-import Analytics from './components/Analytics';
 import Gamification from './components/Gamification';
+import Analytics from './components/Analytics';
 import Premium from './components/Premium';
+// import StreamsSimple from './components/StreamsSimple';
 import Matches from './components/Matches';
 import AdminDashboard from './components/AdminDashboard';
 import ClubRoster from './components/ClubRoster';
@@ -30,16 +31,53 @@ import Videos from './components/Videos';
 import VideoPlayer from './components/VideoPlayer';
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
+import VideoCallRoom from './components/VideoCallRoom';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { applyBackgroundStyle } from './utils/applyBackgroundStyle';
 function App() {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  // Track background state to force re-render on change
+  const [bgVersion, setBgVersion] = useState(0);
+
+  // Listen for custom event from Settings to force background update
+  useEffect(() => {
+    const onBgChange = () => setBgVersion(v => v + 1);
+    window.addEventListener('platformBgChanged', onBgChange);
+    return () => window.removeEventListener('platformBgChanged', onBgChange);
+  }, []);
 
   useEffect(() => {
     document.title = 'FootballPro';
   }, []);
+
+  // Global background effect: always apply background from localStorage
+  useEffect(() => {
+    const applyBg = () => {
+      const bgColor = localStorage.getItem('platformBgColor');
+      const bgImage = localStorage.getItem('platformBgImage');
+      applyBackgroundStyle(bgColor, bgImage);
+    };
+    applyBg();
+    // Listen for localStorage changes (cross-tab)
+    const onStorage = (e) => {
+      if (e.key === 'platformBgColor' || e.key === 'platformBgImage') {
+        setBgVersion(v => v + 1);
+        applyBg();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [location.pathname]);
+  // Also re-apply when bgVersion changes (local change)
+  useEffect(() => {
+    const bgColor = localStorage.getItem('platformBgColor');
+    const bgImage = localStorage.getItem('platformBgImage');
+    applyBackgroundStyle(bgColor, bgImage);
+  }, [bgVersion]);
 
   if (loading) {
     return (
@@ -101,7 +139,7 @@ function App() {
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
-            <Route path="/streams" element={user ? <Streams /> : <Navigate to="/login" />} />
+            {/* <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} /> */}
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <Gamification /> : <Navigate to="/login" />} />

@@ -1,3 +1,20 @@
+export const matchScorersAPI = {
+  saveMatchScorers: (matchId, scorers) => API.post(`/matches/${matchId}/scorers`, { scorers }),
+};
+/* =========================
+   MATCHES
+========================= */
+export const matchesAPI = {
+  getMatches: () => API.get('/matches'),
+  createMatch: (data) => API.post('/matches', data),
+  updateMatchScore: (id, data) => API.put(`/matches/${id}/score`, data),
+};
+/* =========================
+   USER MATCHES
+========================= */
+export const userMatchesAPI = {
+  getStats: () => API.get('/user-matches/stats'),
+};
 /* =========================
    LIGA
 ========================= */
@@ -17,10 +34,21 @@ const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
+// Interceptor për Authorization header
+API.interceptors.request.use(config => {
+  // Merr token-in nga localStorage (ose nga context nëse ke)
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 /* =========================
    SPONSORS
 ========================= */
 export const sponsorAPI = {
+  getAllSponsors: () => API.get('/sponsors/all'),
   getSponsorsByUser: (userId) => API.get(`/sponsors/user/${userId}`),
   createSponsor: (data) => {
     // If FormData, set multipart headers
@@ -199,6 +227,7 @@ export const subscriptionsAPI = {
    GAMIFICATION
 ========================= */
 export const gamificationAPI = {
+  getUserStatus: (userId) => API.get(`/gamification/user${userId ? `/${userId}` : ''}`),
   getAchievements: () => API.get('/gamification/achievements'),
   getBadges: () => API.get('/gamification/badges'),
   getLeaderboard: () => API.get('/gamification/leaderboard'),
@@ -212,13 +241,7 @@ export const analyticsAPI = {
   getFollowerGrowth: (period) => API.get(`/analytics/follower-growth?period=${period}`),
   getEngagementRate: (period) => API.get(`/analytics/engagement-rate?period=${period}`),
 };
-
-/* =========================
-   VIDEO CALL (mock)
-========================= */
-export const videoCallAPI = {
-  startCall: () => Promise.resolve({ data: true }),
-};
+// Stream-related API removed
 
 /* =========================
    CLUB MEMBERS
@@ -266,3 +289,4 @@ export const nationalTeamsAPI = {
 };
 
 export default API;
+export { API };

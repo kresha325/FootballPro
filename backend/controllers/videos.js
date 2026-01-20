@@ -127,7 +127,7 @@ exports.getVideo = async (req, res) => {
         {
           model: User,
           attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePicture', 'position', 'club'] }],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club'] }],
         },
       ],
     });

@@ -3,7 +3,14 @@ import { clubMembersAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 
 const ClubProfile = ({ profile, stats, isOwner }) => {
-  const clubData = profile.stats || {};
+  const clubData = (profile && profile.stats) ? profile.stats : {};
+
+  // Helper për path të plotë të fotove/video
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (/^https?:\/\//.test(url)) return url;
+    return apiRoot + (url.startsWith('/') ? url : '/' + url);
+  };
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
@@ -21,20 +28,52 @@ const ClubProfile = ({ profile, stats, isOwner }) => {
   return (
     <div className="space-y-6">
       {/* Profile Photo */}
-      <div className="flex justify-center mb-6">
-        <img
-          src={
-            profile.profilePhoto
-              ? (isAbsoluteUrl(profile.profilePhoto)
-                  ? profile.profilePhoto
-                  : `${apiRoot}${profile.profilePhoto}`)
-              : '/default-profile.png'
-          }
-          alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 shadow-lg"
-          data-userid={profile.userId}
-        />
-      </div>
+      {profile.profilePhoto && (
+        <div className="flex justify-center mb-6">
+          <img
+            src={getFullUrl(profile.profilePhoto)}
+            alt="Profile"
+            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
+          />
+        </div>
+      )}
+      {/* Gallery Photos */}
+      {Array.isArray(profile.gallery) && profile.gallery.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>🖼️</span> Galeria e klubit
+          </h3>
+          <div className="flex flex-wrap gap-4">
+            {profile.gallery.map((img, idx) => (
+              <img
+                key={idx}
+                src={getFullUrl(img)}
+                alt={`Gallery ${idx+1}`}
+                className="w-32 h-32 object-cover rounded-lg border"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Club Videos */}
+      {Array.isArray(profile.videos) && profile.videos.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>🎥</span> Videot e klubit
+          </h3>
+          <div className="flex flex-wrap gap-4">
+            {profile.videos.map((vid, idx) => (
+              <video
+                key={idx}
+                src={getFullUrl(vid)}
+                controls
+                className="w-64 h-36 rounded-lg border"
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Club Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">

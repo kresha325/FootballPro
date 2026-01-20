@@ -254,7 +254,7 @@ exports.sendMessage = async (req, res) => {
     let messageData = {
       conversationId,
       senderId: req.user.id,
-      content,
+      content: content || '',
       type: 'text',
     };
 
@@ -317,7 +317,7 @@ exports.sendMessage = async (req, res) => {
     const senderName = `${sender.firstName} ${sender.lastName}`;
     
     for (const member of members) {
-      await notifyMessage(member.userId, req.user.id, content);
+      await notifyMessage(member.userId, req.user.id, fullMessage);
       
       // Send email notification
       try {

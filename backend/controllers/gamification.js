@@ -1,35 +1,84 @@
-
-const { User, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription } = require('../models');
+const { User, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Match } = require('../models');
 const sequelize = require('sequelize');
 
-// Utility: Award points to user
-exports.awardPoints = async (userId, points, reason = '') => {
+// Award points and level up
+async function awardPoints(userId, points, reason = '') {
   const user = await User.findByPk(userId);
   if (!user) return;
   user.points += points;
-  // Level up logic (example: every 1000 points = 1 level)
   const newLevel = Math.floor(user.points / 1000) + 1;
   if (newLevel > user.level) user.level = newLevel;
   await user.save();
-  // Optionally log reason
-};
+}
 
-// Main: Get user gamification status
-exports.getUserGamification = async (req, res) => {
+// Get user gamification status and auto-award achievements/badges
+async function getUserGamification(req, res) {
   try {
+    console.log('DEBUG req.user:', req.user);
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     const userId = req.user.id;
-    // User stats
     const postsCount = await Post.count({ where: { userId } });
     const followersCount = await Subscription.count({ where: { subscribedToId: userId } });
     const likesCount = await Like.count({ include: [{ model: Post, where: { userId }, attributes: [] }] });
     const commentsCount = await Comment.count({ include: [{ model: Post, where: { userId }, attributes: [] }] });
     const user = await User.findByPk(userId, { attributes: ['level', 'points'] });
 
+    // Streak fitore (5 fitore radhazi)
+    const matches = await Match.findAll({
+      where: {
+        status: 'finished',
+        [sequelize.Op.or]: [
+          { homeUserId: userId },
+          { awayUserId: userId }
+        ]
+      },
+      order: [['matchDate', 'DESC'], ['id', 'DESC']],
+    });
+    const wins = matches.filter(m =>
+      (m.homeUserId === userId && m.scoreHome > m.scoreAway) ||
+      (m.awayUserId === userId && m.scoreAway > m.scoreHome)
+    );
+    let streak = 0;
+    for (const match of wins) {
+      const idx = matches.findIndex(m => m.id === match.id);
+      if (idx !== streak) break;
+      streak++;
+    }
+    if (streak >= 5) {
+      const badgeName = '5 Wins Streak';
+      let badge = await Badge.findOne({ where: { name: badgeName } });
+      if (!badge) {
+        badge = await Badge.create({
+          name: badgeName,
+          description: 'Arritje për 5 fitore radhazi në ndeshje!',
+          icon: '🔥',
+          rarity: 'epic',
+        });
+      }
+      let achievement = await Achievement.findOne({ where: { name: badgeName } });
+      if (!achievement) {
+        achievement = await Achievement.create({
+          name: badgeName,
+          description: 'Arritje për 5 fitore radhazi në ndeshje!',
+          icon: '🔥',
+          criteria: { type: 'streak', value: 5, badgeId: badge.id },
+        });
+      }
+      const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
+      if (!hasAchievement) {
+        await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
+        const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
+        if (!hasBadge) {
+          await UserBadge.create({ userId, badgeId: badge.id, earnedAt: new Date() });
+        }
+      }
+    }
+
     // Milestones
     const participationMilestones = [10, 50, 100, 500, 1000];
     const likeMilestones = [100, 1000, 10000, 100000, 1000000];
-
-    // Award participation badges/achievements
     for (const milestone of participationMilestones) {
       const badgeName = `Participation ${milestone}`;
       let badge = await Badge.findOne({ where: { name: badgeName } });
@@ -59,8 +108,6 @@ exports.getUserGamification = async (req, res) => {
         }
       }
     }
-
-    // Award like badges/achievements
     for (const milestone of likeMilestones) {
       const badgeName = `Likes ${milestone}`;
       let badge = await Badge.findOne({ where: { name: badgeName } });
@@ -90,10 +137,8 @@ exports.getUserGamification = async (req, res) => {
         }
       }
     }
-
-    // Check all achievements for unlock
-    const achievements = await Achievement.findAll();
-    for (const achievement of achievements) {
+    const achievementsList = await Achievement.findAll();
+    for (const achievement of achievementsList) {
       const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
       if (!hasAchievement && achievement.criteria) {
         let unlocked = false;
@@ -117,19 +162,109 @@ exports.getUserGamification = async (req, res) => {
         }
       }
     }
+    // Achievements
+    const achievementsRaw = await Achievement.findAll();
+    const userAchievements = await UserAchievement.findAll({ where: { userId }, attributes: ['achievementId', 'unlockedAt'] });
+    const unlockedMap = {};
+    userAchievements.forEach(ua => { unlockedMap[ua.achievementId] = ua.unlockedAt; });
+    // Statistika të avancuara për progres custom
+    // Merr statistika të user-it (goals, assists, matches, winStreak, blocks, keyPasses, captain, cleanSheet, etj.)
+    // Këtu mund të shtosh query të tjera për statistika sipas nevojës
+    // Shembull: goalsCount, assistsCount, matchesCount, winStreak, blocksCount, keyPassesCount, captainCount, cleanSheetCount
+    // Për demonstrim, vendos vlera default 0
+    // TODO: Shto query reale për statistika të avancuara
+    // Për demonstrim, përdor vlera default 0
+    const stats = {
+      posts: postsCount,
+      followers: followersCount,
+      likes: likesCount,
+      comments: commentsCount,
+      level: user.level,
+      points: user.points,
+      goals: 0, // Shto query për numrin e golave
+      goalsInMatch: 0, // Shto query për golat në një ndeshje
+      assists: 0, // Shto query për asistet
+      matches: matches ? matches.length : 0,
+      winStreak: streak,
+      blocks: 0, // Shto query për bllokimet
+      keyPasses: 0, // Shto query për pasimet kyçe
+      captain: 0, // Shto query për ndeshjet si kapiten
+      cleanSheet: 0 // Shto query për clean sheets
+    };
+    // TODO: Shto query për statistika reale nga modelet për secilën fushë
+    const achievements = achievementsRaw.map(achievement => {
+      const unlocked = !!unlockedMap[achievement.id];
+      let progress = 0;
+      if (!unlocked && achievement.criteria) {
+        let criteria = achievement.criteria;
+        // Nëse është string, parse JSON
+        if (typeof criteria === 'string') {
+          try {
+            criteria = JSON.parse(criteria);
+          } catch (e) {
+            criteria = {};
+          }
+        }
+        let current = 0;
+        // Nëse ka 'type', përdor atë
+        if (criteria.type && stats[criteria.type] !== undefined) {
+          current = stats[criteria.type];
+          if (criteria.value) {
+            progress = Math.min(100, Math.round((current / criteria.value) * 100));
+          }
+        } else {
+          // Nëse ka çelësa custom si 'goals', 'assists', etj.
+          for (const key in criteria) {
+            if (key !== 'badgeId' && stats[key] !== undefined && typeof criteria[key] === 'number') {
+              current = stats[key];
+              progress = Math.min(100, Math.round((current / criteria[key]) * 100));
+              break;
+            }
+          }
+        }
+        // Nëse ende është 0, vendos 0
+        if (!progress || isNaN(progress)) progress = 0;
+      }
+      return { ...achievement.toJSON(), unlocked, unlockedAt: unlockedMap[achievement.id] || null, progress };
+    });
 
-    res.json({ level: user.level, points: user.points, postsCount, followersCount, likesCount, commentsCount });
+    // Badges
+    const badgesRaw = await Badge.findAll({
+      order: [
+        [sequelize.literal(`CASE WHEN rarity = 'legendary' THEN 1 WHEN rarity = 'epic' THEN 2 WHEN rarity = 'rare' THEN 3 ELSE 4 END`), 'ASC'],
+        ['name', 'ASC'],
+      ],
+    });
+    const userBadges = await UserBadge.findAll({ where: { userId }, attributes: ['badgeId', 'earnedAt'] });
+    const earnedMap = {};
+    userBadges.forEach(ub => { earnedMap[ub.badgeId] = ub.earnedAt; });
+    const badges = badgesRaw.map(badge => ({ ...badge.toJSON(), earned: !!earnedMap[badge.id], earnedAt: earnedMap[badge.id] || null }));
+
+    console.log('DB User:', user);
+    console.log('DB Achievements:', achievements);
+    console.log('DB Badges:', badges);
+    console.log('DB Stats:', { postsCount, followersCount, likesCount, commentsCount });
+    res.json({
+      user: user,
+      achievements,
+      badges,
+      postsCount,
+      followersCount,
+      likesCount,
+      commentsCount
+    });
   } catch (error) {
     console.error('Get user gamification error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-// Get achievements
-exports.getAchievements = async (req, res) => {
+// Get achievements with progress
+async function getAchievements(req, res) {
   try {
-    const userId = req.user.id;
-    const achievements = await Achievement.findAll({ order: [['points', 'DESC']] });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+    const achievementsRaw = await Achievement.findAll({ order: [['points', 'DESC']] });
     const userAchievements = await UserAchievement.findAll({ where: { userId }, attributes: ['achievementId', 'unlockedAt'] });
     const unlockedMap = {};
     userAchievements.forEach(ua => { unlockedMap[ua.achievementId] = ua.unlockedAt; });
@@ -138,7 +273,7 @@ exports.getAchievements = async (req, res) => {
     const likesCount = await Like.count({ include: [{ model: Post, where: { userId }, attributes: [] }] });
     const commentsCount = await Comment.count({ include: [{ model: Post, where: { userId }, attributes: [] }] });
     const user = await User.findByPk(userId, { attributes: ['level', 'points'] });
-    const achievementsWithProgress = achievements.map(achievement => {
+    const achievementsWithProgress = achievementsRaw.map(achievement => {
       const unlocked = !!unlockedMap[achievement.id];
       let progress = 0;
       if (!unlocked && achievement.criteria) {
@@ -156,6 +291,7 @@ exports.getAchievements = async (req, res) => {
       }
       return { ...achievement.toJSON(), unlocked, unlockedAt: unlockedMap[achievement.id] || null, progress };
     });
+    console.log('DB Achievements:', achievementsWithProgress);
     res.json(achievementsWithProgress);
   } catch (error) {
     console.error('Get achievements error:', error);
@@ -163,8 +299,8 @@ exports.getAchievements = async (req, res) => {
   }
 };
 
-// Get badges
-exports.getBadges = async (req, res) => {
+// Get badges with status
+async function getBadges(req, res) {
   try {
     const userId = req.user.id;
     const badges = await Badge.findAll({
@@ -177,6 +313,7 @@ exports.getBadges = async (req, res) => {
     const earnedMap = {};
     userBadges.forEach(ub => { earnedMap[ub.badgeId] = ub.earnedAt; });
     const badgesWithStatus = badges.map(badge => ({ ...badge.toJSON(), earned: !!earnedMap[badge.id], earnedAt: earnedMap[badge.id] || null }));
+    console.log('DB Badges:', badgesWithStatus);
     res.json(badgesWithStatus);
   } catch (error) {
     console.error('Get badges error:', error);
@@ -185,7 +322,7 @@ exports.getBadges = async (req, res) => {
 };
 
 // Claim reward
-exports.claimReward = async (req, res) => {
+async function claimReward(req, res) {
   try {
     const { rewardId } = req.params;
     const userId = req.user.id;
@@ -199,7 +336,7 @@ exports.claimReward = async (req, res) => {
     }
     await UserReward.create({ userId, rewardId, claimedAt: new Date() });
     if (reward.value) {
-      await exports.awardPoints(userId, reward.value, 'Reward claimed');
+      await awardPoints(userId, reward.value, 'Reward claimed');
     }
     res.json({ msg: 'Reward claimed successfully' });
   } catch (error) {
@@ -207,416 +344,11 @@ exports.claimReward = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
-          if (streak5) {
-            const badgeName = '5 Wins Streak';
-            let badge = await Badge.findOne({ where: { name: badgeName } });
-            if (!badge) {
-              badge = await Badge.create({
-                name: badgeName,
-                description: 'Arritje për 5 fitore radhazi!',
-                icon: '🔥',
-                rarity: 'epic',
-              });
-            }
-            let achievement = await Achievement.findOne({ where: { name: badgeName } });
-            if (!achievement) {
-              achievement = await Achievement.create({
-                name: badgeName,
-                description: 'Arritje për 5 fitore radhazi!',
-                icon: '🔥',
-                criteria: { type: 'streak', value: 5, badgeId: badge.id },
-              });
-            }
-            const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
-            if (!hasAchievement) {
-              await UserAchievement.create({
-                userId,
-                achievementId: achievement.id,
-                unlockedAt: new Date(),
-              });
-              const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
-              if (!hasBadge) {
-                await UserBadge.create({
-                  userId,
-                  badgeId: badge.id,
-                  earnedAt: new Date(),
-                });
-              }
-            }
-          }
-      // Arritje sportive automatike
-      // 1. Fitore ndeshje
-      const winMilestones = [1, 5, 10, 50, 100];
-      const winCount = await Post.count({ where: { userId, type: 'win' } }); // ose perdor modelin tuaj te ndeshjeve
-      for (const milestone of winMilestones) {
-        const badgeName = `Wins ${milestone}`;
-        let badge = await Badge.findOne({ where: { name: badgeName } });
-        if (!badge) {
-          badge = await Badge.create({
-            name: badgeName,
-            description: `Arritje për ${milestone} fitore në ndeshje!`,
-            icon: '🏆',
-            rarity: 'epic',
-          });
-        }
-        let achievement = await Achievement.findOne({ where: { name: badgeName } });
-        if (!achievement) {
-          achievement = await Achievement.create({
-            name: badgeName,
-            description: `Arritje për ${milestone} fitore në ndeshje!`,
-            icon: '🏆',
-            criteria: { type: 'wins', value: milestone, badgeId: badge.id },
-          });
-        }
-        const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
-        if (!hasAchievement && winCount >= milestone) {
-          await UserAchievement.create({
-            userId,
-            achievementId: achievement.id,
-            unlockedAt: new Date(),
-          });
-          const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
-          if (!hasBadge) {
-            await UserBadge.create({
-              userId,
-              badgeId: badge.id,
-              earnedAt: new Date(),
-            });
-          }
-        }
-      }
 
-      // 2. Streak fitore (5 fitore radhazi)
-      // Kjo kerkon logjike shtese sipas modelit tuaj te ndeshjeve
-      // 3. Fair Play
-      const fairPlayBadge = await Badge.findOrCreate({
-        where: { name: 'Fair Play' },
-        defaults: {
-          description: 'Arritje për sjellje të shkëlqyer sportive!',
-          icon: '🤝',
-          rarity: 'rare',
-        }
-      });
-      // Jepni manualisht ose me logjike te dedikuar sipas rastit
-
-      // 4. Top 3 Leaderboard
-      const leaderboardBadge = await Badge.findOrCreate({
-        where: { name: 'Top 3 Leaderboard' },
-        defaults: {
-          description: 'Arritje për renditje në top 3 të leaderboard!',
-          icon: '🥇',
-          rarity: 'legendary',
-        }
-      });
-      // Jepni kur useri hyn ne top 3 (logjike ne update leaderboard)
-
-      // 5. Pjesemarrje ne ndeshje
-      const participationMilestones = [1, 10, 50, 100];
-      const participationCount = await Post.count({ where: { userId, type: 'match' } }); // ose modelin tuaj te pjesemarrjes
-      for (const milestone of participationMilestones) {
-        const badgeName = `Participation ${milestone}`;
-        let badge = await Badge.findOne({ where: { name: badgeName } });
-        if (!badge) {
-          badge = await Badge.create({
-            name: badgeName,
-            description: `Arritje për pjesëmarrje në ${milestone} ndeshje!`,
-            icon: '⚽',
-            rarity: 'common',
-          });
-        }
-        let achievement = await Achievement.findOne({ where: { name: badgeName } });
-        if (!achievement) {
-          achievement = await Achievement.create({
-            name: badgeName,
-            description: `Arritje për pjesëmarrje në ${milestone} ndeshje!`,
-            icon: '⚽',
-            criteria: { type: 'participation', value: milestone, badgeId: badge.id },
-          });
-        }
-        const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
-        if (!hasAchievement && participationCount >= milestone) {
-          await UserAchievement.create({
-            userId,
-            achievementId: achievement.id,
-            unlockedAt: new Date(),
-          });
-          const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
-          if (!hasBadge) {
-            await UserBadge.create({
-              userId,
-              badgeId: badge.id,
-              earnedAt: new Date(),
-            });
-          }
-        }
-      }
-  try {
-    const achievements = await Achievement.findAll();
-    
-    // Get user stats
-    const postsCount = await Post.count({ where: { userId } });
-    const followersCount = await Subscription.count({ where: { subscribedToId: userId } });
-    const likesCount = await Like.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
-    const commentsCount = await Comment.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
-
-    const user = await User.findByPk(userId, { attributes: ['level', 'points'] });
-
-    // Likes milestones: 100, 1,000, 10,000, 100,000, 1,000,000
-    const likeMilestones = [100, 1000, 10000, 100000, 1000000];
-    for (const milestone of likeMilestones) {
-      const badgeName = `Likes ${milestone}`;
-      // Kontrollo nëse ekziston badge/achievement për këtë milestone
-      let badge = await Badge.findOne({ where: { name: badgeName } });
-      if (!badge) {
-        badge = await Badge.create({
-          name: badgeName,
-          description: `Arritje për ${milestone} pelqime të marra në total në postimet e tua!`,
-          icon: '👍',
-          rarity: 'rare',
-        });
-      }
-      let achievement = await Achievement.findOne({ where: { name: badgeName } });
-      if (!achievement) {
-        achievement = await Achievement.create({
-          name: badgeName,
-          description: `Arritje për ${milestone} pelqime të marra në total në postimet e tua!`,
-          icon: '👍',
-          criteria: { type: 'likes', value: milestone, badgeId: badge.id },
-        });
-      }
-      // Jep badge/achievement nëse milestone është arritur
-      const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
-      if (!hasAchievement && likesCount >= milestone) {
-        await UserAchievement.create({
-          userId,
-          achievementId: achievement.id,
-          unlockedAt: new Date(),
-        });
-        const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
-        if (!hasBadge) {
-          await UserBadge.create({
-            userId,
-            badgeId: badge.id,
-            earnedAt: new Date(),
-          });
-        }
-      }
-    }
-
-    for (const achievement of achievements) {
-      const hasAchievement = await UserAchievement.findOne({
-        where: { userId, achievementId: achievement.id },
-      });
-
-      if (!hasAchievement && achievement.criteria) {
-        let unlocked = false;
-        const criteria = achievement.criteria;
-
-        switch (criteria.type) {
-          case 'posts':
-            unlocked = postsCount >= criteria.value;
-            break;
-          case 'followers':
-            unlocked = followersCount >= criteria.value;
-            break;
-          case 'likes':
-            unlocked = likesCount >= criteria.value;
-            break;
-          case 'comments':
-            unlocked = commentsCount >= criteria.value;
-            break;
-          case 'level':
-            unlocked = user.level >= criteria.value;
-            break;
-          case 'points':
-            unlocked = user.points >= criteria.value;
-            break;
-        }
-
-        if (unlocked) {
-          await UserAchievement.create({
-            userId,
-            achievementId: achievement.id,
-            unlockedAt: new Date(),
-          });
-
-          // Award badge if achievement has one
-          if (criteria.badgeId) {
-            const hasBadge = await UserBadge.findOne({
-              where: { userId, badgeId: criteria.badgeId },
-            });
-            if (!hasBadge) {
-              await UserBadge.create({
-                userId,
-                badgeId: criteria.badgeId,
-                earnedAt: new Date(),
-              });
-            }
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Check achievements error:', error);
-  };
-  
-
-// Get achievements
-exports.getAchievements = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const achievements = await Achievement.findAll({
-      order: [['points', 'DESC']],
-    });
-
-    // Get user's unlocked achievements
-    const userAchievements = await UserAchievement.findAll({
-      where: { userId },
-      attributes: ['achievementId', 'unlockedAt'],
-    });
-
-    const unlockedMap = {};
-    userAchievements.forEach(ua => {
-      unlockedMap[ua.achievementId] = ua.unlockedAt;
-    });
-
-    // Get user stats for progress
-    const postsCount = await Post.count({ where: { userId } });
-    const followersCount = await Subscription.count({ where: { subscribedToId: userId } });
-    const likesCount = await Like.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
-    const commentsCount = await Comment.count({
-      include: [{ model: Post, where: { userId }, attributes: [] }],
-    });
-    const user = await User.findByPk(userId, { attributes: ['level', 'points'] });
-
-    // Add progress to each achievement
-    const achievementsWithProgress = achievements.map(achievement => {
-      const unlocked = !!unlockedMap[achievement.id];
-      let progress = 0;
-
-      if (!unlocked && achievement.criteria) {
-        const criteria = achievement.criteria;
-        let current = 0;
-
-        switch (criteria.type) {
-          case 'posts':
-            current = postsCount;
-            break;
-          case 'followers':
-            current = followersCount;
-            break;
-          case 'likes':
-            current = likesCount;
-            break;
-          case 'comments':
-            current = commentsCount;
-            break;
-          case 'level':
-            current = user.level;
-            break;
-          case 'points':
-            current = user.points;
-            break;
-        }
-
-        progress = Math.min(100, Math.round((current / criteria.value) * 100));
-      }
-
-      return {
-        ...achievement.toJSON(),
-        unlocked,
-        unlockedAt: unlockedMap[achievement.id] || null,
-        progress,
-      };
-    });
-
-    res.json(achievementsWithProgress);
-  } catch (error) {
-    console.error('Get achievements error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+module.exports = {
+  awardPoints,
+  getUserGamification,
+  getAchievements,
+  getBadges,
+  claimReward
 };
-
-// Get badges
-exports.getBadges = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const badges = await Badge.findAll({
-      order: [
-        [sequelize.literal(`CASE 
-          WHEN rarity = 'legendary' THEN 1 
-          WHEN rarity = 'epic' THEN 2 
-          WHEN rarity = 'rare' THEN 3 
-          ELSE 4 
-        END`), 'ASC'],
-        ['name', 'ASC'],
-      ],
-    });
-
-    const userBadges = await UserBadge.findAll({
-      where: { userId },
-      attributes: ['badgeId', 'earnedAt'],
-    });
-
-    const earnedMap = {};
-    userBadges.forEach(ub => {
-      earnedMap[ub.badgeId] = ub.earnedAt;
-    });
-
-    const badgesWithStatus = badges.map(badge => ({
-      ...badge.toJSON(),
-      earned: !!earnedMap[badge.id],
-      earnedAt: earnedMap[badge.id] || null,
-    }));
-
-    res.json(badgesWithStatus);
-  } catch (error) {
-    console.error('Get badges error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
-// Claim reward
-exports.claimReward = async (req, res) => {
-  try {
-    const { rewardId } = req.params;
-    const userId = req.user.id;
-
-    const reward = await Reward.findByPk(rewardId);
-    if (!reward) return res.status(404).json({ error: 'Reward not found' });
-
-    // Check if already claimed
-    const claimed = await UserReward.findOne({
-      where: { userId, rewardId },
-    });
-    if (claimed) return res.status(400).json({ error: 'Reward already claimed' });
-
-    // Check if user has required badge
-    if (reward.badgeId) {
-      const hasBadge = await UserBadge.findOne({
-        where: { userId, badgeId: reward.badgeId },
-      });
-      if (!hasBadge) return res.status(403).json({ error: 'Badge required to claim this reward' });
-    }
-
-    // Claim reward
-    await UserReward.create({ userId, rewardId, claimedAt: new Date() });
-
-    // Award points if applicable
-    if (reward.value) {
-      await exports.awardPoints(userId, reward.value, 'Reward claimed');
-    }
-
-    res.json({ msg: 'Reward claimed successfully' });
-  } catch (error) {
-    console.error('Claim reward error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-

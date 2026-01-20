@@ -3,15 +3,15 @@ import { postsAPI } from '../services/api';
 
 const PostsContext = createContext();
 
-export const usePosts = () => {
+export function usePosts() {
   const context = useContext(PostsContext);
   if (!context) {
     throw new Error('usePosts must be used within PostsProvider');
   }
   return context;
-};
+}
 
-export const PostsProvider = ({ children }) => {
+function PostsProvider({ children }) {
   const [allPosts, setAllPosts] = useState([]);
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [postComments, setPostComments] = useState({});
@@ -147,4 +147,5 @@ export const PostsProvider = ({ children }) => {
   };
 
   return <PostsContext.Provider value={value}>{children}</PostsContext.Provider>;
-};
+}
+export default PostsProvider;

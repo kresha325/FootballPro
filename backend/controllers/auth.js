@@ -106,6 +106,16 @@ exports.login = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
+    // Krijo profil automatikisht nëse nuk ekziston
+    const existingProfile = await Profile.findOne({ where: { userId: user.id } });
+    if (!existingProfile) {
+      await Profile.create({
+        userId: user.id,
+        // Mund të shtosh edhe fusha të tjera bazë nëse duhen
+      });
+      console.log('BACKEND: Profile created automatically for user:', user.id);
+    }
+
     const payload = {
       user: {
         id: user.id,
@@ -116,16 +126,17 @@ exports.login = async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: '7d',
     });
-    console.log('BACKEND: Login successful, sending token');    res.json({
-  token,
-  user: {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    firstName: user.firstName,
-    lastName: user.lastName,
-  },
-});
+    console.log('BACKEND: Login successful, sending token');
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
 
   } catch (err) {
     console.error(err);

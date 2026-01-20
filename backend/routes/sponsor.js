@@ -4,6 +4,10 @@ const router = express.Router();
 const sponsorController = require('../controllers/sponsor');
 const sponsorUpload = require('../middleware/sponsorUpload');
 
+
+// GET all sponsors (public)
+router.get('/all', sponsorController.getAllSponsors);
+
 // GET all sponsors for a user
 router.get('/user/:userId', sponsorController.getSponsorsByUser);
 

@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { postsAPI, sponsorAPI } from '../services/api';
+// import streamsAPI from '../services/streamsAPI';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../contexts/PostsContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from 'react-share';
+
 import AdSlider from './AdSlider';
 import SponsorBanner from './SponsorBanner.jsx';
+import UserCardsSection from './UserCardsSection';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -23,6 +26,8 @@ const Feed = () => {
   } = usePosts();
   
   const [searchParams] = useSearchParams();
+  // const [streams, setStreams] = useState([]);
+  // const [streamsLoading, setStreamsLoading] = useState(true);
   const highlightedPostId = searchParams.get('post');
   const postRefs = useRef({});
   
@@ -42,29 +47,9 @@ const Feed = () => {
   // Sponsor state per post
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [activeSponsorPost, setActiveSponsorPost] = useState(null);
-  // sponsorData: { [userId]: [sponsor, ...] }
+  // sponsorData: { [userId]: [sponsor, ...] } (DEPRECATED, now use post.sponsors)
   const [sponsorData, setSponsorData] = useState({});
-  useEffect(() => {
-    if (!user) return;
-    sponsorAPI.getSponsorsByUser(user.id)
-      .then(res => {
-        // Group by userId for compatibility with rendering logic
-        const grouped = {};
-        res.data.forEach(s => {
-          if (!grouped[s.userId]) grouped[s.userId] = [];
-          grouped[s.userId].push({
-            name: s.name,
-            link: s.link,
-            image: s.image, // TODO: handle image preview if needed
-            imagePreview: s.image, // For now, use image as preview
-            id: s.id,
-            startDate: s.startDate,
-            endDate: s.endDate
-          });
-        });
-        setSponsorData(grouped);
-      });
-  }, [user]);
+  //useEffect(() => { ... });
   const [tempSponsor, setTempSponsor] = useState({ name: '', link: '', image: null, imagePreview: null });
 
   const handleSponsorImage = (e) => {
@@ -112,22 +97,23 @@ const Feed = () => {
     }
     try {
       await sponsorAPI.createSponsor(formData);
-      // Rifresko sponsorat nga backend pas shtimit
-      const res = await sponsorAPI.getSponsorsByUser(userId);
-      const grouped = {};
-      res.data.forEach(s => {
-        if (!grouped[s.userId]) grouped[s.userId] = [];
-        grouped[s.userId].push({
-          name: s.name,
-          link: s.link,
-          image: s.image,
-          imagePreview: s.image,
-          id: s.id,
-          startDate: s.startDate,
-          endDate: s.endDate
-        });
-      });
-      setSponsorData(grouped);
+      // Fetch updated sponsors for the post
+      const res = await sponsorAPI.getSponsorsByPost(activeSponsorPost);
+      const sponsors = res.data.map(s => ({
+        name: s.name,
+        link: s.link,
+        image: s.image,
+        imagePreview: s.image,
+        id: s.id,
+        startDate: s.startDate,
+        endDate: s.endDate
+      }));
+      // Update the post's sponsors in allPosts
+      setAllPosts(prevPosts => prevPosts.map(post =>
+        post.id === activeSponsorPost
+          ? { ...post, sponsors }
+          : post
+      ));
     } catch (err) {
       // handle error
     }
@@ -135,6 +121,7 @@ const Feed = () => {
   };
   useEffect(() => {
     fetchPosts();
+    // Stream/livestream fetch removed
     // Auto-refresh është hequr për performancë më të mirë
     // Useri mund të refresh manualisht nëse dëshiron
   }, [fetchPosts]);
@@ -280,18 +267,14 @@ const Feed = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Feed Content */}
         <div className="lg:col-span-2">
 
-      {/* Banner Ad */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 mb-6 text-white text-center">
-        <h2 className="text-xl font-bold mb-2">Special Offer!</h2>
-        <p>Get 50% off on premium subscriptions</p>
-        <button className="mt-4 bg-white text-blue-600 px-4 py-2 rounded-md font-semibold hover:bg-gray-100">
-          Learn More
-        </button>
-      </div>
+
+      {/* Player Cards Section */}
+      <UserCardsSection />
 
       {/* Create Post Form */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
@@ -335,14 +318,34 @@ const Feed = () => {
                 />
               </label>
               
-              {/* Emoji Picker (placeholder) */}
-              <button
-                type="button"
-                className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                title="Add emoji"
-              >
-                <span className="text-xl">😊</span>
-              </button>
+              {/* Emoji Picker (custom, football only) */}
+              <div className="relative inline-block">
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                  title="Add emoji"
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                >
+                  <span className="text-xl">😊</span>
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute z-10 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
+                    {['⚽','🥅','🥇','🏆','🏟️','👟','🧤','🎽','🚩','🟩'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className="text-2xl hover:scale-125 transition-transform"
+                        onClick={() => {
+                          setNewPost(newPost + emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               
               {/* Location */}
               <button
@@ -399,7 +402,7 @@ const Feed = () => {
               `}
               style={{}}
             >
-                {sponsorData[post.userId]?.length > 0 && (
+                {post.sponsors?.length > 0 && (
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #FFD700, 0 0 2px #fff' }}>Sponsored</span>
                   </div>
@@ -442,9 +445,9 @@ const Feed = () => {
                     </div>
                   </div>
                   {/* Sponsor Banner inline with user info */}
-                  {sponsorData[post.userId]?.length > 0 && (
+                  {post.sponsors?.length > 0 && (
                     <div className="ml-4">
-                      <SponsorBanner sponsors={sponsorData[post.userId] || []} compact />
+                      <SponsorBanner sponsors={post.sponsors} compact />
                     </div>
                   )}
                 </div>
@@ -579,16 +582,37 @@ const Feed = () => {
               )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => toggleLike(post.id)}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-md ${
-                      likedPosts.has(post.id) ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                    aria-label={likedPosts.has(post.id) ? `Unlike post by ${post.author?.username || 'Unknown'}` : `Like post by ${post.author?.username || 'Unknown'}`}
-                  >
-                    <span>👍</span>
-                    <span>{post.likes || 0}</span>
-                  </button>
+                  <div className="relative inline-block">
+                    <button
+                      onClick={() => toggleLike(post.id)}
+                      className={`flex items-center space-x-1 px-3 py-1 rounded-md ${
+                        likedPosts.has(post.id) ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                      aria-label={likedPosts.has(post.id) ? `Unlike post by ${post.author?.username || 'Unknown'}` : `Like post by ${post.author?.username || 'Unknown'}`}
+                      onContextMenu={e => { e.preventDefault(); setShowEmojiPicker(post.id); }}
+                    >
+                      <span>{post.emoji || '👍'}</span>
+                      <span>{post.likes || 0}</span>
+                    </button>
+                    {showEmojiPicker === post.id && (
+                      <div className="absolute z-10 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
+                        {['⚽','🥅','🥇','🏆','🏟️','👟','🧤','🎽','🚩','🟩'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            className="text-2xl hover:scale-125 transition-transform"
+                            onClick={() => {
+                              // You may want to update the like emoji in state or backend here
+                              post.emoji = emoji;
+                              setShowEmojiPicker(false);
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={() => toggleComments(post.id)}
                     className="flex items-center space-x-1 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600" 

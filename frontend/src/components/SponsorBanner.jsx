@@ -29,9 +29,13 @@ const SponsorBanner = ({ sponsors, compact }) => {
         title={sponsor.name}
         style={{ minHeight: 32 }}
       >
-        {sponsor.imagePreview ? (
+        {(sponsor.imagePreview || sponsor.image) ? (
           <img
-            src={sponsor.imagePreview?.startsWith('/uploads/') ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview}` : sponsor.imagePreview}
+            src={
+              (sponsor.imagePreview || sponsor.image).startsWith('/uploads/')
+                ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview || sponsor.image}`
+                : (sponsor.imagePreview || sponsor.image)
+            }
             alt="Sponsor"
             className="w-8 h-6 rounded object-cover border border-yellow-400 shadow"
           />
@@ -54,9 +58,13 @@ const SponsorBanner = ({ sponsors, compact }) => {
         title={sponsor.name}
         style={{ minHeight: 56 }}
       >
-        {sponsor.imagePreview ? (
+        {(sponsor.imagePreview || sponsor.image) ? (
           <img
-            src={sponsor.imagePreview?.startsWith('/uploads/') ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview}` : sponsor.imagePreview}
+            src={
+              (sponsor.imagePreview || sponsor.image).startsWith('/uploads/')
+                ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview || sponsor.image}`
+                : (sponsor.imagePreview || sponsor.image)
+            }
             alt="Sponsor"
             className="w-16 h-10 rounded object-cover border border-yellow-400 shadow"
           />

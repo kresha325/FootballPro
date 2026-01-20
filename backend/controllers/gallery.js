@@ -5,7 +5,7 @@ const path = require('path');
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/gallery/');
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
@@ -35,7 +35,21 @@ exports.getGallery = async (req, res) => {
     });
     console.log('📸 Gallery items found:', gallery.length);
     console.log('📸 First item:', gallery[0]);
-    res.json(gallery);
+    
+    // Standardizo path-et për gallery
+    const galleryStandardized = (gallery || []).map(item => {
+      const obj = item.toJSON();
+      if (obj.imageUrl) {
+        const filename = obj.imageUrl.split('/').pop();
+        obj.imageUrl = `/uploads/gallery/${filename}`;
+      }
+      if (obj.videoUrl) {
+        const filename = obj.videoUrl.split('/').pop();
+        obj.videoUrl = `/uploads/gallery/${filename}`;
+      }
+      return obj;
+    });
+    res.json(galleryStandardized);
   } catch (err) {
     console.error('Gallery error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -58,7 +72,20 @@ exports.getUserGallery = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
     
-    res.json(gallery || []);
+    // Standardizo path-et për gallery
+    const galleryStandardized = (gallery || []).map(item => {
+      const obj = item.toJSON();
+      if (obj.imageUrl) {
+        const filename = obj.imageUrl.split('/').pop();
+        obj.imageUrl = `/uploads/${filename}`;
+      }
+      if (obj.videoUrl) {
+        const filename = obj.videoUrl.split('/').pop();
+        obj.videoUrl = `/uploads/${filename}`;
+      }
+      return obj;
+    });
+    res.json(galleryStandardized);
   } catch (err) {
     console.error('Get user gallery error:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -73,7 +100,7 @@ exports.createGalleryItem = async (req, res) => {
       return res.status(400).json({ msg: 'No file uploaded' });
     }
     
-    const fileUrl = '/uploads/gallery/' + req.file.filename;
+    const fileUrl = '/uploads/' + req.file.filename;
     const isVideo = req.file.mimetype.startsWith('video/');
     
     const item = await Gallery.create({

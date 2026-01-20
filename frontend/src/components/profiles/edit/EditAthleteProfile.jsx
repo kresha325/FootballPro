@@ -35,9 +35,21 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      formData.append(key, value);
+    // Fushat që shkojnë te User/Profile direkt
+    const directFields = [
+      'firstName', 'lastName', 'dateOfBirth', 'gender', 'bio', 'position', 'club', 'city', 'country'
+    ];
+    directFields.forEach(field => {
+      if (form[field] !== undefined) formData.append(field, form[field]);
     });
+    // Paketoj fushat e statistikave si objekt stats
+    const stats = {
+      height: form.height,
+      weight: form.weight,
+      preferredFoot: form.preferredFoot,
+      jerseyNumber: form.jerseyNumber
+    };
+    formData.append('stats', JSON.stringify(stats));
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }
