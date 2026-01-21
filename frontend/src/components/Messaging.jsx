@@ -588,17 +588,7 @@ function Messaging() {
           {/* Input */}
           <form
             onSubmit={sendMessage}
-            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full"
-            style={{
-              position: 'fixed',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 30,
-              maxWidth: '100vw',
-              // Only fixed on small screens
-              ...(window.innerWidth < 768 ? {} : { position: 'static' })
-            }}
+            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto"
           >
             {replyTo && (
               <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded flex justify-between items-center">
