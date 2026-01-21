@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PlayerProfileHeader = ({ profile, stats }) => {
+const PlayerProfileHeader = ({ profile = {}, stats }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 flex flex-col md:flex-row items-center gap-6 mb-6">
       <div className="flex flex-col items-center md:items-start gap-2">

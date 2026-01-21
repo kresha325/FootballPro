@@ -1,6 +1,6 @@
 import React from 'react';
 
-const BusinessProfile = ({ profile, stats, isOwner }) => {
+const BusinessProfile = ({ profile = {}, stats, isOwner }) => {
   const businessData = profile.stats || {};
 
   const isAbsoluteUrl = url => /^https?:\/\//.test(url);

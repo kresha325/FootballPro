@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ManagerProfile = ({ profile, stats, isOwner }) => {
+const ManagerProfile = ({ profile = {}, stats, isOwner }) => {
   const managerData = profile.stats || {};
 
   const isAbsoluteUrl = url => /^https?:\/\//.test(url);

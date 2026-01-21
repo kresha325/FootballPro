@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ScoutProfile = ({ profile, stats, isOwner }) => {
+const ScoutProfile = ({ profile = {}, stats, isOwner }) => {
   const scoutData = profile.stats || {};
 
   const isAbsoluteUrl = url => /^https?:\/\//.test(url);

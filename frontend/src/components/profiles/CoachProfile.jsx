@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CoachProfile = ({ profile, stats, isOwner }) => {
+const CoachProfile = ({ profile = {}, stats, isOwner }) => {
   const coachData = profile.stats || {};
 
   const getAffiliationLabel = (affiliation) => {
