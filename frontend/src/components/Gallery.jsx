@@ -3,6 +3,12 @@ import { galleryAPI, profileAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const Gallery = () => {
+    const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+    const getFullUrl = (url) => {
+      if (!url) return '';
+      if (/^https?:\/\//.test(url)) return url;
+      return apiRoot + (url.startsWith('/') ? url : '/' + url);
+    };
     const [settingProfilePhoto, setSettingProfilePhoto] = useState(null);
     // Set as profile photo handler
     const handleSetProfilePhoto = async (imageUrl, itemId) => {
@@ -212,7 +218,7 @@ const Gallery = () => {
               {item.imageUrl ? (
                 <>
                   <img
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.imageUrl}`}
+                    src={getFullUrl(item.imageUrl)}
                     alt={item.title || 'Gallery item'}
                     className="w-full h-48 object-cover"
                     onError={(e) => {
@@ -236,7 +242,7 @@ const Gallery = () => {
                 </>
               ) : item.videoUrl ? (
                 <video
-                  src={`${import.meta.env.VITE_API_URL.replace('/api','')}${item.videoUrl}`}
+                  src={getFullUrl(item.videoUrl)}
                   controls
                   className="w-full h-48 object-cover"
                 />
@@ -290,7 +296,7 @@ const Gallery = () => {
               ✕
             </button>
             <img
-              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedImage.imageUrl}`}
+              src={getFullUrl(selectedImage.imageUrl)}
               alt={selectedImage.title}
               className="max-w-full max-h-screen object-contain"
             />

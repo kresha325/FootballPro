@@ -66,6 +66,26 @@ function Navbar() {
             <span className="text-2xl">{darkMode ? '☀️' : '🌙'}</span>
           </button>
 
+          {/* PROFILE AVATAR */}
+          <Link
+            to={`/profile/${user?.id}`}
+            className="flex items-center"
+            aria-label="Profile"
+          >
+            {user?.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
+              <img
+                src={user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`}
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover shadow-md border-2 border-blue-500"
+                onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
+                {user?.firstName?.[0]}
+              </div>
+            )}
+          </Link>
+
           {/* BURGER MENU BUTTON */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}

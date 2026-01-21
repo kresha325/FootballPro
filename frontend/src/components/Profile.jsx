@@ -989,7 +989,7 @@ const Profile = () => {
               ✕
             </button>
             <img
-              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedGalleryImage.imageUrl}`}
+              src={getFullUrl(selectedGalleryImage.imageUrl)}
               alt={selectedGalleryImage.title}
               className="max-w-full max-h-screen object-contain rounded-lg"
             />

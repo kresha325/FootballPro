@@ -1,6 +1,7 @@
 const Gallery = require('../models/Gallery');
 const multer = require('multer');
 const path = require('path');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -36,16 +37,14 @@ exports.getGallery = async (req, res) => {
     console.log('📸 Gallery items found:', gallery.length);
     console.log('📸 First item:', gallery[0]);
     
-    // Standardizo path-et për gallery
+    // Standardizo path-et për gallery (ruaj URL absolute të Cloudinary)
     const galleryStandardized = (gallery || []).map(item => {
       const obj = item.toJSON();
       if (obj.imageUrl) {
-        const filename = obj.imageUrl.split('/').pop();
-        obj.imageUrl = `/uploads/gallery/${filename}`;
+        obj.imageUrl = toAbsoluteUploadsUrl(req, obj.imageUrl);
       }
       if (obj.videoUrl) {
-        const filename = obj.videoUrl.split('/').pop();
-        obj.videoUrl = `/uploads/gallery/${filename}`;
+        obj.videoUrl = toAbsoluteUploadsUrl(req, obj.videoUrl);
       }
       return obj;
     });
@@ -72,16 +71,14 @@ exports.getUserGallery = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
     
-    // Standardizo path-et për gallery
+    // Standardizo path-et për gallery (ruaj URL absolute të Cloudinary)
     const galleryStandardized = (gallery || []).map(item => {
       const obj = item.toJSON();
       if (obj.imageUrl) {
-        const filename = obj.imageUrl.split('/').pop();
-        obj.imageUrl = `/uploads/${filename}`;
+        obj.imageUrl = toAbsoluteUploadsUrl(req, obj.imageUrl);
       }
       if (obj.videoUrl) {
-        const filename = obj.videoUrl.split('/').pop();
-        obj.videoUrl = `/uploads/${filename}`;
+        obj.videoUrl = toAbsoluteUploadsUrl(req, obj.videoUrl);
       }
       return obj;
     });
