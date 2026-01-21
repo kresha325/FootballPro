@@ -28,20 +28,38 @@ exports.updateMatch = async (req, res) => {
 exports.getUserMatches = async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
-    const matches = await Match.findAll({
-      where: {
-        [require('sequelize').Op.or]: [
-          { homeUserId: userId },
-          { awayUserId: userId }
-        ]
-      },
-      include: [
-        { model: db.Tournament, attributes: ['name'] },
-        { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
-        { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
-      ],
-      order: [['matchDate', 'DESC']]
-    });
+    let matches;
+    try {
+      matches = await Match.findAll({
+        where: {
+          [require('sequelize').Op.or]: [
+            { homeUserId: userId },
+            { awayUserId: userId }
+          ]
+        },
+        include: [
+          { model: db.Tournament, attributes: ['name'] },
+          { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
+          { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+        ],
+        order: [['matchDate', 'DESC']]
+      });
+    } catch (err) {
+      const message = err?.message || '';
+      if (message.includes('MatchScorers') || message.includes('Tournaments') || message.includes('does not exist')) {
+        matches = await Match.findAll({
+          where: {
+            [require('sequelize').Op.or]: [
+              { homeUserId: userId },
+              { awayUserId: userId }
+            ]
+          },
+          order: [['matchDate', 'DESC']]
+        });
+      } else {
+        throw err;
+      }
+    }
     res.json(matches);
   } catch (err) {
     console.error('Error in getUserMatches:', err);
@@ -97,17 +115,32 @@ exports.createMatch = async (req, res) => {
 
 exports.getMatches = async (req, res) => {
   try {
-    const matches = await Match.findAll({
-      include: [
-        { model: db.Tournament, attributes: ['name'] },
-        { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
-        { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
-        {
-          model: db.MatchScorer,
-          include: [{ model: db.User, attributes: ['id', 'firstName', 'lastName'] }],
-        },
-      ],
-    });
+    let matches;
+    try {
+      matches = await Match.findAll({
+        include: [
+          { model: db.Tournament, attributes: ['name'] },
+          { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
+          { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+          {
+            model: db.MatchScorer,
+            include: [{ model: db.User, attributes: ['id', 'firstName', 'lastName'] }],
+          },
+        ],
+      });
+    } catch (err) {
+      const message = err?.message || '';
+      if (message.includes('MatchScorers') || message.includes('Tournaments') || message.includes('does not exist')) {
+        matches = await Match.findAll({
+          include: [
+            { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
+            { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+          ],
+        });
+      } else {
+        throw err;
+      }
+    }
     res.json(matches);
   } catch (err) {
     console.error('Error in getMatches:', err);
