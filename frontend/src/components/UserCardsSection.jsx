@@ -1,8 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
 // Helper për URL absolute/relative të fotos
-const isAbsoluteUrl = url => /^https?:\/\//.test(url);
 const apiRoot = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : '';
+const getFullUrl = (url) => {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  return apiRoot + (url.startsWith('/') ? url : '/' + url);
+};
 import { profileAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -63,11 +67,7 @@ const UserCardsSection = () => {
           <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col">
             <div className="relative h-48 w-full overflow-hidden">
               <img
-                src={profile.profilePhoto
-                  ? (isAbsoluteUrl(profile.profilePhoto)
-                      ? profile.profilePhoto
-                      : apiRoot + (profile.profilePhoto.startsWith('/') ? profile.profilePhoto : '/' + profile.profilePhoto))
-                  : '/default-avatar.png'}
+                src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
                 alt={profile.firstName + ' ' + profile.lastName}
                 className="object-cover w-full h-full"
                 onError={e => { e.target.src = '/default-avatar.png'; }}
