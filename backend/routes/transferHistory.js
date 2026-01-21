@@ -28,6 +28,10 @@ router.get('/user/:userId', async (req, res) => {
       if (dbError && dbError.stack) {
         console.error('[TransferHistory] DB Error Stack:', dbError.stack);
       }
+      const message = dbError?.message || '';
+      if (message.includes('TransferHistories') || message.includes('transferhistories') || message.includes('does not exist')) {
+        return res.json([]);
+      }
       return res.status(500).json({ msg: 'DB error', error: dbError.message });
     }
     res.json(transfers);
