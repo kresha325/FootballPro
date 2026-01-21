@@ -164,15 +164,20 @@ exports.updateProfile = async (req, res) => {
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));
       if (req.files.profilePhoto) {
-        const file = req.files.profilePhoto[0];
-        // Upload to Cloudinary
-        const cloudRes = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'image',
-          folder: 'profile_photos',
-        });
-        // Remove local file
-        fs.unlink(file.path, () => {});
-        updateData.profilePhoto = cloudRes.secure_url;
+        let profilePublicId;
+        if (req.body.profilePhoto) {
+          updateData.profilePhoto = req.body.profilePhoto;
+        } else {
+          const file = req.files.profilePhoto[0];
+          const cloudRes = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'image',
+            folder: 'profile_photos',
+          });
+          // Remove local file
+          fs.unlink(file.path, () => {});
+          updateData.profilePhoto = cloudRes.secure_url;
+          profilePublicId = cloudRes.public_id;
+        }
         console.log('✅ profilePhoto set to:', updateData.profilePhoto);
         // Add profile photo to gallery
         await Gallery.create({
@@ -181,7 +186,7 @@ exports.updateProfile = async (req, res) => {
           description: 'Profile photo',
           imageUrl: updateData.profilePhoto,
           type: 'photo',
-          publicId: cloudRes.public_id,
+          ...(profilePublicId ? { publicId: profilePublicId } : {}),
         });
       }
       if (req.files.coverPhoto) {
