@@ -19,6 +19,7 @@ exports.setPostSponsors = async (req, res) => {
 };
 const Post = require('../models/Post');
 const Gallery = require('../models/Gallery');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 // ...existing code...
 
 exports.getPosts = async (req, res) => {
@@ -56,17 +57,14 @@ exports.getPosts = async (req, res) => {
       // Standardizo path-in për imazhe dhe video të postimeve
       const postObj = post.toJSON();
       if (postObj.imageUrl) {
-        const filename = postObj.imageUrl.split('/').pop();
-        postObj.imageUrl = `/uploads/${filename}`;
+        postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
       }
       if (postObj.videoUrl) {
-        const filename = postObj.videoUrl.split('/').pop();
-        postObj.videoUrl = `/uploads/${filename}`;
+        postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
       }
       // Standardizo path-in e profilePhoto të author-it në çdo post
       if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
-        const filename = postObj.author.Profile.profilePhoto.split('/').pop();
-        postObj.author.profilePhoto = `/uploads/${filename}`;
+        postObj.author.profilePhoto = toAbsoluteUploadsUrl(req, postObj.author.Profile.profilePhoto);
       } else {
         postObj.author = postObj.author || {};
         postObj.author.profilePhoto = null;
@@ -116,17 +114,14 @@ exports.getUserPosts = async (req, res) => {
       // Standardizo path-in për imazhe dhe video të postimeve
       const postObj = post.toJSON();
       if (postObj.imageUrl) {
-        const filename = postObj.imageUrl.split('/').pop();
-        postObj.imageUrl = `/uploads/${filename}`;
+        postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
       }
       if (postObj.videoUrl) {
-        const filename = postObj.videoUrl.split('/').pop();
-        postObj.videoUrl = `/uploads/${filename}`;
+        postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
       }
       // Standardizo path-in e profilePhoto të author-it në çdo post
       if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
-        const filename = postObj.author.Profile.profilePhoto.split('/').pop();
-        postObj.author.profilePhoto = `/uploads/${filename}`;
+        postObj.author.profilePhoto = toAbsoluteUploadsUrl(req, postObj.author.Profile.profilePhoto);
       } else {
         postObj.author = postObj.author || {};
         postObj.author.profilePhoto = null;
@@ -183,7 +178,10 @@ exports.getPost = async (req, res) => {
       await metrics.save();
     }
 
-    res.json(post);
+    const postObj = post.toJSON();
+    if (postObj.imageUrl) postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
+    if (postObj.videoUrl) postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
+    res.json(postObj);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
@@ -195,14 +193,14 @@ exports.createPost = async (req, res) => {
     console.log('📁 CREATE POST - File:', req.file);
     
     const { content, location, locationLat, locationLng, mentions } = req.body;
-    let imageUrl = null;
-    let videoUrl = null;
-    // Merr path-in për imazh dhe video nga req.files
+    let imageUrl = req.body.image || null;
+    let videoUrl = req.body.video || null;
+    // Merr path-in për imazh dhe video nga req.files (fallback local)
     if (req.files) {
-      if (req.files['image'] && req.files['image'][0]) {
+      if (!imageUrl && req.files['image'] && req.files['image'][0]) {
         imageUrl = `/uploads/${req.files['image'][0].filename}`;
       }
-      if (req.files['video'] && req.files['video'][0]) {
+      if (!videoUrl && req.files['video'] && req.files['video'][0]) {
         videoUrl = `/uploads/${req.files['video'][0].filename}`;
       }
     }
@@ -274,7 +272,10 @@ exports.createPost = async (req, res) => {
     
       // Gamification u largua
     
-    res.json(post);
+    const postObj = post.toJSON();
+    if (postObj.imageUrl) postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
+    if (postObj.videoUrl) postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
+    res.json(postObj);
   } catch (err) {
     console.error('❌ CREATE POST ERROR:', err);
     console.error('Error details:', err.message);
@@ -287,9 +288,29 @@ exports.deletePost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, userId: req.user.id } });
     if (!post) return res.status(404).json({ msg: 'Post not found' });
+    const Like = require('../models/Like');
+    const Comment = require('../models/Comment');
+    const PostAnalytics = require('../models/PostAnalytics');
+    const PostSponsor = require('../models/PostSponsor');
+
+    const safeDestroy = async (model, where) => {
+      try {
+        await model.destroy({ where });
+      } catch (deleteErr) {
+        console.warn('Delete related rows failed:', deleteErr.message);
+      }
+    };
+
+    await Promise.all([
+      safeDestroy(Like, { postId: post.id }),
+      safeDestroy(Comment, { postId: post.id }),
+      safeDestroy(PostAnalytics, { postId: post.id }),
+      safeDestroy(PostSponsor, { postId: post.id }),
+    ]);
     await post.destroy();
     res.json({ msg: 'Post deleted' });
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('Delete post error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };

@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
 const multer = require('multer');
 const path = require('path');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 
 // Configure multer for profile photos
 const storage = multer.diskStorage({
@@ -112,8 +113,10 @@ exports.getProfile = async (req, res) => {
     };
     // Standardize profilePhoto path for avatar
     if (response.profilePhoto) {
-      const filename = response.profilePhoto.split('/').pop();
-      response.profilePhoto = `/uploads/${filename}`;
+      response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);
+    }
+    if (response.coverPhoto) {
+      response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
 
     res.json(response);
@@ -180,14 +183,18 @@ exports.updateProfile = async (req, res) => {
         }
         console.log('✅ profilePhoto set to:', updateData.profilePhoto);
         // Add profile photo to gallery
-        await Gallery.create({
-          userId: req.user.id,
-          title: 'Profile Photo',
-          description: 'Profile photo',
-          imageUrl: updateData.profilePhoto,
-          type: 'photo',
-          ...(profilePublicId ? { publicId: profilePublicId } : {}),
-        });
+        try {
+          await Gallery.create({
+            userId: req.user.id,
+            title: 'Profile Photo',
+            description: 'Profile photo',
+            imageUrl: updateData.profilePhoto,
+            type: 'photo',
+            ...(profilePublicId ? { publicId: profilePublicId } : {}),
+          });
+        } catch (galleryErr) {
+          console.warn('Gallery create failed (profile photo):', galleryErr.message);
+        }
       }
       if (req.files.coverPhoto) {
         let coverPublicId;
@@ -206,14 +213,18 @@ exports.updateProfile = async (req, res) => {
         }
         console.log('✅ coverPhoto set to:', updateData.coverPhoto);
         // Add cover photo to gallery
-        await Gallery.create({
-          userId: req.user.id,
-          title: 'Cover Photo',
-          description: 'Cover photo',
-          imageUrl: updateData.coverPhoto,
-          type: 'photo',
-          ...(coverPublicId ? { publicId: coverPublicId } : {}),
-        });
+        try {
+          await Gallery.create({
+            userId: req.user.id,
+            title: 'Cover Photo',
+            description: 'Cover photo',
+            imageUrl: updateData.coverPhoto,
+            type: 'photo',
+            ...(coverPublicId ? { publicId: coverPublicId } : {}),
+          });
+        } catch (galleryErr) {
+          console.warn('Gallery create failed (cover photo):', galleryErr.message);
+        }
       }
     } else {
       console.log('❌ No files in request');
@@ -243,8 +254,14 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
-    // No need to standardize path, just return profile with Cloudinary URLs
-    res.json(profile);
+    const response = profile.get ? profile.get({ plain: true }) : profile;
+    if (response.profilePhoto) {
+      response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);
+    }
+    if (response.coverPhoto) {
+      response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
+    }
+    res.json(response);
   } catch (err) {
     console.error('Profile update error:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
