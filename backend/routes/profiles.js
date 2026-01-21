@@ -25,6 +25,11 @@ router.get('/', auth, getAllProfiles);
  * GET PROFILE BY ID (public, but auth required)
  * GET /api/profiles/:id
  */
+router.get('/me', auth, (req, res, next) => {
+  req.params.id = req.user.id;
+  return getProfile(req, res, next);
+});
+
 router.get('/:id', auth, getProfile);
 
 /**
