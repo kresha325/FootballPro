@@ -124,10 +124,12 @@ exports.getProfile = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
+  const cloudinary = require('../utils/cloudinary');
+  const fs = require('fs');
   try {
     console.log('📝 UPDATE PROFILE - Body:', req.body);
     console.log('📁 UPDATE PROFILE - Files:', req.files);
-    
+
     // Build updateData dynamically from req.body for Profile fields
     const profileFields = [
       'bio', 'city', 'country', 'club', 'position', 'stats', 'careerHistory', 'contact',
@@ -148,7 +150,7 @@ exports.updateProfile = async (req, res) => {
         }
       }
     }
-    
+
     // Allow profilePhoto update from body (URL or string)
     if (req.body.profilePhoto) {
       updateData.profilePhoto = req.body.profilePhoto;
@@ -157,44 +159,58 @@ exports.updateProfile = async (req, res) => {
     if (req.body.coverPhoto) {
       updateData.coverPhoto = req.body.coverPhoto;
     }
-    // Handle file uploads and add to gallery
+
+    // Handle file uploads and add to gallery (Cloudinary)
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));
-         if (req.files.profilePhoto) {
-           // Store only the filename in /uploads
-           const filename = req.files.profilePhoto[0].filename;
-           updateData.profilePhoto = `/uploads/${filename}`;
+      if (req.files.profilePhoto) {
+        const file = req.files.profilePhoto[0];
+        // Upload to Cloudinary
+        const cloudRes = await cloudinary.uploader.upload(file.path, {
+          resource_type: 'image',
+          folder: 'profile_photos',
+        });
+        // Remove local file
+        fs.unlink(file.path, () => {});
+        updateData.profilePhoto = cloudRes.secure_url;
         console.log('✅ profilePhoto set to:', updateData.profilePhoto);
-        
         // Add profile photo to gallery
         await Gallery.create({
           userId: req.user.id,
           title: 'Profile Photo',
           description: 'Profile photo',
           imageUrl: updateData.profilePhoto,
-          type: 'photo'
+          type: 'photo',
+          publicId: cloudRes.public_id,
         });
       }
-         if (req.files.coverPhoto) {
-           const filename = req.files.coverPhoto[0].filename;
-           updateData.coverPhoto = `/uploads/${filename}`;
+      if (req.files.coverPhoto) {
+        const file = req.files.coverPhoto[0];
+        // Upload to Cloudinary
+        const cloudRes = await cloudinary.uploader.upload(file.path, {
+          resource_type: 'image',
+          folder: 'cover_photos',
+        });
+        // Remove local file
+        fs.unlink(file.path, () => {});
+        updateData.coverPhoto = cloudRes.secure_url;
         console.log('✅ coverPhoto set to:', updateData.coverPhoto);
-        
         // Add cover photo to gallery
         await Gallery.create({
           userId: req.user.id,
           title: 'Cover Photo',
           description: 'Cover photo',
           imageUrl: updateData.coverPhoto,
-          type: 'photo'
+          type: 'photo',
+          publicId: cloudRes.public_id,
         });
       }
     } else {
       console.log('❌ No files in request');
     }
-    
+
     let profile = await Profile.findOne({ where: { userId: req.user.id } });
-    
+
     if (!profile) {
       profile = await Profile.create({
         userId: req.user.id,
@@ -203,7 +219,7 @@ exports.updateProfile = async (req, res) => {
     } else {
       await profile.update(updateData);
     }
-    
+
     // Update all user base info if provided
     if (req.body.firstName || req.body.lastName || req.body.dateOfBirth || req.body.gender) {
       const user = await User.findByPk(req.user.id);
@@ -216,19 +232,8 @@ exports.updateProfile = async (req, res) => {
         });
       }
     }
-    
-    // Standardizo path-et për profilePhoto dhe coverPhoto
-    if (profile) {
-      if (profile.profilePhoto) {
-        const filename = profile.profilePhoto.split('/').pop();
-        profile.profilePhoto = `/uploads/${filename}`;
-      }
-      if (profile.coverPhoto) {
-        const filename = profile.coverPhoto.split('/').pop();
-        profile.coverPhoto = `/uploads/${filename}`;
-      }
-    }
-    
+
+    // No need to standardize path, just return profile with Cloudinary URLs
     res.json(profile);
   } catch (err) {
     console.error('Profile update error:', err);

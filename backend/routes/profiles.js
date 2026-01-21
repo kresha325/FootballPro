@@ -13,7 +13,7 @@ const {
   getFollowing,
   checkFollowStatus
 } = require('../controllers/profiles');
-const uploadCloud = require('../middleware/uploadLocal');
+const uploadCloud = require('../middleware/uploadCloudinary');
 
 /**
  * GET ALL PROFILES (with optional filters)
