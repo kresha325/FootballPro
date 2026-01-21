@@ -91,6 +91,7 @@ const Profile = () => {
   // State for cover crop modal
   const [showCoverCrop, setShowCoverCrop] = useState(false);
   const [coverCropImage, setCoverCropImage] = useState(null);
+  const [coverOriginalFile, setCoverOriginalFile] = useState(null);
   const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverCroppedArea, setCoverCroppedArea] = useState(null);
@@ -258,12 +259,30 @@ const Profile = () => {
   // Handler for file input change (cover)
   const handleCoverFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
+      setCoverOriginalFile(e.target.files[0]);
       const reader = new FileReader();
       reader.onload = (ev) => {
         setCoverCropImage(ev.target.result);
         setShowCoverCrop(true);
       };
       reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleUseOriginalCover = async () => {
+    try {
+      if (!coverOriginalFile) return;
+      const formData = new FormData();
+      formData.append('coverPhoto', coverOriginalFile);
+      await profileAPI.updateProfile(formData);
+      const res = await profileAPI.getProfile(id);
+      setProfile(res.data);
+    } catch (err) {
+      alert('Nuk u ruajt fotoja!');
+    } finally {
+      setShowCoverCrop(false);
+      setCoverCropImage(null);
+      setCoverOriginalFile(null);
     }
   };
 
@@ -281,6 +300,7 @@ const Profile = () => {
       setProfile(res.data);
       setShowCoverCrop(false);
       setCoverCropImage(null);
+      setCoverOriginalFile(null);
     } catch (err) {
       alert('Nuk u ruajt fotoja!');
       setShowCoverCrop(false);
@@ -313,7 +333,7 @@ const Profile = () => {
           <img
             src={getFullUrl(profile.coverPhoto)}
             alt="Cover"
-            className="w-full h-full object-cover bg-white rounded-md"
+            className="w-full h-full object-contain bg-black/10 rounded-md"
             loading="lazy"
             decoding="async"
             style={{ background: '#f3f4f6' }}
@@ -357,6 +377,7 @@ const Profile = () => {
             />
             <div className="flex gap-4 mt-4">
               <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={handleSaveCoverCrop}>Ruaj</button>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleUseOriginalCover}>Pa prerje</button>
               <button className="bg-gray-300 px-4 py-2 rounded" onClick={() => setShowCoverCrop(false)}>Anulo</button>
             </div>
           </div>
