@@ -23,14 +23,10 @@ export const SocketProvider = ({ children }) => {
     }
 
 
-    // Build WebSocket URL dynamically for prod/dev
-    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const wsHost = window.location.host;
-    const wsUrl = `${wsProtocol}://${wsHost}`;
+    const socketUrl = BACKEND_URL;
+    console.log('🔗 Connecting to Socket.IO:', socketUrl);
 
-    console.log('🔗 Connecting to Socket.IO:', wsUrl);
-
-    const newSocket = io(wsUrl, {
+    const newSocket = io(socketUrl, {
       auth: {
         userId: user.id,
       },

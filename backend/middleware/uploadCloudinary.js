@@ -3,8 +3,14 @@ const path = require('path');
 const fs = require('fs');
 const cloudinary = require('../utils/cloudinary');
 
-// Multer config: store temporarily in /tmp
-const storage = multer.diskStorage({
+const isCloudinaryEnabled = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+// Multer config: store temporarily in /tmp (cloudinary) or in /uploads (local fallback)
+const tempStorage = multer.diskStorage({
 	destination: function (req, file, cb) {
 		cb(null, '/tmp');
 	},
@@ -14,7 +20,21 @@ const storage = multer.diskStorage({
 	}
 });
 
-const upload = multer({ storage: storage });
+const localStorage = multer.diskStorage({
+	destination: function (req, file, cb) {
+		const dest = path.join(__dirname, '../uploads');
+		if (!fs.existsSync(dest)) {
+			fs.mkdirSync(dest, { recursive: true });
+		}
+		cb(null, dest);
+	},
+	filename: function (req, file, cb) {
+		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+		cb(null, uniqueSuffix + '-' + file.originalname.replace(/\s+/g, '_'));
+	}
+});
+
+const upload = multer({ storage: isCloudinaryEnabled ? tempStorage : localStorage });
 
 // Wrapper for .fields to upload to Cloudinary after multer
 function cloudinaryFields(fields) {
@@ -23,6 +43,17 @@ function cloudinaryFields(fields) {
 		multerFields(req, res, async function (err) {
 			if (err) return next(err);
 			if (!req.files) return next();
+			if (!isCloudinaryEnabled) {
+				for (const field of fields) {
+					const files = req.files[field.name];
+					if (files && files.length > 0) {
+						for (const file of files) {
+							req.body[field.name] = `/uploads/${file.filename}`;
+						}
+					}
+				}
+				return next();
+			}
 			// For each field, upload to Cloudinary
 			for (const field of fields) {
 				const files = req.files[field.name];
