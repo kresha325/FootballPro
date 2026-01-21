@@ -2,19 +2,25 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn("Products", "sellerId", {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-      references: {
-        model: "Users",
-        key: "id",
-      },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
-    });
+    const table = await queryInterface.describeTable("Products");
+    if (!table.sellerId) {
+      await queryInterface.addColumn("Products", "sellerId", {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "Users",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn("Products", "sellerId");
+    const table = await queryInterface.describeTable("Products");
+    if (table.sellerId) {
+      await queryInterface.removeColumn("Products", "sellerId");
+    }
   },
 };
