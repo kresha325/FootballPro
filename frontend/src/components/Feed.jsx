@@ -426,11 +426,11 @@ const Feed = () => {
                         }
                         alt={post.author?.firstName || user?.firstName || 'User'}
                         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                        onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                        onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                       />
                     ) : (
                       <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                        {post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}
+                        {`${post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}${post.author?.lastName?.charAt(0).toUpperCase() || user?.lastName?.charAt(0).toUpperCase() || ''}`}
                       </div>
                     )}
                     <div className="ml-3">

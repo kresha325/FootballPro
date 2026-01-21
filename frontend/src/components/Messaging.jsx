@@ -328,7 +328,19 @@ function Messaging() {
     return (
       <>
         {message.replyTo && (
-          <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500">
+          <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500 flex items-center gap-2">
+            {message.replyTo.sender && message.replyTo.sender.profilePhoto ? (
+              <img
+                src={message.replyTo.sender.profilePhoto.startsWith('http') ? message.replyTo.sender.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${message.replyTo.sender.profilePhoto}`}
+                alt={message.replyTo.sender.firstName}
+                className="w-6 h-6 rounded-full object-cover"
+                onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                {`${message.replyTo.sender?.firstName?.charAt(0)?.toUpperCase() || ''}${message.replyTo.sender?.lastName?.charAt(0)?.toUpperCase() || ''}`}
+              </div>
+            )}
             <p className="font-medium">
               {message.replyTo.sender && message.replyTo.sender.firstName
                 ? message.replyTo.sender.firstName

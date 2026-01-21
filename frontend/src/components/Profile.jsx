@@ -379,10 +379,11 @@ const Profile = () => {
                     alt={`${profile.firstName} ${profile.lastName}`}
                     className="w-full h-full object-cover bg-white"
                     style={{ background: '#f3f4f6' }}
+                    onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
-                    {profile.firstName[0]}{profile.lastName[0]}
+                    {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`}
                   </div>
                 )}
               </div>
