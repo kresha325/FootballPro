@@ -22,9 +22,15 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    console.log('🔗 Connecting to Socket.IO:', BACKEND_URL);
-    
-    const newSocket = io(BACKEND_URL, {
+
+    // Build WebSocket URL dynamically for prod/dev
+    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsHost = window.location.host;
+    const wsUrl = `${wsProtocol}://${wsHost}`;
+
+    console.log('🔗 Connecting to Socket.IO:', wsUrl);
+
+    const newSocket = io(wsUrl, {
       auth: {
         userId: user.id,
       },
