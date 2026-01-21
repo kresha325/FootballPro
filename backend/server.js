@@ -135,23 +135,27 @@ io.on('connection', (socket) => {
     socket.on('call:join-room', async (data) => {
       const { roomId, userId } = data;
       socket.join(roomId);
-      // Find or create call history for this room
-      let call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
-      if (!call) {
-        call = await VideoCallHistory.create({
-          roomId,
-          participants: [userId],
-          startedAt: new Date(),
-          status: 'completed',
-        });
-      } else {
-        // Add user to participants if not already present
-        const participants = Array.isArray(call.participants) ? call.participants : [];
-        if (!participants.includes(userId)) {
-          participants.push(userId);
-          call.participants = participants;
-          await call.save();
+      try {
+        // Find or create call history for this room
+        let call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
+        if (!call) {
+          call = await VideoCallHistory.create({
+            roomId,
+            participants: [userId],
+            startedAt: new Date(),
+            status: 'completed',
+          });
+        } else {
+          // Add user to participants if not already present
+          const participants = Array.isArray(call.participants) ? call.participants : [];
+          if (!participants.includes(userId)) {
+            participants.push(userId);
+            call.participants = participants;
+            await call.save();
+          }
         }
+      } catch (err) {
+        console.warn('⚠️ VideoCallHistory not available:', err.message);
       }
       io.to(roomId).emit('call:user-joined', { userId });
     });
@@ -265,13 +269,17 @@ io.on('connection', (socket) => {
       });
     }
     // Mark call as ended in DB (for all rooms this user is in)
-    const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
-    for (const roomId of rooms) {
-      const call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
-      if (call) {
-        call.endedAt = new Date();
-        await call.save();
+    try {
+      const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+      for (const roomId of rooms) {
+        const call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
+        if (call) {
+          call.endedAt = new Date();
+          await call.save();
+        }
       }
+    } catch (err) {
+      console.warn('⚠️ VideoCallHistory not available:', err.message);
     }
   });
 
