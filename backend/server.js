@@ -72,13 +72,7 @@ app.use(passport.initialize());
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Serve static files from frontend/dist (React build)
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// SPA fallback: kthe index.html për çdo route që nuk është API/static
-app.get(/^\/(?!api|uploads).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
+// ...frontend serving removed for Render split-service deployment...
 
 // Routes
 
