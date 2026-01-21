@@ -75,6 +75,8 @@ const UserCardsSection = () => {
                 src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
                 alt={profile.firstName + ' ' + profile.lastName}
                 className="object-cover w-full h-full"
+                loading="lazy"
+                decoding="async"
                 onError={e => { e.target.src = '/default-avatar.png'; }}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">

@@ -204,6 +204,8 @@ const BrowseProfiles = () => {
                     src={getFullUrl(profile.profilePhoto)}
                     alt={profile.firstName + ' ' + profile.lastName}
                     className="object-cover w-full h-full"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full bg-gray-300 dark:bg-gray-700 text-3xl font-bold text-white select-none">
@@ -220,12 +222,12 @@ const BrowseProfiles = () => {
                   <div className="text-sm opacity-80">Datëlindja: {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('sq-AL') : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
                 </div>
                 <div className="flex gap-2 mt-auto">
-                  <button
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 rounded-md transition"
-                    onClick={() => window.location.href = `/profile/${profile.id}`}
+                  <Link
+                    to={`/profile/${profile.id}`}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 rounded-md transition text-center"
                   >
                     SHIKO PROFILIN
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

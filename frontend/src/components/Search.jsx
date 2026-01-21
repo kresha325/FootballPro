@@ -372,6 +372,8 @@ export default function Search() {
                             src={getFullUrl(post.User.Profile.profilePhoto)}
                             alt={post.User.firstName}
                             className="w-10 h-10 rounded-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
@@ -396,6 +398,8 @@ export default function Search() {
                           src={getFullUrl(post.imageUrl)}
                           alt="Post"
                           className="rounded-lg w-full max-h-96 object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                       )}
                     </div>
@@ -417,6 +421,8 @@ export default function Search() {
                           src={getFullUrl(user.Profile.profilePhoto)}
                           alt={user.firstName}
                           className="w-16 h-16 rounded-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center text-2xl font-bold">
@@ -463,6 +469,8 @@ export default function Search() {
                             src={getFullUrl(user.Profile.profilePhoto)}
                             alt={user.firstName}
                             className="w-16 h-16 rounded-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center text-2xl font-bold">
@@ -505,9 +513,11 @@ export default function Search() {
                   <div className="flex items-center gap-4">
                     {user.Profile?.profilePhoto ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL}${user.Profile.profilePhoto}`}
+                        src={getFullUrl(user.Profile.profilePhoto)}
                         alt={user.firstName}
                         className="w-16 h-16 rounded-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center text-2xl font-bold">
@@ -557,10 +567,12 @@ export default function Search() {
                 <div key={post.id} className="bg-white rounded-lg shadow p-4">
                   <div className="flex items-center gap-3 mb-3">
                     {post.User?.Profile?.profilePhoto ? (
-                        <img
-                          src={getFullUrl(post.User.Profile.profilePhoto)}
+                      <img
+                        src={getFullUrl(post.User.Profile.profilePhoto)}
                         alt={post.User.firstName}
                         className="w-10 h-10 rounded-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
@@ -585,6 +597,8 @@ export default function Search() {
                       src={getFullUrl(post.imageUrl)}
                       alt="Post"
                       className="rounded-lg w-full max-h-96 object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   )}
                 </div>

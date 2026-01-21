@@ -46,12 +46,15 @@ function ForwardButton({ message }) {
       setConversations([]);
     }
     setLoading(false);
-      if (message.type === 'image' || message.type === 'video' || message.type === 'file') {
-        // Shkarko file-in dhe dërgo si file të ri
-        const response = await fetch(getFullUrl(message.fileUrl));
-        const blob = await response.blob();
-        formData.append('file', blob, message.fileName || 'media');
-      }
+  };
+
+  const handleForward = async (convId) => {
+    if (forwardingId) return;
+    setForwardingId(convId);
+    setSuccess(false);
+    try {
+      const formData = new FormData();
+      if ((message.type === 'image' || message.type === 'video' || message.type === 'file') && message.fileUrl) {
         const response = await fetch(getFullUrl(message.fileUrl));
         const blob = await response.blob();
         formData.append('file', blob, message.fileName || 'media');
@@ -65,7 +68,7 @@ function ForwardButton({ message }) {
       setSuccess(true);
       setTimeout(() => setShowList(false), 1000);
     } catch (err) {
-      // mund të shtosh error handling
+      // optional error handling
     }
     setForwardingId(null);
   };

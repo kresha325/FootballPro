@@ -18,6 +18,7 @@ const https = require('https');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const passport = require('./config/passport');
+const morgan = require('morgan');
 // const sequelize = require('./config/database');
 
 dotenv.config();
@@ -55,6 +56,10 @@ app.use(cors({
   credentials: true
 }));
 app.options('*', cors());
+
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('combined'));
+}
 
 // Socket.io CORS
 io = socketIo(server, {
@@ -333,5 +338,11 @@ server.listen(PORT, '0.0.0.0', () => {
 // Error handling middleware (duhet të jetë në fund të file-it)
 app.use((err, req, res, next) => {
   console.error('❌ Express error:', err);
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large. Max 10MB.' });
+  }
+  if (err && err.message === 'Invalid file type') {
+    return res.status(400).json({ error: 'Invalid file type.' });
+  }
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });

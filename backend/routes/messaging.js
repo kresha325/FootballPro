@@ -28,10 +28,11 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|mp4|mp3|wav/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
+    const extnameOk = /\.(jpe?g|png|gif|webp|pdf|docx?|mp4|mov|avi|webm|mp3|wav|ogg)$/i
+      .test(path.extname(file.originalname));
+    const mimetypeOk = /^(image\/(jpeg|png|gif|webp)|video\/(mp4|quicktime|x-msvideo|webm)|audio\/(mpeg|wav|ogg)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/i
+      .test(file.mimetype);
+    if (mimetypeOk || extnameOk) {
       return cb(null, true);
     }
     cb(new Error('Invalid file type'));

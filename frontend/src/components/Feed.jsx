@@ -437,6 +437,8 @@ const Feed = () => {
                         }
                         alt={post.author?.firstName || user?.firstName || 'User'}
                         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                        loading="lazy"
+                        decoding="async"
                         onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                       />
                     ) : (
@@ -574,6 +576,8 @@ const Feed = () => {
                   src={getFullUrl(post.imageUrl)}
                   alt="Post content" 
                   className="w-full rounded-lg mb-4 max-h-96 object-cover"
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
                     console.error('Post image failed to load:', post.imageUrl);
                     e.target.style.display = 'none';
@@ -584,6 +588,7 @@ const Feed = () => {
                 <video 
                   src={getFullUrl(post.videoUrl || post.imageUrl)}
                   controls 
+                  preload="metadata"
                   className="w-full rounded-lg mb-4 max-h-96"
                   onError={(e) => {
                     console.error('Post video failed to load:', post.videoUrl || post.imageUrl);

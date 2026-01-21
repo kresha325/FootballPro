@@ -226,6 +226,8 @@ const Gallery = () => {
                     src={getFullUrl(item.imageUrl)}
                     alt={item.title || 'Gallery item'}
                     className="w-full h-48 object-cover"
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       console.error('❌ Image failed to load:', item.imageUrl);
                       console.error('Full item:', item);
@@ -249,6 +251,7 @@ const Gallery = () => {
                 <video
                   src={getFullUrl(item.videoUrl)}
                   controls
+                  preload="metadata"
                   className="w-full h-48 object-cover"
                 />
               ) : (

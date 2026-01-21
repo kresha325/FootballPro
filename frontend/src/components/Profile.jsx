@@ -314,6 +314,8 @@ const Profile = () => {
             src={getFullUrl(profile.coverPhoto)}
             alt="Cover"
             className="w-full h-full object-cover bg-white rounded-md"
+            loading="lazy"
+            decoding="async"
             style={{ background: '#f3f4f6' }}
           />
         )}
@@ -373,6 +375,8 @@ const Profile = () => {
                     src={getFullUrl(profile.profilePhoto)}
                     alt={`${profile.firstName} ${profile.lastName}`}
                     className="w-full h-full object-cover bg-white"
+                    loading="lazy"
+                    decoding="async"
                     style={{ background: '#f3f4f6' }}
                     onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                   />
@@ -616,6 +620,8 @@ const Profile = () => {
                             src={getFullUrl(post.imageUrl)}
                             alt="Post" 
                             className="w-full h-auto object-cover"
+                            loading="lazy"
+                            decoding="async"
                             onDoubleClick={() => setFullScreenImage(post.imageUrl)}
                           />
                         </div>
@@ -627,6 +633,7 @@ const Profile = () => {
                           <video 
                             src={getFullUrl(post.videoUrl)}
                             controls 
+                            preload="metadata"
                             className="w-full h-auto"
                           />
                         </div>

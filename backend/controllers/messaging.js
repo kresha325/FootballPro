@@ -322,7 +322,9 @@ exports.sendMessage = async (req, res) => {
       // Send email notification
       try {
         const recipient = await User.findByPk(member.userId);
-        const preview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+        const safeContent = typeof content === 'string' ? content : '';
+        const previewBase = safeContent || messageData.fileName || 'Media message';
+        const preview = previewBase.substring(0, 100) + (previewBase.length > 100 ? '...' : '');
         await sendEmail(recipient.email, 'newMessage', senderName, preview, conversationId);
       } catch (emailError) {
         console.error('Email notification failed:', emailError);
