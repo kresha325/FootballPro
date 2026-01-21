@@ -1,6 +1,10 @@
 // Helper për URL absolute/relative të fotos
-const isAbsoluteUrl = url => /^https?:\/\//.test(url);
 const apiRoot = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : '';
+const getFullUrl = (url) => {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  return apiRoot + (url.startsWith('/') ? url : '/' + url);
+};
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI } from '../services/api';
@@ -192,9 +196,7 @@ const BrowseProfiles = () => {
               <div className="relative h-48 w-full overflow-hidden">
                 {profile.profilePhoto ? (
                   <img
-                    src={isAbsoluteUrl(profile.profilePhoto)
-                      ? profile.profilePhoto
-                      : apiRoot + (profile.profilePhoto.startsWith('/') ? profile.profilePhoto : '/' + profile.profilePhoto)}
+                    src={getFullUrl(profile.profilePhoto)}
                     alt={profile.firstName + ' ' + profile.lastName}
                     className="object-cover w-full h-full"
                   />

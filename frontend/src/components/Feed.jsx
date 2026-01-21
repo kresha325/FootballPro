@@ -12,6 +12,12 @@ import UserCardsSection from './UserCardsSection';
 
 const Feed = () => {
   const { user } = useAuth();
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (/^https?:\/\//.test(url)) return url;
+    return apiRoot + (url.startsWith('/') ? url : '/' + url);
+  };
   const navigate = useNavigate();
   const { 
     allPosts, 
@@ -421,8 +427,8 @@ const Feed = () => {
                       <img
                         src={
                           post.author?.profilePhoto
-                            ? (post.author.profilePhoto.startsWith('http') ? post.author.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${post.author.profilePhoto}`)
-                            : (user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`)
+                            ? getFullUrl(post.author.profilePhoto)
+                            : getFullUrl(user.profilePhoto)
                         }
                         alt={post.author?.firstName || user?.firstName || 'User'}
                         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
