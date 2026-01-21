@@ -185,18 +185,29 @@ exports.updateProfile = async (req, res) => {
         });
       }
       if (req.files.coverPhoto) {
+        let coverPublicId;
         // Prefer Cloudinary URL from middleware
         if (req.body.coverPhoto) {
           updateData.coverPhoto = req.body.coverPhoto;
-          console.log('✅ coverPhoto set to:', updateData.coverPhoto);
-          // Add cover photo to gallery
-          await Gallery.create({
-            userId: req.user.id,
-            title: 'Cover Photo',
-            description: 'Cover photo',
-            imageUrl: updateData.coverPhoto,
+        } else {
+          const file = req.files.coverPhoto[0];
+          const coverRes = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'image',
+            folder: 'cover_photos',
+          });
+          fs.unlink(file.path, () => {});
+          updateData.coverPhoto = coverRes.secure_url;
+          coverPublicId = coverRes.public_id;
+        }
+        console.log('✅ coverPhoto set to:', updateData.coverPhoto);
+        // Add cover photo to gallery
+        await Gallery.create({
+          userId: req.user.id,
+          title: 'Cover Photo',
+          description: 'Cover photo',
+          imageUrl: updateData.coverPhoto,
           type: 'photo',
-          publicId: cloudRes.public_id,
+          ...(coverPublicId ? { publicId: coverPublicId } : {}),
         });
       }
     } else {
