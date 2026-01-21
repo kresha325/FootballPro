@@ -29,9 +29,19 @@ function cloudinaryFields(fields) {
 				if (files && files.length > 0) {
 					for (const file of files) {
 						try {
+							// Determine resource type and folder
+							let resource_type = 'image';
+							let folder = 'profile_photos';
+							if (field.name === 'coverPhoto') {
+								folder = 'cover_photos';
+							}
+							if (field.name === 'video' || field.name === 'videoFile') {
+								resource_type = 'video';
+								folder = 'videos';
+							}
 							const cloudRes = await cloudinary.uploader.upload(file.path, {
-								resource_type: 'image',
-								folder: field.name === 'coverPhoto' ? 'cover_photos' : 'profile_photos',
+								resource_type,
+								folder,
 							});
 							// Attach cloudinary url to req.body for controller
 							req.body[field.name] = cloudRes.secure_url;

@@ -44,21 +44,25 @@ exports.upload = upload;
 exports.uploadVideo = async (req, res) => {
   const cloudinary = require('../utils/cloudinary');
   try {
-    if (!req.file) {
+    // Accept Cloudinary URL from middleware if present
+    let videoUrl = req.body.video || req.body.videoFile;
+    let publicId = null;
+    if (!videoUrl && req.file) {
+      // Fallback: upload to Cloudinary here if not handled by middleware
+      const cloudRes = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: 'video',
+        folder: 'videos',
+      });
+      videoUrl = cloudRes.secure_url;
+      publicId = cloudRes.public_id;
+      // Fshi file lokal pas upload
+      const fs = require('fs');
+      fs.unlink(req.file.path, () => {});
+    }
+    if (!videoUrl) {
       return res.status(400).json({ error: 'No video file provided' });
     }
-
     const { title, description, category, tags, isPremium } = req.body;
-
-    // Upload video to Cloudinary
-    const cloudRes = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: 'video',
-      folder: 'videos',
-    });
-
-    const videoUrl = cloudRes.secure_url;
-    const publicId = cloudRes.public_id;
-
     const video = await Video.create({
       userId: req.user.id,
       title,
@@ -71,11 +75,6 @@ exports.uploadVideo = async (req, res) => {
       isProcessing: false,
       processingStatus: 'completed',
     });
-
-    // Fshi file lokal pas upload
-    const fs = require('fs');
-    fs.unlink(req.file.path, () => {});
-
     res.status(201).json(video);
   } catch (error) {
     console.error('Upload video error:', error);
