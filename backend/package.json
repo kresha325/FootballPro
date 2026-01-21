@@ -9,6 +9,7 @@
     "migrate": "npx sequelize-cli db:migrate"
   },
   "dependencies": {
+    "cloudinary": "^1.39.3",
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.1.3",
     "bcryptjs": "^2.4.3",
