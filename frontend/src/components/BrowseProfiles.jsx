@@ -190,16 +190,19 @@ const BrowseProfiles = () => {
           {filteredProfiles.map(profile => (
             <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col">
               <div className="relative h-48 w-full overflow-hidden">
-                <img
-                  src={profile.profilePhoto
-                    ? (isAbsoluteUrl(profile.profilePhoto)
-                        ? profile.profilePhoto
-                        : apiRoot + (profile.profilePhoto.startsWith('/') ? profile.profilePhoto : '/' + profile.profilePhoto))
-                    : '/default-avatar.png'}
-                  alt={profile.firstName + ' ' + profile.lastName}
-                  className="object-cover w-full h-full"
-                  onError={e => { e.target.src = '/default-avatar.png'; }}
-                />
+                {profile.profilePhoto ? (
+                  <img
+                    src={isAbsoluteUrl(profile.profilePhoto)
+                      ? profile.profilePhoto
+                      : apiRoot + (profile.profilePhoto.startsWith('/') ? profile.profilePhoto : '/' + profile.profilePhoto)}
+                    alt={profile.firstName + ' ' + profile.lastName}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full bg-gray-300 dark:bg-gray-700 text-3xl font-bold text-white select-none">
+                    {`${(profile.firstName?.[0] || '').toUpperCase()}${(profile.lastName?.[0] || '').toUpperCase()}`}
+                  </div>
+                )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                   <div className="text-xl font-bold text-white drop-shadow-lg">{profile.firstName} {profile.lastName}</div>
                   <div className="text-white text-sm font-medium drop-shadow">{profile.position || '—'}</div>
