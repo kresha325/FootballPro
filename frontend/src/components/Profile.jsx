@@ -20,8 +20,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 const getFullUrl = (url) => {
   if (!url) return '';
-  if (/^https?:\/\//.test(url)) return url;
-  return apiRoot + (url.startsWith('/') ? url : '/' + url);
+  const normalized = url.startsWith('https//')
+    ? url.replace('https//', 'https://')
+    : url.startsWith('http//')
+      ? url.replace('http//', 'http://')
+      : url;
+  if (/^https?:\/\//.test(normalized)) return normalized;
+  return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
 };
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI } from '../services/api';
@@ -97,9 +102,7 @@ const Profile = () => {
     try {
       const formData = new FormData();
       // Only prepend apiRoot if imageUrl is relative
-      const isAbsoluteUrl = url => /^https?:\/\//.test(url);
-      const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-      const fetchUrl = isAbsoluteUrl(imageUrl) ? imageUrl : `${apiRoot}${imageUrl}`;
+      const fetchUrl = getFullUrl(imageUrl);
       const response = await fetch(fetchUrl);
       const blob = await response.blob();
       const filename = imageUrl.split('/').pop();
@@ -308,11 +311,7 @@ const Profile = () => {
       <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative flex items-center justify-center overflow-hidden">
         {profile.coverPhoto && (
           <img
-            src={
-              /^https?:\/\//.test(profile.coverPhoto)
-                ? profile.coverPhoto
-                : `${import.meta.env.VITE_API_URL.replace('/api','')}${profile.coverPhoto}`
-            }
+            src={getFullUrl(profile.coverPhoto)}
             alt="Cover"
             className="w-full h-full object-cover bg-white rounded-md"
             style={{ background: '#f3f4f6' }}
@@ -371,11 +370,7 @@ const Profile = () => {
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
                 {profile.profilePhoto ? (
                   <img
-                    src={
-                      /^https?:\/\//.test(profile.profilePhoto)
-                        ? profile.profilePhoto
-                        : `${import.meta.env.VITE_API_URL.replace('/api','')}${profile.profilePhoto}`
-                    }
+                    src={getFullUrl(profile.profilePhoto)}
                     alt={`${profile.firstName} ${profile.lastName}`}
                     className="w-full h-full object-cover bg-white"
                     style={{ background: '#f3f4f6' }}
@@ -618,7 +613,7 @@ const Profile = () => {
                       {post.imageUrl && (
                         <div className="mt-3 rounded-lg overflow-hidden">
                           <img 
-                            src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
+                            src={getFullUrl(post.imageUrl)}
                             alt="Post" 
                             className="w-full h-auto object-cover"
                             onDoubleClick={() => setFullScreenImage(post.imageUrl)}
@@ -630,7 +625,7 @@ const Profile = () => {
                       {post.videoUrl && (
                         <div className="mt-3 rounded-lg overflow-hidden">
                           <video 
-                            src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.videoUrl}`}
+                            src={getFullUrl(post.videoUrl)}
                             controls 
                             className="w-full h-auto"
                           />

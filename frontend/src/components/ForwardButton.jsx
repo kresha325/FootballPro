@@ -7,6 +7,17 @@ function ForwardButton({ message }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [forwardingId, setForwardingId] = useState(null); // id e bisedës që po dërgohet
+  const apiRoot = import.meta.env.VITE_API_URL.replace(/\/api$/, '');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
 
   // Helper to get avatar and name for conversation
   const getOtherMember = (conv) => {
@@ -35,17 +46,13 @@ function ForwardButton({ message }) {
       setConversations([]);
     }
     setLoading(false);
-  };
-
-  const handleForward = async (convId) => {
-    setForwardingId(convId);
-    try {
-      const formData = new FormData();
       if (message.type === 'image' || message.type === 'video' || message.type === 'file') {
         // Shkarko file-in dhe dërgo si file të ri
-        const response = await fetch(message.fileUrl.startsWith('/uploads/')
-          ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-          : `${import.meta.env.VITE_API_URL}${message.fileUrl}`);
+        const response = await fetch(getFullUrl(message.fileUrl));
+        const blob = await response.blob();
+        formData.append('file', blob, message.fileName || 'media');
+      }
+        const response = await fetch(getFullUrl(message.fileUrl));
         const blob = await response.blob();
         formData.append('file', blob, message.fileName || 'media');
       }
@@ -105,10 +112,8 @@ function ForwardButton({ message }) {
                     <div className="bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-700 max-w-full flex items-center gap-3">
                       {message.type === 'image' && message.fileUrl ? (
                         <>
-                          <img
-                            src={message.fileUrl.startsWith('/uploads/')
-                              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-                              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+                            <img
+                              src={getFullUrl(message.fileUrl)}
                             alt="Image preview"
                             className="w-12 h-12 object-cover rounded border"
                           />
@@ -116,10 +121,8 @@ function ForwardButton({ message }) {
                         </>
                       ) : message.type === 'video' && message.fileUrl ? (
                         <>
-                          <video
-                            src={message.fileUrl.startsWith('/uploads/')
-                              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-                              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+                            <video
+                              src={getFullUrl(message.fileUrl)}
                             className="w-12 h-12 object-cover rounded border"
                             style={{ background: '#222' }}
                             muted
@@ -153,13 +156,13 @@ function ForwardButton({ message }) {
                           }}
                           onClick={() => forwardingId ? null : handleForward(conv.id)}
                         >
-                          {other.profilePhoto ? (
-                            <img
-                              src={`${import.meta.env.VITE_API_URL}${other.profilePhoto}`}
-                              alt={other.name}
-                              className="w-10 h-10 rounded-full object-cover border"
-                            />
-                          ) : (
+                            {other.profilePhoto ? (
+                              <img
+                                src={getFullUrl(other.profilePhoto)}
+                                alt={other.name}
+                                className="w-10 h-10 rounded-full object-cover border"
+                              />
+                            ) : (
                             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
                               {other.name.charAt(0).toUpperCase()}
                             </div>

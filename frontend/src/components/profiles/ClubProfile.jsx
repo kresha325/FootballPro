@@ -2,14 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { clubMembersAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 
-const ClubProfile = ({ profile, stats, isOwner }) => {
+const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const clubData = (profile && profile.stats) ? profile.stats : {};
 
   // Helper për path të plotë të fotove/video
   const getFullUrl = (url) => {
     if (!url) return '';
-    if (/^https?:\/\//.test(url)) return url;
-    return apiRoot + (url.startsWith('/') ? url : '/' + url);
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -22,7 +27,6 @@ const ClubProfile = ({ profile, stats, isOwner }) => {
 
 
   // Helper for absolute/relative URL
-  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 
   return (

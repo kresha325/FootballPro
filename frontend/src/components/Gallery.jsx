@@ -6,8 +6,13 @@ const Gallery = () => {
     const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
     const getFullUrl = (url) => {
       if (!url) return '';
-      if (/^https?:\/\//.test(url)) return url;
-      return apiRoot + (url.startsWith('/') ? url : '/' + url);
+      const normalized = url.startsWith('https//')
+        ? url.replace('https//', 'https://')
+        : url.startsWith('http//')
+          ? url.replace('http//', 'http://')
+          : url;
+      if (/^https?:\/\//.test(normalized)) return normalized;
+      return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
     };
     const [settingProfilePhoto, setSettingProfilePhoto] = useState(null);
     // Set as profile photo handler

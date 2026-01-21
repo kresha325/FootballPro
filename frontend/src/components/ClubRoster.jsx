@@ -4,6 +4,17 @@ import { clubMembersAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 function ClubRoster() {
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   const { user } = useAuth();
   const [members, setMembers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -202,7 +213,7 @@ function ClubRoster() {
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
                     {membership.athlete?.Profile?.profilePhoto ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL.replace('/api','')}${membership.athlete.Profile.profilePhoto}`}
+                        src={getFullUrl(membership.athlete.Profile.profilePhoto)}
                         alt={membership.athlete.firstName}
                         className="w-full h-full rounded-full object-cover"
                       />
@@ -287,7 +298,7 @@ function ClubRoster() {
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500 to-orange-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
                     {membership.athlete?.Profile?.profilePhoto ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL.replace('/api','')}${membership.athlete.Profile.profilePhoto}`}
+                        src={getFullUrl(membership.athlete.Profile.profilePhoto)}
                         alt={membership.athlete.firstName}
                         className="w-full h-full rounded-full object-cover"
                       />

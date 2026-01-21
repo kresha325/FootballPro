@@ -4,6 +4,17 @@ import api from '../services/api';
 import { FunnelIcon, ArrowTrendingUpIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 export default function Search() {
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -358,7 +369,7 @@ export default function Search() {
                       <div className="flex items-center gap-3 mb-3">
                         {post.User?.Profile?.profilePhoto ? (
                           <img
-                            src={`${import.meta.env.VITE_API_URL}${post.User.Profile.profilePhoto}`}
+                            src={getFullUrl(post.User.Profile.profilePhoto)}
                             alt={post.User.firstName}
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -382,7 +393,7 @@ export default function Search() {
                       <p className="text-gray-800 mb-2">{post.content}</p>
                       {post.imageUrl && (
                         <img
-                          src={`${import.meta.env.VITE_API_URL}${post.imageUrl}`}
+                          src={getFullUrl(post.imageUrl)}
                           alt="Post"
                           className="rounded-lg w-full max-h-96 object-cover"
                         />
@@ -403,7 +414,7 @@ export default function Search() {
                     <div key={user.id} className="bg-white rounded-lg shadow p-4 flex items-center gap-4">
                       {user.Profile?.profilePhoto ? (
                         <img
-                          src={`${import.meta.env.VITE_API_URL}${user.Profile.profilePhoto}`}
+                          src={getFullUrl(user.Profile.profilePhoto)}
                           alt={user.firstName}
                           className="w-16 h-16 rounded-full object-cover"
                         />
@@ -449,7 +460,7 @@ export default function Search() {
                       <div key={user.id} className="bg-white rounded-lg shadow p-4 flex items-center gap-4">
                         {user.Profile?.profilePhoto ? (
                           <img
-                            src={`${import.meta.env.VITE_API_URL}${user.Profile.profilePhoto}`}
+                            src={getFullUrl(user.Profile.profilePhoto)}
                             alt={user.firstName}
                             className="w-16 h-16 rounded-full object-cover"
                           />
@@ -546,8 +557,8 @@ export default function Search() {
                 <div key={post.id} className="bg-white rounded-lg shadow p-4">
                   <div className="flex items-center gap-3 mb-3">
                     {post.User?.Profile?.profilePhoto ? (
-                      <img
-                        src={`${import.meta.env.VITE_API_URL}${post.User.Profile.profilePhoto}`}
+                        <img
+                          src={getFullUrl(post.User.Profile.profilePhoto)}
                         alt={post.User.firstName}
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -571,7 +582,7 @@ export default function Search() {
                   <p className="text-gray-800 mb-2">{post.content}</p>
                   {post.imageUrl && (
                     <img
-                      src={`${import.meta.env.VITE_API_URL}${post.imageUrl}`}
+                      src={getFullUrl(post.imageUrl)}
                       alt="Post"
                       className="rounded-lg w-full max-h-96 object-cover"
                     />

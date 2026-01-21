@@ -13,19 +13,19 @@ const ProfileSelector = ({ user, profile }) => {
     case 'athlete':
       return <PlayerProfile profile={profile} />;
     case 'coach':
-      return <CoachProfile coach={profile} />;
+      return <CoachProfile profile={profile} />;
     case 'scout':
-      return <ScoutProfile scout={profile} />;
+      return <ScoutProfile profile={profile} />;
     case 'manager':
-      return <ManagerProfile manager={profile} />;
+      return <ManagerProfile profile={profile} />;
     case 'club':
-      return <ClubProfile club={profile} />;
+      return <ClubProfile profile={profile} />;
     case 'business':
       return <BusinessProfile profile={profile} />;
     case 'liga':
-      return <LigaProfile liga={profile} />;
+      return <LigaProfile profile={profile} />;
     case 'federation':
-      return <FederationProfile federation={profile} />;
+      return <FederationProfile profile={profile} />;
     default:
       return <div>Unknown role or profile type.</div>;
   }

@@ -31,6 +31,17 @@ import {
 } from 'recharts';
 
 const Analytics = () => {
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [followerGrowth, setFollowerGrowth] = useState([]);
@@ -366,7 +377,7 @@ const Analytics = () => {
                 {/* Show image if present and not a video file */}
                 {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
+                    src={getFullUrl(post.imageUrl)}
                     alt="Post"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -374,7 +385,7 @@ const Analytics = () => {
                 {/* Show video if present */}
                 {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.videoUrl || post.imageUrl}`}
+                    src={getFullUrl(post.videoUrl || post.imageUrl)}
                     controls
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -391,7 +402,7 @@ const Analytics = () => {
                   {/* Show image if present and not a video file */}
                   {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                     <img
-                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.imageUrl}`}
+                      src={getFullUrl(post.imageUrl)}
                       alt="Post"
                       className="w-full h-auto object-cover rounded mb-4"
                     />
@@ -399,7 +410,7 @@ const Analytics = () => {
                   {/* Show video if present */}
                   {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                     <video
-                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${post.videoUrl || post.imageUrl}`}
+                      src={getFullUrl(post.videoUrl || post.imageUrl)}
                       controls
                       className="w-full h-auto object-cover rounded mb-4"
                     />

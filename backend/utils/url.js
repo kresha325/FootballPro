@@ -10,21 +10,26 @@ const getBaseUrl = (req) => {
 
 const toAbsoluteUploadsUrl = (req, value) => {
   if (!value) return value;
-  if (/^https?:\/\//i.test(value)) return value;
+  const normalized = value.startsWith('https//')
+    ? value.replace('https//', 'https://')
+    : value.startsWith('http//')
+      ? value.replace('http//', 'http://')
+      : value;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
 
-  let normalized = value;
-  if (value.includes('/uploads/')) {
-    const filename = value.split('/uploads/').pop();
-    normalized = `/uploads/${filename}`;
-  } else if (value.startsWith('uploads/')) {
-    normalized = `/${value}`;
+  let normalizedPath = normalized;
+  if (normalized.includes('/uploads/')) {
+    const filename = normalized.split('/uploads/').pop();
+    normalizedPath = `/uploads/${filename}`;
+  } else if (normalized.startsWith('uploads/')) {
+    normalizedPath = `/${normalized}`;
   }
 
-  if (normalized.startsWith('/uploads/')) {
-    return `${getBaseUrl(req)}${normalized}`;
+  if (normalizedPath.startsWith('/uploads/')) {
+    return `${getBaseUrl(req)}${normalizedPath}`;
   }
 
-  return value;
+  return normalized;
 };
 
 module.exports = {

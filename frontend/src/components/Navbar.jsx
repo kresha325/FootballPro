@@ -10,6 +10,17 @@ import { notificationsAPI } from '../services/api';
 function Navbar() {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
   const navigate = useNavigate();
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0); // notifications
 
@@ -74,7 +85,7 @@ function Navbar() {
           >
             {user?.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
               <img
-                src={user.profilePhoto.startsWith('http') ? user.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${user.profilePhoto}`}
+                src={getFullUrl(user.profilePhoto)}
                 alt="Profile"
                 className="w-9 h-9 rounded-full object-cover shadow-md border-2 border-blue-500"
                 onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}

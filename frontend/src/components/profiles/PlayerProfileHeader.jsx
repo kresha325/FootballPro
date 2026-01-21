@@ -1,11 +1,22 @@
 import React from 'react';
 
 const PlayerProfileHeader = ({ profile = {}, stats }) => {
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 flex flex-col md:flex-row items-center gap-6 mb-6">
       <div className="flex flex-col items-center md:items-start gap-2">
         <img
-          src={profile.profilePhoto ? profile.profilePhoto : '/default-avatar.png'}
+          src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
           alt={profile.firstName + ' ' + profile.lastName}
           className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg bg-gray-200"
         />

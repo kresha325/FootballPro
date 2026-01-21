@@ -10,6 +10,17 @@ import { useEffect, useState, useRef } from 'react';
 const Gamification = () => {
   const { user } = useAuth();
   const { userId } = useParams();
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
   const isOwnProfile = !userId || userId === String(user.id);
   const [activeTab, setActiveTab] = useState('overview');
   const [gamificationData, setGamificationData] = useState(null);
@@ -287,7 +298,7 @@ const Gamification = () => {
                         <div className="flex items-center gap-3">
                           {player.Profile?.profilePicture ? (
                             <img
-                              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${player.Profile.profilePicture}`}
+                              src={getFullUrl(player.Profile.profilePicture)}
                               alt={player.firstName}
                               className="w-10 h-10 rounded-full"
                             />
