@@ -432,7 +432,11 @@ export default function Tournaments() {
                         <div className="flex items-center gap-2">
                           {item.Match.homeUser?.Profile?.profilePhoto ? (
                             <img
-                              src={`${import.meta.env.VITE_API_URL}${item.Match.homeUser.Profile.profilePhoto}`}
+                              src={item.Match.homeUser.Profile.profilePhoto
+                                ? (item.Match.homeUser.Profile.profilePhoto.startsWith('http')
+                                    ? item.Match.homeUser.Profile.profilePhoto
+                                    : `${import.meta.env.VITE_API_URL}${item.Match.homeUser.Profile.profilePhoto.startsWith('/') ? item.Match.homeUser.Profile.profilePhoto : '/' + item.Match.homeUser.Profile.profilePhoto}`)
+                                : '/default-avatar.png'}
                               alt=""
                               className="w-8 h-8 rounded-full object-cover"
                             />
@@ -459,7 +463,11 @@ export default function Tournaments() {
                         <div className="flex items-center gap-2">
                           {item.Match.awayUser?.Profile?.profilePhoto ? (
                             <img
-                              src={`${import.meta.env.VITE_API_URL}${item.Match.awayUser.Profile.profilePhoto}`}
+                              src={item.Match.awayUser.Profile.profilePhoto
+                                ? (item.Match.awayUser.Profile.profilePhoto.startsWith('http')
+                                    ? item.Match.awayUser.Profile.profilePhoto
+                                    : `${import.meta.env.VITE_API_URL}${item.Match.awayUser.Profile.profilePhoto.startsWith('/') ? item.Match.awayUser.Profile.profilePhoto : '/' + item.Match.awayUser.Profile.profilePhoto}`)
+                                : '/default-avatar.png'}
                               alt=""
                               className="w-8 h-8 rounded-full object-cover"
                             />
@@ -773,7 +781,11 @@ export default function Tournaments() {
                     <div className="flex items-center gap-2">
                       {participant.User?.Profile?.profilePhoto ? (
                         <img
-                          src={`${import.meta.env.VITE_API_URL}${participant.User.Profile.profilePhoto}`}
+                          src={participant.User.Profile.profilePhoto
+                            ? (participant.User.Profile.profilePhoto.startsWith('http')
+                                ? participant.User.Profile.profilePhoto
+                                : `${import.meta.env.VITE_API_URL}${participant.User.Profile.profilePhoto.startsWith('/') ? participant.User.Profile.profilePhoto : '/' + participant.User.Profile.profilePhoto}`)
+                            : '/default-avatar.png'}
                           alt=""
                           className="w-8 h-8 rounded-full object-cover"
                         />
@@ -832,7 +844,11 @@ export default function Tournaments() {
                   <div className="flex items-center justify-end gap-2">
                     {match.homeUser?.Profile?.profilePhoto ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL}${match.homeUser.Profile.profilePhoto}`}
+                        src={match.homeUser.Profile.profilePhoto
+                          ? (match.homeUser.Profile.profilePhoto.startsWith('http')
+                              ? match.homeUser.Profile.profilePhoto
+                              : `${import.meta.env.VITE_API_URL}${match.homeUser.Profile.profilePhoto.startsWith('/') ? match.homeUser.Profile.profilePhoto : '/' + match.homeUser.Profile.profilePhoto}`)
+                          : '/default-avatar.png'}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -867,7 +883,11 @@ export default function Tournaments() {
                     </span>
                     {match.awayUser?.Profile?.profilePhoto ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL}${match.awayUser.Profile.profilePhoto}`}
+                        src={match.awayUser.Profile.profilePhoto
+                          ? (match.awayUser.Profile.profilePhoto.startsWith('http')
+                              ? match.awayUser.Profile.profilePhoto
+                              : `${import.meta.env.VITE_API_URL}${match.awayUser.Profile.profilePhoto.startsWith('/') ? match.awayUser.Profile.profilePhoto : '/' + match.awayUser.Profile.profilePhoto}`)
+                          : '/default-avatar.png'}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />
