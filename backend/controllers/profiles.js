@@ -54,7 +54,7 @@ exports.createProfile = async (req, res) => {
 
     res.status(201).json(profile);
   } catch (err) {
-    console.error('Create profile error:', err);
+      console.error('Create profile error:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -118,7 +118,7 @@ exports.getProfile = async (req, res) => {
 
     res.json(response);
   } catch (err) {
-    console.error('Get profile error:', err);
+      console.error('Get profile error:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
