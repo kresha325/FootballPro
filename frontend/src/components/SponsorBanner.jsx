@@ -32,9 +32,11 @@ const SponsorBanner = ({ sponsors, compact }) => {
         {(sponsor.imagePreview || sponsor.image) ? (
           <img
             src={
-              (sponsor.imagePreview || sponsor.image).startsWith('/uploads/')
-                ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview || sponsor.image}`
-                : (sponsor.imagePreview || sponsor.image)
+              (sponsor.imagePreview || sponsor.image)
+                ? ((sponsor.imagePreview || sponsor.image).startsWith('http')
+                    ? (sponsor.imagePreview || sponsor.image)
+                    : `${import.meta.env.VITE_API_URL.replace('/api','')}${(sponsor.imagePreview || sponsor.image).startsWith('/') ? (sponsor.imagePreview || sponsor.image) : '/' + (sponsor.imagePreview || sponsor.image)}`)
+                : undefined
             }
             alt="Sponsor"
             className="w-8 h-6 rounded object-cover border border-yellow-400 shadow"
@@ -61,9 +63,11 @@ const SponsorBanner = ({ sponsors, compact }) => {
         {(sponsor.imagePreview || sponsor.image) ? (
           <img
             src={
-              (sponsor.imagePreview || sponsor.image).startsWith('/uploads/')
-                ? `${import.meta.env.VITE_API_URL.replace('/api','')}${sponsor.imagePreview || sponsor.image}`
-                : (sponsor.imagePreview || sponsor.image)
+              (sponsor.imagePreview || sponsor.image)
+                ? ((sponsor.imagePreview || sponsor.image).startsWith('http')
+                    ? (sponsor.imagePreview || sponsor.image)
+                    : `${import.meta.env.VITE_API_URL.replace('/api','')}${(sponsor.imagePreview || sponsor.image).startsWith('/') ? (sponsor.imagePreview || sponsor.image) : '/' + (sponsor.imagePreview || sponsor.image)}`)
+                : undefined
             }
             alt="Sponsor"
             className="w-16 h-10 rounded object-cover border border-yellow-400 shadow"
