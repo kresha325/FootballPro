@@ -62,14 +62,21 @@ const UserCardsSection = () => {
   };
 
   if (loading) return <div className="mb-6">Loading players...</div>;
-  if (!profiles.length) return null;
+  if (!profiles.length) {
+    return (
+      <div className="mb-8">
+        <div className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Lojtarët më të spikatur</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">Nuk ka lojtarë për momentin.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-8">
       <div className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Lojtarët më të spikatur</div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible">
         {profiles.map(profile => (
-          <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col">
+          <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col min-w-[220px] snap-start sm:min-w-0">
             <div className="relative h-48 w-full overflow-hidden">
               <img
                 src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}

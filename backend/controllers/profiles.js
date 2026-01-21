@@ -305,8 +305,7 @@ exports.getAllProfiles = async (req, res) => {
       let photo = obj.profilePhoto;
       if (!photo && profile.profilePhoto) photo = profile.profilePhoto;
       if (photo) {
-        const filename = photo.split('/').pop();
-        obj.profilePhoto = `/uploads/${filename}`;
+        obj.profilePhoto = toAbsoluteUploadsUrl(req, photo);
       } else {
         obj.profilePhoto = null;
       }
