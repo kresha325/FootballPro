@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom';
 const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const clubData = (profile && profile.stats) ? profile.stats : {};
 
+  // Helper for absolute/relative URL
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+
   // Helper për path të plotë të fotove/video
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -19,15 +22,25 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
 
+  const fetchClubMembers = async () => {
+    const clubId = profile.userId || profile.id;
+    if (!clubId) return;
+    setLoadingMembers(true);
+    try {
+      const res = await clubMembersAPI.getClubMembers(clubId, 'approved');
+      setClubMembers(res.data || []);
+    } catch (err) {
+      setClubMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
   useEffect(() => {
-    if (profile.userId) {
+    if (profile.userId || profile.id) {
       fetchClubMembers();
     }
-  }, [profile.userId]);
-
-
-  // Helper for absolute/relative URL
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  }, [profile.userId, profile.id]);
 
   return (
     <div className="space-y-6">
@@ -138,6 +151,50 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
         </div>
       )}
+
+      {/* Club Members */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+          <span>👥</span> Lista e anëtarëve
+        </h3>
+        {loadingMembers ? (
+          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+        ) : clubMembers.length === 0 ? (
+          <div className="text-gray-500 dark:text-gray-400">Nuk ka anëtarë të aprovuar ende.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {clubMembers.map((member) => (
+              <Link
+                key={member.id}
+                to={`/profile/${member.athlete?.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
+              >
+                {member.athlete?.Profile?.profilePhoto ? (
+                  <img
+                    src={getFullUrl(member.athlete.Profile.profilePhoto)}
+                    alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
+                    className="w-12 h-12 rounded-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                    {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
+                  </div>
+                )}
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {member.athlete?.firstName} {member.athlete?.lastName}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {member.position || member.athlete?.Profile?.position || '—'}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Achievements & Honors */}
       {clubData.achievements && clubData.achievements.length > 0 && (

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { clubMembersAPI } from '../../../services/api';
 
 const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
@@ -32,7 +33,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     // Fushat që shkojnë te User/Profile direkt
@@ -53,7 +54,21 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }
-    onSave(formData);
+    await onSave(formData);
+
+    const trimmedClub = form.club?.trim();
+    const initialClub = (user.club || '').trim();
+    if (trimmedClub && trimmedClub !== initialClub) {
+      try {
+        await clubMembersAPI.requestMembership({
+          clubName: trimmedClub,
+          position: form.position || undefined,
+          jerseyNumber: form.jerseyNumber || undefined,
+        });
+      } catch (err) {
+        // ignore membership request errors to not block profile save
+      }
+    }
   };
 
   return (
