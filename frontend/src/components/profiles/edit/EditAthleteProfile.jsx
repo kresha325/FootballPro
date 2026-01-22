@@ -106,29 +106,29 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        <label htmlFor="athlete-profile-photo" className="block text-sm font-medium mb-1">Profile Photo</label>
         {preview && (
           <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
-        <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+        <input id="athlete-profile-photo" type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
       <h3 className="text-lg font-semibold mb-3">Athlete Profile</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">First Name *</label>
-          <input name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <label htmlFor="athlete-first-name" className="block text-sm font-medium mb-1">First Name *</label>
+          <input id="athlete-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Last Name *</label>
-          <input name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <label htmlFor="athlete-last-name" className="block text-sm font-medium mb-1">Last Name *</label>
+          <input id="athlete-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Date of Birth</label>
-          <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-dob" className="block text-sm font-medium mb-1">Date of Birth</label>
+          <input id="athlete-dob" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Gender</label>
-          <select name="gender" value={form.gender} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
+          <label htmlFor="athlete-gender" className="block text-sm font-medium mb-1">Gender</label>
+          <select id="athlete-gender" name="gender" value={form.gender} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
             <option value="">Select Gender</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
@@ -137,13 +137,13 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Bio</label>
-        <textarea name="bio" value={form.bio} onChange={handleChange} rows={4} maxLength={500} className="w-full p-2 border border-gray-300 rounded" />
+        <label htmlFor="athlete-bio" className="block text-sm font-medium mb-1">Bio</label>
+        <textarea id="athlete-bio" name="bio" value={form.bio} onChange={handleChange} rows={4} maxLength={500} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Position</label>
-          <select name="position" value={form.position} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
+          <label htmlFor="athlete-position" className="block text-sm font-medium mb-1">Position</label>
+          <select id="athlete-position" name="position" value={form.position} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
             <option value="">Select Position</option>
             <option value="Goalkeeper">Goalkeeper</option>
             <option value="Defender">Defender</option>
@@ -154,9 +154,10 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Club</label>
+          <label htmlFor="athlete-club" className="block text-sm font-medium mb-1">Club</label>
           <div className="relative">
             <input
+              id="athlete-club"
               name="club"
               value={form.club}
               onChange={(e) => {
@@ -199,24 +200,24 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Jersey Number</label>
-          <input name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">Jersey Number</label>
+          <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Preferred Foot</label>
-          <select name="preferredFoot" value={form.preferredFoot} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
+          <label htmlFor="athlete-foot" className="block text-sm font-medium mb-1">Preferred Foot</label>
+          <select id="athlete-foot" name="preferredFoot" value={form.preferredFoot} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
             <option value="right">Right</option>
             <option value="left">Left</option>
             <option value="both">Both</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Height (cm)</label>
-          <input name="height" value={form.height} onChange={handleChange} type="number" placeholder="175" className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-height" className="block text-sm font-medium mb-1">Height (cm)</label>
+          <input id="athlete-height" name="height" value={form.height} onChange={handleChange} type="number" placeholder="175" className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Weight (kg)</label>
-          <input name="weight" value={form.weight} onChange={handleChange} type="number" placeholder="70" className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-weight" className="block text-sm font-medium mb-1">Weight (kg)</label>
+          <input id="athlete-weight" name="weight" value={form.weight} onChange={handleChange} type="number" placeholder="70" className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
