@@ -30,7 +30,7 @@ const hydrateAgeGroup = async (membership) => {
     changed = true;
   }
 
-  if (changed && profile.save) {
+  if (changed && profile.save && profile.id) {
     await profile.save();
   }
 
