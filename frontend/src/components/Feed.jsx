@@ -296,7 +296,7 @@ const Feed = () => {
               id="new-post"
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
-              placeholder="What's on your mind?"
+              placeholder="Shoot you penalty"
               className="w-full p-3 border border-yellow-300 dark:border-yellow-700 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white/90 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               rows="3"
               style={{
@@ -325,8 +325,8 @@ const Feed = () => {
             <div className="flex items-center gap-2">
               {/* Photo/Video Upload */}
               <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <span className="text-xl">📷</span>
-                <span className="text-sm font-medium">Photo/Video</span>
+                <span className="text-xl">⚽</span>
+                <span className="text-sm font-medium">Shoot</span>
                 <input
                   type="file"
                   accept="image/*,video/*"
