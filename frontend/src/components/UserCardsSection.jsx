@@ -65,7 +65,6 @@ const UserCardsSection = () => {
   if (!profiles.length) {
     return (
       <div className="mb-8">
-        <div className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Lojtarët më të spikatur</div>
         <div className="text-sm text-gray-500 dark:text-gray-400">Nuk ka lojtarë për momentin.</div>
       </div>
     );
@@ -73,7 +72,6 @@ const UserCardsSection = () => {
 
   return (
     <div className="mb-8">
-      <div className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Lojtarët më të spikatur</div>
       <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible">
         {profiles.map(profile => (
           <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col min-w-[220px] snap-start sm:min-w-0">
