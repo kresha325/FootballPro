@@ -15,7 +15,7 @@
     }
   };
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 // Helper to get full URL for images/videos
 const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 const getFullUrl = (url) => {
@@ -69,6 +69,11 @@ const Profile = () => {
     fetchComments, 
     addComment 
   } = usePosts();
+
+  const fetchUserPostsRef = useRef(fetchUserPosts);
+  useEffect(() => {
+    fetchUserPostsRef.current = fetchUserPosts;
+  }, [fetchUserPosts]);
 
   const [profile, setProfile] = useState(null);
   const [gallery, setGallery] = useState([]);
@@ -203,7 +208,7 @@ const Profile = () => {
         setProfile(res.data);
 
         // Fetch user posts using context
-        await fetchUserPosts(id);
+        await fetchUserPostsRef.current(id);
 
         // Fetch user gallery
         try {
@@ -230,7 +235,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [id, fetchUserPosts]);
+  }, [id]);
 
   useEffect(() => {
     if (!id || !user || user.id === parseInt(id)) return;

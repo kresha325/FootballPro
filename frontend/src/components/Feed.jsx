@@ -370,7 +370,7 @@ const Feed = () => {
                   <span className="text-xl">😊</span>
                 </button>
                 {showEmojiPicker && (
-                  <div className="absolute z-10 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
+                  <div className="absolute z-50 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
                     {['⚽','🥅','🥇','🏆','🏟️','👟','🧤','🎽','🚩','🟩'].map((emoji) => (
                       <button
                         key={emoji}
