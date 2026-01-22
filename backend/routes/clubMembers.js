@@ -55,12 +55,20 @@ router.get('/club/:clubId', async (req, res) => {
     }
 
     const clubProfile = await Profile.findOne({ where: { userId: parseInt(clubId) } });
-    if (clubProfile?.club) {
-      const athleteProfiles = await Profile.findAll({
-        where: {
+    if (clubProfile?.club || clubProfile?.userId) {
+      const orFilters = [];
+      if (clubProfile?.club) {
+        orFilters.push({
           club: {
             [Op.iLike]: `%${clubProfile.club}%`,
           },
+        });
+      }
+      orFilters.push({ clubId: parseInt(clubId) });
+
+      const athleteProfiles = await Profile.findAll({
+        where: {
+          [Op.or]: orFilters,
         },
         include: [{
           model: User,

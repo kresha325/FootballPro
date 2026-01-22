@@ -98,6 +98,7 @@ exports.createProfile = async (req, res) => {
       city: req.body.city || '',
       country: req.body.country || '',
       club: req.body.club || '',
+      clubId: req.body.clubId || null,
       position: req.body.position || '',
     });
 
@@ -211,7 +212,7 @@ exports.updateProfile = async (req, res) => {
 
     // Build updateData dynamically from req.body for Profile fields
     const profileFields = [
-      'bio', 'city', 'country', 'club', 'clubLogo', 'position', 'stats', 'careerHistory', 'contact',
+      'bio', 'city', 'country', 'club', 'clubId', 'clubLogo', 'position', 'stats', 'careerHistory', 'contact',
       // add more profile fields here if needed
     ];
     let updateData = {};
