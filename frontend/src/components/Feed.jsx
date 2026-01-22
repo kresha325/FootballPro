@@ -438,6 +438,7 @@ const Feed = () => {
             {/* Post Content */}
               {/* Post Content */}
               <div className={`flex-1 rounded-lg shadow-md p-6 border 
+                ${post.sponsors?.length > 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}
                 ${highlightedPostId === String(post.id)
                   ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900'
                   : 'border-gray-200 dark:border-gray-700'}

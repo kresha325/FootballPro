@@ -204,8 +204,6 @@ const Profile = () => {
 
         // Fetch user posts using context
         await fetchUserPosts(id);
-        // Filter posts for this user
-        const userPostsData = allPosts.filter(post => post.userId === parseInt(id));
 
         // Fetch user gallery
         try {
@@ -217,11 +215,11 @@ const Profile = () => {
         }
 
         // Set stats
-        setStats({
-          posts: userPostsData.length,
+        setStats(prev => ({
+          ...prev,
           followers: res.data.followers || 0,
           following: res.data.following || 0,
-        });
+        }));
 
         // Check follow status if viewing another user's profile
         if (user && user.id !== parseInt(id)) {
@@ -242,7 +240,13 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [id, fetchUserPosts, allPosts]);
+  }, [id, fetchUserPosts, user]);
+
+  useEffect(() => {
+    if (!id) return;
+    const userPostsData = allPosts.filter(post => post.userId === parseInt(id));
+    setStats(prev => ({ ...prev, posts: userPostsData.length }));
+  }, [id, allPosts]);
 
   // Follow/Unfollow handlers
   const handleFollow = async () => {
