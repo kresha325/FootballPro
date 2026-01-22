@@ -129,7 +129,25 @@ router.post('/request', protect, async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ msg: 'Membership request already exists' });
+      if (existing.status === 'rejected') {
+        existing.status = 'pending';
+        if (position) existing.position = position;
+        if (jerseyNumber !== undefined) existing.jerseyNumber = jerseyNumber;
+        await existing.save();
+      }
+
+      const existingWithDetails = await ClubMember.findByPk(existing.id, {
+        include: [
+          {
+            model: User,
+            as: 'athlete',
+            attributes: ['id', 'firstName', 'lastName'],
+            include: [{ model: Profile, attributes: ['profilePhoto', 'position'] }],
+          },
+        ],
+      });
+
+      return res.json(existingWithDetails);
     }
 
     // Create membership request
