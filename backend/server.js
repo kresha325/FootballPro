@@ -79,6 +79,15 @@ app.use(passport.initialize());
 // Serve static files from uploads directory (now from 'uploads' at project root)
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Fallback placeholder for missing uploads (avoid CORB on 404)
+app.use('/uploads', (req, res) => {
+  const placeholder = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NgYGBgAAAABQABDQottAAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  res.setHeader('Content-Type', 'image/png');
+  res.status(200).send(placeholder);
+});
 
 // ...frontend serving removed for Render split-service deployment...
 
