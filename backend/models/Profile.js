@@ -26,6 +26,8 @@ const Profile = sequelize.define('Profile', {
   contact: DataTypes.JSON,
   coverPhoto: DataTypes.STRING,
   profilePhoto: DataTypes.STRING,
+  age: DataTypes.INTEGER,
+  ageGroup: DataTypes.STRING,
   achievements: DataTypes.JSON,
   matches: DataTypes.JSON,
   media: DataTypes.JSON,
