@@ -960,6 +960,12 @@ const Profile = () => {
 
             {activeTab === 'contact' && (
               <div className="space-y-4">
+                {(profile.User?.email || profile.email) && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📧</span>
+                    <span>{profile.User?.email || profile.email}</span>
+                  </div>
+                )}
                 {profile.contact?.phone && (
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">📱</span>
@@ -990,7 +996,7 @@ const Profile = () => {
                     </a>
                   </div>
                 )}
-                {!profile.contact?.phone && !profile.contact?.instagram && !profile.contact?.twitter && !profile.contact?.facebook && (
+                {!profile.User?.email && !profile.email && !profile.contact?.phone && !profile.contact?.instagram && !profile.contact?.twitter && !profile.contact?.facebook && (
                   <p className="text-center text-gray-500 py-8">No contact information available</p>
                 )}
               </div>
