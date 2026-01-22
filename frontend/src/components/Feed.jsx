@@ -293,7 +293,7 @@ const Feed = () => {
         style={{
           backgroundImage: "linear-gradient(180deg, #101214 0%, #1f242b 55%, #0f3d1c 100%)",
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'visible'
         }}
       >
         <div
