@@ -24,10 +24,27 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [pendingMembers, setPendingMembers] = useState([]);
   const [loadingPending, setLoadingPending] = useState(true);
 
+  const teamTypeLabels = {
+    first_team: 'First Team',
+    men: 'Men',
+    women: 'Women',
+    youth: 'Youth',
+    u23: 'U23',
+    u21: 'U21',
+    u19: 'U19',
+    u17: 'U17',
+    u15: 'U15',
+    u13: 'U13',
+    u11: 'U11',
+    u9: 'U9',
+  };
+
   const groupedMembers = clubMembers.reduce((acc, member) => {
+    const teamType = member.teamType ? teamTypeLabels[member.teamType] || member.teamType : null;
     const ageGroup = member.athlete?.Profile?.ageGroup || 'Pa grupmoshë';
-    if (!acc[ageGroup]) acc[ageGroup] = [];
-    acc[ageGroup].push(member);
+    const groupKey = teamType || ageGroup;
+    if (!acc[groupKey]) acc[groupKey] = [];
+    acc[groupKey].push(member);
     return acc;
   }, {});
 
