@@ -71,28 +71,38 @@ router.get('/athlete/:athleteId', protect, async (req, res) => {
 // Request to join club (automatically when athlete selects club)
 router.post('/request', protect, async (req, res) => {
   try {
-    const { clubName, position, jerseyNumber } = req.body;
+    const { clubId, clubName, position, jerseyNumber } = req.body;
 
-    // Find club user by club name in Profile
-    const clubProfile = await Profile.findOne({
-      where: {
-        club: {
-          [Op.iLike]: `%${clubName}%`,
-        },
-      },
-      include: [{
-        model: User,
-        where: { role: 'club' },
-      }],
-    });
+    let clubUser;
 
-    if (!clubProfile) {
-      // If no exact club profile found, create pending request anyway
-      // This allows clubs to be notified even if they haven't set up their profile yet
-      return res.status(404).json({ msg: 'Club not found in system. Make sure the club has registered.' });
+    if (clubId && !isNaN(Number(clubId))) {
+      const club = await User.findByPk(parseInt(clubId));
+      if (!club || club.role !== 'club') {
+        return res.status(404).json({ msg: 'Club not found in system. Make sure the club has registered.' });
+      }
+      clubUser = club;
     }
 
-    const clubUser = clubProfile.User;
+    if (!clubUser) {
+      // Find club user by club name in Profile
+      const clubProfile = await Profile.findOne({
+        where: {
+          club: {
+            [Op.iLike]: `%${clubName}%`,
+          },
+        },
+        include: [{
+          model: User,
+          where: { role: 'club' },
+        }],
+      });
+
+      if (!clubProfile) {
+        return res.status(404).json({ msg: 'Club not found in system. Make sure the club has registered.' });
+      }
+
+      clubUser = clubProfile.User;
+    }
 
     // Check if already exists
     const existing = await ClubMember.findOne({

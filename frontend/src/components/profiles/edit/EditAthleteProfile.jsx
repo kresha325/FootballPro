@@ -27,6 +27,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   const [clubSuggestions, setClubSuggestions] = useState([]);
   const [showClubSuggestions, setShowClubSuggestions] = useState(false);
   const [clubQuery, setClubQuery] = useState(user.club || '');
+  const [selectedClubId, setSelectedClubId] = useState(null);
 
   useEffect(() => {
     const query = clubQuery.trim();
@@ -81,12 +82,13 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     if (trimmedClub && trimmedClub !== initialClub) {
       try {
         await clubMembersAPI.requestMembership({
+          clubId: selectedClubId || undefined,
           clubName: trimmedClub,
           position: form.position || undefined,
           jerseyNumber: form.jerseyNumber || undefined,
         });
       } catch (err) {
-        // ignore membership request errors to not block profile save
+          alert('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.');
       }
     }
   };
@@ -151,6 +153,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
                 handleChange(e);
                 setClubQuery(e.target.value);
                 setShowClubSuggestions(true);
+                setSelectedClubId(null);
               }}
               onFocus={() => setShowClubSuggestions(true)}
               onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
@@ -170,6 +173,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
                       onMouseDown={() => {
                         setForm((prev) => ({ ...prev, club: label }));
                         setClubQuery(label);
+                        setSelectedClubId(club.userId || club.id);
                         setShowClubSuggestions(false);
                       }}
                     >
