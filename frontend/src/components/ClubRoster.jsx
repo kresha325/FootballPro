@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { clubMembersAPI } from '../services/api';
+import { clubMembersAPI, clubStaffAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 function ClubRoster() {
@@ -18,8 +18,9 @@ function ClubRoster() {
   const { user } = useAuth();
   const [members, setMembers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [staffMembers, setStaffMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('approved'); // approved, pending
+  const [activeTab, setActiveTab] = useState('approved'); // approved, pending, staff
   const [teamFilter, setTeamFilter] = useState('all'); // all, first_team, women, men, youth teams
   const [showTeamSelectModal, setShowTeamSelectModal] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState(null);
@@ -79,9 +80,15 @@ function ClubRoster() {
   const fetchMembers = async () => {
     try {
       setLoading(true);
+      if (activeTab === 'staff') {
+        const res = await clubStaffAPI.getClubStaff(user.id, { status: 'active' });
+        setStaffMembers(res.data || []);
+        return;
+      }
+
       const status = activeTab === 'approved' ? 'approved' : 'pending';
       const response = await clubMembersAPI.getClubMembers(user.id, status);
-      
+
       if (activeTab === 'approved') {
         setMembers(response.data);
       } else {
@@ -198,6 +205,16 @@ function ClubRoster() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('staff')}
+          className={`px-6 py-3 rounded-lg font-medium transition ${
+            activeTab === 'staff'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          🧑‍🏫 Staff ({staffMembers.length})
+        </button>
       </div>
 
       {/* Team Type Filter (only for approved) */}
@@ -298,6 +315,50 @@ function ClubRoster() {
                   >
                     <TrashIcon className="h-6 w-6" />
                   </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Staff Members */}
+      {activeTab === 'staff' && (
+        <div className="space-y-4">
+          {staffMembers.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
+              <div className="text-6xl mb-4">🧑‍🏫</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No staff members yet</h3>
+              <p className="text-gray-600 dark:text-gray-400">Staff will appear here once added.</p>
+            </div>
+          ) : (
+            staffMembers.map((staff) => (
+              <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                    {staff.staff?.Profile?.profilePhoto ? (
+                      <img
+                        src={getFullUrl(staff.staff.Profile.profilePhoto)}
+                        alt={staff.staff.firstName}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      `${staff.staff?.firstName?.[0] || '?'}${staff.staff?.lastName?.[0] || ''}`
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      {staff.staff?.firstName} {staff.staff?.lastName}
+                    </h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {staff.staffRole || 'Staff'}
+                    </div>
+                    {staff.teamType && (
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Team: {teamTypes.find(t => t.id === staff.teamType)?.label || staff.teamType}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

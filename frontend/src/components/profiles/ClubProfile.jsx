@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { clubMembersAPI } from '../../services/api';
+import { clubMembersAPI, clubStaffAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 
 const ClubProfile = ({ profile = {}, stats, isOwner }) => {
@@ -23,6 +23,8 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [pendingMembers, setPendingMembers] = useState([]);
   const [loadingPending, setLoadingPending] = useState(true);
+  const [clubStaff, setClubStaff] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(true);
   const squadSize = loadingMembers ? '...' : clubMembers.length;
 
   const teamTypeLabels = {
@@ -78,10 +80,25 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
     }
   };
 
+  const fetchClubStaff = async () => {
+    const clubId = profile.userId || profile.User?.id || profile.id;
+    if (!clubId) return;
+    setLoadingStaff(true);
+    try {
+      const res = await clubStaffAPI.getClubStaff(clubId, { status: 'active' });
+      setClubStaff(res.data || []);
+    } catch (err) {
+      setClubStaff([]);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
   useEffect(() => {
     if (profile.userId || profile.id) {
       fetchClubMembers();
       fetchPendingMembers();
+      fetchClubStaff();
     }
   }, [profile.userId, profile.id, isOwner]);
 
@@ -204,6 +221,46 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
         </div>
       )}
+
+      {/* Club Staff */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🧑‍🏫</span> Trajnerët e klubit
+        </h3>
+        {loadingStaff ? (
+          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+        ) : clubStaff.length === 0 ? (
+          <div className="text-gray-500 dark:text-gray-400">Nuk ka trajnerë ende.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {clubStaff.map((staff) => (
+              <div key={staff.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                {staff.staff?.Profile?.profilePhoto ? (
+                  <img
+                    src={getFullUrl(staff.staff.Profile.profilePhoto)}
+                    alt={`${staff.staff?.firstName} ${staff.staff?.lastName}`}
+                    className="w-12 h-12 rounded-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
+                    {`${staff.staff?.firstName?.[0] || ''}${staff.staff?.lastName?.[0] || ''}`}
+                  </div>
+                )}
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {staff.staff?.firstName} {staff.staff?.lastName}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {staff.staffRole || 'Trajner'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Club Roster */}
       {isOwner && (

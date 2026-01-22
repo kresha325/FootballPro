@@ -87,6 +87,9 @@ const Register = () => {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Create your JONSPORT account
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Shfaq talentin, behu i dukshem dhe bashkohu me boten e Futbollit
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
