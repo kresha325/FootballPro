@@ -221,16 +221,6 @@ const Profile = () => {
           following: res.data.following || 0,
         }));
 
-        // Check follow status if viewing another user's profile
-        if (user && user.id !== parseInt(id)) {
-          try {
-            const followStatusRes = await profileAPI.checkFollowStatus(id);
-            setIsFollowing(followStatusRes.data.isFollowing);
-          } catch (err) {
-            console.error('Error checking follow status:', err);
-          }
-        }
-
         await fetchSponsors(id);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
@@ -240,7 +230,20 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [id, fetchUserPosts, user]);
+  }, [id, fetchUserPosts]);
+
+  useEffect(() => {
+    if (!id || !user || user.id === parseInt(id)) return;
+    const checkStatus = async () => {
+      try {
+        const followStatusRes = await profileAPI.checkFollowStatus(id);
+        setIsFollowing(followStatusRes.data.isFollowing);
+      } catch (err) {
+        console.error('Error checking follow status:', err);
+      }
+    };
+    checkStatus();
+  }, [id, user]);
 
   useEffect(() => {
     if (!id) return;
@@ -603,7 +606,10 @@ const Profile = () => {
               <div className="space-y-4">
                 {allPosts.filter(post => post.userId === parseInt(id)).length > 0 ? (
                   allPosts.filter(post => post.userId === parseInt(id)).map((post) => (
-                    <div key={post.id} className="border dark:border-gray-700 rounded-lg p-4">
+                    <div
+                      key={post.id}
+                      className={`border dark:border-gray-700 rounded-lg p-4 ${post.sponsors?.length > 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}`}
+                    >
                       {/* Post Content */}
                       {post.content && (
                         <div className="flex items-center gap-2 mb-3">
