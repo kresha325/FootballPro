@@ -49,8 +49,11 @@ const PORT = process.env.PORT || 10000;
 
 // CORS configuration
 const allowedOrigin = process.env.CORS_ORIGIN || '*'; // Vendos URL-n e frontend-it në .env për prodhim
+const allowedOrigins = allowedOrigin === '*'
+  ? '*'
+  : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({
-  origin: allowedOrigin,
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   credentials: true
@@ -64,7 +67,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Socket.io CORS
 io = socketIo(server, {
   cors: {
-    origin: allowedOrigin,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   }
