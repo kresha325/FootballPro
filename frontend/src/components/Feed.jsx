@@ -671,11 +671,11 @@ const Feed = () => {
                   </button>
                   <button
                     onClick={() => setSharingPost(post.id)}
-                    className="flex items-center space-x-1 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    className="flex items-center justify-center px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white"
                     aria-label={`Share post by ${post.author?.username || 'Unknown'}`}
+                    title="Share"
                   >
-                    <span>📤</span>
-                    <span>Share</span>
+                    <span className="text-sm">🟥</span>
                   </button>
                 </div>
               </div>
