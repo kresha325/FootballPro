@@ -62,6 +62,10 @@ exports.getUnreadCount = async (req, res) => {
     });
     res.json({ count });
   } catch (err) {
+    const message = err?.original?.message || err?.message || '';
+    if (message.includes('Notifications') && message.includes('does not exist')) {
+      return res.json({ count: 0 });
+    }
     console.error('Get unread count error:', err);
     res.status(500).json({ msg: 'Server error' });
   }
