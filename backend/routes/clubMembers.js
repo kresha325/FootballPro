@@ -84,24 +84,40 @@ router.post('/request', protect, async (req, res) => {
     }
 
     if (!clubUser) {
-      // Find club user by club name in Profile
-      const clubProfile = await Profile.findOne({
+      // Try to find club user by name
+      const clubByUser = await User.findOne({
         where: {
-          club: {
-            [Op.iLike]: `%${clubName}%`,
-          },
+          role: 'club',
+          [Op.or]: [
+            { firstName: { [Op.iLike]: `%${clubName}%` } },
+            { lastName: { [Op.iLike]: `%${clubName}%` } },
+            { email: { [Op.iLike]: `%${clubName}%` } },
+          ],
         },
-        include: [{
-          model: User,
-          where: { role: 'club' },
-        }],
       });
 
-      if (!clubProfile) {
-        return res.status(404).json({ msg: 'Club not found in system. Make sure the club has registered.' });
-      }
+      if (clubByUser) {
+        clubUser = clubByUser;
+      } else {
+        // Find club user by club name in Profile
+        const clubProfile = await Profile.findOne({
+          where: {
+            club: {
+              [Op.iLike]: `%${clubName}%`,
+            },
+          },
+          include: [{
+            model: User,
+            where: { role: 'club' },
+          }],
+        });
 
-      clubUser = clubProfile.User;
+        if (!clubProfile) {
+          return res.status(404).json({ msg: 'Club not found in system. Make sure the club has registered.' });
+        }
+
+        clubUser = clubProfile.User;
+      }
     }
 
     // Check if already exists

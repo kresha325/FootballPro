@@ -38,7 +38,15 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     const handle = setTimeout(async () => {
       try {
         const res = await profileAPI.getAllProfiles({ role: 'club', search: query, limit: 6 });
-        setClubSuggestions(res.data || []);
+        const results = res.data || [];
+        setClubSuggestions(results);
+        const exact = results.find((club) => {
+          const label = (club.club || `${club.firstName || ''} ${club.lastName || ''}`.trim()).toLowerCase();
+          return label === query.toLowerCase();
+        });
+        if (exact) {
+          setSelectedClubId(exact.userId || exact.id);
+        }
       } catch (err) {
         setClubSuggestions([]);
       }
