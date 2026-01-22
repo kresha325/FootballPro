@@ -67,7 +67,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     const formData = new FormData();
     // Fushat që shkojnë te User/Profile direkt
     const directFields = [
-      'firstName', 'lastName', 'dateOfBirth', 'gender', 'bio', 'position', 'club', 'city', 'country'
+      'firstName', 'lastName', 'dateOfBirth', 'gender', 'bio', 'position', 'club', 'clubLogo', 'city', 'country'
     ];
     directFields.forEach(field => {
       if (form[field] !== undefined) formData.append(field, form[field]);
@@ -182,6 +182,9 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
                         setForm((prev) => ({ ...prev, club: label }));
                         setClubQuery(label);
                         setSelectedClubId(club.userId || club.id);
+                        if (club.profilePhoto) {
+                          setForm((prev) => ({ ...prev, clubLogo: club.profilePhoto }));
+                        }
                         setShowClubSuggestions(false);
                       }}
                     >

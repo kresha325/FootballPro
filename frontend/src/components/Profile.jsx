@@ -453,7 +453,17 @@ const Profile = () => {
                 )}
                 {profile.club && (
                   <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
-                    <ClubBadge clubName={profile.club} size="sm" />
+                    {profile.clubLogo ? (
+                      <img
+                        src={getFullUrl(profile.clubLogo)}
+                        alt={profile.club}
+                        className="w-6 h-6 rounded-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <ClubBadge clubName={profile.club} size="sm" />
+                    )}
                     {profile.club}
                   </span>
                 )}

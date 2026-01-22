@@ -178,6 +178,13 @@ router.put('/:membershipId/status', protect, async (req, res) => {
     membership.status = status;
     if (status === 'approved') {
       membership.joinedAt = new Date();
+      const clubProfile = await Profile.findOne({ where: { userId: membership.clubId } });
+      const athleteProfile = await Profile.findOne({ where: { userId: membership.athleteId } });
+      if (athleteProfile && clubProfile) {
+        athleteProfile.club = clubProfile.club || athleteProfile.club;
+        athleteProfile.clubLogo = clubProfile.profilePhoto || athleteProfile.clubLogo;
+        await athleteProfile.save();
+      }
     }
     await membership.save();
 

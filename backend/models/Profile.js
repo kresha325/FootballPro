@@ -19,6 +19,7 @@ const Profile = sequelize.define('Profile', {
   city: DataTypes.STRING,
   country: DataTypes.STRING,
   club: DataTypes.STRING,
+  clubLogo: DataTypes.STRING,
   position: DataTypes.STRING,
   stats: DataTypes.JSON,
   careerHistory: DataTypes.JSON,

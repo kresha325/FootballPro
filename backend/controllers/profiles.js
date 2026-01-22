@@ -118,6 +118,9 @@ exports.getProfile = async (req, res) => {
     if (response.coverPhoto) {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
+    if (response.clubLogo) {
+      response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
+    }
 
     res.json(response);
   } catch (err) {
@@ -135,7 +138,7 @@ exports.updateProfile = async (req, res) => {
 
     // Build updateData dynamically from req.body for Profile fields
     const profileFields = [
-      'bio', 'city', 'country', 'club', 'position', 'stats', 'careerHistory', 'contact',
+      'bio', 'city', 'country', 'club', 'clubLogo', 'position', 'stats', 'careerHistory', 'contact',
       // add more profile fields here if needed
     ];
     let updateData = {};
@@ -308,6 +311,9 @@ exports.getAllProfiles = async (req, res) => {
         obj.profilePhoto = toAbsoluteUploadsUrl(req, photo);
       } else {
         obj.profilePhoto = null;
+      }
+      if (obj.clubLogo) {
+        obj.clubLogo = toAbsoluteUploadsUrl(req, obj.clubLogo);
       }
       return obj;
     });
