@@ -471,7 +471,7 @@ const Feed = () => {
                       className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 border border-orange-300 rounded px-2 py-1 text-xs"
                       title="Sponsorizo këtë post"
                     >
-                      Sponsorizo
+                      S
                     </button>
                     <button
                       onClick={() => handleDeletePost(post.id)}

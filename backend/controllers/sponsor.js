@@ -1,17 +1,25 @@
+const db = require('../models');
+const Sponsor = db.Sponsor;
+const { toAbsoluteUploadsUrl } = require('../utils/url');
+
 // GET all sponsors (public)
 exports.getAllSponsors = async (req, res) => {
   try {
     const sponsors = await Sponsor.findAll({
       order: [['startDate', 'DESC']]
     });
-    res.json(sponsors);
+    const normalized = sponsors.map(s => {
+      const sponsorObj = s.toJSON ? s.toJSON() : s;
+      if (sponsorObj.image) {
+        sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+      }
+      return sponsorObj;
+    });
+    res.json(normalized);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-const db = require('../models');
-const Sponsor = db.Sponsor;
-
 // GET all sponsors for a user
 exports.getSponsorsByUser = async (req, res) => {
   try {
@@ -20,7 +28,14 @@ exports.getSponsorsByUser = async (req, res) => {
       where: { userId },
       order: [['startDate', 'DESC']]
     });
-    res.json(sponsors);
+    const normalized = sponsors.map(s => {
+      const sponsorObj = s.toJSON ? s.toJSON() : s;
+      if (sponsorObj.image) {
+        sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+      }
+      return sponsorObj;
+    });
+    res.json(normalized);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

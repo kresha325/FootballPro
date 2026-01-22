@@ -69,12 +69,19 @@ exports.getPosts = async (req, res) => {
         postObj.author = postObj.author || {};
         postObj.author.profilePhoto = null;
       }
+      const normalizedSponsors = allSponsors.map(s => {
+        const sponsorObj = s.toJSON ? s.toJSON() : s;
+        if (sponsorObj.image) {
+          sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+        }
+        return sponsorObj;
+      });
       return {
         ...postObj,
         likes: likesCount,
         comments: commentsCount,
         isLiked: !!userLiked,
-        sponsors: allSponsors.map(s => s.toJSON ? s.toJSON() : s)
+        sponsors: normalizedSponsors
       };
     }));
     res.json(postsWithCounts);
@@ -126,12 +133,19 @@ exports.getUserPosts = async (req, res) => {
         postObj.author = postObj.author || {};
         postObj.author.profilePhoto = null;
       }
+      const normalizedSponsors = sponsors.map(s => {
+        const sponsorObj = s.toJSON ? s.toJSON() : s;
+        if (sponsorObj.image) {
+          sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+        }
+        return sponsorObj;
+      });
       return {
         ...postObj,
         likes: likesCount,
         comments: commentsCount,
         isLiked: !!userLiked,
-        sponsors: sponsors.map(s => s.toJSON ? s.toJSON() : s)
+        sponsors: normalizedSponsors
       };
     }));
     res.json(postsWithCounts);

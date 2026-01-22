@@ -1,4 +1,5 @@
 const { Ad } = require('../models');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 
 // GET all active ads
 exports.getActiveAds = async (req, res) => {
@@ -11,7 +12,14 @@ exports.getActiveAds = async (req, res) => {
       },
       order: [['createdAt', 'DESC']],
     });
-    res.json(ads);
+    const normalized = ads.map(ad => {
+      const adObj = ad.toJSON ? ad.toJSON() : ad;
+      if (adObj.imageUrl) {
+        adObj.imageUrl = toAbsoluteUploadsUrl(req, adObj.imageUrl);
+      }
+      return adObj;
+    });
+    res.json(normalized);
   } catch (err) {
     console.error('❌ Error in getActiveAds:', err);
     res.status(500).json({ error: 'Server error', details: err.message });
