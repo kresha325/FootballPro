@@ -86,8 +86,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     await onSave(formData);
 
     const trimmedClub = form.club?.trim();
-    const initialClub = (user.club || '').trim();
-    if (trimmedClub && trimmedClub !== initialClub) {
+    if (trimmedClub) {
       try {
         await clubMembersAPI.requestMembership({
           clubId: selectedClubId || undefined,
