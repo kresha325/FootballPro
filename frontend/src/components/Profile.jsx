@@ -235,7 +235,7 @@ const Profile = () => {
   // Role-based profile component renderer
   const renderProfileContent = () => {
     if (!profile) return null;
-    return <ProfileSelector user={profile.User ? profile.User : profile} profile={profile} />;
+    return <ProfileSelector user={profile.User ? profile.User : profile} profile={profile} isOwner={isOwner} />;
   };
 
   // Helper functions for role logic

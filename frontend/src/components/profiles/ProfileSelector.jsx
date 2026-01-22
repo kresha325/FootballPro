@@ -8,7 +8,7 @@ import BusinessProfile from './BusinessProfile';
 import LigaProfile from './LigaProfile';
 import FederationProfile from './FederationProfile';
 
-const ProfileSelector = ({ user, profile }) => {
+const ProfileSelector = ({ user, profile, isOwner }) => {
   switch (user.role) {
     case 'athlete':
       return <PlayerProfile profile={profile} />;
@@ -19,7 +19,7 @@ const ProfileSelector = ({ user, profile }) => {
     case 'manager':
       return <ManagerProfile profile={profile} />;
     case 'club':
-      return <ClubProfile profile={profile} />;
+      return <ClubProfile profile={profile} isOwner={isOwner} />;
     case 'business':
       return <BusinessProfile profile={profile} />;
     case 'liga':

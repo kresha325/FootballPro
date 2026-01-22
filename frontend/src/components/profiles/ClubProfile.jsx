@@ -21,6 +21,8 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   };
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [pendingMembers, setPendingMembers] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(true);
 
   const fetchClubMembers = async () => {
     const clubId = profile.userId || profile.id;
@@ -36,11 +38,37 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
     }
   };
 
+  const fetchPendingMembers = async () => {
+    if (!isOwner) return;
+    const clubId = profile.userId || profile.id;
+    if (!clubId) return;
+    setLoadingPending(true);
+    try {
+      const res = await clubMembersAPI.getClubMembers(clubId, 'pending');
+      setPendingMembers(res.data || []);
+    } catch (err) {
+      setPendingMembers([]);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
   useEffect(() => {
     if (profile.userId || profile.id) {
       fetchClubMembers();
+      fetchPendingMembers();
     }
-  }, [profile.userId, profile.id]);
+  }, [profile.userId, profile.id, isOwner]);
+
+  const handleMembershipDecision = async (membershipId, status) => {
+    try {
+      await clubMembersAPI.updateMembershipStatus(membershipId, status);
+      await fetchClubMembers();
+      await fetchPendingMembers();
+    } catch (err) {
+      // ignore
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -195,6 +223,67 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
           </div>
         )}
       </div>
+
+      {/* Pending Members (club owners only) */}
+      {isOwner && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>⏳</span> Kërkesa në pritje
+          </h3>
+          {loadingPending ? (
+            <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+          ) : pendingMembers.length === 0 ? (
+            <div className="text-gray-500 dark:text-gray-400">Nuk ka kërkesa në pritje.</div>
+          ) : (
+            <div className="space-y-3">
+              {pendingMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="flex items-center gap-3">
+                    {member.athlete?.Profile?.profilePhoto ? (
+                      <img
+                        src={getFullUrl(member.athlete.Profile.profilePhoto)}
+                        alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
+                        className="w-10 h-10 rounded-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                        {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-white">
+                        {member.athlete?.firstName} {member.athlete?.lastName}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {member.position || member.athlete?.Profile?.position || '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                      onClick={() => handleMembershipDecision(member.id, 'approved')}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
+                      onClick={() => handleMembershipDecision(member.id, 'rejected')}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Achievements & Honors */}
       {clubData.achievements && clubData.achievements.length > 0 && (
