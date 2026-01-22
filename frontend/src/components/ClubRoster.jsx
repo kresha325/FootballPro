@@ -41,6 +41,35 @@ function ClubRoster() {
     { id: 'u9', label: 'U9', icon: '🎯' },
   ];
 
+  const normalizeGroup = (value) => (value || '').toString().trim().toLowerCase();
+
+  const matchesTeamFilter = (membership) => {
+    if (teamFilter === 'all') return true;
+
+    const teamType = membership?.teamType;
+    const gender = membership?.athlete?.gender;
+    const ageGroup = normalizeGroup(membership?.athlete?.Profile?.ageGroup);
+
+    if (teamType === teamFilter) return true;
+
+    if (teamFilter === 'men') return gender === 'male';
+    if (teamFilter === 'women') return gender === 'female';
+
+    if (teamFilter === 'youth') {
+      return ageGroup.startsWith('u');
+    }
+
+    if (teamFilter === 'first_team') {
+      return ageGroup === 'senior' || teamType === 'first_team';
+    }
+
+    if (teamFilter.startsWith('u')) {
+      return ageGroup === teamFilter;
+    }
+
+    return false;
+  };
+
   useEffect(() => {
     if (user && user.role === 'club') {
       fetchMembers();
@@ -194,7 +223,7 @@ function ClubRoster() {
       {/* Approved Members */}
       {activeTab === 'approved' && (
         <div className="space-y-4">
-          {members.filter(m => teamFilter === 'all' || m.teamType === teamFilter).length === 0 ? (
+          {members.filter(matchesTeamFilter).length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
               <div className="text-6xl mb-4">👥</div>
               <p className="text-gray-500 text-lg">No athletes in your squad yet</p>
@@ -203,7 +232,7 @@ function ClubRoster() {
               </p>
             </div>
           ) : (
-            members.filter(m => teamFilter === 'all' || m.teamType === teamFilter).map((membership) => (
+            members.filter(matchesTeamFilter).map((membership) => (
               <div
                 key={membership.id}
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition"

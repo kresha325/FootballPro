@@ -72,6 +72,9 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     directFields.forEach(field => {
       if (form[field] !== undefined) formData.append(field, form[field]);
     });
+    if (selectedClubId) {
+      formData.append('clubId', selectedClubId);
+    }
     // Paketoj fushat e statistikave si objekt stats
     const stats = {
       height: form.height,

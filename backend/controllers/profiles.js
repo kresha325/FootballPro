@@ -4,6 +4,8 @@ const Gallery = require('../models/Gallery');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
+const ClubMember = require('../models/ClubMember');
+const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
@@ -254,6 +256,79 @@ exports.updateProfile = async (req, res) => {
           dateOfBirth: req.body.dateOfBirth || user.dateOfBirth,
           gender: req.body.gender || user.gender,
         });
+      }
+    }
+
+    if (req.user?.role === 'athlete') {
+      const clubName = req.body.club || updateData.club;
+      const clubId = req.body.clubId;
+
+      if (clubId || clubName) {
+        let clubUser;
+
+        if (clubId && !isNaN(Number(clubId))) {
+          const clubById = await User.findByPk(parseInt(clubId));
+          if (clubById && clubById.role === 'club') {
+            clubUser = clubById;
+          }
+        }
+
+        if (!clubUser && clubName) {
+          const clubByUser = await User.findOne({
+            where: {
+              role: 'club',
+              [Op.or]: [
+                { firstName: { [Op.iLike]: `%${clubName}%` } },
+                { lastName: { [Op.iLike]: `%${clubName}%` } },
+                { email: { [Op.iLike]: `%${clubName}%` } },
+              ],
+            },
+          });
+
+          if (clubByUser) {
+            clubUser = clubByUser;
+          } else {
+            const clubProfile = await Profile.findOne({
+              where: {
+                club: {
+                  [Op.iLike]: `%${clubName}%`,
+                },
+              },
+              include: [{
+                model: User,
+                where: { role: 'club' },
+              }],
+            });
+
+            if (clubProfile) {
+              clubUser = clubProfile.User;
+            }
+          }
+        }
+
+        if (clubUser) {
+          const existing = await ClubMember.findOne({
+            where: {
+              clubId: clubUser.id,
+              athleteId: req.user.id,
+            },
+          });
+
+          if (existing) {
+            if (existing.status === 'rejected') {
+              existing.status = 'pending';
+              await existing.save();
+            }
+          } else {
+            await ClubMember.create({
+              clubId: clubUser.id,
+              athleteId: req.user.id,
+              status: 'pending',
+              position: updateData.position,
+              jerseyNumber: updateData?.stats?.jerseyNumber,
+            });
+          }
+        }
       }
     }
 
