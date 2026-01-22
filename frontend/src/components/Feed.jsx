@@ -288,19 +288,44 @@ const Feed = () => {
       <UserCardsSection />
 
       {/* Create Post Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+      <div
+        className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700"
+        style={{
+          backgroundImage: "linear-gradient(180deg, #101214 0%, #1f242b 55%, #0f3d1c 100%)",
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 16px), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 16px)",
+            opacity: 0.35,
+            pointerEvents: 'none'
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 right-0 h-16"
+          style={{
+            backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.5) 100%)",
+            pointerEvents: 'none'
+          }}
+        />
+        <div className="relative">
         <form onSubmit={handleCreatePost}>
           <label htmlFor="new-post" className="sr-only">What's on your mind?</label>
-          <div className="rounded-lg border-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30 shadow-inner p-2">
+          <div className="rounded-lg border-4 border-white/80 bg-white/90 shadow-inner p-2">
             <textarea
               id="new-post"
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
               placeholder="Shoot you penalty"
-              className="w-full p-3 border border-yellow-300 dark:border-yellow-700 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white/90 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              className="w-full p-3 border border-white/60 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white/80 bg-white/95 text-gray-900 placeholder-gray-500"
               rows="3"
               style={{
-                backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 14px), repeating-linear-gradient(90deg, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 14px)",
+                backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 14px), repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 14px)",
                 backgroundSize: 'auto',
               }}
             />
@@ -324,7 +349,7 @@ const Feed = () => {
           <div className="mt-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* Photo/Video Upload */}
-              <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+              <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition">
                 <span className="text-xl">⚽</span>
                 <span className="text-sm font-medium">Shoot</span>
                 <input
@@ -339,7 +364,7 @@ const Feed = () => {
               <div className="relative inline-block">
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                  className="px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition"
                   title="Add emoji"
                   onClick={() => setShowEmojiPicker((prev) => !prev)}
                 >
@@ -367,7 +392,7 @@ const Feed = () => {
               {/* Location */}
               <button
                 type="button"
-                className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                className="px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition"
                 title="Add location"
                 onClick={() => setShowLocationInput((prev) => !prev)}
               >
@@ -388,7 +413,7 @@ const Feed = () => {
             <button
               type="submit"
               disabled={posting || (!newPost.trim() && !selectedFile)}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="bg-yellow-400 text-black px-6 py-2 rounded-md hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
               aria-describedby="post-button-desc"
             >
               {posting ? 'Posting...' : 'Post'}
@@ -396,6 +421,7 @@ const Feed = () => {
           </div>
           <div id="post-button-desc" className="sr-only">Submit your post to share with others</div>
         </form>
+        </div>
       </div>
 
       {/* Posts List */}
