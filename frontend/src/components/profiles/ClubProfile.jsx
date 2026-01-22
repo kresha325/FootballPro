@@ -204,122 +204,21 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
         </div>
       )}
 
-      {/* Club Members */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-          <span>👥</span> Lista e anëtarëve
-        </h3>
-        {loadingMembers ? (
-          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
-        ) : clubMembers.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400">Nuk ka anëtarë të aprovuar ende.</div>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedMembers).map(([group, members]) => (
-              <div key={group}>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{group}</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {members.map((member) => {
-                    const age = member.athlete?.Profile?.age;
-                    const ageGroup = member.athlete?.Profile?.ageGroup;
-                    const ageLabel = ageGroup
-                      ? `${age || ''}${age ? '' : ''}(${ageGroup})`
-                      : age ? `${age}` : '';
-                    return (
-                      <Link
-                        key={member.id}
-                        to={`/profile/${member.athlete?.id}`}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
-                      >
-                        {member.athlete?.Profile?.profilePhoto ? (
-                          <img
-                            src={getFullUrl(member.athlete.Profile.profilePhoto)}
-                            alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
-                            className="w-12 h-12 rounded-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                            {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
-                            {member.athlete?.firstName} {member.athlete?.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {ageLabel ? `${ageLabel} ` : ''}{member.position || member.athlete?.Profile?.position || '—'}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pending Members (club owners only) */}
+      {/* Club Roster */}
       {isOwner && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>⏳</span> Kërkesa në pritje
+          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>👥</span> Club Roster
           </h3>
-          {loadingPending ? (
-            <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
-          ) : pendingMembers.length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400">Nuk ka kërkesa në pritje.</div>
-          ) : (
-            <div className="space-y-3">
-              {pendingMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="flex items-center gap-3">
-                    {member.athlete?.Profile?.profilePhoto ? (
-                      <img
-                        src={getFullUrl(member.athlete.Profile.profilePhoto)}
-                        alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
-                        className="w-10 h-10 rounded-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                        {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-semibold text-gray-900 dark:text-white">
-                        {member.athlete?.firstName} {member.athlete?.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {member.position || member.athlete?.Profile?.position || '—'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
-                      onClick={() => handleMembershipDecision(member.id, 'approved')}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
-                      onClick={() => handleMembershipDecision(member.id, 'rejected')}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Menaxho kërkesat dhe anëtarët e klubit në faqen e dedikuar.
+          </p>
+          <Link
+            to="/club-roster"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+          >
+            Shko te Club Roster
+          </Link>
         </div>
       )}
 

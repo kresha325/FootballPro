@@ -54,49 +54,55 @@ router.get('/club/:clubId', async (req, res) => {
       where.status = status;
     }
 
-    const clubProfile = await Profile.findOne({ where: { userId: parseInt(clubId) } });
-    if (clubProfile?.club || clubProfile?.userId) {
-      const orFilters = [];
-      if (clubProfile?.club) {
-        orFilters.push({
-          club: {
-            [Op.iLike]: `%${clubProfile.club}%`,
-          },
-        });
-      }
-      orFilters.push({ clubId: parseInt(clubId) });
-
-      const athleteProfiles = await Profile.findAll({
-        where: {
-          [Op.or]: orFilters,
-        },
-        include: [{
-          model: User,
-          attributes: ['id', 'role'],
-          where: { role: 'athlete' },
-        }],
-      });
-
-      await Promise.all(
-        athleteProfiles.map(async (profile) => {
-          const existing = await ClubMember.findOne({
-            where: {
-              clubId: parseInt(clubId),
-              athleteId: profile.userId,
-            },
-          });
-
-          if (!existing) {
-            await ClubMember.create({
-              clubId: parseInt(clubId),
-              athleteId: profile.userId,
-              status: 'pending',
-              position: profile.position || null,
-              jerseyNumber: profile.stats?.jerseyNumber || null,
+    if (!status) {
+      try {
+        const clubProfile = await Profile.findOne({ where: { userId: parseInt(clubId) } });
+        if (clubProfile?.club || clubProfile?.userId) {
+          const orFilters = [];
+          if (clubProfile?.club) {
+            orFilters.push({
+              club: {
+                [Op.iLike]: `%${clubProfile.club}%`,
+              },
             });
           }
-        })
-      );
+          orFilters.push({ clubId: parseInt(clubId) });
+
+          const athleteProfiles = await Profile.findAll({
+            where: {
+              [Op.or]: orFilters,
+            },
+            include: [{
+              model: User,
+              attributes: ['id', 'role'],
+              where: { role: 'athlete' },
+            }],
+          });
+
+          await Promise.all(
+            athleteProfiles.map(async (profile) => {
+              const existing = await ClubMember.findOne({
+                where: {
+                  clubId: parseInt(clubId),
+                  athleteId: profile.userId,
+                },
+              });
+
+              if (!existing) {
+                await ClubMember.create({
+                  clubId: parseInt(clubId),
+                  athleteId: profile.userId,
+                  status: 'pending',
+                  position: profile.position || null,
+                  jerseyNumber: profile.stats?.jerseyNumber || null,
+                });
+              }
+            })
+          );
+        }
+      } catch (syncError) {
+        console.error('Club members sync error:', syncError);
+      }
     }
 
     const members = await ClubMember.findAll({
