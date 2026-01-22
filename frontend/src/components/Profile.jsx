@@ -927,6 +927,15 @@ const Profile = () => {
                     {profile.club && (
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500">🏆</span>
+                        {profile.clubLogo ? (
+                          <img
+                            src={getFullUrl(profile.clubLogo)}
+                            alt={profile.club}
+                            className="w-6 h-6 rounded-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : null}
                         <span>{profile.club}</span>
                       </div>
                     )}
