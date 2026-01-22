@@ -48,21 +48,11 @@ const EditProfile = ({ user, onClose }) => {
   const handleSave = async (form) => {
     setLoading(true);
     try {
-      let api;
-      switch (user.role) {
-        case 'athlete':
-          api = profileAPI;
-          break;
-        case 'club':
-          api = clubMembersAPI;
-          break;
-        case 'liga':
-          api = ligaAPI;
-          break;
-        default:
-          api = profileAPI;
+      if (user.role === 'liga') {
+        await ligaAPI.updateLiga(form);
+      } else {
+        await profileAPI.updateProfile(form);
       }
-      await api.updateProfile(form);
       setLoading(false);
       onClose();
     } catch (err) {
