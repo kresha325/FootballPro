@@ -351,7 +351,6 @@ const Feed = () => {
               {/* Photo/Video Upload */}
               <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition">
                 <span className="text-xl">⚽</span>
-                <span className="text-sm font-medium">Shoot</span>
                 <input
                   type="file"
                   accept="image/*,video/*"
