@@ -204,6 +204,14 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
+          <label htmlFor="athlete-city" className="block text-sm font-medium mb-1">City</label>
+          <input id="athlete-city" name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label htmlFor="athlete-country" className="block text-sm font-medium mb-1">Country</label>
+          <input id="athlete-country" name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
           <label htmlFor="athlete-foot" className="block text-sm font-medium mb-1">Preferred Foot</label>
           <select id="athlete-foot" name="preferredFoot" value={form.preferredFoot} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
             <option value="right">Right</option>

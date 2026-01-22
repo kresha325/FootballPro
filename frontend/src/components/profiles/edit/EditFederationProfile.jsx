@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 const EditFederationProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
     club: user.club || '',
+    city: user.city || '',
     country: user.country || '',
     bio: user.bio || '',
     contact: user.contact || {},
@@ -51,6 +52,10 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
         <div>
           <label className="block text-sm font-medium mb-1">Federation Name</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">City</label>
+          <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Country</label>

@@ -6,6 +6,52 @@ const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
 const ClubMember = require('../models/ClubMember');
 const { Op } = require('sequelize');
+
+const resolveClubUser = async ({ clubId, clubName }) => {
+  let clubUser;
+
+  if (clubId && !isNaN(Number(clubId))) {
+    const clubById = await User.findByPk(parseInt(clubId));
+    if (clubById && clubById.role === 'club') {
+      clubUser = clubById;
+    }
+  }
+
+  if (!clubUser && clubName) {
+    const clubByUser = await User.findOne({
+      where: {
+        role: 'club',
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${clubName}%` } },
+          { lastName: { [Op.iLike]: `%${clubName}%` } },
+          { email: { [Op.iLike]: `%${clubName}%` } },
+        ],
+      },
+    });
+
+    if (clubByUser) {
+      clubUser = clubByUser;
+    } else {
+      const clubProfile = await Profile.findOne({
+        where: {
+          club: {
+            [Op.iLike]: `%${clubName}%`,
+          },
+        },
+        include: [{
+          model: User,
+          where: { role: 'club' },
+        }],
+      });
+
+      if (clubProfile) {
+        clubUser = clubProfile.User;
+      }
+    }
+  }
+
+  return clubUser;
+};
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
@@ -54,6 +100,31 @@ exports.createProfile = async (req, res) => {
       club: req.body.club || '',
       position: req.body.position || '',
     });
+
+    if (req.user?.role === 'athlete') {
+      const clubName = req.body.club;
+      const clubId = req.body.clubId;
+      const clubUser = await resolveClubUser({ clubId, clubName });
+
+      if (clubUser) {
+        const existing = await ClubMember.findOne({
+          where: {
+            clubId: clubUser.id,
+            athleteId: req.user.id,
+          },
+        });
+
+        if (!existing) {
+          await ClubMember.create({
+            clubId: clubUser.id,
+            athleteId: req.user.id,
+            status: 'pending',
+            position: req.body.position || null,
+            jerseyNumber: req.body.stats?.jerseyNumber,
+          });
+        }
+      }
+    }
 
     res.status(201).json(profile);
   } catch (err) {
@@ -264,47 +335,7 @@ exports.updateProfile = async (req, res) => {
       const clubId = req.body.clubId;
 
       if (clubId || clubName) {
-        let clubUser;
-
-        if (clubId && !isNaN(Number(clubId))) {
-          const clubById = await User.findByPk(parseInt(clubId));
-          if (clubById && clubById.role === 'club') {
-            clubUser = clubById;
-          }
-        }
-
-        if (!clubUser && clubName) {
-          const clubByUser = await User.findOne({
-            where: {
-              role: 'club',
-              [Op.or]: [
-                { firstName: { [Op.iLike]: `%${clubName}%` } },
-                { lastName: { [Op.iLike]: `%${clubName}%` } },
-                { email: { [Op.iLike]: `%${clubName}%` } },
-              ],
-            },
-          });
-
-          if (clubByUser) {
-            clubUser = clubByUser;
-          } else {
-            const clubProfile = await Profile.findOne({
-              where: {
-                club: {
-                  [Op.iLike]: `%${clubName}%`,
-                },
-              },
-              include: [{
-                model: User,
-                where: { role: 'club' },
-              }],
-            });
-
-            if (clubProfile) {
-              clubUser = clubProfile.User;
-            }
-          }
-        }
+        const clubUser = await resolveClubUser({ clubId, clubName });
 
         if (clubUser) {
           const existing = await ClubMember.findOne({

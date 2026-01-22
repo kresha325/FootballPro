@@ -10,6 +10,8 @@ const EditBusinessProfile = ({ user, onSave, loading, errors }) => {
     employees: user.stats?.employees || '',
     partnerships: user.stats?.partnerships || '',
     countries: user.stats?.countries || '',
+    city: user.city || '',
+    country: user.country || '',
     bio: user.bio || '',
     phone: user.contact?.phone || '',
     instagram: user.contact?.instagram || '',
@@ -90,6 +92,14 @@ const EditBusinessProfile = ({ user, onSave, loading, errors }) => {
         <div>
           <label className="block text-sm font-medium mb-1">Countries</label>
           <input name="countries" value={form.countries} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">City</label>
+          <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Country</label>
+          <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div>
