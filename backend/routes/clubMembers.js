@@ -6,6 +6,43 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { Op } = require('sequelize');
 
+const hydrateAgeGroup = async (membership) => {
+  if (!membership || !membership.athlete || !membership.athlete.Profile) {
+    return membership.toJSON ? membership.toJSON() : membership;
+  }
+
+  const athlete = membership.athlete;
+  const profile = athlete.Profile;
+  let age = profile.age;
+  let ageGroup = profile.ageGroup;
+  const computedAge = athlete.getAge ? athlete.getAge() : null;
+  const computedAgeGroup = athlete.getAgeGroup ? athlete.getAgeGroup() : null;
+
+  let changed = false;
+  if ((age === null || age === undefined) && computedAge !== null) {
+    age = computedAge;
+    profile.age = computedAge;
+    changed = true;
+  }
+  if ((!ageGroup || ageGroup === 'N/A') && computedAgeGroup) {
+    ageGroup = computedAgeGroup;
+    profile.ageGroup = computedAgeGroup;
+    changed = true;
+  }
+
+  if (changed && profile.save) {
+    await profile.save();
+  }
+
+  const plain = membership.toJSON ? membership.toJSON() : membership;
+  if (plain?.athlete?.Profile) {
+    plain.athlete.Profile.age = age ?? plain.athlete.Profile.age;
+    plain.athlete.Profile.ageGroup = ageGroup ?? plain.athlete.Profile.ageGroup;
+  }
+
+  return plain;
+};
+
 // Get club members (for club profile)
 router.get('/club/:clubId', async (req, res) => {
   try {
@@ -23,7 +60,7 @@ router.get('/club/:clubId', async (req, res) => {
         {
           model: User,
           as: 'athlete',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'gender'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'gender', 'dateOfBirth'],
           include: [{
             model: Profile,
             attributes: ['profilePhoto', 'position', 'bio', 'stats', 'age', 'ageGroup'],
@@ -33,7 +70,8 @@ router.get('/club/:clubId', async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    res.json(members);
+    const serialized = await Promise.all(members.map(hydrateAgeGroup));
+    res.json(serialized);
   } catch (error) {
     console.error('Get club members error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -211,13 +249,14 @@ router.put('/:membershipId/status', protect, async (req, res) => {
         {
           model: User,
           as: 'athlete',
-          attributes: ['id', 'firstName', 'lastName', 'gender'],
+          attributes: ['id', 'firstName', 'lastName', 'gender', 'dateOfBirth'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'age', 'ageGroup'] }],
         },
       ],
     });
 
-    res.json(updatedMembership);
+    const hydrated = await hydrateAgeGroup(updatedMembership);
+    res.json(hydrated);
   } catch (error) {
     console.error('Update membership status error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -251,13 +290,14 @@ router.patch('/:membershipId', protect, async (req, res) => {
         {
           model: User,
           as: 'athlete',
-          attributes: ['id', 'firstName', 'lastName', 'gender'],
+          attributes: ['id', 'firstName', 'lastName', 'gender', 'dateOfBirth'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'age', 'ageGroup'] }],
         },
       ],
     });
 
-    res.json(updatedMembership);
+    const hydrated = await hydrateAgeGroup(updatedMembership);
+    res.json(hydrated);
   } catch (error) {
     console.error('Update member error:', error);
     res.status(500).json({ msg: 'Server error' });
