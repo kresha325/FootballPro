@@ -291,14 +291,20 @@ const Feed = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
         <form onSubmit={handleCreatePost}>
           <label htmlFor="new-post" className="sr-only">What's on your mind?</label>
-          <textarea
-            id="new-post"
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-            placeholder="What's on your mind?"
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-            rows="3"
-          />
+          <div className="rounded-lg border-4 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30 shadow-inner p-2">
+            <textarea
+              id="new-post"
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+              placeholder="What's on your mind?"
+              className="w-full p-3 border border-yellow-300 dark:border-yellow-700 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white/90 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              rows="3"
+              style={{
+                backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 14px), repeating-linear-gradient(90deg, rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 14px)",
+                backgroundSize: 'auto',
+              }}
+            />
+          </div>
           
           {/* File Preview */}
           {filePreview && (
