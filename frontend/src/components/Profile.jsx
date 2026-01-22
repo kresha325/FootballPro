@@ -29,7 +29,7 @@ const getFullUrl = (url) => {
   return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
 };
 import { useParams, useNavigate } from 'react-router-dom';
-import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI } from '../services/api';
+import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI } from '../services/api';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';
@@ -55,6 +55,9 @@ const Profile = () => {
   const { id } = useParams();
   // Fix ReferenceError: sponsorList is not defined
   const [sponsorList, setSponsorList] = useState([]);
+  const [sponsorLoading, setSponsorLoading] = useState(false);
+  const [editingSponsorId, setEditingSponsorId] = useState(null);
+  const [editingSponsor, setEditingSponsor] = useState({ name: '', link: '' });
   const navigate = useNavigate();
   const { user } = useAuth();
   const { 
@@ -133,6 +136,53 @@ const Profile = () => {
       }
     }
   };
+
+  const fetchSponsors = async (userId) => {
+    if (!userId) return;
+    setSponsorLoading(true);
+    try {
+      const res = await sponsorAPI.getSponsorsByUser(userId);
+      setSponsorList(res.data || []);
+    } catch (err) {
+      setSponsorList([]);
+    } finally {
+      setSponsorLoading(false);
+    }
+  };
+
+  const handleEditSponsor = (sponsor) => {
+    setEditingSponsorId(sponsor.id);
+    setEditingSponsor({ name: sponsor.name || '', link: sponsor.link || '' });
+  };
+
+  const handleCancelEditSponsor = () => {
+    setEditingSponsorId(null);
+    setEditingSponsor({ name: '', link: '' });
+  };
+
+  const handleSaveSponsor = async () => {
+    if (!editingSponsorId) return;
+    try {
+      const res = await sponsorAPI.updateSponsor(editingSponsorId, {
+        name: editingSponsor.name,
+        link: editingSponsor.link,
+      });
+      setSponsorList((prev) => prev.map(s => (s.id === editingSponsorId ? res.data : s)));
+      handleCancelEditSponsor();
+    } catch (err) {
+      alert('Ndryshimi i sponsorit dështoi.');
+    }
+  };
+
+  const handleDeleteSponsor = async (sponsorId) => {
+    if (!window.confirm('A jeni i sigurt që doni ta fshini sponsorin?')) return;
+    try {
+      await sponsorAPI.deleteSponsor(sponsorId);
+      setSponsorList((prev) => prev.filter(s => s.id !== sponsorId));
+    } catch (err) {
+      alert('Fshirja e sponsorit dështoi.');
+    }
+  };
   // Fetch streams for user (removed)
   // useEffect(() => {
   //   if (!id) return;
@@ -182,6 +232,8 @@ const Profile = () => {
             console.error('Error checking follow status:', err);
           }
         }
+
+        await fetchSponsors(id);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
       } finally {
@@ -273,6 +325,17 @@ const Profile = () => {
   );
 
   const isOwner = user?.id === profile.id;
+  const tabs = [
+    { key: 'overview', label: '🏠 Overview' },
+    { key: 'posts', label: '📝 Posts' },
+    { key: 'gallery', label: '🖼️ Gallery' },
+    { key: 'videos', label: '🎥 Videos' },
+    { key: 'about', label: 'ℹ️ About' },
+    { key: 'contact', label: '✉️ Contact' },
+  ];
+  if (isOwner) {
+    tabs.push({ key: 'sponsors', label: '🤝 Sponsors' });
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -512,14 +575,7 @@ const Profile = () => {
               {/* Tab Navigation */}
               <div className="border-b border-gray-200 dark:border-gray-700">
             <div className="flex gap-8 px-6 overflow-x-auto">
-              {[
-                { key: 'overview', label: '🏠 Overview' },
-                { key: 'posts', label: '📝 Posts' },
-                { key: 'gallery', label: '🖼️ Gallery' },
-                { key: 'videos', label: '🎥 Videos' },
-                { key: 'about', label: 'ℹ️ About' },
-                { key: 'contact', label: '✉️ Contact' }
-              ].map((tab) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
@@ -921,6 +977,107 @@ const Profile = () => {
                 )}
                 {!profile.contact?.phone && !profile.contact?.instagram && !profile.contact?.twitter && !profile.contact?.facebook && (
                   <p className="text-center text-gray-500 py-8">No contact information available</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'sponsors' && isOwner && (
+              <div className="space-y-4">
+                {sponsorLoading ? (
+                  <p className="text-gray-500 dark:text-gray-400">Duke ngarkuar sponsorët...</p>
+                ) : sponsorList.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">Nuk ke sponsorë ende.</p>
+                ) : (
+                  sponsorList.map((sponsor) => (
+                    <div key={sponsor.id} className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                        {sponsor.image ? (
+                          <img
+                            src={getFullUrl(sponsor.image)}
+                            alt={sponsor.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className="text-2xl">🎯</span>
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        {editingSponsorId === sponsor.id ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={editingSponsor.name}
+                              onChange={(e) => setEditingSponsor({ ...editingSponsor, name: e.target.value })}
+                              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              placeholder="Emri i firmës"
+                            />
+                            <input
+                              type="url"
+                              value={editingSponsor.link}
+                              onChange={(e) => setEditingSponsor({ ...editingSponsor, link: e.target.value })}
+                              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              placeholder="Linku"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-semibold text-gray-900 dark:text-white">{sponsor.name}</div>
+                            {sponsor.link && (
+                              <a
+                                href={sponsor.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline"
+                              >
+                                {sponsor.link}
+                              </a>
+                            )}
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {sponsor.startDate ? `Start: ${new Date(sponsor.startDate).toLocaleDateString()}` : ''}
+                              {sponsor.endDate ? ` • End: ${new Date(sponsor.endDate).toLocaleDateString()}` : ''}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        {editingSponsorId === sponsor.id ? (
+                          <>
+                            <button
+                              onClick={handleSaveSponsor}
+                              className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                            >
+                              Ruaj
+                            </button>
+                            <button
+                              onClick={handleCancelEditSponsor}
+                              className="px-3 py-1 rounded bg-gray-200 text-gray-900 text-sm hover:bg-gray-300"
+                            >
+                              Anulo
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEditSponsor(sponsor)}
+                              className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                            >
+                              Ndrysho
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSponsor(sponsor.id)}
+                              className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
+                            >
+                              Fshi
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             )}
