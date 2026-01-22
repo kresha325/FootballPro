@@ -23,6 +23,7 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [pendingMembers, setPendingMembers] = useState([]);
   const [loadingPending, setLoadingPending] = useState(true);
+  const squadSize = loadingMembers ? '...' : clubMembers.length;
 
   const teamTypeLabels = {
     first_team: 'First Team',
@@ -178,7 +179,7 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">👥</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{clubData.squadSize || 0}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{squadSize}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Squad Size</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
