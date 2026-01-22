@@ -24,6 +24,13 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [pendingMembers, setPendingMembers] = useState([]);
   const [loadingPending, setLoadingPending] = useState(true);
 
+  const groupedMembers = clubMembers.reduce((acc, member) => {
+    const ageGroup = member.athlete?.Profile?.ageGroup || 'Pa grupmoshë';
+    if (!acc[ageGroup]) acc[ageGroup] = [];
+    acc[ageGroup].push(member);
+    return acc;
+  }, {});
+
   const fetchClubMembers = async () => {
     const clubId = profile.userId || profile.id;
     if (!clubId) return;
@@ -190,35 +197,49 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
         ) : clubMembers.length === 0 ? (
           <div className="text-gray-500 dark:text-gray-400">Nuk ka anëtarë të aprovuar ende.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clubMembers.map((member) => (
-              <Link
-                key={member.id}
-                to={`/profile/${member.athlete?.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
-              >
-                {member.athlete?.Profile?.profilePhoto ? (
-                  <img
-                    src={getFullUrl(member.athlete.Profile.profilePhoto)}
-                    alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
-                    className="w-12 h-12 rounded-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                    {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
-                  </div>
-                )}
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
-                    {member.athlete?.firstName} {member.athlete?.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {member.position || member.athlete?.Profile?.position || '—'}
-                  </div>
+          <div className="space-y-6">
+            {Object.entries(groupedMembers).map(([group, members]) => (
+              <div key={group}>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{group}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {members.map((member) => {
+                    const age = member.athlete?.Profile?.age;
+                    const ageGroup = member.athlete?.Profile?.ageGroup;
+                    const ageLabel = ageGroup
+                      ? `${age || ''}${age ? '' : ''}(${ageGroup})`
+                      : age ? `${age}` : '';
+                    return (
+                      <Link
+                        key={member.id}
+                        to={`/profile/${member.athlete?.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
+                      >
+                        {member.athlete?.Profile?.profilePhoto ? (
+                          <img
+                            src={getFullUrl(member.athlete.Profile.profilePhoto)}
+                            alt={`${member.athlete.firstName} ${member.athlete.lastName}`}
+                            className="w-12 h-12 rounded-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                            {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-gray-900 dark:text-white">
+                            {member.athlete?.firstName} {member.athlete?.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ageLabel ? `${ageLabel} ` : ''}{member.position || member.athlete?.Profile?.position || '—'}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
