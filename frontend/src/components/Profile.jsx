@@ -15,7 +15,7 @@
     }
   };
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 // Helper to get full URL for images/videos
 const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 const getFullUrl = (url) => {
@@ -48,8 +48,6 @@ import { ClubBadge } from '../utils/clubLogos';
 import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '../utils/cropImage';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -87,15 +85,6 @@ const Profile = () => {
   });
   // Shtojme state per modalin e fotos full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
-
-  // State for cover crop modal
-  const [showCoverCrop, setShowCoverCrop] = useState(false);
-  const [coverCropImage, setCoverCropImage] = useState(null);
-  const [coverOriginalFile, setCoverOriginalFile] = useState(null);
-  const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
-  const [coverZoom, setCoverZoom] = useState(1);
-  const [coverCroppedArea, setCoverCroppedArea] = useState(null);
-
 
   // Set gallery image as profile or cover photo
 
@@ -252,60 +241,21 @@ const Profile = () => {
     return role === 'admin';
   }
 
-  const onCoverCropChange = useCallback((crop) => setCoverCrop(crop), []);
-  const onCoverZoomChange = useCallback((zoom) => setCoverZoom(zoom), []);
-  const onCoverCropComplete = useCallback((_, croppedAreaPixels) => setCoverCroppedArea(croppedAreaPixels), []);
+    // Handler for file input change (cover)
+    const handleCoverFileChange = async (e) => {
+      if (e.target.files && e.target.files[0]) {
+        try {
+          const formData = new FormData();
+          formData.append('coverPhoto', e.target.files[0]);
+          await profileAPI.updateProfile(formData);
+          const res = await profileAPI.getProfile(id);
+          setProfile(res.data);
+        } catch (err) {
+          alert('Nuk u ruajt fotoja!');
+        }
+      }
+    };
 
-  // Handler for file input change (cover)
-  const handleCoverFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setCoverOriginalFile(e.target.files[0]);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setCoverCropImage(ev.target.result);
-        setShowCoverCrop(true);
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
-
-  const handleUseOriginalCover = async () => {
-    try {
-      if (!coverOriginalFile) return;
-      const formData = new FormData();
-      formData.append('coverPhoto', coverOriginalFile);
-      await profileAPI.updateProfile(formData);
-      const res = await profileAPI.getProfile(id);
-      setProfile(res.data);
-    } catch (err) {
-      alert('Nuk u ruajt fotoja!');
-    } finally {
-      setShowCoverCrop(false);
-      setCoverCropImage(null);
-      setCoverOriginalFile(null);
-    }
-  };
-
-  // Save cropped cover image
-  const handleSaveCoverCrop = async () => {
-    try {
-      if (!coverCropImage || !coverCroppedArea) return;
-      // Krijo imazhin e crop-uar si blob
-      const croppedBlob = await getCroppedImg(coverCropImage, coverCroppedArea);
-      const formData = new FormData();
-      formData.append('coverPhoto', croppedBlob, 'cover.jpg');
-      await profileAPI.updateProfile(formData);
-      // Rifresko profilin
-      const res = await profileAPI.getProfile(id);
-      setProfile(res.data);
-      setShowCoverCrop(false);
-      setCoverCropImage(null);
-      setCoverOriginalFile(null);
-    } catch (err) {
-      alert('Nuk u ruajt fotoja!');
-      setShowCoverCrop(false);
-    }
-  };
 
 
 
@@ -333,7 +283,7 @@ const Profile = () => {
           <img
             src={getFullUrl(profile.coverPhoto)}
             alt="Cover"
-            className="w-full h-full object-contain bg-black/10 rounded-md"
+            className="w-full h-full object-cover bg-black/10 rounded-md"
             loading="lazy"
             decoding="async"
             style={{ background: '#f3f4f6' }}
@@ -347,42 +297,6 @@ const Profile = () => {
           </div>
         )}
       </div>
-
-      {/* Modal for cropping cover photo */}
-      {showCoverCrop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-          <div className="bg-white p-6 rounded shadow-lg relative w-[90vw] max-w-3xl h-[60vh] flex flex-col items-center">
-            <h2 className="mb-2 font-bold">Poziciono Cover-in</h2>
-            <div className="relative w-full h-full flex-1">
-              <Cropper
-                image={coverCropImage}
-                crop={coverCrop}
-                zoom={coverZoom}
-                aspect={3.5/1}
-                onCropChange={onCoverCropChange}
-                onZoomChange={onCoverZoomChange}
-                onCropComplete={onCoverCropComplete}
-                cropShape="rect"
-                showGrid={false}
-              />
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.01}
-              value={coverZoom}
-              onChange={e => setCoverZoom(Number(e.target.value))}
-              className="w-full mt-2"
-            />
-            <div className="flex gap-4 mt-4">
-              <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={handleSaveCoverCrop}>Ruaj</button>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleUseOriginalCover}>Pa prerje</button>
-              <button className="bg-gray-300 px-4 py-2 rounded" onClick={() => setShowCoverCrop(false)}>Anulo</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Profile Header */}
       <div className={`shadow mt-28 ${sponsorList.length > 0 ? 'bg-green-100 border-green-300 border-2' : 'bg-white dark:bg-gray-800'}` }>
@@ -1108,40 +1022,6 @@ const Profile = () => {
         </div>
       )}
 
-      {/* Modal for cropping cover photo */}
-      {showCoverCrop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-          <div className="bg-white p-6 rounded shadow-lg relative w-[90vw] max-w-3xl h-[60vh] flex flex-col items-center">
-            <h2 className="mb-2 font-bold">Poziciono Cover-in</h2>
-            <div className="relative w-full h-full flex-1">
-              <Cropper
-                image={coverCropImage}
-                crop={coverCrop}
-                zoom={coverZoom}
-                aspect={3.5/1} // Typical cover ratio
-                onCropChange={onCoverCropChange}
-                onZoomChange={onCoverZoomChange}
-                onCropComplete={onCoverCropComplete}
-                cropShape="rect"
-                showGrid={false}
-              />
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.01}
-              value={coverZoom}
-              onChange={e => setCoverZoom(Number(e.target.value))}
-              className="w-full mt-2"
-            />
-            <div className="flex gap-4 mt-4">
-              <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={handleSaveCoverCrop}>Ruaj</button>
-              <button className="bg-gray-300 px-4 py-2 rounded" onClick={() => setShowCoverCrop(false)}>Anulo</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
