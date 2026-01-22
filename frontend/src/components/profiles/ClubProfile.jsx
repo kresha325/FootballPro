@@ -49,7 +49,7 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   }, {});
 
   const fetchClubMembers = async () => {
-    const clubId = profile.userId || profile.id;
+    const clubId = profile.userId || profile.User?.id || profile.id;
     if (!clubId) return;
     setLoadingMembers(true);
     try {
@@ -64,7 +64,7 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
 
   const fetchPendingMembers = async () => {
     if (!isOwner) return;
-    const clubId = profile.userId || profile.id;
+    const clubId = profile.userId || profile.User?.id || profile.id;
     if (!clubId) return;
     setLoadingPending(true);
     try {
