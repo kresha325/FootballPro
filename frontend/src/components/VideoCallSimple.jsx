@@ -30,6 +30,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const peerConnectionRef = useRef(null);
   const callStatusRef = useRef(callStatus);
   const disconnectTimerRef = useRef(null);
+  const ringtoneRef = useRef({ ctx: null, osc: null, gain: null, intervalId: null });
 
   // Thirrja niset vetëm me klikim (jo automatikisht)
 
@@ -84,6 +85,18 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   }, [callStatus, onClose]);
 
   useEffect(() => {
+    if (callStatus === 'calling' || callStatus === 'ringing') {
+      startRingtone();
+    } else {
+      stopRingtone();
+    }
+
+    return () => {
+      stopRingtone();
+    };
+  }, [callStatus]);
+
+  useEffect(() => {
     if (callStatus === 'connected') {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.muted = false;
@@ -97,12 +110,20 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     if (remoteStream) {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play?.().catch(() => {});
       }
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
       }
     }
   }, [remoteStream]);
+
+  useEffect(() => {
+    if (localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play?.().catch(() => {});
+    }
+  }, [localStream]);
   // Handler for incoming call offer
   const handleIncomingCall = ({ from, callerName, offer }) => {
     if (!user || !from || !offer) return;
@@ -212,6 +233,44 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       alert(errorMessage);
       return null;
     }
+  };
+
+  const startRingtone = () => {
+    if (ringtoneRef.current.intervalId) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.15;
+      gain.connect(ctx.destination);
+
+      const playBeep = () => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        osc.connect(gain);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+      };
+
+      playBeep();
+      const intervalId = setInterval(playBeep, 1200);
+      ringtoneRef.current = { ctx, gain, intervalId, osc: null };
+    } catch (err) {
+      console.warn('Ringtone error:', err);
+    }
+  };
+
+  const stopRingtone = () => {
+    const { ctx, intervalId } = ringtoneRef.current || {};
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    if (ctx) {
+      ctx.close?.().catch(() => {});
+    }
+    ringtoneRef.current = { ctx: null, osc: null, gain: null, intervalId: null };
   };
 
   const createPeerConnection = (streamOverride) => {
