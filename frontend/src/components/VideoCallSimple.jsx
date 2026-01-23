@@ -83,6 +83,17 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       onClose();
     }
   }, [callStatus, onClose]);
+
+  useEffect(() => {
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+      }
+    }
+  }, [remoteStream]);
   // Handler for incoming call offer
   const handleIncomingCall = async ({ from, callerName, offer }) => {
     if (!user || !from || !offer) return;
@@ -411,15 +422,14 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       {/* Remote Video (Full Screen) */}
       <div className="flex-1 relative bg-black">
         <audio ref={remoteAudioRef} autoPlay playsInline />
-        {callStatus === 'connected' && remoteStream ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            muted={false}
-            className="w-full h-full object-cover"
-          />
-        ) : (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          muted={false}
+          className={`w-full h-full object-cover ${callStatus === 'connected' && remoteStream ? '' : 'hidden'}`}
+        />
+        {!(callStatus === 'connected' && remoteStream) && (
           <div className="w-full h-full flex flex-col items-center justify-center text-white px-4">
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-700 flex items-center justify-center text-3xl sm:text-4xl mb-4">
               {targetUser.firstName?.[0]}{targetUser.lastName?.[0]}
