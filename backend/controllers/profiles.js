@@ -499,6 +499,7 @@ exports.getAllProfiles = async (req, res) => {
       model: User,
       attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
       where: role ? whereClause : {},
+      required: true,
     };
 
     let profiles = await Profile.findAll({
@@ -508,7 +509,9 @@ exports.getAllProfiles = async (req, res) => {
 
 
     // Merge user data into each profile dhe standardizo path-in e profilePhoto
-    let profilesWithUserData = profiles.map(profile => {
+    let profilesWithUserData = profiles
+      .filter(profile => profile && profile.User)
+      .map(profile => {
       const obj = {
         ...profile.toJSON(),
         id: profile.userId,
