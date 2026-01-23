@@ -542,12 +542,13 @@ exports.getAllProfiles = async (req, res) => {
 
     // Apply search filter if provided
     if (search) {
-      const searchLower = search.toLowerCase();
-      profilesWithUserData = profilesWithUserData.filter(p => 
-        `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchLower) ||
-        p.club?.toLowerCase().includes(searchLower) ||
-        p.position?.toLowerCase().includes(searchLower) ||
-        p.city?.toLowerCase().includes(searchLower)
+      const searchLower = String(search).toLowerCase();
+      const safeLower = (value) => (typeof value === 'string' ? value.toLowerCase() : String(value || '').toLowerCase());
+      profilesWithUserData = profilesWithUserData.filter(p =>
+        safeLower(`${p.firstName} ${p.lastName}`).includes(searchLower) ||
+        safeLower(p.club).includes(searchLower) ||
+        safeLower(p.position).includes(searchLower) ||
+        safeLower(p.city).includes(searchLower)
       );
     }
 
