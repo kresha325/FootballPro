@@ -85,6 +85,9 @@ const ClubStaff = sequelize.define('ClubStaff', {
     type: DataTypes.ENUM('first_team', 'youth', 'women', 'men', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u9'),
     defaultValue: 'first_team',
   },
+}, {
+  tableName: 'ClubStaff',
+  freezeTableName: true,
 });
 
 // Relationships
