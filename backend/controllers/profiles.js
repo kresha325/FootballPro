@@ -480,16 +480,13 @@ exports.updateProfile = async (req, res) => {
 exports.getAllProfiles = async (req, res) => {
   try {
     const { role, search, random, limit } = req.query;
-    const buildRoleWhere = (value) => {
-      if (!value) return {};
-      const normalized = String(value).toLowerCase();
-      if (normalized === 'club') {
-        return sequelizeWhere(fn('lower', col('User.role')), { [Op.in]: ['club', 'klub'] });
-      }
-      if (normalized === 'coach') {
-        return sequelizeWhere(fn('lower', col('User.role')), { [Op.in]: ['coach', 'trajner'] });
-      }
-      return { role: value };
+    const normalizedRole = role ? String(role).toLowerCase() : null;
+    const filterRoleInJs = (itemRole) => {
+      const r = String(itemRole || '').toLowerCase();
+      if (!normalizedRole) return true;
+      if (normalizedRole === 'club') return ['club', 'klub'].includes(r);
+      if (normalizedRole === 'coach') return ['coach', 'trajner'].includes(r);
+      return r === normalizedRole;
     };
 
     // Exclude current user
@@ -499,7 +496,7 @@ exports.getAllProfiles = async (req, res) => {
     const userInclude = {
       model: User,
       attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
-      where: role ? buildRoleWhere(role) : {},
+      where: role && !['club', 'coach'].includes(normalizedRole) ? { role } : {},
       required: true,
     };
 
@@ -535,6 +532,10 @@ exports.getAllProfiles = async (req, res) => {
       }
       return obj;
     });
+
+    if (role) {
+      profilesWithUserData = profilesWithUserData.filter(p => filterRoleInJs(p.role));
+    }
 
     // Exclude current user
     if (excludeUserId) {
