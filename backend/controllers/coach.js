@@ -1,5 +1,54 @@
 const Coach = require('../models/Profile');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
+const ClubStaff = require('../models/ClubStaff');
+const { Op } = require('sequelize');
+
+const resolveClubUser = async ({ clubId, clubName }) => {
+  let clubUser;
+
+  if (clubId && !isNaN(Number(clubId))) {
+    const clubById = await User.findByPk(parseInt(clubId));
+    if (clubById && clubById.role === 'club') {
+      clubUser = clubById;
+    }
+  }
+
+  if (!clubUser && clubName) {
+    const clubByUser = await User.findOne({
+      where: {
+        role: 'club',
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${clubName}%` } },
+          { lastName: { [Op.iLike]: `%${clubName}%` } },
+          { email: { [Op.iLike]: `%${clubName}%` } },
+        ],
+      },
+    });
+
+    if (clubByUser) {
+      clubUser = clubByUser;
+    } else {
+      const clubProfile = await Profile.findOne({
+        where: {
+          club: {
+            [Op.iLike]: `%${clubName}%`,
+          },
+        },
+        include: [{
+          model: User,
+          where: { role: 'club' },
+        }],
+      });
+
+      if (clubProfile) {
+        clubUser = clubProfile.User;
+      }
+    }
+  }
+
+  return clubUser;
+};
 
 // Create Coach profile
 exports.createCoach = async (req, res) => {
@@ -24,6 +73,39 @@ exports.createCoach = async (req, res) => {
       coverPhoto: req.body.coverPhoto,
       profilePhoto: req.body.profilePhoto,
     });
+
+    const clubUser = await resolveClubUser({ clubId: req.body.clubId, clubName: req.body.club });
+    if (clubUser) {
+      const existing = await ClubStaff.findOne({
+        where: {
+          clubId: clubUser.id,
+          staffId: req.user.id,
+        },
+      });
+
+      const category = req.body.coachCategory;
+      const staffRoleMap = {
+        general_trainer: 'head_coach',
+        assistant_trainer: 'assistant_coach',
+        fitness_trainer: 'fitness_coach',
+        goalkeeper_trainer: 'goalkeeper_coach',
+        technical_trainer: 'technical_coach',
+        tactical_trainer: 'tactical_coach',
+        psychological_trainer: 'sports_psychologist',
+        youth_trainer: 'assistant_coach',
+        rehabilitation_trainer: 'physiotherapist',
+      };
+
+      if (!existing) {
+        await ClubStaff.create({
+          clubId: clubUser.id,
+          staffId: req.user.id,
+          staffRole: staffRoleMap[category] || 'assistant_coach',
+          teamType: 'first_team',
+          status: 'pending',
+        });
+      }
+    }
     res.status(201).json(profile);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -66,6 +148,46 @@ exports.updateCoach = async (req, res) => {
       coverPhoto: req.body.coverPhoto || profile.coverPhoto,
       profilePhoto: req.body.profilePhoto || profile.profilePhoto,
     });
+
+    const clubName = req.body.club || profile.club;
+    const clubUser = await resolveClubUser({ clubId: req.body.clubId, clubName });
+
+    if (clubUser) {
+      const existing = await ClubStaff.findOne({
+        where: {
+          clubId: clubUser.id,
+          staffId: req.user.id,
+        },
+      });
+
+      const category = req.body.coachCategory || profile.coachCategory;
+      const staffRoleMap = {
+        general_trainer: 'head_coach',
+        assistant_trainer: 'assistant_coach',
+        fitness_trainer: 'fitness_coach',
+        goalkeeper_trainer: 'goalkeeper_coach',
+        technical_trainer: 'technical_coach',
+        tactical_trainer: 'tactical_coach',
+        psychological_trainer: 'sports_psychologist',
+        youth_trainer: 'assistant_coach',
+        rehabilitation_trainer: 'physiotherapist',
+      };
+
+      if (existing) {
+        existing.status = 'pending';
+        existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
+        existing.teamType = existing.teamType || 'first_team';
+        await existing.save();
+      } else {
+        await ClubStaff.create({
+          clubId: clubUser.id,
+          staffId: req.user.id,
+          staffRole: staffRoleMap[category] || 'assistant_coach',
+          teamType: 'first_team',
+          status: 'pending',
+        });
+      }
+    }
     res.json(profile);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
