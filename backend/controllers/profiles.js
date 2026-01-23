@@ -267,6 +267,13 @@ exports.updateProfile = async (req, res) => {
     let updateData = {};
     for (const key in req.body) {
       if (profileFields.includes(key)) {
+        if (key === 'clubId') {
+          const parsed = parseInt(req.body[key], 10);
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            updateData.clubId = parsed;
+          }
+          continue;
+        }
         // Parse JSON fields if needed
         if ((key === 'stats' || key === 'careerHistory' || key === 'contact') && typeof req.body[key] === 'string' && req.body[key].trim() !== '') {
           try {
@@ -385,30 +392,34 @@ exports.updateProfile = async (req, res) => {
       const clubId = req.body.clubId;
 
       if (clubId || clubName) {
-        const clubUser = await resolveClubUser({ clubId, clubName });
+        try {
+          const clubUser = await resolveClubUser({ clubId, clubName });
 
-        if (clubUser) {
-          const existing = await ClubMember.findOne({
-            where: {
-              clubId: clubUser.id,
-              athleteId: req.user.id,
-            },
-          });
-
-          if (existing) {
-            if (existing.status === 'rejected') {
-              existing.status = 'pending';
-              await existing.save();
-            }
-          } else {
-            await ClubMember.create({
-              clubId: clubUser.id,
-              athleteId: req.user.id,
-              status: 'pending',
-              position: updateData.position,
-              jerseyNumber: updateData?.stats?.jerseyNumber,
+          if (clubUser) {
+            const existing = await ClubMember.findOne({
+              where: {
+                clubId: clubUser.id,
+                athleteId: req.user.id,
+              },
             });
+
+            if (existing) {
+              if (existing.status === 'rejected') {
+                existing.status = 'pending';
+                await existing.save();
+              }
+            } else {
+              await ClubMember.create({
+                clubId: clubUser.id,
+                athleteId: req.user.id,
+                status: 'pending',
+                position: updateData.position,
+                jerseyNumber: updateData?.stats?.jerseyNumber,
+              });
+            }
           }
+        } catch (clubMemberError) {
+          console.warn('Club member request error:', clubMemberError.message);
         }
       }
     }
@@ -418,47 +429,51 @@ exports.updateProfile = async (req, res) => {
       const clubId = req.body.clubId || updateData.clubId;
 
       if (clubId || clubName) {
-        const clubUser = await resolveClubUser({ clubId, clubName });
+        try {
+          const clubUser = await resolveClubUser({ clubId, clubName });
 
-        if (clubUser) {
-          await profile.update({ clubId: clubUser.id });
+          if (clubUser) {
+            await profile.update({ clubId: clubUser.id });
 
-          const existing = await ClubStaff.findOne({
-            where: {
-              clubId: clubUser.id,
-              staffId: req.user.id,
-            },
-          });
-
-          const category = req.body.coachCategory || updateData.coachCategory;
-          const staffRoleMap = {
-            general_trainer: 'head_coach',
-            assistant_trainer: 'assistant_coach',
-            fitness_trainer: 'fitness_coach',
-            goalkeeper_trainer: 'goalkeeper_coach',
-            technical_trainer: 'technical_coach',
-            tactical_trainer: 'tactical_coach',
-            psychological_trainer: 'sports_psychologist',
-            youth_trainer: 'assistant_coach',
-            rehabilitation_trainer: 'physiotherapist',
-          };
-
-          if (existing) {
-            if (existing.status !== 'active') {
-              existing.status = 'pending';
-            }
-            existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
-            existing.teamType = existing.teamType || 'first_team';
-            await existing.save();
-          } else {
-            await ClubStaff.create({
-              clubId: clubUser.id,
-              staffId: req.user.id,
-              staffRole: staffRoleMap[category] || 'assistant_coach',
-              teamType: 'first_team',
-              status: 'pending',
+            const existing = await ClubStaff.findOne({
+              where: {
+                clubId: clubUser.id,
+                staffId: req.user.id,
+              },
             });
+
+            const category = req.body.coachCategory || updateData.coachCategory;
+            const staffRoleMap = {
+              general_trainer: 'head_coach',
+              assistant_trainer: 'assistant_coach',
+              fitness_trainer: 'fitness_coach',
+              goalkeeper_trainer: 'goalkeeper_coach',
+              technical_trainer: 'technical_coach',
+              tactical_trainer: 'tactical_coach',
+              psychological_trainer: 'sports_psychologist',
+              youth_trainer: 'assistant_coach',
+              rehabilitation_trainer: 'physiotherapist',
+            };
+
+            if (existing) {
+              if (existing.status !== 'active') {
+                existing.status = 'pending';
+              }
+              existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
+              existing.teamType = existing.teamType || 'first_team';
+              await existing.save();
+            } else {
+              await ClubStaff.create({
+                clubId: clubUser.id,
+                staffId: req.user.id,
+                staffRole: staffRoleMap[category] || 'assistant_coach',
+                teamType: 'first_team',
+                status: 'pending',
+              });
+            }
           }
+        } catch (clubStaffError) {
+          console.warn('Club staff request error:', clubStaffError.message);
         }
       }
     }
@@ -500,10 +515,25 @@ exports.getAllProfiles = async (req, res) => {
       required: true,
     };
 
-    let profiles = await Profile.findAll({
-      include: [userInclude],
-      order: [['createdAt', 'DESC']]
-    });
+    let profiles = [];
+    try {
+      profiles = await Profile.findAll({
+        include: [userInclude],
+        order: [['createdAt', 'DESC']]
+      });
+    } catch (includeError) {
+      console.warn('Get all profiles include error, falling back:', includeError.message);
+      const baseProfiles = await Profile.findAll({ order: [['createdAt', 'DESC']] });
+      const userIds = baseProfiles.map(p => p.userId).filter(Boolean);
+      const users = await User.findAll({ where: { id: userIds } });
+      const userMap = new Map(users.map(u => [u.id, u]));
+      profiles = baseProfiles
+        .map(p => {
+          p.User = userMap.get(p.userId);
+          return p;
+        })
+        .filter(p => p.User);
+    }
 
 
     // Merge user data into each profile dhe standardizo path-in e profilePhoto
