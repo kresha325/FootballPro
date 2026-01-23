@@ -1,18 +1,73 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { PhoneIcon, PhoneXMarkIcon } from '@heroicons/react/24/solid';
 
 export default function IncomingCallModal({ caller, onAccept, onReject }) {
-  const [ringing, setRinging] = useState(true);
   const audioRef = useRef(null);
+  const ringtoneRef = useRef({ ctx: null, gain: null, intervalId: null, resumeHandler: null, vibrateId: null });
 
   useEffect(() => {
-    // Play ringtone (if you have an audio file)
-    // audioRef.current?.play();
+    const startRingtone = () => {
+      if (ringtoneRef.current.intervalId) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.15;
+      gain.connect(ctx.destination);
 
-    return () => {
-      // Stop ringtone
-      // audioRef.current?.pause();
+      const playBeep = () => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        osc.connect(gain);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+      };
+
+      const begin = () => {
+        playBeep();
+        const intervalId = setInterval(playBeep, 1200);
+        ringtoneRef.current.intervalId = intervalId;
+      };
+
+      ringtoneRef.current.ctx = ctx;
+      ringtoneRef.current.gain = gain;
+
+      if (ctx.state === 'suspended') {
+        const resume = () => {
+          ctx.resume().then(begin).catch(() => {});
+          window.removeEventListener('click', resume);
+          window.removeEventListener('touchstart', resume);
+        };
+        ringtoneRef.current.resumeHandler = resume;
+        window.addEventListener('click', resume, { once: true });
+        window.addEventListener('touchstart', resume, { once: true });
+      } else {
+        begin();
+      }
+
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+        ringtoneRef.current.vibrateId = setInterval(() => {
+          navigator.vibrate([200, 100, 200]);
+        }, 1500);
+      }
     };
+
+    const stopRingtone = () => {
+      const { ctx, intervalId, resumeHandler, vibrateId } = ringtoneRef.current;
+      if (intervalId) clearInterval(intervalId);
+      if (vibrateId) clearInterval(vibrateId);
+      if (resumeHandler) {
+        window.removeEventListener('click', resumeHandler);
+        window.removeEventListener('touchstart', resumeHandler);
+      }
+      if (ctx) ctx.close?.().catch(() => {});
+      ringtoneRef.current = { ctx: null, gain: null, intervalId: null, resumeHandler: null, vibrateId: null };
+    };
+
+    startRingtone();
+    return () => stopRingtone();
   }, []);
 
   return (
@@ -55,9 +110,7 @@ export default function IncomingCallModal({ caller, onAccept, onReject }) {
         </div>
 
         {/* Hidden audio element for ringtone */}
-        <audio ref={audioRef} loop>
-          {/* <source src="/sounds/ringtone.mp3" type="audio/mpeg" /> */}
-        </audio>
+        <audio ref={audioRef} loop />
       </div>
     </div>
   );

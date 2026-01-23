@@ -54,6 +54,10 @@ exports.endCall = async (req, res) => {
   try {
     const call = await VideoCall.findByPk(callId);
     if (call) {
+      const callerUser = await User.findByPk(req.user.id);
+      const callerName = callerUser
+        ? `${callerUser.firstName || ''} ${callerUser.lastName || ''}`.trim()
+        : 'Someone';
       const wasRinging = call.status === 'ringing';
       call.status = 'ended';
       call.endTime = new Date();
@@ -66,7 +70,7 @@ exports.endCall = async (req, res) => {
           actorId: req.user.id,
           type: 'system',
           title: 'Missed Call',
-          message: `${req.user.firstName} ${req.user.lastName} tried to call you`,
+          message: `${callerName} tried to call you`,
           link: '/messaging',
           entityType: 'call',
           entityId: call.id,
@@ -75,7 +79,7 @@ exports.endCall = async (req, res) => {
         await sendNotification(
           call.receiverId,
           'Missed Call',
-          `${req.user.firstName} ${req.user.lastName} tried to call you`,
+          `${callerName} tried to call you`,
           { type: 'missed_call', callId: call.id }
         );
       }
@@ -122,6 +126,10 @@ exports.updateCallStatus = async (req, res) => {
       return res.status(404).json({ msg: 'Call not found' });
     }
 
+    const callerUser = await User.findByPk(req.user.id);
+    const callerName = callerUser
+      ? `${callerUser.firstName || ''} ${callerUser.lastName || ''}`.trim()
+      : 'Someone';
     const prevStatus = videoCall.status;
     videoCall.status = status;
     if (status === 'ended' || status === 'declined') {
@@ -137,7 +145,7 @@ exports.updateCallStatus = async (req, res) => {
         actorId: req.user.id,
         type: 'system',
         title: 'Missed Call',
-        message: `${req.user.firstName} ${req.user.lastName} tried to call you`,
+        message: `${callerName} tried to call you`,
         link: '/messaging',
         entityType: 'call',
         entityId: videoCall.id,
@@ -146,7 +154,7 @@ exports.updateCallStatus = async (req, res) => {
       await sendNotification(
         videoCall.receiverId,
         'Missed Call',
-        `${req.user.firstName} ${req.user.lastName} tried to call you`,
+        `${callerName} tried to call you`,
         { type: 'missed_call', callId: videoCall.id }
       );
     }
