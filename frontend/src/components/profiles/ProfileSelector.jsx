@@ -3,6 +3,7 @@ import PlayerProfile from './PlayerProfile';
 import CoachProfile from './CoachProfile';
 import ScoutProfile from './ScoutProfile';
 import ManagerProfile from './ManagerProfile';
+import RefereeProfile from './RefereeProfile';
 import ClubProfile from './ClubProfile';
 import BusinessProfile from './BusinessProfile';
 import LigaProfile from './LigaProfile';
@@ -18,6 +19,8 @@ const ProfileSelector = ({ user, profile, isOwner }) => {
       return <ScoutProfile profile={profile} />;
     case 'manager':
       return <ManagerProfile profile={profile} />;
+    case 'referee':
+      return <RefereeProfile profile={profile} />;
     case 'club':
       return <ClubProfile profile={profile} isOwner={isOwner} />;
     case 'business':

@@ -293,7 +293,7 @@ const Profile = () => {
 
   // Helper functions for role logic
   const ENTE_ROLES = ['business', 'federation', 'media', 'club'];
-  const INDIVID_ROLES = ['athlete', 'coach', 'scout', 'manager'];
+  const INDIVID_ROLES = ['athlete', 'coach', 'scout', 'manager', 'referee'];
 
   function isEnte(role) {
     return ENTE_ROLES.includes(role);

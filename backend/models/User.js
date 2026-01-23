@@ -17,7 +17,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('athlete', 'coach', 'scout', 'manager', 'club', 'federation', 'liga', 'media', 'business', 'admin'),
+    type: DataTypes.ENUM('athlete', 'coach', 'scout', 'manager', 'referee', 'club', 'federation', 'liga', 'media', 'business', 'admin'),
     allowNull: false,
   },
   premium: {

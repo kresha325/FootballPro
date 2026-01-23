@@ -27,6 +27,45 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
   const [loadingStaff, setLoadingStaff] = useState(true);
   const squadSize = loadingMembers ? '...' : clubMembers.length;
 
+  const staffRoleLabels = {
+    president: 'President',
+    vice_president: 'Vice President',
+    chairman: 'Chairman',
+    ceo: 'CEO',
+    general_manager: 'General Manager',
+    sporting_director: 'Sporting Director',
+    technical_director: 'Technical Director',
+    director_of_football: 'Director of Football',
+    academy_director: 'Academy Director',
+    youth_director: 'Youth Director',
+    team_manager: 'Team Manager',
+    secretary_general: 'Secretary General',
+    secretary: 'Secretary',
+    head_coach: 'Head Coach',
+    assistant_coach: 'Assistant Coach',
+    fitness_coach: 'Fitness Coach',
+    goalkeeper_coach: 'Goalkeeper Coach',
+    technical_coach: 'Technical Coach',
+    tactical_coach: 'Tactical Coach',
+    medical_staff: 'Medical Staff',
+    doctor: 'Doctor',
+    assistant_doctor: 'Assistant Doctor',
+    physiotherapist: 'Physiotherapist',
+    sports_psychologist: 'Sports Psychologist',
+    nutritionist: 'Nutritionist',
+    masseur: 'Masseur',
+    scout: 'Scout',
+    analyst: 'Analyst',
+    video_analyst: 'Video Analyst',
+    media_officer: 'Media Officer',
+    security_officer: 'Security Officer',
+    logistics_manager: 'Logistics Manager',
+    kit_manager: 'Kit Manager',
+    equipment_manager: 'Equipment Manager',
+    groundskeeper: 'Groundskeeper',
+    other: 'Other',
+  };
+
   const teamTypeLabels = {
     first_team: 'First Team',
     men: 'Men',
@@ -253,7 +292,7 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
                     {staff.staff?.firstName} {staff.staff?.lastName}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {staff.staffRole || 'Trajner'}
+                    {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Trajner'}
                   </div>
                 </div>
               </div>

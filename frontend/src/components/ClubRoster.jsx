@@ -19,6 +19,9 @@ function ClubRoster() {
   const [members, setMembers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
+  const [pendingStaff, setPendingStaff] = useState([]);
+  const [pendingStaffRoles, setPendingStaffRoles] = useState({});
+  const [pendingStaffTeams, setPendingStaffTeams] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('approved'); // approved, pending, staff
   const [teamFilter, setTeamFilter] = useState('all'); // all, first_team, women, men, youth teams
@@ -41,6 +44,50 @@ function ClubRoster() {
     { id: 'u11', label: 'U11', icon: '🎯' },
     { id: 'u9', label: 'U9', icon: '🎯' },
   ];
+
+  const staffRoleOptions = [
+    { id: 'president', label: 'President' },
+    { id: 'vice_president', label: 'Vice President' },
+    { id: 'chairman', label: 'Chairman' },
+    { id: 'ceo', label: 'CEO' },
+    { id: 'general_manager', label: 'General Manager' },
+    { id: 'sporting_director', label: 'Sporting Director' },
+    { id: 'technical_director', label: 'Technical Director' },
+    { id: 'director_of_football', label: 'Director of Football' },
+    { id: 'academy_director', label: 'Academy Director' },
+    { id: 'youth_director', label: 'Youth Director' },
+    { id: 'team_manager', label: 'Team Manager' },
+    { id: 'secretary_general', label: 'Secretary General' },
+    { id: 'secretary', label: 'Secretary' },
+    { id: 'head_coach', label: 'Head Coach' },
+    { id: 'assistant_coach', label: 'Assistant Coach' },
+    { id: 'fitness_coach', label: 'Fitness Coach' },
+    { id: 'goalkeeper_coach', label: 'Goalkeeper Coach' },
+    { id: 'technical_coach', label: 'Technical Coach' },
+    { id: 'tactical_coach', label: 'Tactical Coach' },
+    { id: 'medical_staff', label: 'Medical Staff' },
+    { id: 'doctor', label: 'Doctor' },
+    { id: 'assistant_doctor', label: 'Assistant Doctor' },
+    { id: 'physiotherapist', label: 'Physiotherapist' },
+    { id: 'sports_psychologist', label: 'Sports Psychologist' },
+    { id: 'nutritionist', label: 'Nutritionist' },
+    { id: 'masseur', label: 'Masseur' },
+    { id: 'scout', label: 'Scout' },
+    { id: 'analyst', label: 'Analyst' },
+    { id: 'video_analyst', label: 'Video Analyst' },
+    { id: 'media_officer', label: 'Media Officer' },
+    { id: 'security_officer', label: 'Security Officer' },
+    { id: 'logistics_manager', label: 'Logistics Manager' },
+    { id: 'kit_manager', label: 'Kit Manager' },
+    { id: 'equipment_manager', label: 'Equipment Manager' },
+    { id: 'groundskeeper', label: 'Groundskeeper' },
+    { id: 'other', label: 'Other' },
+  ];
+
+  const staffRoleLabels = staffRoleOptions.reduce((acc, role) => {
+    acc[role.id] = role.label;
+    return acc;
+  }, {});
 
   const normalizeGroup = (value) => (value || '').toString().trim().toLowerCase();
 
@@ -81,8 +128,20 @@ function ClubRoster() {
     try {
       setLoading(true);
       if (activeTab === 'staff') {
-        const res = await clubStaffAPI.getClubStaff(user.id, { status: 'active' });
-        setStaffMembers(res.data || []);
+        const [activeRes, pendingRes] = await Promise.all([
+          clubStaffAPI.getClubStaff(user.id, { status: 'active' }),
+          clubStaffAPI.getClubStaff(user.id, { status: 'pending' })
+        ]);
+        setStaffMembers(activeRes.data || []);
+        setPendingStaff(pendingRes.data || []);
+        const roleMap = {};
+        const teamMap = {};
+        (pendingRes.data || []).forEach((staff) => {
+          roleMap[staff.id] = staff.staffRole || 'assistant_coach';
+          teamMap[staff.id] = staff.teamType || 'first_team';
+        });
+        setPendingStaffRoles(roleMap);
+        setPendingStaffTeams(teamMap);
         return;
       }
 
@@ -152,6 +211,32 @@ function ClubRoster() {
     }
   };
 
+  const handleApproveStaff = async (staffId) => {
+    try {
+      await clubStaffAPI.updateStaff(staffId, {
+        status: 'active',
+        staffRole: pendingStaffRoles[staffId] || undefined,
+        teamType: pendingStaffTeams[staffId] || undefined,
+      });
+      fetchMembers();
+      alert('Staff approved successfully!');
+    } catch (error) {
+      console.error('Error approving staff:', error);
+      alert('Failed to approve staff');
+    }
+  };
+
+  const handleRejectStaff = async (staffId) => {
+    try {
+      await clubStaffAPI.updateStaff(staffId, { status: 'inactive' });
+      fetchMembers();
+      alert('Staff request rejected');
+    } catch (error) {
+      console.error('Error rejecting staff:', error);
+      alert('Failed to reject staff request');
+    }
+  };
+
   if (user?.role !== 'club') {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -213,7 +298,7 @@ function ClubRoster() {
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          🧑‍🏫 Staff ({staffMembers.length})
+          🧑‍🏫 Staff ({staffMembers.length + pendingStaff.length})
         </button>
       </div>
 
@@ -325,43 +410,124 @@ function ClubRoster() {
       {/* Staff Members */}
       {activeTab === 'staff' && (
         <div className="space-y-4">
-          {staffMembers.length === 0 ? (
+          {pendingStaff.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+                <span className="text-lg">⏳</span>
+                Kërkesa në pritje
+              </div>
+              {pendingStaff.map((staff) => (
+                <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-2 border-yellow-400 dark:border-yellow-600">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500 to-orange-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                      {staff.staff?.Profile?.profilePhoto ? (
+                        <img
+                          src={getFullUrl(staff.staff.Profile.profilePhoto)}
+                          alt={staff.staff.firstName}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        `${staff.staff?.firstName?.[0] || '?'}${staff.staff?.lastName?.[0] || ''}`
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {staff.staff?.firstName} {staff.staff?.lastName}
+                      </h3>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff'}
+                      </div>
+                      {staff.teamType && (
+                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          Team: {teamTypes.find(t => t.id === staff.teamType)?.label || staff.teamType}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 min-w-[180px]">
+                      <select
+                        value={pendingStaffRoles[staff.id] || staff.staffRole || 'assistant_coach'}
+                        onChange={(e) => setPendingStaffRoles((prev) => ({ ...prev, [staff.id]: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm"
+                      >
+                        {staffRoleOptions.map((role) => (
+                          <option key={role.id} value={role.id}>{role.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={pendingStaffTeams[staff.id] || staff.teamType || 'first_team'}
+                        onChange={(e) => setPendingStaffTeams((prev) => ({ ...prev, [staff.id]: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm"
+                      >
+                        {teamTypes.filter(t => t.id !== 'all').map((team) => (
+                          <option key={team.id} value={team.id}>{team.label}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveStaff(staff.id)}
+                          className="flex-1 p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectStaff(staff.id)}
+                          className="flex-1 p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {staffMembers.length === 0 && pendingStaff.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
               <div className="text-6xl mb-4">🧑‍🏫</div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No staff members yet</h3>
               <p className="text-gray-600 dark:text-gray-400">Staff will appear here once added.</p>
             </div>
           ) : (
-            staffMembers.map((staff) => (
-              <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
-                    {staff.staff?.Profile?.profilePhoto ? (
-                      <img
-                        src={getFullUrl(staff.staff.Profile.profilePhoto)}
-                        alt={staff.staff.firstName}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      `${staff.staff?.firstName?.[0] || '?'}${staff.staff?.lastName?.[0] || ''}`
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {staff.staff?.firstName} {staff.staff?.lastName}
-                    </h3>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {staff.staffRole || 'Staff'}
-                    </div>
-                    {staff.teamType && (
-                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Team: {teamTypes.find(t => t.id === staff.teamType)?.label || staff.teamType}
-                      </div>
-                    )}
-                  </div>
+            staffMembers.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-300">
+                  <span className="text-lg">✅</span>
+                  Staff aktiv
                 </div>
+                {staffMembers.map((staff) => (
+                  <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                        {staff.staff?.Profile?.profilePhoto ? (
+                          <img
+                            src={getFullUrl(staff.staff.Profile.profilePhoto)}
+                            alt={staff.staff.firstName}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          `${staff.staff?.firstName?.[0] || '?'}${staff.staff?.lastName?.[0] || ''}`
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                          {staff.staff?.firstName} {staff.staff?.lastName}
+                        </h3>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff'}
+                        </div>
+                        {staff.teamType && (
+                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            Team: {teamTypes.find(t => t.id === staff.teamType)?.label || staff.teamType}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))
+            )
           )}
         </div>
       )}

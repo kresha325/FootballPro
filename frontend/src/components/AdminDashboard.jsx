@@ -484,6 +484,7 @@ export default function AdminDashboard() {
                         <option value="player">Player</option>
                         <option value="coach">Coach</option>
                         <option value="scout">Scout</option>
+                        <option value="referee">Referat</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>

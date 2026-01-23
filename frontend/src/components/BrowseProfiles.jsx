@@ -30,6 +30,7 @@ const BrowseProfiles = () => {
     { id: 'athlete', label: 'Players', icon: '⚽', role: 'athlete' },
     { id: 'coach', label: 'Coaches', icon: '📋', role: 'coach' },
     { id: 'scout', label: 'Scouts', icon: '🔍', role: 'scout' },
+    { id: 'referee', label: 'Referat', icon: '🧑‍⚖️', role: 'referee' },
     { id: 'club', label: 'Clubs', icon: '🏟️', role: 'club' },
     { id: 'manager', label: 'Managers', icon: '💼', role: 'manager' },
     { id: 'business', label: 'Businesses', icon: '🏢', role: 'business' },

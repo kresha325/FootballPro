@@ -54,6 +54,7 @@ export default function SearchSimple() {
       coach: '👨‍🏫',
       scout: '🔍',
       manager: '📋',
+      referee: '🧑‍⚖️',
       club: '🏟️',
       federation: '🏛️',
       media: '📺',

@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { clubStaffAPI } from '../../services/api';
 
 const CoachProfile = ({ profile = {}, stats, isOwner }) => {
   const coachData = profile.stats || {};
+  const [clubStaffAssignments, setClubStaffAssignments] = useState([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
 
   const getAffiliationLabel = (affiliation) => {
     const labels = {
@@ -27,8 +30,65 @@ const CoachProfile = ({ profile = {}, stats, isOwner }) => {
     return labels[category] || category;
   };
 
-  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const staffRoleLabels = {
+    president: 'President',
+    vice_president: 'Vice President',
+    chairman: 'Chairman',
+    ceo: 'CEO',
+    general_manager: 'General Manager',
+    sporting_director: 'Sporting Director',
+    technical_director: 'Technical Director',
+    director_of_football: 'Director of Football',
+    academy_director: 'Academy Director',
+    youth_director: 'Youth Director',
+    team_manager: 'Team Manager',
+    secretary_general: 'Secretary General',
+    secretary: 'Secretary',
+    head_coach: 'Head Coach',
+    assistant_coach: 'Assistant Coach',
+    fitness_coach: 'Fitness Coach',
+    goalkeeper_coach: 'Goalkeeper Coach',
+    technical_coach: 'Technical Coach',
+    tactical_coach: 'Tactical Coach',
+    medical_staff: 'Medical Staff',
+    doctor: 'Doctor',
+    assistant_doctor: 'Assistant Doctor',
+    physiotherapist: 'Physiotherapist',
+    sports_psychologist: 'Sports Psychologist',
+    nutritionist: 'Nutritionist',
+    masseur: 'Masseur',
+    scout: 'Scout',
+    analyst: 'Analyst',
+    video_analyst: 'Video Analyst',
+    media_officer: 'Media Officer',
+    security_officer: 'Security Officer',
+    logistics_manager: 'Logistics Manager',
+    kit_manager: 'Kit Manager',
+    equipment_manager: 'Equipment Manager',
+    groundskeeper: 'Groundskeeper',
+    other: 'Other',
+  };
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      const staffId = profile.userId || profile.id;
+      if (!staffId) {
+        setLoadingAssignments(false);
+        return;
+      }
+      setLoadingAssignments(true);
+      try {
+        const res = await clubStaffAPI.getStaffAssignments(staffId);
+        setClubStaffAssignments(res.data || []);
+      } catch (err) {
+        setClubStaffAssignments([]);
+      } finally {
+        setLoadingAssignments(false);
+      }
+    };
+
+    fetchAssignments();
+  }, [profile.userId, profile.id]);
   return (
     <div className="space-y-6">
       {/* Profile Photo */}
@@ -95,6 +155,36 @@ const CoachProfile = ({ profile = {}, stats, isOwner }) => {
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
         </div>
       )}
+
+      {/* Club Staff Positions */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🏟️</span> Pozitat në klub
+        </h3>
+        {loadingAssignments ? (
+          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+        ) : clubStaffAssignments.filter((item) => item.status === 'active').length === 0 ? (
+          <div className="text-gray-500 dark:text-gray-400">Nuk ka pozita të aprovuara.</div>
+        ) : (
+          <div className="space-y-3">
+            {clubStaffAssignments.filter((item) => item.status === 'active').map((assignment) => (
+              <div key={assignment.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                  {assignment.club?.Profile?.club?.[0] || assignment.club?.firstName?.[0] || '?'}
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {staffRoleLabels[assignment.staffRole] || assignment.staffRole}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {assignment.club?.Profile?.club || `${assignment.club?.firstName || ''} ${assignment.club?.lastName || ''}`}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Certifications & Licenses */}
       {coachData.certifications && coachData.certifications.length > 0 && (

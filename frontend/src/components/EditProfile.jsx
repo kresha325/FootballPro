@@ -9,6 +9,7 @@ import EditFederationProfile from './profiles/edit/EditFederationProfile';
 import EditClubProfile from './profiles/edit/EditClubProfile';
 import EditBusinessProfile from './profiles/edit/EditBusinessProfile';
 import EditManagerProfile from './profiles/edit/EditManagerProfile';
+import EditRefereeProfile from './profiles/edit/EditRefereeProfile';
 import EditScoutProfile from './profiles/edit/EditScoutProfile';
 
 const EditProfile = ({ user, onClose }) => {
@@ -84,6 +85,9 @@ const EditProfile = ({ user, onClose }) => {
         )}
         {user.role === 'manager' && (
           <EditManagerProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+        )}
+        {user.role === 'referee' && (
+          <EditRefereeProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
         {user.role === 'scout' && (
           <EditScoutProfile user={user} onSave={handleSave} loading={loading} errors={errors} />

@@ -74,6 +74,7 @@ const UserManagement = () => {
                     <option value="coach">Coach</option>
                     <option value="scout">Scout</option>
                     <option value="manager">Manager</option>
+                    <option value="referee">Referat</option>
                     <option value="club">Club</option>
                     <option value="federation">Federation</option>
                     <option value="media">Media</option>
