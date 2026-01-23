@@ -60,12 +60,19 @@ exports.createCoach = async (req, res) => {
     if (existingProfile) {
       return res.status(400).json({ msg: 'Coach profile already exists' });
     }
+    let clubId = req.body.clubId;
+    const clubUser = await resolveClubUser({ clubId, clubName: req.body.club });
+    if (clubUser) {
+      clubId = clubUser.id;
+    }
+
     const profile = await Coach.create({
       userId: req.user.id,
       bio: req.body.bio,
       city: req.body.city,
       country: req.body.country,
       club: req.body.club,
+      clubId: clubId || null,
       coachAffiliation: req.body.coachAffiliation,
       coachCategory: req.body.coachCategory,
       careerHistory: req.body.careerHistory,
@@ -74,11 +81,11 @@ exports.createCoach = async (req, res) => {
       profilePhoto: req.body.profilePhoto,
     });
 
-    const clubUser = await resolveClubUser({ clubId: req.body.clubId, clubName: req.body.club });
-    if (clubUser) {
+    const staffClubUser = clubUser || (await resolveClubUser({ clubId: req.body.clubId, clubName: req.body.club }));
+    if (staffClubUser) {
       const existing = await ClubStaff.findOne({
         where: {
-          clubId: clubUser.id,
+          clubId: staffClubUser.id,
           staffId: req.user.id,
         },
       });
@@ -98,7 +105,7 @@ exports.createCoach = async (req, res) => {
 
       if (!existing) {
         await ClubStaff.create({
-          clubId: clubUser.id,
+          clubId: staffClubUser.id,
           staffId: req.user.id,
           staffRole: staffRoleMap[category] || 'assistant_coach',
           teamType: 'first_team',
@@ -136,11 +143,18 @@ exports.updateCoach = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ msg: 'Coach profile not found' });
     }
+    let clubId = req.body.clubId || profile.clubId;
+    const clubUser = await resolveClubUser({ clubId, clubName: req.body.club || profile.club });
+    if (clubUser) {
+      clubId = clubUser.id;
+    }
+
     await profile.update({
       bio: req.body.bio || profile.bio,
       city: req.body.city || profile.city,
       country: req.body.country || profile.country,
       club: req.body.club || profile.club,
+      clubId: clubId || null,
       coachAffiliation: req.body.coachAffiliation || profile.coachAffiliation,
       coachCategory: req.body.coachCategory || profile.coachCategory,
       careerHistory: req.body.careerHistory || profile.careerHistory,
@@ -150,12 +164,12 @@ exports.updateCoach = async (req, res) => {
     });
 
     const clubName = req.body.club || profile.club;
-    const clubUser = await resolveClubUser({ clubId: req.body.clubId, clubName });
+    const staffClubUser = clubUser || (await resolveClubUser({ clubId: req.body.clubId, clubName }));
 
-    if (clubUser) {
+    if (staffClubUser) {
       const existing = await ClubStaff.findOne({
         where: {
-          clubId: clubUser.id,
+          clubId: staffClubUser.id,
           staffId: req.user.id,
         },
       });
@@ -180,7 +194,7 @@ exports.updateCoach = async (req, res) => {
         await existing.save();
       } else {
         await ClubStaff.create({
-          clubId: clubUser.id,
+          clubId: staffClubUser.id,
           staffId: req.user.id,
           staffRole: staffRoleMap[category] || 'assistant_coach',
           teamType: 'first_team',

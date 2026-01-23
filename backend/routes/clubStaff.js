@@ -38,16 +38,30 @@ router.get('/staff/:staffId', protect, async (req, res) => {
   try {
     const { staffId } = req.params;
 
-    const assignments = await ClubStaff.findAll({
-      where: { staffId: parseInt(staffId) },
-      include: [{
-        model: User,
-        as: 'club',
-        attributes: ['id', 'firstName', 'lastName'],
-        include: [{ model: Profile, attributes: ['club', 'profilePhoto'] }]
-      }],
-      order: [['createdAt', 'DESC']],
-    });
+    let assignments;
+    try {
+      assignments = await ClubStaff.findAll({
+        where: { staffId: parseInt(staffId) },
+        include: [{
+          model: User,
+          as: 'club',
+          attributes: ['id', 'firstName', 'lastName'],
+          include: [{ model: Profile, attributes: ['club', 'profilePhoto'] }]
+        }],
+        order: [['createdAt', 'DESC']],
+      });
+    } catch (includeError) {
+      console.warn('Get staff assignments include error, falling back:', includeError.message);
+      assignments = await ClubStaff.findAll({
+        where: { staffId: parseInt(staffId) },
+        include: [{
+          model: User,
+          as: 'club',
+          attributes: ['id', 'firstName', 'lastName'],
+        }],
+        order: [['createdAt', 'DESC']],
+      });
+    }
 
     res.json(assignments);
   } catch (error) {
