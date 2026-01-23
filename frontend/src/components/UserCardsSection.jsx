@@ -61,7 +61,7 @@ const UserCardsSection = () => {
     setLoadingFollow(lf => ({ ...lf, [profileId]: false }));
   };
 
-  const getAge = (dateOfBirth) => {
+  const getAgeFromDate = (dateOfBirth) => {
     if (!dateOfBirth) return null;
     const birth = new Date(dateOfBirth);
     if (Number.isNaN(birth.getTime())) return null;
@@ -72,6 +72,12 @@ const UserCardsSection = () => {
       age -= 1;
     }
     return age;
+  };
+
+  const getProfileAge = (profile) => {
+    if (typeof profile?.age === 'number') return profile.age;
+    if (typeof profile?.Profile?.age === 'number') return profile.Profile.age;
+    return getAgeFromDate(profile?.dateOfBirth || profile?.User?.dateOfBirth);
   };
 
   if (loading) return <div className="mb-6">Loading players...</div>;
@@ -104,7 +110,7 @@ const UserCardsSection = () => {
             </div>
               <div className="flex-1 flex flex-col justify-between p-4 bg-gray-900/90 text-white">
               <div className="mb-2">
-                <div className="text-sm opacity-80">Datëlindja: {getAge(profile.dateOfBirth) ?? '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
+                <div className="text-sm opacity-80">Datëlindja: {getProfileAge(profile) ?? '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
               </div>
               <div className="flex gap-2 mt-auto">
                 <button
