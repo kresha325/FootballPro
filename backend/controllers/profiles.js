@@ -5,6 +5,7 @@ const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
 const ClubMember = require('../models/ClubMember');
+const ClubStaff = require('../models/ClubStaff');
 const { Op } = require('sequelize');
 
 const resolveClubUser = async ({ clubId, clubName }) => {
@@ -122,6 +123,45 @@ exports.createProfile = async (req, res) => {
             status: 'pending',
             position: req.body.position || null,
             jerseyNumber: req.body.stats?.jerseyNumber,
+          });
+        }
+      }
+    }
+
+    if (req.user?.role === 'coach') {
+      const clubName = req.body.club;
+      const clubId = req.body.clubId;
+      const clubUser = await resolveClubUser({ clubId, clubName });
+
+      if (clubUser) {
+        const existing = await ClubStaff.findOne({
+          where: {
+            clubId: clubUser.id,
+            staffId: req.user.id,
+          },
+        });
+
+        if (!existing) {
+          const category = req.body.coachCategory;
+          const staffRoleMap = {
+            general_trainer: 'head_coach',
+            assistant_trainer: 'assistant_coach',
+            fitness_trainer: 'fitness_coach',
+            goalkeeper_trainer: 'goalkeeper_coach',
+            technical_trainer: 'technical_coach',
+            tactical_trainer: 'tactical_coach',
+            psychological_trainer: 'sports_psychologist',
+            youth_trainer: 'assistant_coach',
+            rehabilitation_trainer: 'physiotherapist',
+          };
+
+          await ClubStaff.create({
+            clubId: clubUser.id,
+            staffId: req.user.id,
+            staffRole: staffRoleMap[category] || 'assistant_coach',
+            teamType: 'first_team',
+            status: 'active',
+            joinedAt: new Date(),
           });
         }
       }
@@ -358,6 +398,67 @@ exports.updateProfile = async (req, res) => {
               status: 'pending',
               position: updateData.position,
               jerseyNumber: updateData?.stats?.jerseyNumber,
+            });
+          }
+        }
+      }
+    }
+
+    if (req.user?.role === 'coach') {
+      const clubName = req.body.club || updateData.club;
+      const clubId = req.body.clubId || updateData.clubId;
+
+      if (clubId || clubName) {
+        const clubUser = await resolveClubUser({ clubId, clubName });
+
+        if (clubUser) {
+          await ClubStaff.update(
+            { status: 'inactive', leftAt: new Date() },
+            {
+              where: {
+                staffId: req.user.id,
+                clubId: { [Op.ne]: clubUser.id },
+                status: 'active',
+              },
+            }
+          );
+
+          const existing = await ClubStaff.findOne({
+            where: {
+              clubId: clubUser.id,
+              staffId: req.user.id,
+            },
+          });
+
+          const category = req.body.coachCategory || updateData.coachCategory;
+          const staffRoleMap = {
+            general_trainer: 'head_coach',
+            assistant_trainer: 'assistant_coach',
+            fitness_trainer: 'fitness_coach',
+            goalkeeper_trainer: 'goalkeeper_coach',
+            technical_trainer: 'technical_coach',
+            tactical_trainer: 'tactical_coach',
+            psychological_trainer: 'sports_psychologist',
+            youth_trainer: 'assistant_coach',
+            rehabilitation_trainer: 'physiotherapist',
+          };
+
+          if (existing) {
+            existing.status = 'active';
+            existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
+            existing.teamType = existing.teamType || 'first_team';
+            if (!existing.joinedAt) {
+              existing.joinedAt = new Date();
+            }
+            await existing.save();
+          } else {
+            await ClubStaff.create({
+              clubId: clubUser.id,
+              staffId: req.user.id,
+              staffRole: staffRoleMap[category] || 'assistant_coach',
+              teamType: 'first_team',
+              status: 'active',
+              joinedAt: new Date(),
             });
           }
         }
