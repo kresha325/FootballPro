@@ -1,7 +1,7 @@
 const VideoCall = require('../models/VideoCall');
 const ScheduledCall = require('../models/ScheduledCall');
 const User = require('../models/User');
-const { sendNotification } = require('./notifications');
+const { sendNotification, createNotification } = require('./notifications');
 const { Op } = require('sequelize');
 
 // Create a video call
@@ -61,6 +61,17 @@ exports.endCall = async (req, res) => {
       await call.save();
 
       if (wasRinging && req.user.id === call.callerId && call.receiverId) {
+        await createNotification({
+          userId: call.receiverId,
+          actorId: req.user.id,
+          type: 'system',
+          title: 'Missed Call',
+          message: `${req.user.firstName} ${req.user.lastName} tried to call you`,
+          link: '/messaging',
+          entityType: 'call',
+          entityId: call.id,
+          metadata: { type: 'missed_call', callId: call.id },
+        });
         await sendNotification(
           call.receiverId,
           'Missed Call',
@@ -121,6 +132,17 @@ exports.updateCallStatus = async (req, res) => {
     await videoCall.save();
 
     if (prevStatus === 'ringing' && status === 'ended' && req.user.id === videoCall.callerId) {
+      await createNotification({
+        userId: videoCall.receiverId,
+        actorId: req.user.id,
+        type: 'system',
+        title: 'Missed Call',
+        message: `${req.user.firstName} ${req.user.lastName} tried to call you`,
+        link: '/messaging',
+        entityType: 'call',
+        entityId: videoCall.id,
+        metadata: { type: 'missed_call', callId: videoCall.id },
+      });
       await sendNotification(
         videoCall.receiverId,
         'Missed Call',

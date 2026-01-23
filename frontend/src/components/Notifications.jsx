@@ -72,8 +72,9 @@ const Notifications = () => {
     }
   };
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
+  const getNotificationIcon = (notification) => {
+    if (notification?.metadata?.type === 'missed_call') return '📞';
+    switch (notification?.type) {
       case 'like': return '👍';
       case 'comment': return '💬';
       case 'follow': return '👤';
@@ -144,7 +145,7 @@ const Notifications = () => {
               <div className="flex items-start gap-3">
                 {/* Icon */}
                 <div className="text-3xl flex-shrink-0">
-                  {getNotificationIcon(notification.type)}
+                  {getNotificationIcon(notification)}
                 </div>
 
                 {/* Content */}
