@@ -481,7 +481,15 @@ exports.getAllProfiles = async (req, res) => {
   try {
     const { role, search, random, limit } = req.query;
     let whereClause = {};
-    if (role) whereClause.role = role;
+    if (role) {
+      if (role === 'club') {
+        whereClause.role = { [Op.in]: ['club', 'klub'] };
+      } else if (role === 'coach') {
+        whereClause.role = { [Op.in]: ['coach', 'trajner'] };
+      } else {
+        whereClause.role = role;
+      }
+    }
 
     // Exclude current user
     const excludeUserId = req.user?.id;
@@ -490,7 +498,7 @@ exports.getAllProfiles = async (req, res) => {
     const userInclude = {
       model: User,
       attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
-      where: role ? { role } : {},
+      where: role ? whereClause : {},
     };
 
     let profiles = await Profile.findAll({
