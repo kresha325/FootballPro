@@ -141,27 +141,31 @@ exports.createProfile = async (req, res) => {
           },
         });
 
-        if (!existing) {
-          const category = req.body.coachCategory;
-          const staffRoleMap = {
-            general_trainer: 'head_coach',
-            assistant_trainer: 'assistant_coach',
-            fitness_trainer: 'fitness_coach',
-            goalkeeper_trainer: 'goalkeeper_coach',
-            technical_trainer: 'technical_coach',
-            tactical_trainer: 'tactical_coach',
-            psychological_trainer: 'sports_psychologist',
-            youth_trainer: 'assistant_coach',
-            rehabilitation_trainer: 'physiotherapist',
-          };
+        const category = req.body.coachCategory;
+        const staffRoleMap = {
+          general_trainer: 'head_coach',
+          assistant_trainer: 'assistant_coach',
+          fitness_trainer: 'fitness_coach',
+          goalkeeper_trainer: 'goalkeeper_coach',
+          technical_trainer: 'technical_coach',
+          tactical_trainer: 'tactical_coach',
+          psychological_trainer: 'sports_psychologist',
+          youth_trainer: 'assistant_coach',
+          rehabilitation_trainer: 'physiotherapist',
+        };
 
+        if (existing) {
+          if (existing.status !== 'pending') {
+            existing.status = 'pending';
+            await existing.save();
+          }
+        } else {
           await ClubStaff.create({
             clubId: clubUser.id,
             staffId: req.user.id,
             staffRole: staffRoleMap[category] || 'assistant_coach',
             teamType: 'first_team',
-            status: 'active',
-            joinedAt: new Date(),
+            status: 'pending',
           });
         }
       }
@@ -412,17 +416,6 @@ exports.updateProfile = async (req, res) => {
         const clubUser = await resolveClubUser({ clubId, clubName });
 
         if (clubUser) {
-          await ClubStaff.update(
-            { status: 'inactive', leftAt: new Date() },
-            {
-              where: {
-                staffId: req.user.id,
-                clubId: { [Op.ne]: clubUser.id },
-                status: 'active',
-              },
-            }
-          );
-
           const existing = await ClubStaff.findOne({
             where: {
               clubId: clubUser.id,
@@ -444,12 +437,9 @@ exports.updateProfile = async (req, res) => {
           };
 
           if (existing) {
-            existing.status = 'active';
+            existing.status = 'pending';
             existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
             existing.teamType = existing.teamType || 'first_team';
-            if (!existing.joinedAt) {
-              existing.joinedAt = new Date();
-            }
             await existing.save();
           } else {
             await ClubStaff.create({
@@ -457,8 +447,7 @@ exports.updateProfile = async (req, res) => {
               staffId: req.user.id,
               staffRole: staffRoleMap[category] || 'assistant_coach',
               teamType: 'first_team',
-              status: 'active',
-              joinedAt: new Date(),
+              status: 'pending',
             });
           }
         }
