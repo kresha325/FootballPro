@@ -27,14 +27,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const remoteVideoRef = useRef(null);
   const peerConnectionRef = useRef(null);
 
-  // Nis automatikisht thirrjen kur hapet modali nëse targetUser ekziston
-  useEffect(() => {
-    if (callStatus === 'idle' && targetUser && socket && connected) {
-      console.log('[AutoStart] Nis thirrjen automatikisht për', targetUser);
-      startCall();
-    }
-    // eslint-disable-next-line
-  }, [targetUser, socket, connected]);
+  // Thirrja niset vetëm me klikim (jo automatikisht)
 
   // ICE servers configuration
   const iceServers = {
@@ -77,6 +70,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       cleanup();
     };
   }, [socket, connected]);
+
+  useEffect(() => {
+    if (callStatus === 'ended' && onClose) {
+      onClose();
+    }
+  }, [callStatus, onClose]);
   // Handler for incoming call offer
   const handleIncomingCall = async ({ from, callerName, offer }) => {
     if (!user || !from || !offer) return;
@@ -87,12 +86,13 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     }
     setCallStatus('ringing');
     // Create peer connection
-    const pc = createPeerConnection();
+    const stream = localStream || await startLocalStream();
+    const pc = createPeerConnection(stream);
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       // Add local stream if not already
-      if (localStream) {
-        localStream.getTracks().forEach(track => {
+      if (stream) {
+        stream.getTracks().forEach(track => {
           pc.addTrack(track, localStream);
         });
       }
@@ -153,7 +153,13 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+      if (peerConnectionRef.current && peerConnectionRef.current.getSenders().length === 0) {
+        stream.getTracks().forEach(track => {
+          peerConnectionRef.current.addTrack(track, stream);
+        });
+      }
       console.log('✅ Local stream started successfully');
+      return stream;
     } catch (error) {
       console.error('Error accessing media devices:', error);
       
@@ -169,17 +175,19 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       }
       
       alert(errorMessage);
+      return null;
     }
   };
 
-  const createPeerConnection = () => {
+  const createPeerConnection = (streamOverride) => {
     const pc = new RTCPeerConnection(iceServers);
     peerConnectionRef.current = pc;
 
     // Add local stream to peer connection
-    if (localStream) {
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
+    const activeStream = streamOverride || localStream;
+    if (activeStream) {
+      activeStream.getTracks().forEach(track => {
+        pc.addTrack(track, activeStream);
       });
     }
 
@@ -268,6 +276,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
     try {
       setCallStatus('calling');
+
+      const stream = localStream || await startLocalStream();
+      if (!stream) {
+        setCallStatus('idle');
+        return;
+      }
       
       // Create backend call record
       const response = await API.post('/video-calls/start', {
@@ -276,7 +290,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       setCurrentCallId(response.data.id);
 
       // Create peer connection and offer
-      const pc = createPeerConnection();
+      const pc = createPeerConnection(stream);
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
@@ -316,12 +330,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       setCallStatus('ended');
       
       setTimeout(() => {
-        onClose();
-      }, 1000);
+        if (onClose) onClose();
+      }, 300);
     } catch (error) {
       console.error('Error ending call:', error);
       cleanup();
-      onClose();
+      if (onClose) onClose();
     }
   };
 
