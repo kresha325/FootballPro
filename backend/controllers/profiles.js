@@ -128,7 +128,7 @@ exports.createProfile = async (req, res) => {
       }
     }
 
-    if (req.user?.role === 'coach') {
+    if (['coach', 'trajner'].includes(req.user?.role)) {
       const clubName = req.body.club;
       const clubId = req.body.clubId;
       const clubUser = await resolveClubUser({ clubId, clubName });
@@ -413,7 +413,7 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
-    if (req.user?.role === 'coach') {
+    if (['coach', 'trajner'].includes(req.user?.role)) {
       const clubName = req.body.club || updateData.club;
       const clubId = req.body.clubId || updateData.clubId;
 

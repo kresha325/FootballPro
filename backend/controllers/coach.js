@@ -53,7 +53,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
 // Create Coach profile
 exports.createCoach = async (req, res) => {
   try {
-    if (req.user.role !== 'coach') {
+    if (!['coach', 'trajner'].includes(req.user.role)) {
       return res.status(403).json({ msg: 'Access denied' });
     }
     const existingProfile = await Coach.findOne({ where: { userId: req.user.id } });
