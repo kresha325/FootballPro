@@ -6,7 +6,7 @@ const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
-const { Op } = require('sequelize');
+const { Op, fn, col, where: sequelizeWhere } = require('sequelize');
 
 const resolveClubUser = async ({ clubId, clubName }) => {
   let clubUser;
@@ -480,16 +480,17 @@ exports.updateProfile = async (req, res) => {
 exports.getAllProfiles = async (req, res) => {
   try {
     const { role, search, random, limit } = req.query;
-    let whereClause = {};
-    if (role) {
-      if (role === 'club') {
-        whereClause.role = { [Op.in]: ['club', 'klub'] };
-      } else if (role === 'coach') {
-        whereClause.role = { [Op.in]: ['coach', 'trajner'] };
-      } else {
-        whereClause.role = role;
+    const buildRoleWhere = (value) => {
+      if (!value) return {};
+      const normalized = String(value).toLowerCase();
+      if (normalized === 'club') {
+        return sequelizeWhere(fn('lower', col('User.role')), { [Op.in]: ['club', 'klub'] });
       }
-    }
+      if (normalized === 'coach') {
+        return sequelizeWhere(fn('lower', col('User.role')), { [Op.in]: ['coach', 'trajner'] });
+      }
+      return { role: value };
+    };
 
     // Exclude current user
     const excludeUserId = req.user?.id;
@@ -498,7 +499,7 @@ exports.getAllProfiles = async (req, res) => {
     const userInclude = {
       model: User,
       attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
-      where: role ? whereClause : {},
+      where: role ? buildRoleWhere(role) : {},
       required: true,
     };
 
