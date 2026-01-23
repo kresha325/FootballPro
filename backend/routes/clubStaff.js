@@ -15,16 +15,30 @@ router.get('/club/:clubId', async (req, res) => {
     if (status) where.status = status;
     if (teamType) where.teamType = teamType;
 
-    const staff = await ClubStaff.findAll({
-      where,
-      include: [{
-        model: User,
-        as: 'staff',
-        attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-        include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
-      }],
-      order: [['createdAt', 'DESC']],
-    });
+    let staff;
+    try {
+      staff = await ClubStaff.findAll({
+        where,
+        include: [{
+          model: User,
+          as: 'staff',
+          attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
+        }],
+        order: [['createdAt', 'DESC']],
+      });
+    } catch (includeError) {
+      console.warn('Get club staff include error, falling back:', includeError.message);
+      staff = await ClubStaff.findAll({
+        where,
+        include: [{
+          model: User,
+          as: 'staff',
+          attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
+        }],
+        order: [['createdAt', 'DESC']],
+      });
+    }
 
     res.json(staff);
   } catch (error) {
