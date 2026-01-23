@@ -240,8 +240,6 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
         remoteVideoRef.current.play?.().catch(() => {});
-      } else {
-        console.warn('⚠️ [ontrack] remoteVideoRef.current është null');
       }
 
       if (remoteAudioRef.current) {
