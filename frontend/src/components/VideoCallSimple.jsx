@@ -22,6 +22,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -61,8 +62,6 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
     // Listen for incoming call offer
     socket.on('call:incoming', handleIncomingCall);
-
-    startLocalStream();
     
     return () => {
       socket.off('call:answered');
@@ -85,6 +84,16 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   }, [callStatus, onClose]);
 
   useEffect(() => {
+    if (callStatus === 'connected') {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1;
+        remoteAudioRef.current.play?.().catch(() => {});
+      }
+    }
+  }, [callStatus]);
+
+  useEffect(() => {
     if (remoteStream) {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
@@ -95,39 +104,47 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     }
   }, [remoteStream]);
   // Handler for incoming call offer
-  const handleIncomingCall = async ({ from, callerName, offer }) => {
+  const handleIncomingCall = ({ from, callerName, offer }) => {
     if (!user || !from || !offer) return;
-    // Accept the call automatically if idle, otherwise reject
     if (callStatus !== 'idle') {
       socket.emit('call:reject', { to: from });
       return;
     }
+    setIncomingCall({ from, callerName, offer });
     setCallStatus('ringing');
-    // Create peer connection
-    const stream = localStream || await startLocalStream();
-    const pc = createPeerConnection(stream);
+  };
+
+  const acceptIncomingCall = async () => {
+    if (!incomingCall) return;
+    const { from, offer } = incomingCall;
     try {
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      // Add local stream if not already
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          pc.addTrack(track, localStream);
-        });
+      const stream = localStream || await startLocalStream();
+      if (!stream) {
+        setCallStatus('idle');
+        setIncomingCall(null);
+        return;
       }
-      // Create answer
+      const pc = createPeerConnection(stream);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      // Send answer back to caller
-      socket.emit('call:answer', {
-        to: from,
-        answer,
-      });
+      socket.emit('call:answer', { to: from, answer });
+      setIncomingCall(null);
       setCallStatus('connected');
     } catch (err) {
-      console.error('Error handling incoming call:', err);
-      socket.emit('call:reject', { to: from });
+      console.error('Error accepting incoming call:', err);
+      socket.emit('call:reject', { to: incomingCall.from });
+      setIncomingCall(null);
       setCallStatus('idle');
     }
+  };
+
+  const rejectIncomingCall = () => {
+    if (incomingCall?.from) {
+      socket.emit('call:reject', { to: incomingCall.from });
+    }
+    setIncomingCall(null);
+    setCallStatus('idle');
   };
 
   const startLocalStream = async () => {
@@ -314,6 +331,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       alert('Socket not connected. Please wait and try again.');
       return;
     }
+    if (callStatus !== 'idle') return;
 
     try {
       setCallStatus('calling');
@@ -439,10 +457,26 @@ export default function VideoCallSimple({ targetUser, onClose }) {
             </h2>
             <p className="text-gray-400 text-sm sm:text-base">
               {callStatus === 'calling' && 'Duke thirrur...'}
-              {callStatus === 'ringing' && 'Duke rënë...'}
+              {callStatus === 'ringing' && (incomingCall ? 'Thirrje hyrëse...' : 'Duke rënë...')}
               {callStatus === 'connected' && 'Lidhur'}
               {callStatus === 'ended' && 'Thirrja përfundoi'}
             </p>
+            {incomingCall && (
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={acceptIncomingCall}
+                  className="px-4 py-2 rounded-full bg-green-500 text-white font-semibold"
+                >
+                  Prano
+                </button>
+                <button
+                  onClick={rejectIncomingCall}
+                  className="px-4 py-2 rounded-full bg-red-500 text-white font-semibold"
+                >
+                  Refuzo
+                </button>
+              </div>
+            )}
           </div>
         )}
 
