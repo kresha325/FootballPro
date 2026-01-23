@@ -72,7 +72,7 @@ const UserCardsSection = () => {
 
   return (
     <div className="mb-8">
-      <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory flex-nowrap">
+      <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory flex-nowrap hide-scrollbar-mobile">
         {profiles.map(profile => (
           <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col min-w-[220px] snap-start">
             <div className="relative h-48 w-full overflow-hidden">

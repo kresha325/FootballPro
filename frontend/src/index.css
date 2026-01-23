@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@media (max-width: 768px) {
+  .hide-scrollbar-mobile {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar-mobile::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* ---------------- GLOBAL BASE ---------------- */
 @layer base {
   body {
