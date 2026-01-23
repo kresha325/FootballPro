@@ -9,7 +9,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
 
   if (clubId && !isNaN(Number(clubId))) {
     const clubById = await User.findByPk(parseInt(clubId));
-    if (clubById && clubById.role === 'club') {
+    if (clubById && ['club', 'klub'].includes(clubById.role)) {
       clubUser = clubById;
     }
   }
@@ -17,7 +17,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
   if (!clubUser && clubName) {
     const clubByUser = await User.findOne({
       where: {
-        role: 'club',
+        role: { [Op.in]: ['club', 'klub'] },
         [Op.or]: [
           { firstName: { [Op.iLike]: `%${clubName}%` } },
           { lastName: { [Op.iLike]: `%${clubName}%` } },
@@ -37,7 +37,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
         },
         include: [{
           model: User,
-          where: { role: 'club' },
+          where: { role: { [Op.in]: ['club', 'klub'] } },
         }],
       });
 
