@@ -25,7 +25,10 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const peerConnectionRef = useRef(null);
+  const callStatusRef = useRef(callStatus);
+  const disconnectTimerRef = useRef(null);
 
   // Thirrja niset vetëm me klikim (jo automatikisht)
 
@@ -70,6 +73,10 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       cleanup();
     };
   }, [socket, connected]);
+
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
 
   useEffect(() => {
     if (callStatus === 'ended' && onClose) {
@@ -194,18 +201,24 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     // Handle incoming tracks
     pc.ontrack = (event) => {
       console.log('📥 [ontrack] Remote track event:', event);
-      const [stream] = event.streams;
-      if (stream) {
-        console.log('📥 [ontrack] Remote stream ekziston:', stream);
-        setRemoteStream(stream);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-          console.log('📥 [ontrack] remoteVideoRef.current.srcObject u vendos');
-        } else {
-          console.warn('⚠️ [ontrack] remoteVideoRef.current është null');
-        }
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
+        stream = new MediaStream();
+        stream.addTrack(event.track);
+      }
+
+      setRemoteStream(stream);
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+        remoteVideoRef.current.play?.().catch(() => {});
       } else {
-        console.warn('⚠️ [ontrack] Nuk ka stream në event.streams');
+        console.warn('⚠️ [ontrack] remoteVideoRef.current është null');
+      }
+
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream;
+        remoteAudioRef.current.play?.().catch(() => {});
       }
     };
 
@@ -224,8 +237,25 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     pc.onconnectionstatechange = () => {
       console.log('🔗 Connection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
+        if (disconnectTimerRef.current) {
+          clearTimeout(disconnectTimerRef.current);
+          disconnectTimerRef.current = null;
+        }
         setCallStatus('connected');
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+      } else if (pc.connectionState === 'disconnected') {
+        if (disconnectTimerRef.current) {
+          clearTimeout(disconnectTimerRef.current);
+        }
+        disconnectTimerRef.current = setTimeout(() => {
+          if (
+            peerConnectionRef.current &&
+            peerConnectionRef.current.connectionState === 'disconnected' &&
+            callStatusRef.current !== 'ended'
+          ) {
+            endCall();
+          }
+        }, 3000);
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         endCall();
       }
     };
@@ -340,6 +370,10 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   };
 
   const cleanup = () => {
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = null;
+    }
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
     }
@@ -376,6 +410,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
       {/* Remote Video (Full Screen) */}
       <div className="flex-1 relative bg-black">
+        <audio ref={remoteAudioRef} autoPlay playsInline />
         {callStatus === 'connected' && remoteStream ? (
           <video
             ref={remoteVideoRef}

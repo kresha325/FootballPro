@@ -54,10 +54,20 @@ exports.endCall = async (req, res) => {
   try {
     const call = await VideoCall.findByPk(callId);
     if (call) {
+      const wasRinging = call.status === 'ringing';
       call.status = 'ended';
       call.endTime = new Date();
       call.duration = Math.floor((new Date() - call.startTime) / 1000);
       await call.save();
+
+      if (wasRinging && req.user.id === call.callerId && call.receiverId) {
+        await sendNotification(
+          call.receiverId,
+          'Missed Call',
+          `${req.user.firstName} ${req.user.lastName} tried to call you`,
+          { type: 'missed_call', callId: call.id }
+        );
+      }
     }
     res.json({ msg: 'Call ended', call });
   } catch (err) {
@@ -101,6 +111,7 @@ exports.updateCallStatus = async (req, res) => {
       return res.status(404).json({ msg: 'Call not found' });
     }
 
+    const prevStatus = videoCall.status;
     videoCall.status = status;
     if (status === 'ended' || status === 'declined') {
       videoCall.endTime = new Date();
@@ -108,6 +119,15 @@ exports.updateCallStatus = async (req, res) => {
     }
 
     await videoCall.save();
+
+    if (prevStatus === 'ringing' && status === 'ended' && req.user.id === videoCall.callerId) {
+      await sendNotification(
+        videoCall.receiverId,
+        'Missed Call',
+        `${req.user.firstName} ${req.user.lastName} tried to call you`,
+        { type: 'missed_call', callId: videoCall.id }
+      );
+    }
     res.json(videoCall);
   } catch (error) {
     console.error('Update call status error:', error);
