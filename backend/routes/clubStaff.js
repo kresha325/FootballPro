@@ -21,7 +21,7 @@ router.get('/club/:clubId', async (req, res) => {
         model: User,
         as: 'staff',
         attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-        include: [{ model: Profile, attributes: ['profilePhoto', 'coachAffiliation', 'coachCategory', 'bio'] }]
+        include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
       }],
       order: [['createdAt', 'DESC']],
     });
@@ -92,7 +92,7 @@ router.post('/', protect, async (req, res) => {
         model: User,
         as: 'staff',
         attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-        include: [{ model: Profile, attributes: ['profilePhoto', 'coachAffiliation', 'coachCategory'] }]
+        include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
       }]
     });
 
@@ -138,7 +138,7 @@ router.patch('/:staffMemberId', protect, async (req, res) => {
         model: User,
         as: 'staff',
         attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-        include: [{ model: Profile, attributes: ['profilePhoto', 'coachAffiliation', 'coachCategory'] }]
+        include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
       }]
     });
 
