@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { profileAPI } from '../../../services/api';
 
 const EditCoachProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
@@ -19,6 +20,35 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
 
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [preview, setPreview] = useState(user.profilePhoto || '');
+  const [clubSuggestions, setClubSuggestions] = useState([]);
+  const [showClubSuggestions, setShowClubSuggestions] = useState(false);
+  const [clubQuery, setClubQuery] = useState(user.club || '');
+  const [selectedClubId, setSelectedClubId] = useState(null);
+
+  useEffect(() => {
+    const query = clubQuery.trim();
+    if (!query) {
+      setClubSuggestions([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        const res = await profileAPI.getAllProfiles({ role: 'club', search: query, limit: 6 });
+        const results = res.data || [];
+        setClubSuggestions(results);
+        const exact = results.find((club) => {
+          const label = (club.club || `${club.firstName || ''} ${club.lastName || ''}`.trim()).toLowerCase();
+          return label === query.toLowerCase();
+        });
+        if (exact) {
+          setSelectedClubId(exact.userId || exact.id);
+        }
+      } catch (err) {
+        setClubSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [clubQuery]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -34,6 +64,9 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
     Object.entries(form).forEach(([key, value]) => {
       formData.append(key, value);
     });
+    if (selectedClubId) {
+      formData.append('clubId', selectedClubId);
+    }
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }
@@ -67,7 +100,45 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Club</label>
-          <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          <div className="relative">
+            <input
+              name="club"
+              value={form.club}
+              onChange={(e) => {
+                handleChange(e);
+                setClubQuery(e.target.value);
+                setShowClubSuggestions(true);
+                setSelectedClubId(null);
+              }}
+              onFocus={() => setShowClubSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
+              className="w-full p-2 border border-gray-300 rounded"
+              placeholder="Shkruaj emrin e klubit"
+              autoComplete="off"
+            />
+            {showClubSuggestions && clubSuggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-sm max-h-48 overflow-y-auto">
+                {clubSuggestions.map((club) => {
+                  const label = club.club || `${club.firstName || ''} ${club.lastName || ''}`.trim();
+                  return (
+                    <button
+                      type="button"
+                      key={club.id}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                      onMouseDown={() => {
+                        setForm((prev) => ({ ...prev, club: label }));
+                        setClubQuery(label);
+                        setSelectedClubId(club.userId || club.id);
+                        setShowClubSuggestions(false);
+                      }}
+                    >
+                      {label || 'Club'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Affiliation</label>
