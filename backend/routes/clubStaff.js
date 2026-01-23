@@ -23,21 +23,26 @@ router.get('/club/:clubId', async (req, res) => {
           model: User,
           as: 'staff',
           attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
+          include: [{ model: Profile, as: 'Profile', attributes: ['profilePhoto', 'bio'] }]
         }],
         order: [['createdAt', 'DESC']],
       });
     } catch (includeError) {
       console.warn('Get club staff include error, falling back:', includeError.message);
-      staff = await ClubStaff.findAll({
-        where,
-        include: [{
-          model: User,
-          as: 'staff',
-          attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-        }],
-        order: [['createdAt', 'DESC']],
-      });
+      try {
+        staff = await ClubStaff.findAll({
+          where,
+          include: [{
+            model: User,
+            as: 'staff',
+            attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
+          }],
+          order: [['createdAt', 'DESC']],
+        });
+      } catch (fallbackError) {
+        console.warn('Get club staff fallback include error:', fallbackError.message);
+        staff = await ClubStaff.findAll({ where, order: [['createdAt', 'DESC']] });
+      }
     }
 
     res.json(staff);
@@ -60,21 +65,26 @@ router.get('/staff/:staffId', protect, async (req, res) => {
           model: User,
           as: 'club',
           attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['club', 'profilePhoto'] }]
+          include: [{ model: Profile, as: 'Profile', attributes: ['club', 'profilePhoto'] }]
         }],
         order: [['createdAt', 'DESC']],
       });
     } catch (includeError) {
       console.warn('Get staff assignments include error, falling back:', includeError.message);
-      assignments = await ClubStaff.findAll({
-        where: { staffId: parseInt(staffId) },
-        include: [{
-          model: User,
-          as: 'club',
-          attributes: ['id', 'firstName', 'lastName'],
-        }],
-        order: [['createdAt', 'DESC']],
-      });
+      try {
+        assignments = await ClubStaff.findAll({
+          where: { staffId: parseInt(staffId) },
+          include: [{
+            model: User,
+            as: 'club',
+            attributes: ['id', 'firstName', 'lastName'],
+          }],
+          order: [['createdAt', 'DESC']],
+        });
+      } catch (fallbackError) {
+        console.warn('Get staff assignments fallback include error:', fallbackError.message);
+        assignments = await ClubStaff.findAll({ where: { staffId: parseInt(staffId) }, order: [['createdAt', 'DESC']] });
+      }
     }
 
     res.json(assignments);
