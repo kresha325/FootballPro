@@ -103,7 +103,14 @@ exports.createCoach = async (req, res) => {
         rehabilitation_trainer: 'physiotherapist',
       };
 
-      if (!existing) {
+      if (existing) {
+        if (existing.status !== 'active') {
+          existing.status = 'pending';
+          existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
+          existing.teamType = existing.teamType || 'first_team';
+          await existing.save();
+        }
+      } else {
         await ClubStaff.create({
           clubId: staffClubUser.id,
           staffId: req.user.id,
@@ -216,7 +223,9 @@ exports.updateCoach = async (req, res) => {
       };
 
       if (existing) {
-        existing.status = 'pending';
+        if (existing.status !== 'active') {
+          existing.status = 'pending';
+        }
         existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
         existing.teamType = existing.teamType || 'first_team';
         await existing.save();
