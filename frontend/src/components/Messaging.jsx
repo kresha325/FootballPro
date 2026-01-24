@@ -33,6 +33,32 @@ function ImageModal({ src, alt, onClose }) {
 }
 
 function Messaging() {
+  // All useState declarations at the top
+  const [modalImage, setModalImage] = useState(null);
+  const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageContent, setMessageContent] = useState('');
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState({});
+  const [replyTo, setReplyTo] = useState(null);
+  const [showCall, setShowCall] = useState(false);
+  const [callType, setCallType] = useState('video'); // 'video' or 'audio'
+  const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const { user } = useAuth();
+  const { socket } = useSocket();
+  const location = useLocation();
+  // Lexo userId dhe conversationId nga query me URLSearchParams
+  const query = new URLSearchParams(location.search);
+  const userId = query.get('userId');
+  const conversationId = query.get('conversationId');
+
   const getFullUrl = (url) => {
     if (!url) return '';
     const normalized = url.startsWith('https//')
@@ -43,56 +69,34 @@ function Messaging() {
     if (/^https?:\/\//.test(normalized)) return normalized;
     return API_URL + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
+
   // Ngarko bisedat sapo hapet komponenti
   useEffect(() => {
     fetchConversations();
   }, []);
-  const [modalImage, setModalImage] = useState(null);
-  const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
-    // Fetch online status for all conversation members
-    useEffect(() => {
-      const fetchOnlineStatus = async () => {
-        const statusObj = {};
-        for (const conv of conversations) {
-          // Only check for 1-1 conversations
-          if (!conv.isGroup) {
-            const other = conv.members.find(m => m.id !== user.id);
-            if (other && other.id) {
-              try {
-                const res = await axios.get(`${API_URL}/users/${other.id}/online`);
-                statusObj[other.id] = res.data.online;
-              } catch {
-                statusObj[other.id] = false;
-              }
+
+  // Fetch online status for all conversation members
+  useEffect(() => {
+    const fetchOnlineStatus = async () => {
+      const statusObj = {};
+      for (const conv of conversations) {
+        // Only check for 1-1 conversations
+        if (!conv.isGroup) {
+          const other = conv.members.find(m => m.id !== user.id);
+          if (other && other.id) {
+            try {
+              const res = await axios.get(`${API_URL}/users/${other.id}/online`);
+              statusObj[other.id] = res.data.online;
+            } catch {
+              statusObj[other.id] = false;
             }
           }
         }
-        setOnlineStatus(statusObj);
-      };
-      if (conversations.length && user) fetchOnlineStatus();
-    }, [conversations, user]);
-  const { user } = useAuth();
-  const { socket } = useSocket();
-  const location = useLocation();
-  // Lexo userId dhe conversationId nga query me URLSearchParams
-  const query = new URLSearchParams(location.search);
-  const userId = query.get('userId');
-  const conversationId = query.get('conversationId');
-  const [conversations, setConversations] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [messageContent, setMessageContent] = useState('');
-  const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState({});
-  const [replyTo, setReplyTo] = useState(null);
-  const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const fileInputRef = useRef(null);
-  // Video/audio call state
-  const [showCall, setShowCall] = useState(false);
-  const [callType, setCallType] = useState('video'); // 'video' or 'audio'
+      }
+      setOnlineStatus(statusObj);
+    };
+    if (conversations.length && user) fetchOnlineStatus();
+  }, [conversations, user]);
 
   // Auto-open conversation if userId or conversationId is in query
   useEffect(() => {
