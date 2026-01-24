@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getJonCoinBalance } from '../services/joncoin';
 import { useAuth } from '../contexts/AuthContext';
 import { marketplaceAPI, ordersAPI } from '../services/api';
 import { loadStripe } from '@stripe/stripe-js';
@@ -8,6 +9,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 
 const Marketplace = () => {
   const [items, setItems] = useState([]);
+  const [jonCoinBalance, setJonCoinBalance] = useState(null);
   const [newItem, setNewItem] = useState({ title: '', description: '', price: '', category: '' });
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -18,7 +20,11 @@ const Marketplace = () => {
       { id: 1, title: 'Football Boots', description: 'Used but in good condition', price: 50, seller: 'John Doe', category: 'Equipment' },
       { id: 2, title: 'Team Jersey', description: 'Official club jersey', price: 30, seller: 'Jane Smith', category: 'Apparel' },
     ]);
-  }, []);
+    // Fetch JonCoin balance for logged-in user
+    if (user?.id) {
+      getJonCoinBalance(user.id).then(setJonCoinBalance);
+    }
+  }, [user]);
 
   const handleCreateItem = (e) => {
     e.preventDefault();
@@ -36,7 +42,16 @@ const Marketplace = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Marketplace</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+        <h1 className="text-3xl font-bold">Marketplace</h1>
+        {jonCoinBalance !== null && (
+          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
+            <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="gold" strokeWidth="2" fill="yellow" /><text x="10" y="15" textAnchor="middle" fontSize="10" fill="#b45309" fontWeight="bold">JC</text></svg>
+            {jonCoinBalance} JonCoin
+            <span className="text-xs text-gray-500 ml-1">(1 JonCoin = 1€)</span>
+          </span>
+        )}
+      </div>
 
       {/* Create Item Form */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">

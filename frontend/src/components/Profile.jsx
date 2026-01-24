@@ -16,6 +16,7 @@
   };
 
 import React, { useEffect, useRef, useState } from 'react';
+import { getJonCoinBalance } from '../services/joncoin';
 // Helper to get full URL for images/videos
 const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
 const getFullUrl = (url) => {
@@ -76,6 +77,7 @@ const Profile = () => {
   }, [fetchUserPosts]);
 
   const [profile, setProfile] = useState(null);
+  const [jonCoinBalance, setJonCoinBalance] = useState(null);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -227,6 +229,10 @@ const Profile = () => {
         }));
 
         await fetchSponsors(id);
+
+        // Fetch JonCoin balance
+        const balance = await getJonCoinBalance(id);
+        setJonCoinBalance(balance);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
       } finally {
@@ -406,21 +412,29 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Name and Stats */}
+            {/* Name, JonCoin Balance, and Stats */}
             <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2">
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {profile.firstName} {profile.lastName}
-                  </h1>
-                  {profile.verified && (
-                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {sponsorList.length > 0 && (
-                    <span className="text-xs font-bold animate-pulse" style={{ color: '#22c55e', letterSpacing: '1px', textShadow: '0 0 8px #bbf7d0, 0 0 2px #fff' }}>Sponsored</span>
-                  )}
-                </div>
+              <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {profile.firstName} {profile.lastName}
+                </h1>
+                {profile.verified && (
+                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {sponsorList.length > 0 && (
+                  <span className="text-xs font-bold animate-pulse" style={{ color: '#22c55e', letterSpacing: '1px', textShadow: '0 0 8px #bbf7d0, 0 0 2px #fff' }}>Sponsored</span>
+                )}
+                {/* JonCoin Balance */}
+                {jonCoinBalance !== null && (
+                  <span className="ml-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
+                    <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="gold" strokeWidth="2" fill="yellow" /><text x="10" y="15" textAnchor="middle" fontSize="10" fill="#b45309" fontWeight="bold">JC</text></svg>
+                    {jonCoinBalance} JonCoin
+                    <span className="text-xs text-gray-500 ml-1">(1 JonCoin = 1€)</span>
+                  </span>
+                )}
+              </div>
               
               {/* Bio */}
               {profile.bio && (
