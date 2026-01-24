@@ -137,7 +137,11 @@ app.use('/api/clubs', require('./routes/club'));
 app.use('/api/federations', require('./routes/federation'));
 app.use('/api/medias', require('./routes/media'));
 app.use('/api/businesses', require('./routes/business'));
+
 app.use('/api/ligas', require('./routes/liga'));
+
+// JonCoin API
+app.use('/api/joncoin', require('./routes/joncoin'));
 
 
 // Endpoint për të kontrolluar nëse një user është online
