@@ -456,9 +456,7 @@ exports.updateProfile = async (req, res) => {
             };
 
             if (existing) {
-              if (existing.status !== 'active') {
-                existing.status = 'pending';
-              }
+              existing.status = 'pending';
               existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
               existing.teamType = existing.teamType || 'first_team';
               await existing.save();
