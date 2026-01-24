@@ -37,6 +37,7 @@ const JonCoinWallet = () => {
   return (
     <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-8">
       <h2 className="text-2xl font-bold mb-4">JonCoin Wallet</h2>
+      <div className="mb-2 text-sm text-gray-500">1 JonCoin = 1 €</div>
       <div className="mb-4 text-lg">Balance: <span className="font-mono text-green-600">{balance} JonCoins</span></div>
       <form onSubmit={handleTransfer} className="space-y-3">
         <input
