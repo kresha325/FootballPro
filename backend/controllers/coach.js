@@ -109,15 +109,17 @@ exports.createCoach = async (req, res) => {
           existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
           existing.teamType = existing.teamType || 'first_team';
           await existing.save();
+          console.log('[ClubStaff] Updated existing staff to pending:', existing.toJSON());
         }
       } else {
-        await ClubStaff.create({
+        const created = await ClubStaff.create({
           clubId: staffClubUser.id,
           staffId: req.user.id,
           staffRole: staffRoleMap[category] || 'assistant_coach',
           teamType: 'first_team',
           status: 'pending',
         });
+        console.log('[ClubStaff] Created new pending staff:', created.toJSON());
       }
     }
     res.status(201).json(profile);
@@ -229,14 +231,16 @@ exports.updateCoach = async (req, res) => {
         existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
         existing.teamType = existing.teamType || 'first_team';
         await existing.save();
+        console.log('[ClubStaff] Updated existing staff to pending:', existing.toJSON());
       } else {
-        await ClubStaff.create({
+        const created = await ClubStaff.create({
           clubId: staffClubUser.id,
           staffId: req.user.id,
           staffRole: staffRoleMap[category] || 'assistant_coach',
           teamType: 'first_team',
           status: 'pending',
         });
+        console.log('[ClubStaff] Created new pending staff:', created.toJSON());
       }
     }
     res.json(profile);
