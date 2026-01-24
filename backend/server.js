@@ -139,6 +139,19 @@ app.use('/api/medias', require('./routes/media'));
 app.use('/api/businesses', require('./routes/business'));
 app.use('/api/ligas', require('./routes/liga'));
 
+
+// Endpoint për të kontrolluar nëse një user është online
+app.get('/api/users/:userId/online', (req, res) => {
+  try {
+    const { userId } = req.params;
+    // userSockets është në scope global të server.js
+    const isOnline = userSockets.has(String(userId));
+    res.json({ userId, online: isOnline });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/', (req, res) => {
   res.send('JONSPORT Backend API');
 });

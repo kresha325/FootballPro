@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 // Helper për URL absolute/relative të fotos
 const apiRoot = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : '';
 const getFullUrl = (url) => {
@@ -22,6 +23,7 @@ const UserCardsSection = () => {
   const [loading, setLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState({}); // { [userId]: true/false }
   const [loadingFollow, setLoadingFollow] = useState({}); // { [userId]: true/false }
+  const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -29,8 +31,9 @@ const UserCardsSection = () => {
     profileAPI.getAllProfiles({ role: 'athlete', limit: 8 })
       .then(async res => {
         setProfiles(res.data);
-        // Fetch follow status for each profile
+        // Fetch follow status and online status for each profile
         const statusObj = {};
+        const onlineObj = {};
         await Promise.all(res.data.map(async (profile) => {
           if (user && user.id !== profile.id) {
             try {
@@ -40,8 +43,16 @@ const UserCardsSection = () => {
               statusObj[profile.id] = false;
             }
           }
+          // Fetch online status
+          try {
+            const onlineRes = await axios.get(`${import.meta.env.VITE_API_URL.replace('/api','')}/api/users/${profile.id}/online`);
+            onlineObj[profile.id] = onlineRes.data.online;
+          } catch {
+            onlineObj[profile.id] = false;
+          }
         }));
         setFollowStatus(statusObj);
+        setOnlineStatus(onlineObj);
       })
       .catch(() => setProfiles([]))
       .finally(() => setLoading(false));
@@ -98,13 +109,20 @@ const UserCardsSection = () => {
               <img
                 src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
                 alt={profile.firstName + ' ' + profile.lastName}
-                className="object-cover w-full h-full"
+                className={`object-cover w-full h-full border-4 transition-all duration-300 ${onlineStatus[profile.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                 loading="lazy"
                 decoding="async"
                 onError={e => { e.target.src = '/default-avatar.png'; }}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <div className="text-xl font-bold text-white drop-shadow-lg">{profile.firstName} {profile.lastName}</div>
+                <div className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
+                  {profile.firstName} {profile.lastName}
+                  {onlineStatus[profile.id] === true ? (
+                    <span title="Online" className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
+                  ) : (
+                    <span title="Offline" className="inline-block w-3 h-3 rounded-full bg-gray-400 border-2 border-white"></span>
+                  )}
+                </div>
                 <div className="text-white text-sm font-medium drop-shadow">{profile.position || '—'}</div>
               </div>
             </div>

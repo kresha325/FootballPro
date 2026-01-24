@@ -47,6 +47,29 @@ function Messaging() {
     fetchConversations();
   }, []);
   const [modalImage, setModalImage] = useState(null);
+  const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
+    // Fetch online status for all conversation members
+    useEffect(() => {
+      const fetchOnlineStatus = async () => {
+        const statusObj = {};
+        for (const conv of conversations) {
+          // Only check for 1-1 conversations
+          if (!conv.isGroup) {
+            const other = conv.members.find(m => m.id !== user.id);
+            if (other && other.id) {
+              try {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL.replace('/api','')}/api/users/${other.id}/online`);
+                statusObj[other.id] = res.data.online;
+              } catch {
+                statusObj[other.id] = false;
+              }
+            }
+          }
+        }
+        setOnlineStatus(statusObj);
+      };
+      if (conversations.length && user) fetchOnlineStatus();
+    }, [conversations, user]);
   const { user } = useAuth();
   const { socket } = useSocket();
   const location = useLocation();
@@ -292,12 +315,14 @@ function Messaging() {
       return {
         name: conversation.name || 'Group Chat',
         profilePhoto: conversation.avatar,
+        id: null,
       };
     }
     const otherMember = conversation.members.find(m => m.id !== user.id);
     return {
       name: `${otherMember.firstName} ${otherMember.lastName}`,
       profilePhoto: otherMember.profilePhoto,
+      id: otherMember.id,
     };
   };
 
@@ -461,13 +486,18 @@ function Messaging() {
                       <img
                         src={getFullUrl(other.profilePhoto)}
                         alt={other.name}
-                        className="w-12 h-12 rounded-full object-cover"
+                        className={`w-12 h-12 rounded-full object-cover border-4 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
                         {other.name.charAt(0).toUpperCase()}
                       </div>
                     )}
+                    {/* Online/offline dot */}
+                    <span
+                      title={onlineStatus[other.id] === true ? 'Online' : 'Offline'}
+                      className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${onlineStatus[other.id] === true ? 'bg-green-500' : 'bg-gray-400'}`}
+                    ></span>
                     {conv.unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
                         {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
@@ -506,13 +536,18 @@ function Messaging() {
                       <img
                         src={getFullUrl(other.profilePhoto)}
                         alt={other.name}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className={`w-10 h-10 rounded-full object-cover border-4 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
                         {other.name.charAt(0).toUpperCase()}
                       </div>
                     )}
+                    {/* Online/offline dot */}
+                    <span
+                      title={onlineStatus[other.id] === true ? 'Online' : 'Offline'}
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${onlineStatus[other.id] === true ? 'bg-green-500' : 'bg-gray-400'}`}
+                    ></span>
                     <h3 className="font-semibold dark:text-white">{other.name}</h3>
                   </>
                 );

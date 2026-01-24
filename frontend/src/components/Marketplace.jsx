@@ -43,22 +43,30 @@ const Marketplace = () => {
         <h2 className="text-xl font-semibold mb-4">Sell an Item</h2>
         <form onSubmit={handleCreateItem} className="space-y-4">
           <input
+            id="marketplace-title"
+            name="title"
             type="text"
             placeholder="Item Title"
             value={newItem.title}
             onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            autoComplete="off"
           />
           <textarea
+            id="marketplace-description"
+            name="description"
             placeholder="Description"
             value={newItem.description}
             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows="3"
+            autoComplete="off"
           />
           <div className="flex gap-4">
             <input
+              id="marketplace-price"
+              name="price"
               type="number"
               placeholder="Price (JonCoins)"
               value={newItem.price}
@@ -67,11 +75,15 @@ const Marketplace = () => {
               min="0"
               step="0.01"
               required
+              autoComplete="off"
             />
             <select
+              id="marketplace-category"
+              name="category"
               value={newItem.category}
               onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
               className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete="off"
             >
               <option value="">Select Category</option>
               <option value="Equipment">Equipment</option>
