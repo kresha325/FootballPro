@@ -9,7 +9,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 
 const Marketplace = () => {
   const [items, setItems] = useState([]);
-  const [jonCoinBalance, setJonCoinBalance] = useState(null);
+  const [jonCoinBalance, setJonCoinBalance] = useState(0);
   const [newItem, setNewItem] = useState({ title: '', description: '', price: '', category: '' });
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -22,7 +22,7 @@ const Marketplace = () => {
     ]);
     // Fetch JonCoin balance for logged-in user
     if (user?.id) {
-      getJonCoinBalance(user.id).then(setJonCoinBalance);
+      getJonCoinBalance(user.id).then(balance => setJonCoinBalance(Number(balance) || 0));
     }
   }, [user]);
 

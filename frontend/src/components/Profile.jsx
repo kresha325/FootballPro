@@ -77,7 +77,7 @@ const Profile = () => {
   }, [fetchUserPosts]);
 
   const [profile, setProfile] = useState(null);
-  const [jonCoinBalance, setJonCoinBalance] = useState(null);
+  const [jonCoinBalance, setJonCoinBalance] = useState(0);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -232,7 +232,7 @@ const Profile = () => {
 
         // Fetch JonCoin balance
         const balance = await getJonCoinBalance(id);
-        setJonCoinBalance(balance);
+        setJonCoinBalance(Number(balance) || 0);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
       } finally {
