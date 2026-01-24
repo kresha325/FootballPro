@@ -7,6 +7,8 @@ import { FiPhone, FiVideo } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
 import ForwardButton from './ForwardButton';
 
+import { API_URL } from '../config/api';
+
 // Modal për shfaqjen e fotove të mëdha
 function ImageModal({ src, alt, onClose }) {
   return (
@@ -31,7 +33,7 @@ function ImageModal({ src, alt, onClose }) {
 }
 
 function Messaging() {
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const apiRoot = API_URL.replace('/api','');
   const getFullUrl = (url) => {
     if (!url) return '';
     const normalized = url.startsWith('https//')
@@ -58,7 +60,7 @@ function Messaging() {
             const other = conv.members.find(m => m.id !== user.id);
             if (other && other.id) {
               try {
-                const res = await axios.get(`${import.meta.env.VITE_API_URL.replace('/api','')}/api/users/${other.id}/online`);
+                const res = await axios.get(`${API_URL.replace('/api','')}/api/users/${other.id}/online`);
                 statusObj[other.id] = res.data.online;
               } catch {
                 statusObj[other.id] = false;
@@ -367,7 +369,7 @@ function Messaging() {
           <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500 flex items-center gap-2">
             {message.replyTo.sender && message.replyTo.sender.profilePhoto ? (
               <img
-                src={message.replyTo.sender.profilePhoto.startsWith('http') ? message.replyTo.sender.profilePhoto : `${import.meta.env.VITE_API_URL.replace('/api','')}${message.replyTo.sender.profilePhoto}`}
+                src={message.replyTo.sender.profilePhoto.startsWith('http') ? message.replyTo.sender.profilePhoto : `${API_URL.replace('/api','')}${message.replyTo.sender.profilePhoto}`}
                 alt={message.replyTo.sender.firstName}
                 className="w-6 h-6 rounded-full object-cover"
                 onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
@@ -388,20 +390,20 @@ function Messaging() {
         {message.type === 'image' && message.fileUrl && (
           <img
             src={message.fileUrl.startsWith('/uploads/')
-              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+              ? `${API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${API_URL}${message.fileUrl}`}
             alt={message.fileName || 'Shared'}
             className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
             onClick={() => setModalImage(message.fileUrl.startsWith('/uploads/')
-              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`)}
+              ? `${API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${API_URL}${message.fileUrl}`)}
           />
         )}
         {message.type === 'video' && message.fileUrl && (
           <video
             src={message.fileUrl.startsWith('/uploads/')
-              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+              ? `${API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${API_URL}${message.fileUrl}`}
             controls
             className="max-w-xs rounded mb-2"
           />
@@ -409,8 +411,8 @@ function Messaging() {
         {message.type === 'file' && message.fileUrl && (
           <a
             href={message.fileUrl.startsWith('/uploads/')
-              ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}${message.fileUrl}`
-              : `${import.meta.env.VITE_API_URL}${message.fileUrl}`}
+              ? `${API_URL.replace(/\/api$/, '')}${message.fileUrl}`
+              : `${API_URL}${message.fileUrl}`}
             download={message.fileName}
             className="flex items-center gap-2 text-blue-500 hover:underline mb-2"
           >
