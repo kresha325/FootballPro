@@ -320,11 +320,17 @@ function Messaging() {
         id: null,
       };
     }
+    if (!conversation.members || !Array.isArray(conversation.members)) {
+      return { name: 'Unknown', profilePhoto: '', id: null };
+    }
     const otherMember = conversation.members.find(m => m.id !== user.id);
+    if (!otherMember) {
+      return { name: 'Unknown', profilePhoto: '', id: null };
+    }
     return {
-      name: `${otherMember.firstName} ${otherMember.lastName}`,
-      profilePhoto: otherMember.profilePhoto,
-      id: otherMember.id,
+      name: `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || 'Unknown',
+      profilePhoto: otherMember.profilePhoto || '',
+      id: otherMember.id || null,
     };
   };
 
