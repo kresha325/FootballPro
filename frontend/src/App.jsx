@@ -46,7 +46,7 @@ function App() {
 
   // Listen for custom event from Settings to force background update
   useEffect(() => {
-    const onBgChange = () => setBgVersion(v => v + 1);
+    const onBgChange = () => setBgVersion(version => version + 1);
     window.addEventListener('platformBgChanged', onBgChange);
     return () => window.removeEventListener('platformBgChanged', onBgChange);
   }, []);
@@ -66,7 +66,7 @@ function App() {
     // Listen for localStorage changes (cross-tab)
     const onStorage = (e) => {
       if (e.key === 'platformBgColor' || e.key === 'platformBgImage') {
-        setBgVersion(v => v + 1);
+        setBgVersion(version => version + 1);
         applyBg();
       }
     };
