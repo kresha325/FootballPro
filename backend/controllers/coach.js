@@ -174,7 +174,35 @@ exports.updateCoach = async (req, res) => {
         },
       });
 
-      const category = req.body.coachCategory || profile.coachCategory;
+      const normalizeCoachCategory = (value) => {
+        const raw = String(value || '').toLowerCase();
+        const map = {
+          general_trainer: 'general_trainer',
+          assistant_trainer: 'assistant_trainer',
+          fitness_trainer: 'fitness_trainer',
+          goalkeeper_trainer: 'goalkeeper_trainer',
+          technical_trainer: 'technical_trainer',
+          tactical_trainer: 'tactical_trainer',
+          psychological_trainer: 'psychological_trainer',
+          youth_trainer: 'youth_trainer',
+          rehabilitation_trainer: 'rehabilitation_trainer',
+          trajner_i_pergjithshem: 'general_trainer',
+          trajner_i_përgjithshëm: 'general_trainer',
+          trajner_ndihmes: 'assistant_trainer',
+          trajner_ndihmës: 'assistant_trainer',
+          trajner_fizik: 'fitness_trainer',
+          trajner_i_portiereve: 'goalkeeper_trainer',
+          trajner_i_portierëve: 'goalkeeper_trainer',
+          trajner_teknik: 'technical_trainer',
+          trajner_taktik: 'tactical_trainer',
+          trajner_psikologjik: 'psychological_trainer',
+          trajner_i_te_rinjve: 'youth_trainer',
+          trajner_i_të_rinjve: 'youth_trainer',
+          trajner_rehabilitimi: 'rehabilitation_trainer',
+        };
+        return map[raw] || value;
+      };
+      const category = normalizeCoachCategory(req.body.coachCategory || profile.coachCategory);
       const staffRoleMap = {
         general_trainer: 'head_coach',
         assistant_trainer: 'assistant_coach',
