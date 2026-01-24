@@ -136,8 +136,6 @@ function App() {
             <Route path="/search" element={user ? <Search /> : <Navigate to="/login" />} />
             <Route path="/messaging" element={user ? <Messaging /> : <Navigate to="/login" />} />
             <Route path="/marketplace" element={user ? <Marketplace /> : <Navigate to="/login" />} />
-            {/* JonCoin Wallet */}
-            <Route path="/wallet" element={user ? <JonCoinWallet /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
