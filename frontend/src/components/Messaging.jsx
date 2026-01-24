@@ -497,7 +497,7 @@ function Messaging() {
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
-                        {other.name.charAt(0).toUpperCase()}
+                        {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                       </div>
                     )}
                     {/* Online/offline dot */}
@@ -547,7 +547,7 @@ function Messaging() {
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-                        {other.name.charAt(0).toUpperCase()}
+                        {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                       </div>
                     )}
                     {/* Online/offline dot */}
