@@ -13,7 +13,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
 
   if (clubId && !isNaN(Number(clubId))) {
     const clubById = await User.findByPk(parseInt(clubId));
-    if (clubById && ['club', 'klub'].includes(clubById.role)) {
+    if (clubById && clubById.role === 'club') {
       clubUser = clubById;
     }
   }
@@ -21,7 +21,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
   if (!clubUser && clubName) {
     const clubByUser = await User.findOne({
       where: {
-        role: { [Op.in]: ['club', 'klub'] },
+        role: 'club',
         [Op.or]: [
           { firstName: { [Op.iLike]: `%${clubName}%` } },
           { lastName: { [Op.iLike]: `%${clubName}%` } },
@@ -41,7 +41,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
         },
         include: [{
           model: User,
-          where: { role: { [Op.in]: ['club', 'klub'] } },
+          where: { role: 'club' },
         }],
       });
 
@@ -525,7 +525,7 @@ exports.getAllProfiles = async (req, res) => {
     const filterRoleInJs = (itemRole) => {
       const r = String(itemRole || '').toLowerCase();
       if (!normalizedRole) return true;
-      if (normalizedRole === 'club') return ['club', 'klub'].includes(r);
+      if (normalizedRole === 'club') return r === 'club';
       if (normalizedRole === 'coach') return ['coach', 'trajner'].includes(r);
       return r === normalizedRole;
     };
