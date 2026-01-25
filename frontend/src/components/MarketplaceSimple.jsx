@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import { getJonCoinBalance } from '../services/joncoin';
+import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -11,7 +13,8 @@ API.interceptors.request.use((config) => {
 });
 
 export default function MarketplaceSimple() {
-    // ...existing code...
+    const navigate = useNavigate();
+    const [jonCoinBalance, setJonCoinBalance] = useState(null);
     const deleteProduct = async (productId) => {
       if (!window.confirm('A je i sigurt që do ta fshish këtë produkt?')) return;
       try {
@@ -41,6 +44,9 @@ export default function MarketplaceSimple() {
 
   useEffect(() => {
     fetchProducts();
+
+    // Fetch JonCoin balance
+    getJonCoinBalance().then(bal => setJonCoinBalance(Number(bal) || 0));
     
     // Check for payment success/cancel
     const success = searchParams.get('success');
@@ -146,6 +152,21 @@ export default function MarketplaceSimple() {
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
+      {/* JonCoin Balance Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
+            {jonCoinBalance !== null ? `${jonCoinBalance} JonCoin` : '...'}
+            <span className="text-xs text-gray-500 ml-1">(1 JonCoin = 1€)</span>
+          </span>
+        </div>
+        <button
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-semibold shadow"
+          onClick={() => navigate('/wallet')}
+        >
+          Shiko Wallet
+        </button>
+      </div>
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>

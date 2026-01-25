@@ -13,6 +13,7 @@ import Feed from './components/Feed';
 import Search from './components/SearchSimple';
 import Messaging from './components/Messaging';
 import Marketplace from './components/MarketplaceSimple';
+import WalletPage from './components/WalletPage';
 import Notifications from './components/Notifications';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
@@ -150,6 +151,9 @@ function App() {
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
+
+            {/* WALLET PAGE */}
+            <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
 
             {/* ROOT */}
             <Route path="/" element={<Navigate to={user ? "/feed" : "/login"} />} />
