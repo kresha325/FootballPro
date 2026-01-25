@@ -86,11 +86,11 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">First Name *</label>
-          <input name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <input id="coach-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="given-name" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Last Name *</label>
-          <input name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <input id="coach-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="family-name" />
         </div>
       </div>
       <div>
@@ -102,6 +102,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
           <label className="block text-sm font-medium mb-1">Club</label>
           <div className="relative">
             <input
+              id="coach-club"
               name="club"
               value={form.club}
               onChange={(e) => {
@@ -114,7 +115,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
               onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Shkruaj emrin e klubit"
-              autoComplete="off"
+              autoComplete="organization"
             />
             {showClubSuggestions && clubSuggestions.length > 0 && (
               <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-sm max-h-48 overflow-y-auto">

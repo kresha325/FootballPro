@@ -116,15 +116,15 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label htmlFor="athlete-first-name" className="block text-sm font-medium mb-1">First Name *</label>
-          <input id="athlete-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <input id="athlete-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="given-name" />
         </div>
         <div>
           <label htmlFor="athlete-last-name" className="block text-sm font-medium mb-1">Last Name *</label>
-          <input id="athlete-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
+          <input id="athlete-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="family-name" />
         </div>
         <div>
           <label htmlFor="athlete-dob" className="block text-sm font-medium mb-1">Date of Birth</label>
-          <input id="athlete-dob" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-dob" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="bday" />
         </div>
         <div>
           <label htmlFor="athlete-gender" className="block text-sm font-medium mb-1">Gender</label>
@@ -170,7 +170,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
               onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Shkruaj emrin e klubit"
-              autoComplete="off"
+              autoComplete="organization"
             />
             {showClubSuggestions && clubSuggestions.length > 0 && (
               <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-sm max-h-48 overflow-y-auto">
