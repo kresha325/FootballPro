@@ -378,14 +378,5 @@ router.delete('/:membershipId', protect, async (req, res) => {
   }
 });
 
-// Endpoint debug për të marrë anëtarët pending
-router.get('/debug/pending-members', async (req, res) => {
-  try {
-    const pending = await ClubMember.findAll({ where: { status: 'pending' } });
-    res.json(pending);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
