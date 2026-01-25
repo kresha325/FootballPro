@@ -110,7 +110,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
         {preview && (
           <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
-        <input id="athlete-profile-photo" type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+        <input id="athlete-profile-photo" type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} autoComplete="photo" />
       </div>
       <h3 className="text-lg font-semibold mb-3">Athlete Profile</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,15 +201,15 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
         </div>
         <div>
           <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">Jersey Number</label>
-          <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
         <div>
           <label htmlFor="athlete-city" className="block text-sm font-medium mb-1">City</label>
-          <input id="athlete-city" name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-city" name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="address-level2" />
         </div>
         <div>
           <label htmlFor="athlete-country" className="block text-sm font-medium mb-1">Country</label>
-          <input id="athlete-country" name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-country" name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="country" />
         </div>
         <div>
           <label htmlFor="athlete-foot" className="block text-sm font-medium mb-1">Preferred Foot</label>
@@ -221,11 +221,11 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
         </div>
         <div>
           <label htmlFor="athlete-height" className="block text-sm font-medium mb-1">Height (cm)</label>
-          <input id="athlete-height" name="height" value={form.height} onChange={handleChange} type="number" placeholder="175" className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-height" name="height" value={form.height} onChange={handleChange} type="number" placeholder="175" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
         <div>
           <label htmlFor="athlete-weight" className="block text-sm font-medium mb-1">Weight (kg)</label>
-          <input id="athlete-weight" name="weight" value={form.weight} onChange={handleChange} type="number" placeholder="70" className="w-full p-2 border border-gray-300 rounded" />
+          <input id="athlete-weight" name="weight" value={form.weight} onChange={handleChange} type="number" placeholder="70" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
