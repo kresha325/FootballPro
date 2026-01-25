@@ -8,9 +8,4 @@ module.exports = {
   async down (queryInterface, Sequelize) {
     // No revert needed
   }
-};
 
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('Videos', 'publicId');
-  },
-};
