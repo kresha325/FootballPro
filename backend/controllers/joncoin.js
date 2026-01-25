@@ -41,11 +41,22 @@ exports.transfer = async (req, res) => {
 
 const { User, JonCoinTransaction, WithdrawalRequest } = require('../models');
 
-// Merr balancën e JonCoin për userin e loguar
+
+// Merr balancën reale të JonCoin për userin e loguar (bazuar në të gjitha transaksionet)
 exports.getBalance = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
-    return res.json({ balance: user.joncoinBalance });
+    const transactions = await JonCoinTransaction.findAll({
+      where: { userId: req.user.id }
+    });
+    let balance = 0;
+    for (const tx of transactions) {
+      if (tx.type === 'purchase' || tx.type === 'reward' || tx.type === 'refund') {
+        balance += parseFloat(tx.amount);
+      } else if (tx.type === 'spend' || tx.type === 'withdrawal' || tx.type === 'commission') {
+        balance -= parseFloat(tx.amount);
+      }
+    }
+    return res.json({ balance });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
