@@ -71,6 +71,20 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
       formData.append('profilePhoto', profilePhoto);
     }
     onSave(formData);
+
+    // Dërgo kërkesë për membership në klub (pending request)
+    const trimmedClub = form.club?.trim();
+    if (trimmedClub) {
+      import('../../../services/api').then(({ clubMembersAPI }) => {
+        clubMembersAPI.requestMembership({
+          clubId: selectedClubId || undefined,
+          clubName: trimmedClub,
+          position: undefined,
+        }).catch(() => {
+          alert('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.');
+        });
+      });
+    }
   };
 
   return (
