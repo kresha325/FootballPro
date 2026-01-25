@@ -53,6 +53,23 @@ const EditProfile = ({ user, onClose }) => {
         await ligaAPI.updateLiga(form);
       } else {
         await profileAPI.updateProfile(form);
+        // Shto kërkesë membership nëse është atlet dhe ka ndryshuar klubin
+        if (user.role === 'athlete') {
+          const oldClubId = user.clubId || user.club || '';
+          const newClubId = form.get('clubId') || form.get('club') || '';
+          if (newClubId && newClubId !== oldClubId) {
+            try {
+              await clubMembersAPI.requestMembership({
+                clubId: form.get('clubId') || undefined,
+                clubName: form.get('club') || undefined,
+                position: form.get('position') || undefined,
+                jerseyNumber: JSON.parse(form.get('stats') || '{}').jerseyNumber || undefined,
+              });
+            } catch (err) {
+              // Mund të shtosh alert ose error handling këtu
+            }
+          }
+        }
       }
       setLoading(false);
       onClose();
