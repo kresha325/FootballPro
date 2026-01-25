@@ -91,14 +91,23 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     const trimmedClub = form.club?.trim();
     if (trimmedClub) {
       try {
+        // Kërkesë membership (ruan në ClubMembers)
         await clubMembersAPI.requestMembership({
           clubId: selectedClubId || undefined,
           clubName: trimmedClub,
           position: form.position || undefined,
           jerseyNumber: form.jerseyNumber || undefined,
         });
+        // Kërkesë roster (aktivizon notification për klubin)
+        await import('../../../services/api').then(({ API }) =>
+          API.post('/club-roster/request', {
+            clubId: selectedClubId || undefined,
+            position: form.position || undefined,
+            jerseyNumber: form.jerseyNumber || undefined,
+          })
+        );
       } catch (err) {
-          alert('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.');
+        alert('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.');
       }
     }
   };
