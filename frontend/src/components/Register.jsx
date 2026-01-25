@@ -72,8 +72,8 @@ const Register = () => {
     setLoading(false);
 
     if (result.success) {
-      console.log('FRONTEND: Registration successful, navigating to feed');
-      navigate('/feed');
+      console.log('FRONTEND: Registration successful, navigating to login');
+      navigate('/login');
     } else {
       console.error('FRONTEND: Registration failed:', result.error);
       setError(result.error || 'Registration failed. Please try again.');
