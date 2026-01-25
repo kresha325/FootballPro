@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const User = sequelize.define('User', {
+    joncoinBalance: {
+      type: DataTypes.DECIMAL(12,2),
+      defaultValue: 0,
+      allowNull: false,
+    },
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,

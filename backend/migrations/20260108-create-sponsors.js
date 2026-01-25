@@ -53,6 +53,12 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
+    // Fshi fillimisht tabelat që varen nga Sponsors
+    try {
+      await queryInterface.dropTable("PostSponsors");
+    } catch (e) {
+      // Nëse tabela nuk ekziston ose nuk ke leje, vazhdo
+    }
     await queryInterface.dropTable("Sponsors");
   },
 };

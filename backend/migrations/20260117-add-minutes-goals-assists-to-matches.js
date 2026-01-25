@@ -32,8 +32,22 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn("Matches", "minutesPlayed");
-    await queryInterface.removeColumn("Matches", "goals");
-    await queryInterface.removeColumn("Matches", "assists");
+    // Kontrollo nëse tabela ekziston para se të fshish kolonat
+    let table;
+    try {
+      table = await queryInterface.describeTable("Matches");
+    } catch (e) {
+      // Tabela nuk ekziston, nuk ka asgjë për të fshirë
+      return;
+    }
+    if (table.minutesPlayed) {
+      await queryInterface.removeColumn("Matches", "minutesPlayed");
+    }
+    if (table.goals) {
+      await queryInterface.removeColumn("Matches", "goals");
+    }
+    if (table.assists) {
+      await queryInterface.removeColumn("Matches", "assists");
+    }
   },
 };

@@ -49,6 +49,13 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
+    // Fshi fillimisht tabelat që varen nga Matches
+    // Brackets është një shembull, shto më shumë nëse ka të tjera
+    try {
+      await queryInterface.dropTable("Brackets");
+    } catch (e) {
+      // Nëse tabela nuk ekziston, vazhdo
+    }
     await queryInterface.dropTable("Matches");
   },
 };

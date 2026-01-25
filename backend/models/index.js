@@ -1,6 +1,7 @@
 const sequelize = require('../config/database');
 const { DataTypes } = require('sequelize');
 const User = require('./User');
+const JonCoinTransaction = require('./JonCoinTransaction')(sequelize, DataTypes);
 const Product = require('./Product');
 // Product/Seller association
 Product.belongsTo(User, { as: 'Seller', foreignKey: 'sellerId' });
@@ -101,7 +102,8 @@ module.exports = {
   ProfileView,
   EngagementMetrics,
   MatchScorer,
-  VideoCallHistory
+  VideoCallHistory,
+  JonCoinTransaction
 };
 
 

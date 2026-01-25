@@ -1,16 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const joncoinController = require('../controllers/joncoin');
+
+const joncoin = require('../controllers/joncoin');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 
-// Get current user's JonCoin balance
-router.get('/balance', auth, joncoinController.getBalance);
+// Të gjitha ruterat kërkojnë autentikim
+router.use(auth);
 
-// Admin: add coins to a user
-router.post('/add', auth, admin, joncoinController.addCoins);
-
-// Transfer coins to another user
-router.post('/transfer', auth, joncoinController.transferCoins);
+router.get('/balance', joncoin.getBalance);
+router.get('/transactions', joncoin.getTransactions);
+router.post('/purchase', joncoin.purchase);
+router.post('/spend', joncoin.spend);
+router.post('/reward', joncoin.reward); // admin ose sistem
+router.post('/withdraw', joncoin.withdraw);
+router.patch('/transaction/:id', admin, joncoin.updateTransactionStatus); // admin
+router.post('/transfer', joncoin.transfer); // user-to-user transfer
 
 module.exports = router;

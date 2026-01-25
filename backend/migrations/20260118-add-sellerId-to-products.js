@@ -6,7 +6,7 @@ module.exports = {
     if (!table.sellerId) {
       await queryInterface.addColumn("Products", "sellerId", {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true, // Lejo NULL për të shmangur errorin
         references: {
           model: "Users",
           key: "id",

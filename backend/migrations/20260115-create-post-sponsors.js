@@ -30,6 +30,15 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('PostSponsors');
+    try {
+      await queryInterface.dropTable('PostSponsors');
+    } catch (e) {
+      // Nëse nuk ke leje ose tabela nuk ekziston, vazhdo
+    }
+    try {
+      await queryInterface.dropTable('Sponsors');
+    } catch (e) {
+      // Nëse nuk ke leje ose tabela nuk ekziston, vazhdo
+    }
   },
 };
