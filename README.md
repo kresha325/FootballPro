@@ -1,3 +1,4 @@
+# [Jan 2026] Deployment update: removed duplicate migration for publicId in Video table.
 # Stripe API Key Development Note
 
 Aktualisht, backend-i është i konfiguruar që të përdorë një çelës dummy për Stripe (`sk_test_dummy`) nëse variabla e ambientit `STRIPE_SECRET_KEY` nuk është e vendosur. Kjo lejon që serveri të startojë edhe pa një çelës të vërtetë Stripe, por funksionalitetet që lidhen me pagesat nuk do të funksionojnë realisht pa një çelës valid.
