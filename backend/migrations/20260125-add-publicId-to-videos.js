@@ -8,4 +8,5 @@ module.exports = {
   async down (queryInterface, Sequelize) {
     // No revert needed
   }
+};
 
