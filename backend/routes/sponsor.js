@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const sponsorController = require('../controllers/sponsor');
-const sponsorUpload = require('../middleware/sponsorUpload');
+const uploadCloud = require('../middleware/uploadCloudinary');
 
 
 // GET all sponsors (public)
@@ -12,7 +12,7 @@ router.get('/all', sponsorController.getAllSponsors);
 router.get('/user/:userId', sponsorController.getSponsorsByUser);
 
 // POST create sponsor (with image upload)
-router.post('/', sponsorUpload.single('image'), sponsorController.createSponsor);
+router.post('/', uploadCloud.fields([{ name: 'image', maxCount: 1 }]), sponsorController.createSponsor);
 
 // PUT update sponsor
 router.put('/:id', sponsorController.updateSponsor);

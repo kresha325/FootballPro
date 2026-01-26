@@ -29,15 +29,12 @@ exports.getActiveAds = async (req, res) => {
 // POST create ad
 exports.createAd = async (req, res) => {
   try {
-    const { title, text, color, days } = req.body;
+    const { title, text, color, days, image } = req.body;
     if (!title || !text || !days) return res.status(400).json({ error: 'Missing fields' });
     const now = new Date();
     const startDate = now; // fillon nga momenti i krijimit
     const endDate = new Date(startDate.getTime() + Number(days) * 24 * 60 * 60 * 1000);
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
-    }
+    const imageUrl = image || null; // URL cloudinary nëse është ngarkuar
     const ad = await Ad.create({
       title,
       text,

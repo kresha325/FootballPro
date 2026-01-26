@@ -43,15 +43,9 @@ exports.getSponsorsByUser = async (req, res) => {
 
 // POST create sponsor for a user (with file upload)
 exports.createSponsor = async (req, res) => {
-  console.log('BODY:', req.body);
-  console.log('FILE:', req.file);
   try {
-    const { userId, name, link, startDate, endDate } = req.body;
-    let image = null;
-    if (req.file) {
-      // Save relative path for frontend access
-      image = `/uploads/${req.file.filename}`;
-    }
+    const { userId, name, link, startDate, endDate, image } = req.body;
+    // image tani është URL cloudinary nëse është ngarkuar
     const sponsor = await Sponsor.create({ userId, name, link, image, startDate, endDate });
     res.status(201).json(sponsor);
   } catch (err) {
