@@ -19,6 +19,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const [remoteStream, setRemoteStream] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
   const [callStatus, setCallStatus] = useState('idle'); // idle, calling, ringing, connected, ended
+  const [loading, setLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
@@ -384,6 +385,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   };
 
   const startCall = async () => {
+    setLoading(true);
     if (!socket || !connected) {
       alert('Socket not connected. Please wait and try again.');
       return;
@@ -392,13 +394,16 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
     try {
       setCallStatus('calling');
+      // Lejo UI të rifreskohet para operacionit të rëndë
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const stream = localStream || await startLocalStream();
       if (!stream) {
         setCallStatus('idle');
+        setLoading(false);
         return;
       }
-      
+
       // Create backend call record
       const response = await API.post('/video-calls/start', {
         receiverId: targetUser.id,
@@ -423,11 +428,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       });
 
       setCallStatus('ringing');
-      
+      setLoading(false);
     } catch (error) {
       console.error('Error starting call:', error);
       alert('Failed to start call: ' + error.message);
       setCallStatus('idle');
+      setLoading(false);
     }
   };
 
@@ -494,6 +500,11 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+        </div>
+      )}
       {/* Remote Video (Full Screen) */}
       <div className="flex-1 relative bg-black">
         <audio ref={remoteAudioRef} autoPlay playsInline />
