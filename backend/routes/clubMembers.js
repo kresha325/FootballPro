@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, param, query, validationResult } = require('express-validator');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const ClubMember = require('../models/ClubMember');
@@ -45,6 +46,12 @@ const hydrateAgeGroup = async (membership) => {
 
 // Get club members (for club profile)
 router.get('/club/:clubId', async (req, res) => {
+    await param('clubId').isInt({ min: 1 }).run(req);
+    await query('status').optional().isIn(['pending', 'approved', 'rejected']).run(req);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   try {
     const { clubId } = req.params;
     const { status } = req.query; // pending, approved, rejected
@@ -131,6 +138,11 @@ router.get('/club/:clubId', async (req, res) => {
 
 // Get athlete's club memberships
 router.get('/athlete/:athleteId', protect, async (req, res) => {
+    await param('athleteId').isInt({ min: 1 }).run(req);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   try {
     const { athleteId } = req.params;
 
@@ -159,6 +171,14 @@ router.get('/athlete/:athleteId', protect, async (req, res) => {
 
 // Request to join club (automatically when athlete selects club)
 router.post('/request', protect, async (req, res) => {
+    await body('clubId').optional().isInt({ min: 1 }).run(req);
+    await body('clubName').isString().trim().notEmpty().run(req);
+    await body('position').optional().isString().trim().escape().run(req);
+    await body('jerseyNumber').optional().isInt({ min: 1, max: 99 }).run(req);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   try {
     const { clubId, clubName, position, jerseyNumber } = req.body;
 
@@ -268,6 +288,12 @@ router.post('/request', protect, async (req, res) => {
 
 // Approve/Reject membership (club owners only)
 router.put('/:membershipId/status', protect, async (req, res) => {
+    await param('membershipId').isInt({ min: 1 }).run(req);
+    await body('status').isIn(['approved', 'rejected']).run(req);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   try {
     const { membershipId } = req.params;
     const { status } = req.body; // 'approved' or 'rejected'

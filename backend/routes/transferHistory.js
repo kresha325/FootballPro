@@ -1,5 +1,6 @@
 console.log('[TransferHistory] Route file loaded');
 const express = require('express');
+const { body, param, validationResult } = require('express-validator');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const TransferHistory = require('../models/TransferHistory');
@@ -73,9 +74,21 @@ router.get('/club/:clubName', async (req, res) => {
 
 // Add transfer record
 router.post('/', protect, async (req, res) => {
+  await body('transferType').isString().trim().notEmpty().run(req);
+  await body('fromClub').isString().trim().notEmpty().run(req);
+  await body('toClub').isString().trim().notEmpty().run(req);
+  await body('position').optional().isString().trim().run(req);
+  await body('season').optional().isString().trim().run(req);
+  await body('transferDate').optional().isISO8601().toDate().run(req);
+  await body('transferFee').optional().isNumeric().run(req);
+  await body('contractUntil').optional().isISO8601().toDate().run(req);
+  await body('notes').optional().isString().trim().run(req);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   try {
     const { transferType, fromClub, toClub, position, season, transferDate, transferFee, contractUntil, notes } = req.body;
-
     const transfer = await TransferHistory.create({
       userId: req.user.id,
       transferType,
@@ -88,7 +101,6 @@ router.post('/', protect, async (req, res) => {
       contractUntil,
       notes,
     });
-
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Add transfer error:', error);
@@ -98,18 +110,29 @@ router.post('/', protect, async (req, res) => {
 
 // Update transfer record
 router.put('/:transferId', protect, async (req, res) => {
+  await param('transferId').isInt({ min: 1 }).run(req);
+  await body('transferType').optional().isString().trim().run(req);
+  await body('fromClub').optional().isString().trim().run(req);
+  await body('toClub').optional().isString().trim().run(req);
+  await body('position').optional().isString().trim().run(req);
+  await body('season').optional().isString().trim().run(req);
+  await body('transferDate').optional().isISO8601().toDate().run(req);
+  await body('transferFee').optional().isNumeric().run(req);
+  await body('contractUntil').optional().isISO8601().toDate().run(req);
+  await body('notes').optional().isString().trim().run(req);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   try {
     const { transferId } = req.params;
     const transfer = await TransferHistory.findByPk(transferId);
-
     if (!transfer) {
       return res.status(404).json({ msg: 'Transfer record not found' });
     }
-
     if (transfer.userId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ msg: 'Not authorized' });
     }
-
     await transfer.update(req.body);
     res.json(transfer);
   } catch (error) {
@@ -120,18 +143,20 @@ router.put('/:transferId', protect, async (req, res) => {
 
 // Delete transfer record
 router.delete('/:transferId', protect, async (req, res) => {
+  await param('transferId').isInt({ min: 1 }).run(req);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
   try {
     const { transferId } = req.params;
     const transfer = await TransferHistory.findByPk(transferId);
-
     if (!transfer) {
       return res.status(404).json({ msg: 'Transfer record not found' });
     }
-
     if (transfer.userId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ msg: 'Not authorized' });
     }
-
     await transfer.destroy();
     res.json({ msg: 'Transfer record deleted' });
   } catch (error) {

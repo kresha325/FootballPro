@@ -12,6 +12,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
 const dotenv = require('dotenv');
 const http = require('http');
 const https = require('https');
@@ -46,6 +47,24 @@ const app = express();
 let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
+
+// Helmet for HTTP headers
+app.use(helmet());
+
+// Rate limiting (100 requests per 15 min per IP)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// XSS protection
+app.use(xss());
+
+// NoSQL/SQL injection protection
+app.use(mongoSanitize());
 
 // CORS configuration
 const allowedOrigin = process.env.CORS_ORIGIN || '*'; // Vendos URL-n e frontend-it në .env për prodhim
