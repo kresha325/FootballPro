@@ -67,7 +67,7 @@ app.use(xss());
 app.use(mongoSanitize());
 
 // CORS configuration
-const allowedOrigin = process.env.CORS_ORIGIN || '*'; // Vendos URL-n e frontend-it në .env për prodhim
+const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com'; // Vendos URL-n e frontend-it në .env për prodhim
 const allowedOrigins = allowedOrigin === '*'
   ? '*'
   : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
