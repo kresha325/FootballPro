@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { applyBackgroundStyle } from '../utils/applyBackgroundStyle';
+// Hiq importin e applyBackgroundStyle
 import { useAuth } from '../contexts/AuthContext';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 
 const Settings = () => {
-  // Heq kodin e background-it, mbetet vetëm darkMode, notifications, profile
+  // Hiq kodin e background-it, mbetet vetëm darkMode, notifications, profile
   const { user } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(false);

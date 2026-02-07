@@ -1,3 +1,14 @@
+// Middleware për të vendosur header-in CORS për të gjitha endpointet
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Debug: Log Match model attributes and associations at startup
 const db = require('./models');

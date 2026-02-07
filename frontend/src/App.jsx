@@ -37,48 +37,14 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 import { useEffect, useState } from 'react';
-import { applyBackgroundStyle } from './utils/applyBackgroundStyle';
+// Hiq importin e applyBackgroundStyle
 function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  // Track background state to force re-render on change
-  const [bgVersion, setBgVersion] = useState(0);
-
-  // Listen for custom event from Settings to force background update
-  useEffect(() => {
-    const onBgChange = () => setBgVersion(version => version + 1);
-    window.addEventListener('platformBgChanged', onBgChange);
-    return () => window.removeEventListener('platformBgChanged', onBgChange);
-  }, []);
-
+  // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
     document.title = 'FootballPro';
   }, []);
-
-  // Global background effect: always apply background from localStorage
-  useEffect(() => {
-    const applyBg = () => {
-      const bgColor = localStorage.getItem('platformBgColor');
-      const bgImage = localStorage.getItem('platformBgImage');
-      applyBackgroundStyle(bgColor, bgImage);
-    };
-    applyBg();
-    // Listen for localStorage changes (cross-tab)
-    const onStorage = (e) => {
-      if (e.key === 'platformBgColor' || e.key === 'platformBgImage') {
-        setBgVersion(version => version + 1);
-        applyBg();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [location.pathname]);
-  // Also re-apply when bgVersion changes (local change)
-  useEffect(() => {
-    const bgColor = localStorage.getItem('platformBgColor');
-    const bgImage = localStorage.getItem('platformBgImage');
-    applyBackgroundStyle(bgColor, bgImage);
-  }, [bgVersion]);
 
   if (loading) {
     return (
