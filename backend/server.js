@@ -48,6 +48,12 @@ let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
 
+// Shto header-in CORS për /uploads
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
+  next();
+});
+
 // Helmet for HTTP headers
 app.use(helmet());
 
@@ -105,6 +111,7 @@ app.use('/uploads', (req, res) => {
     'base64'
   );
   res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
   res.status(200).send(placeholder);
 });
 
