@@ -74,12 +74,6 @@ const { VideoCallHistory } = require('./models');
 
 const sequelize = require('./config/database');
 
-
-const app = express();
-let server = http.createServer(app);
-let io;
-const PORT = process.env.PORT || 10000;
-
 // Shto header-in CORS për /uploads
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
