@@ -243,8 +243,8 @@ exports.getDashboardAnalytics = async (req, res) => {
 
     // Statistikat kryesore
     const totalPosts = await Post.count({ where: { userId } });
-    const totalFollowers = await Subscription.count({ where: { subscribedToId: userId } });
-    const totalFollowing = await Subscription.count({ where: { subscriberId: userId } });
+    const totalFollowers = await Follow.count({ where: { followingId: userId, status: 'accepted' } });
+    const totalFollowing = await Follow.count({ where: { followerId: userId, status: 'accepted' } });
 
     // Merr id-të e postimeve të userit
     const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });

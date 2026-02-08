@@ -1,4 +1,4 @@
-            {/* JonCoin Wallet */}
+{/* JonCoin Wallet */}
             <Link 
               to="/wallet" 
               onClick={() => setIsMenuOpen(false)}
@@ -32,6 +32,10 @@ function Navbar() {
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0); // notifications
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [liveTitle, setLiveTitle] = useState('');
+  const [liveDescription, setLiveDescription] = useState('');
+  const [liveIsPublic, setLiveIsPublic] = useState(false);
 
 
   useEffect(() => {
@@ -52,6 +56,13 @@ function Navbar() {
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
+  };
+
+  const handleStartLiveStream = async (e) => {
+    e.preventDefault();
+    // Logika për të filluar live stream
+    console.log('Starting live stream with data:', { liveTitle, liveDescription, liveIsPublic });
+    setShowLiveModal(false);
   };
 
 
@@ -276,6 +287,42 @@ function Navbar() {
           className="fixed inset-0 top-16 bg-black/50 z-40"
           onClick={() => setIsMenuOpen(false)}
         ></div>
+      )}
+
+      {/* Go Live në navbar */}
+      {user && (
+        <button
+          onClick={() => setShowLiveModal(true)}
+          className="flex items-center gap-3 p-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors mt-2 w-full"
+        >
+          <span className="text-2xl">🔴</span>
+          <span className="font-medium">Go Live</span>
+        </button>
+      )}
+
+      {/* Modal për live stream */}
+      {user && showLiveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Start Live Stream</h2>
+            <form onSubmit={handleStartLiveStream}>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input type="text" value={liveTitle} onChange={e => setLiveTitle(e.target.value)} required className="w-full px-3 py-2 border rounded" />
+              </div>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea value={liveDescription} onChange={e => setLiveDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              </div>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Public</label>
+                <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
+              </div>
+              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
+              <button type="button" onClick={() => setShowLiveModal(false)} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
+            </form>
+          </div>
+        </div>
       )}
     </nav>
   );

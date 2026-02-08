@@ -15,6 +15,11 @@ const Notifications = () => {
     fetchUnreadCount();
   }, []);
 
+  // Rifresko njoftimet sa herë që ndryshon unreadCount
+  useEffect(() => {
+    fetchNotifications();
+  }, [unreadCount]);
+
   const fetchNotifications = async () => {
     try {
       const response = await notificationsAPI.getNotifications();

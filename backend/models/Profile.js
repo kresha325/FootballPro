@@ -51,6 +51,10 @@ const Profile = sequelize.define('Profile', {
     ),
     allowNull: true,
   },
+  liveVideos: {
+    type: DataTypes.JSON, // [{ url, title, thumbnail, duration, date }]
+    defaultValue: [],
+  },
 });
 
 Profile.belongsTo(User, { foreignKey: 'userId' });

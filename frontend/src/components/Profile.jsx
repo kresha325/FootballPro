@@ -1,4 +1,4 @@
-  // Fshi item nga galeria
+// Fshi item nga galeria
   const handleDeleteGalleryItem = async (itemId, e) => {
     e?.stopPropagation && e.stopPropagation();
     if (!window.confirm('A jeni i sigurt që doni ta fshini këtë media?')) return;
@@ -50,6 +50,184 @@ import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 
+// Komponenti Chat Live për modalin e stream-it
+function LiveStreamChat({ streamId, userId }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+
+  useEffect(() => {
+    // Fetch messages
+    fetch(`/api/live-chat/${streamId}`)
+      .then(res => res.json())
+      .then(setMessages);
+    // Optional: Polling for new messages every 2s
+    const interval = setInterval(() => {
+      fetch(`/api/live-chat/${streamId}`)
+        .then(res => res.json())
+        .then(setMessages);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [streamId]);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+    fetch('/api/live-chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ streamId, userId, message: input })
+    })
+      .then(res => res.json())
+      .then(() => {
+        setInput('');
+        fetch(`/api/live-chat/${streamId}`)
+          .then(res => res.json())
+          .then(setMessages);
+      });
+  };
+
+  return (
+    <div style={{ border: '1px solid #ccc', borderRadius: 8, padding: 8, maxHeight: 300, overflowY: 'auto', background: '#fff' }}>
+      <div style={{ marginBottom: 8, fontWeight: 'bold' }}>Chat Live</div>
+      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+        {messages.map(msg => (
+          <div key={msg.id} style={{ marginBottom: 4 }}>
+            <span style={{ fontWeight: 'bold' }}>{msg.userId}:</span> {msg.message}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', marginTop: 8 }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Shkruaj mesazhin..."
+          style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+        />
+        <button
+          onClick={sendMessage}
+          style={{ marginLeft: 8, padding: '6px 12px', background: '#007bff', color: '#fff', border: 'none', borderRadius: 4 }}
+        >
+          Dërgo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Komponenti Reactions/Emoji për modalin e stream-it
+function LiveStreamReactions({ streamId, userId }) {
+  const emojis = ['👍', '❤️', '😂', '🔥', '👏'];
+  const [reactions, setReactions] = useState([]);
+
+  useEffect(() => {
+    fetch(`/api/live-reaction/${streamId}`)
+      .then(res => res.json())
+      .then(setReactions);
+    const interval = setInterval(() => {
+      fetch(`/api/live-reaction/${streamId}`)
+        .then(res => res.json())
+        .then(setReactions);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [streamId]);
+
+  const sendReaction = emoji => {
+    fetch('/api/live-reaction/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ streamId, userId, emoji })
+    })
+      .then(res => res.json())
+      .then(() => {
+        fetch(`/api/live-reaction/${streamId}`)
+          .then(res => res.json())
+          .then(setReactions);
+      });
+  };
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontWeight: 'bold', marginBottom: 6 }}>Reactions</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        {emojis.map(emoji => (
+          <button
+            key={emoji}
+            onClick={() => sendReaction(emoji)}
+            style={{ fontSize: 22, padding: '4px 10px', border: 'none', background: '#f0f0f0', borderRadius: 6, cursor: 'pointer' }}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+      <div style={{ maxHeight: 60, overflowY: 'auto', fontSize: 16 }}>
+        {reactions.slice(-10).map((r, idx) => (
+          <span key={idx} style={{ marginRight: 6 }}>{r.emoji}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Komponenti Invite Guests për modalin e stream-it
+function LiveStreamGuests({ streamId, userId }) {
+  const [guests, setGuests] = useState([]);
+  const [inviteId, setInviteId] = useState('');
+
+  useEffect(() => {
+    fetch(`/api/live-stream-guest/${streamId}`)
+      .then(res => res.json())
+      .then(setGuests);
+    const interval = setInterval(() => {
+      fetch(`/api/live-stream-guest/${streamId}`)
+        .then(res => res.json())
+        .then(setGuests);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [streamId]);
+
+  const inviteGuest = () => {
+    if (!inviteId.trim()) return;
+    fetch('/api/live-stream-guest/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ streamId, userId: inviteId, invitedBy: userId })
+    })
+      .then(res => res.json())
+      .then(() => {
+        setInviteId('');
+        fetch(`/api/live-stream-guest/${streamId}`)
+          .then(res => res.json())
+          .then(setGuests);
+      });
+  };
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontWeight: 'bold', marginBottom: 6 }}>Fto Guests</div>
+      <div style={{ display: 'flex', marginBottom: 8 }}>
+        <input
+          value={inviteId}
+          onChange={e => setInviteId(e.target.value)}
+          placeholder="ID e userit për ftesë"
+          style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+        />
+        <button
+          onClick={inviteGuest}
+          style={{ marginLeft: 8, padding: '6px 12px', background: '#28a745', color: '#fff', border: 'none', borderRadius: 4 }}
+        >
+          Fto
+        </button>
+      </div>
+      <div style={{ maxHeight: 80, overflowY: 'auto', fontSize: 15 }}>
+        {guests.map(g => (
+          <div key={g.id} style={{ marginBottom: 4 }}>
+            <span style={{ fontWeight: 'bold' }}>{g.userId}</span> - {g.status}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
     // const [streamsLoading, setStreamsLoading] = useState(true);
@@ -88,6 +266,10 @@ const Profile = () => {
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentInputs, setCommentInputs] = useState({});
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [liveTitle, setLiveTitle] = useState('');
+  const [liveDescription, setLiveDescription] = useState('');
+  const [liveIsPublic, setLiveIsPublic] = useState(false);
   const [stats, setStats] = useState({
     posts: 0,
     followers: 0,
@@ -545,7 +727,19 @@ const Profile = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-8 md:mt-4">
+            <div className="mt-8 md:mt-4 flex gap-2">
+              {isOwner && (
+                <button
+                  onClick={() => setShowLiveModal(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                  Go Live
+                </button>
+              )}
+              {/* Butoni Edit Profile */}
               {isOwner ? (
                 <button
                   onClick={() => setEditOpen(true)}
@@ -890,6 +1084,24 @@ const Profile = () => {
 
             {activeTab === 'videos' && (
               <div>
+                {/* Videot e ruajtura live */}
+                {profile?.liveVideos?.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold mb-2">Live Videos</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {profile.liveVideos.map((video, idx) => (
+                        <div key={idx} className="bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden shadow">
+                          <video src={getFullUrl(video.url)} controls poster={getFullUrl(video.thumbnail)} className="w-full h-auto" />
+                          <div className="p-3">
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{video.title}</h4>
+                            <span className="text-xs text-gray-500">{video.duration} min</span>
+                            <span className="block text-xs text-gray-400 mt-1">{new Date(video.date).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Videos userId={id} onlyUserVideos />
               </div>
             )}
@@ -1120,9 +1332,6 @@ const Profile = () => {
         </div>
       </div>
 
-    </div>
-  </div>
-
       {/* Gallery Image Modal */}
       {selectedGalleryImage && (
         <div 
@@ -1211,6 +1420,52 @@ const Profile = () => {
           >
             ×
           </button>
+        </div>
+      )}
+
+      {/* Modal për live stream */}
+      {isOwner && showLiveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Start Live Stream</h2>
+            <form onSubmit={handleStartLiveStream}>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input type="text" value={liveTitle} onChange={e => setLiveTitle(e.target.value)} required className="w-full px-3 py-2 border rounded" />
+              </div>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea value={liveDescription} onChange={e => setLiveDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              </div>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Public</label>
+                <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
+              </div>
+              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
+              <button type="button" onClick={() => setShowLiveModal(false)} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
+            </form>
+
+            {/* Share Link */}
+            <button
+              onClick={() => {
+                const link = getLiveStreamShareLink(liveStreamId);
+                navigator.clipboard.writeText(link);
+                alert('Linku u kopjua!');
+              }}
+              style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '4px' }}
+            >
+              Kopjo Linkun e Stream-it
+            </button>
+
+            {/* Chat Live */}
+            <LiveStreamChat streamId={liveStreamId} userId={userId} />
+
+            {/* Reactions/Emoji */}
+            <LiveStreamReactions streamId={liveStreamId} userId={userId} />
+
+            {/* Invite Guests */}
+            <LiveStreamGuests streamId={liveStreamId} userId={userId} />
+          </div>
         </div>
       )}
 

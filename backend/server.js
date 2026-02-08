@@ -1,3 +1,24 @@
+// ...existing code...
+
+const express = require('express');
+const cors = require('cors');
+const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
+const dotenv = require('dotenv');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const socketIo = require('socket.io');
+const passport = require('./config/passport');
+const morgan = require('morgan');
+// const sequelize = require('./config/database');
+
+dotenv.config();
+
+const app = express();
+let server = http.createServer(app);
+let io;
+const PORT = process.env.PORT || 10000;
+
 // Middleware për të vendosur header-in CORS për të gjitha endpointet
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
@@ -148,7 +169,6 @@ app.use('/api/scouting', require('./routes/scouting'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/video-calls', require('./routes/videoCalls'));
-// ...existing code...
 app.use('/api/videos', require('./routes/videos'));
 app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/matches', require('./routes/matches'));
@@ -158,6 +178,16 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 
 app.use('/api/football', require('./routes/football'));
+app.use('/api/live-chat', require('./routes/liveChat'));
+app.use('/api/live-reaction', require('./routes/liveReaction'));
+app.use('/api/live-stream-guest', require('./routes/liveStreamGuest'));
+app.use('/api/live-stream-analytics', require('./routes/liveStreamAnalytics'));
+app.use('/api/live-chat-moderation', require('./routes/liveChatModeration'));
+app.use('/api/live-stream-notification', require('./routes/liveStreamNotification'));
+app.use('/api/live-donation', require('./routes/liveDonation'));
+app.use('/api/scheduled-live-stream', require('./routes/scheduledLiveStream'));
+app.use('/api/live-stream-replay', require('./routes/liveStreamReplay'));
+app.use('/api/live-chat', require('./routes/liveChat'));
 app.use('/api/club-members', require('./routes/clubMembers'));
 app.use('/api/club-roster', require('./routes/clubRoster'));
 app.use('/api/transfer-history', require('./routes/transferHistory'));
