@@ -2,13 +2,19 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Users', 'joncoinBalance', {
-      type: Sequelize.DECIMAL(12,2),
-      allowNull: false,
-      defaultValue: 0
-    });
+    const table = await queryInterface.describeTable('Users');
+    if (!table.joncoinBalance) {
+      await queryInterface.addColumn('Users', 'joncoinBalance', {
+        type: Sequelize.DECIMAL(12,2),
+        allowNull: false,
+        defaultValue: 0
+      });
+    }
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('Users', 'joncoinBalance');
+    const table = await queryInterface.describeTable('Users');
+    if (table.joncoinBalance) {
+      await queryInterface.removeColumn('Users', 'joncoinBalance');
+    }
   }
 };
