@@ -23,17 +23,23 @@ export const SocketProvider = ({ children }) => {
     }
 
 
-    const socketUrl = BACKEND_URL;
+    // Prefer explicit backend URL from env; fallback to BACKEND_URL
+    const socketUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/i, '')
+      : BACKEND_URL;
     console.log('🔗 Connecting to Socket.IO:', socketUrl);
 
+    // Use polling-first transport to improve reliability behind some proxies/load-balancers
     const newSocket = io(socketUrl, {
       auth: {
         userId: user.id,
       },
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+      reconnectionAttempts: 10,
+      transports: ['polling', 'websocket'], // try polling first, then upgrade
+      path: '/socket.io',
+      withCredentials: true,
     });
 
     newSocket.on('connect', () => {
