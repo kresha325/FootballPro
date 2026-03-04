@@ -84,7 +84,15 @@ const limiter = rateLimit({
     res.status(429).json({ msg: 'Too many requests, please try again later.' });
   }
 });
-app.use(limiter);
+
+// Allow disabling the global rate limiter via env var for platforms where you
+// control access differently (e.g. Render). Set RATE_LIMIT_ENABLED=false to disable.
+const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false';
+if (rateLimitEnabled) {
+  app.use(limiter);
+} else {
+  console.log('Rate limiting disabled (RATE_LIMIT_ENABLED=false) - global limiter not applied.');
+}
 
 // XSS protection
 app.use(xss());
