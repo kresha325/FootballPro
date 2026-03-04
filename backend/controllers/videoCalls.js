@@ -9,6 +9,19 @@ exports.createVideoCall = async (req, res) => {
   try {
     const { participantId, scheduledCallId } = req.body;
 
+    // If there's already an active call between these users, return it instead of creating duplicate
+    const existing = await VideoCall.findOne({
+      where: {
+        callerId: req.user.id,
+        receiverId: participantId,
+        status: { [Op.in]: ['ringing', 'connected'] },
+      },
+    });
+
+    if (existing) {
+      return res.json(existing);
+    }
+
     const videoCall = await VideoCall.create({
       callerId: req.user.id,
       receiverId: participantId,
@@ -35,6 +48,21 @@ exports.createVideoCall = async (req, res) => {
 exports.startCall = async (req, res) => {
   const { receiverId } = req.body;
   try {
+    // Avoid duplicate calls
+    const existing = await VideoCall.findOne({
+      where: {
+        callerId: req.user.id,
+        receiverId,
+        status: { [Op.in]: ['ringing', 'connected'] },
+      },
+    });
+
+    if (existing) {
+      // notify and return existing
+      await sendNotification(receiverId, 'Incoming Call', `You have an incoming call from ${req.user.firstName}`, { type: 'call', callId: existing.id });
+      return res.json(existing);
+    }
+
     const call = await VideoCall.create({
       callerId: req.user.id,
       receiverId,

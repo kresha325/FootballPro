@@ -209,6 +209,8 @@ app.get('/', (req, res) => {
 // Store user socket mappings
 const userSockets = new Map(); // userId -> socketId
 
+const VideoCall = require('./models/VideoCall');
+
 io.on('connection', (socket) => {
     // Multi-user call: join room and log call start
     socket.on('call:join-room', async (data) => {
@@ -315,12 +317,29 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:answer', (data) => {
-    const { to, answer } = data;
-    console.log(`✅ Call answer from user ${socket.userId} to user ${to}`);
-    io.to(String(to)).emit('call:answered', {
-      from: socket.userId,
-      answer,
-    });
+    (async () => {
+      const { to, answer, callId } = data;
+      console.log(`✅ Call answer from user ${socket.userId} to user ${to}`);
+      io.to(String(to)).emit('call:answered', {
+        from: socket.userId,
+        answer,
+        callId,
+      });
+
+      // If a callId was provided, mark the VideoCall as connected
+      if (callId) {
+        try {
+          const vc = await VideoCall.findByPk(callId);
+          if (vc) {
+            vc.status = 'connected';
+            vc.connectedAt = new Date();
+            await vc.save();
+          }
+        } catch (e) {
+          console.warn('Failed to update VideoCall on answer:', e.message);
+        }
+      }
+    })();
   });
 
   socket.on('call:ice-candidate', (data) => {
