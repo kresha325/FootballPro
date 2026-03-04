@@ -28,10 +28,10 @@ exports.getPosts = async (req, res) => {
     const Profile = require('../models/Profile');
     const Like = require('../models/Like');
     const Comment = require('../models/Comment');
-    
+
     const Sponsor = require('../models/Sponsor');
     const PostSponsor = require('../models/PostSponsor');
-    const posts = await Post.findAll({ 
+    const posts = await Post.findAll({
       include: [
         { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
         { model: Sponsor, through: { attributes: [] } }
