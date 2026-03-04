@@ -49,6 +49,12 @@ function Navbar() {
     }
   }, [user]);
 
+  // Allow other components to open the Go Live modal via a window event
+  useEffect(() => {
+    const openHandler = () => setShowLiveModal(true);
+    window.addEventListener('open-live-modal', openHandler);
+    return () => window.removeEventListener('open-live-modal', openHandler);
+  }, []);
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();

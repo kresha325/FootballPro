@@ -52,6 +52,17 @@ function BottomNav() {
           <span className="text-xs md:hidden">Cups</span>
         </NavLink>
 
+        {user && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-live-modal'))}
+            className={`flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 text-red-600`}
+            aria-label="Go Live"
+          >
+            <span className="text-2xl">🔴</span>
+            <span className="text-xs md:hidden">Live</span>
+          </button>
+        )}
+
 
 
         <NavLink
