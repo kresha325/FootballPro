@@ -14,6 +14,10 @@ const morgan = require('morgan');
 
 dotenv.config();
 
+// When behind a proxy (Render, Heroku, etc.) trust the proxy so req.ip is correct
+// This avoids many clients appearing to come from the same IP and hitting the rate limiter
+app.set('trust proxy', 1);
+
 const app = express();
 let server = http.createServer(app);
 let io;
@@ -67,12 +71,18 @@ app.use('/uploads', (req, res, next) => {
 // Helmet for HTTP headers
 app.use(helmet());
 
-// Rate limiting (100 requests per 15 min per IP)
+// Rate limiting (per IP). Note: behind proxies (Render) set `trust proxy` above
+// Increased default to reduce false-positives on shared IP hosts; consider using a
+// centralized store (Redis) for multi-instance deployments.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    console.warn(`Rate limit exceeded for IP ${req.ip} on ${req.originalUrl}`);
+    res.status(429).json({ msg: 'Too many requests, please try again later.' });
+  }
 });
 app.use(limiter);
 
