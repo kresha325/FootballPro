@@ -295,16 +295,7 @@ function Navbar() {
         ></div>
       )}
 
-      {/* Go Live në navbar */}
-      {user && (
-        <button
-          onClick={() => setShowLiveModal(true)}
-          className="flex items-center gap-3 p-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors mt-2 w-full"
-        >
-          <span className="text-2xl">🔴</span>
-          <span className="font-medium">Go Live</span>
-        </button>
-      )}
+      {/* Go Live button removed from top navbar — use BottomNav button instead */}
 
       {/* Modal për live stream */}
       {user && showLiveModal && (
