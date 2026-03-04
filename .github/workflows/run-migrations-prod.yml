@@ -24,7 +24,8 @@ jobs:
         run: |
           npm ci
 
-      - name: Verify required secrets
+      - name: Verify required secrets (optional)
+        id: verify_secrets
         working-directory: backend
         env:
           PROD_PGHOST: ${{ secrets.PROD_PGHOST }}
@@ -38,16 +39,19 @@ jobs:
           missing=0
           for v in PROD_PGHOST PROD_PGUSER PROD_PGPASSWORD PROD_PGDATABASE PROD_PGPORT FOOTBALLPRO_API_URL; do
             if [ -z "${!v}" ]; then
-              echo "ERROR: required secret $v is not set. Please add it in Settings -> Secrets -> Actions." >&2
+              echo "Missing: $v"
               missing=1
             fi
           done
           if [ "$missing" -eq 1 ]; then
-            echo "One or more required secrets are missing. Aborting." >&2
-            exit 1
+            echo "have_secrets=false" >> $GITHUB_OUTPUT
+            echo "One or more required GitHub secrets are missing; skipping migrations. If you manage DB on Render, run migrations there or add secrets to GitHub." >&2
+          else
+            echo "have_secrets=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Run Sequelize migrations
+        if: ${{ steps.verify_secrets.outputs.have_secrets == 'true' }}
         working-directory: backend
         env:
           PGHOST: ${{ secrets.PROD_PGHOST }}
@@ -60,12 +64,19 @@ jobs:
           npx sequelize-cli db:migrate --env production
 
       - name: Backend health check
+        if: ${{ steps.verify_secrets.outputs.have_secrets == 'true' }}
         env:
           FOOTBALLPRO_API_URL: ${{ secrets.FOOTBALLPRO_API_URL }}
         run: |
           set -e
           echo "Checking backend health at $FOOTBALLPRO_API_URL/health"
           curl -fsS "$FOOTBALLPRO_API_URL/health" || (echo 'Health check failed' && exit 1)
+
+      - name: Info when skipping migrations
+        if: ${{ steps.verify_secrets.outputs.have_secrets == 'false' }}
+        run: |
+          echo "GitHub Secrets for direct DB access are not set. Migrations and health check were skipped."
+          echo "If you manage the database on Render, trigger migrations there (SSH/Deploy hook) or add the required GitHub Secrets to run them from Actions."
 
       - name: Notify success
         if: success()
