@@ -43,7 +43,8 @@ exports.getPosts = async (req, res) => {
       const likesCount = await Like.count({ where: { postId: post.id } });
       const commentsCount = await Comment.count({ where: { postId: post.id } });
       const userLiked = req.user ? await Like.findOne({ 
-        where: { postId: post.id, userId: req.user.id } 
+        where: { postId: post.id, userId: req.user.id },
+        attributes: ['id','userId','postId','createdAt','updatedAt']
       }) : null;
       // Get sponsors linked to this post
       const postSponsors = post.Sponsors || [];
@@ -114,7 +115,8 @@ exports.getUserPosts = async (req, res) => {
       const likesCount = await Like.count({ where: { postId: post.id } });
       const commentsCount = await Comment.count({ where: { postId: post.id } });
       const userLiked = req.user ? await Like.findOne({ 
-        where: { postId: post.id, userId: req.user.id } 
+        where: { postId: post.id, userId: req.user.id },
+        attributes: ['id','userId','postId','createdAt','updatedAt']
       }) : null;
       // Get sponsors linked to this post
       const sponsors = post.Sponsors || [];
