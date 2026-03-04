@@ -275,7 +275,8 @@ exports.createPost = async (req, res) => {
         console.log('⚠️ Could not parse mentions:', e.message);
       }
     }
-    
+    console.log('ℹ️ Computed imageUrl, videoUrl before create:', { imageUrl, videoUrl });
+
     const post = await Post.create({
       userId: req.user.id,
       content: content || '',
@@ -286,6 +287,7 @@ exports.createPost = async (req, res) => {
       locationLng: locationLng || null,
       mentions: mentionsParsed,
     });
+    console.log('✅ Post created rows:', post && post.id ? post.id : null);
     // Shto ne gallery nese ka image ose video
     if (imageUrl) {
       await Gallery.create({
@@ -294,6 +296,7 @@ exports.createPost = async (req, res) => {
         type: 'photo',
         title: content ? content.substring(0, 100) : '',
       });
+      console.log('✅ Gallery item created for imageUrl:', imageUrl);
     } else if (videoUrl) {
       await Gallery.create({
         userId: req.user.id,
@@ -301,6 +304,7 @@ exports.createPost = async (req, res) => {
         type: 'video',
         title: content ? content.substring(0, 100) : '',
       });
+      console.log('✅ Gallery item created for videoUrl:', videoUrl);
     }
 
     console.log('✅ Post created:', post.id);
