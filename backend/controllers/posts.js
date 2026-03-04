@@ -59,7 +59,7 @@ exports.getPosts = async (req, res) => {
         if (req.user) {
           userLiked = await Like.findOne({ 
             where: { postId: post.id, userId: req.user.id },
-            attributes: ['id','userId','postId','createdAt','updatedAt']
+            attributes: ['id','userId','postId','createdAt']
           });
         }
       } catch (e) {
@@ -151,7 +151,7 @@ exports.getUserPosts = async (req, res) => {
         if (req.user) {
           userLiked = await Like.findOne({ 
             where: { postId: post.id, userId: req.user.id },
-            attributes: ['id','userId','postId','createdAt','updatedAt']
+            attributes: ['id','userId','postId','createdAt']
           });
         }
       } catch (e) {
