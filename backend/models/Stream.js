@@ -57,4 +57,4 @@ const Stream = sequelize.define('Stream', {
     defaultValue: DataTypes.NOW,
   },
 });
-module.exports = null; // Stream/livestream model removed
+module.exports = Stream;
