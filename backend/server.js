@@ -16,9 +16,10 @@ dotenv.config();
 
 // When behind a proxy (Render, Heroku, etc.) trust the proxy so req.ip is correct
 // This avoids many clients appearing to come from the same IP and hitting the rate limiter
-app.set('trust proxy', 1);
 
 const app = express();
+// trust proxy must be set after app is created
+app.set('trust proxy', 1);
 let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
