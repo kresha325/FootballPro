@@ -6,6 +6,18 @@ require('../config/passport');
 const { register, login, forgotPassword, resetPassword } = require('../controllers/auth');
 const auth = require('../middleware/auth');
 const User = require('../models/User');
+const rateLimit = require('express-rate-limit');
+
+// Lightweight in-memory cache for /me responses to reduce DB calls and avoid 429
+const meCache = new Map(); // key: userId, value: { user, expiry }
+const ME_CACHE_TTL = 5 * 1000; // 5 seconds
+
+const meLimiter = rateLimit({
+  windowMs: 15 * 1000, // 15s window
+  max: 20, // allow bursty requests but limit repeated hits
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * ============================
@@ -49,8 +61,14 @@ router.post('/reset-password', resetPassword);
  * GET /api/auth/me
  * ============================
  */
-router.get('/me', auth, async (req, res) => {
+router.get('/me', meLimiter, auth, async (req, res) => {
   try {
+    const cached = meCache.get(req.user.id);
+    const now = Date.now();
+    if (cached && cached.expiry > now) {
+      return res.json(cached.user);
+    }
+
     const user = await User.findByPk(req.user.id, {
       attributes: [
         'id',
@@ -69,6 +87,9 @@ router.get('/me', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
+
+    // cache for short time
+    meCache.set(req.user.id, { user, expiry: now + ME_CACHE_TTL });
 
     res.json(user);
   } catch (err) {
