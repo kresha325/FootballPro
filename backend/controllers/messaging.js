@@ -143,17 +143,39 @@ exports.getOrCreateConversation = async (req, res) => {
       }
     }
 
-    // Create new conversation
-    const newConversation = await Conversation.create({
-      isGroup: false,
-    });
+    // Create new conversation inside a transaction to avoid race conditions
+    let newConversation = null;
+    const t = await sequelize.transaction();
+    try {
+      newConversation = await Conversation.create({ isGroup: false }, { transaction: t });
 
-    await ConversationMember.bulkCreate([
-      { conversationId: newConversation.id, userId: req.user.id },
-      { conversationId: newConversation.id, userId: targetUserId },
-    ]);
+      await ConversationMember.bulkCreate([
+        { conversationId: newConversation.id, userId: req.user.id },
+        { conversationId: newConversation.id, userId: targetUserId },
+      ], { transaction: t });
 
-    res.json(newConversation);
+      await t.commit();
+
+      const fullConversation = await Conversation.findByPk(newConversation.id, {
+        include: [
+          { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
+          { model: User, as: 'members', attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } },
+        ],
+      });
+
+      return res.json(fullConversation);
+    } catch (txErr) {
+      await t.rollback();
+      // cleanup if partially created
+      try {
+        if (newConversation && newConversation.id) {
+          await Conversation.destroy({ where: { id: newConversation.id } });
+        }
+      } catch (cleanupErr) {
+        console.error('Cleanup after failed conversation create failed:', cleanupErr);
+      }
+      throw txErr;
+    }
   } catch (err) {
     console.error('Get or create conversation error:', err);
     console.error(err.stack);
