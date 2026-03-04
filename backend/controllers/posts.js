@@ -149,7 +149,7 @@ exports.getUserPosts = async (req, res) => {
       }
       try {
         if (req.user) {
-          userLiked = await Like.findOne({ 
+          userLiked = await Like.findOne({
             where: { postId: post.id, userId: req.user.id },
             attributes: ['id','userId','postId','createdAt']
           });
@@ -158,7 +158,6 @@ exports.getUserPosts = async (req, res) => {
         console.warn('Could not fetch user like for post', post.id, e.message);
         userLiked = null;
       }
-      }) : null;
       // Get sponsors linked to this post
       const sponsors = post.Sponsors || [];
       // Standardizo path-in për imazhe dhe video të postimeve
