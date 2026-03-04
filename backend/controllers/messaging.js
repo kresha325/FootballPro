@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { notifyMessage } = require('./notificationsController');
 const { sendEmail } = require('../services/emailService');
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 
@@ -127,7 +127,7 @@ exports.getOrCreateConversation = async (req, res) => {
     const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
     const convoMatches = await sequelize.query(sql, {
       replacements: { a: req.user.id, b: targetUserId },
-      type: sequelize.QueryTypes.SELECT,
+      type: QueryTypes.SELECT,
     });
 
     if (convoMatches && convoMatches.length > 0) {
