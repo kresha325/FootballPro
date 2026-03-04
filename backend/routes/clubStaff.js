@@ -10,8 +10,10 @@ router.get('/club/:clubId', async (req, res) => {
   try {
     const { clubId } = req.params;
     const { status, teamType } = req.query;
+    const numericClubId = parseInt(clubId);
+    if (isNaN(numericClubId)) return res.status(400).json({ msg: 'Invalid clubId' });
 
-    const where = { clubId: parseInt(clubId) };
+    const where = { clubId: numericClubId };
     if (status) where.status = status;
     if (teamType) where.teamType = teamType;
 
@@ -23,7 +25,7 @@ router.get('/club/:clubId', async (req, res) => {
           model: User,
           as: 'staff',
           attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
-          include: [{ model: Profile, as: 'Profile', attributes: ['profilePhoto', 'bio'] }]
+          include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
         }],
         order: [['createdAt', 'DESC']],
       });
