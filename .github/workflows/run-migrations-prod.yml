@@ -1,0 +1,49 @@
+name: Run production migrations
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  migrate:
+    name: Run migrations on production DB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          npm ci
+
+      - name: Run Sequelize migrations
+        working-directory: backend
+        env:
+          PGHOST: ${{ secrets.PROD_PGHOST }}
+          PGUSER: ${{ secrets.PROD_PGUSER }}
+          PGPASSWORD: ${{ secrets.PROD_PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PROD_PGDATABASE }}
+          PGPORT: ${{ secrets.PROD_PGPORT }}
+          NODE_ENV: production
+        run: |
+          npx sequelize-cli db:migrate --env production
+
+      - name: Backend health check
+        env:
+          FOOTBALLPRO_API_URL: ${{ secrets.FOOTBALLPRO_API_URL }}
+        run: |
+          set -e
+          echo "Checking backend health at $FOOTBALLPRO_API_URL/health"
+          curl -fsS "$FOOTBALLPRO_API_URL/health" || (echo 'Health check failed' && exit 1)
+
+      - name: Notify success
+        if: success()
+        run: echo "Migrations completed and health check OK"
