@@ -127,7 +127,8 @@ exports.getOrCreateConversation = async (req, res) => {
       where: { userId: { [Op.in]: [req.user.id, targetUserId] } },
       attributes: ['conversationId'],
       group: ['conversationId'],
-      having: sequelize.literal('COUNT(userId) = 2'),
+      // qualify column name in HAVING to avoid Postgres "column does not exist" error
+      having: sequelize.literal('COUNT("ConversationMember"."userId") = 2'),
     });
 
     if (convoMatches && convoMatches.length > 0) {
