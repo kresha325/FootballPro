@@ -24,6 +24,29 @@ jobs:
         run: |
           npm ci
 
+      - name: Verify required secrets
+        working-directory: backend
+        env:
+          PROD_PGHOST: ${{ secrets.PROD_PGHOST }}
+          PROD_PGUSER: ${{ secrets.PROD_PGUSER }}
+          PROD_PGPASSWORD: ${{ secrets.PROD_PGPASSWORD }}
+          PROD_PGDATABASE: ${{ secrets.PROD_PGDATABASE }}
+          PROD_PGPORT: ${{ secrets.PROD_PGPORT }}
+          FOOTBALLPRO_API_URL: ${{ secrets.FOOTBALLPRO_API_URL }}
+        run: |
+          set -e
+          missing=0
+          for v in PROD_PGHOST PROD_PGUSER PROD_PGPASSWORD PROD_PGDATABASE PROD_PGPORT FOOTBALLPRO_API_URL; do
+            if [ -z "${!v}" ]; then
+              echo "ERROR: required secret $v is not set. Please add it in Settings -> Secrets -> Actions." >&2
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
+            echo "One or more required secrets are missing. Aborting." >&2
+            exit 1
+          fi
+
       - name: Run Sequelize migrations
         working-directory: backend
         env:
