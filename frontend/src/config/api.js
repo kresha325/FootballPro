@@ -1,23 +1,26 @@
-// Automatic backend URL detection
+// Automatic backend URL detection with safe fallbacks
 const getBackendURL = () => {
-  // Check if running on mobile/network
   const hostname = window.location.hostname;
-  
-  // If accessing via localtunnel (loca.lt domain)
-  if (hostname.includes('loca.lt')) {
-    return 'https://tired-birds-rest.loca.lt';
+
+  // Explicit localtunnel override
+  if (hostname.includes('loca.lt')) return 'https://tired-birds-rest.loca.lt';
+
+  // Prefer explicit env var if provided
+  const envUrl = import.meta?.env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.length) {
+    return envUrl.replace(/\/api\/?$/i, '');
   }
-  
-  // If accessing from network IP, use the same IP for backend
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return import.meta.env.VITE_API_URL.replace('/api','');
+
+  // Fallback to current origin (works in dev when VITE_API_URL not set)
+  try {
+    return window.location.origin.replace(/\/api\/?$/i, '');
+  } catch (e) {
+    // Last-resort empty string to avoid throwing errors in code that imports this file
+    return '';
   }
-  
-  // Default to localhost for local development
-  return import.meta.env.VITE_API_URL.replace('/api','');
 };
 
 export const BACKEND_URL = getBackendURL();
-export const API_URL = `${BACKEND_URL}/api`;
+export const API_URL = BACKEND_URL ? `${BACKEND_URL}/api` : '/api';
 
 console.log('🔗 Backend URL:', BACKEND_URL);

@@ -1,34 +1,5 @@
-// Fshi item nga galeria
-  const handleDeleteGalleryItem = async (itemId, e) => {
-    e?.stopPropagation && e.stopPropagation();
-    if (!window.confirm('A jeni i sigurt që doni ta fshini këtë media?')) return;
-    try {
-      const res = await galleryAPI.deleteMedia(itemId);
-      if (res.status === 200) {
-        setGallery(gallery => gallery.filter(item => item.id !== itemId));
-        alert('Media u fshi me sukses!');
-      } else {
-        alert('Fshirja dështoi!');
-      }
-    } catch (err) {
-      alert('Fshirja dështoi!');
-    }
-  };
-
 import React, { useEffect, useRef, useState } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
-// Helper to get full URL for images/videos
-const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-const getFullUrl = (url) => {
-  if (!url) return '';
-  const normalized = url.startsWith('https//')
-    ? url.replace('https//', 'https://')
-    : url.startsWith('http//')
-      ? url.replace('http//', 'http://')
-      : url;
-  if (/^https?:\/\//.test(normalized)) return normalized;
-  return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
-};
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI } from '../services/api';
 // import userStreamsAPI from '../services/userStreamsAPI';
@@ -49,6 +20,19 @@ import { ClubBadge } from '../utils/clubLogos';
 import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
+
+// Helper to get full URL for images/videos
+const apiRoot = import.meta.env.VITE_API_URL?.replace('/api','') || '';
+const getFullUrl = (url) => {
+  if (!url) return '';
+  const normalized = url.startsWith('https//')
+    ? url.replace('https//', 'https://')
+    : url.startsWith('http//')
+      ? url.replace('http//', 'http://')
+      : url;
+  if (/^https?:\/\//.test(normalized)) return normalized;
+  return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+};
 
 // Komponenti Chat Live për modalin e stream-it
 function LiveStreamChat({ streamId, userId }) {
@@ -304,6 +288,24 @@ const Profile = () => {
     } catch (error) {
       console.error('Error setting photo:', error);
       alert('Failed to update photo');
+    }
+  };
+
+  // Fshi item nga galeria (brenda komponentit, ku `galleryAPI` dhe `setGallery` ekzistojnë)
+  const handleDeleteGalleryItem = async (itemId, e) => {
+    e?.stopPropagation && e.stopPropagation();
+    if (!window.confirm('A jeni i sigurt që doni ta fshini këtë media?')) return;
+    try {
+      const res = await galleryAPI.deleteMedia(itemId);
+      if (res.status === 200) {
+        setGallery((g) => g.filter((item) => item.id !== itemId));
+        alert('Media u fshi me sukses!');
+      } else {
+        alert('Fshirja dështoi!');
+      }
+    } catch (err) {
+      console.error('Delete gallery item error:', err);
+      alert('Fshirja dështoi!');
     }
   };
 
@@ -1469,7 +1471,10 @@ const Profile = () => {
         </div>
       )}
 
-    </div>
+        </div>
+        </div>
+
+      </div>
   );
 }
 export default Profile;
