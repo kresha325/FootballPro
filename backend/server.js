@@ -40,22 +40,6 @@ if (db.Match) {
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
 setInterval(deleteExpiredAds, 60 * 60 * 1000);
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
-const dotenv = require('dotenv');
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const socketIo = require('socket.io');
-const passport = require('./config/passport');
-const morgan = require('morgan');
-// const sequelize = require('./config/database');
-
-dotenv.config();
-
 // Import models
 const User = require('./models/User');
 const Achievement = require('./models/Achievement');
