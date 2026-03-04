@@ -121,37 +121,26 @@ exports.getOrCreateConversation = async (req, res) => {
     }
     console.log('✅ Target user exists:', targetUser.firstName, targetUser.lastName);
     
-    // Find all conversations where both users are members
-    const conversations = await Conversation.findAll({
-      where: { isGroup: false },
-      include: [
-        {
-          model: ConversationMember,
-          as: 'memberships',
-          attributes: ['userId'],
-        },
-      ],
+    // Find conversation where both users are members (efficient, avoids loading all conversations)
+    const sequelize = require('../config/database');
+    const convoMatches = await ConversationMember.findAll({
+      where: { userId: { [Op.in]: [req.user.id, targetUserId] } },
+      attributes: ['conversationId'],
+      group: ['conversationId'],
+      having: sequelize.literal('COUNT(userId) = 2'),
     });
-    
-    console.log('🔵 Found conversations:', conversations.length);
 
-    // Check if conversation between these two users exists
-    let existingConversation = null;
-    for (const conv of conversations) {
-      const memberIds = conv.memberships.map(m => m.userId);
-      if (
-        memberIds.length === 2 &&
-        memberIds.includes(req.user.id) &&
-        memberIds.includes(targetUserId)
-      ) {
-        existingConversation = conv;
-        break;
+    if (convoMatches && convoMatches.length > 0) {
+      const conversationId = convoMatches[0].conversationId;
+      const existingConversation = await Conversation.findByPk(conversationId, {
+        include: [
+          { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
+          { model: User, as: 'members', attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } },
+        ],
+      });
+      if (existingConversation && !existingConversation.isGroup) {
+        return res.json(existingConversation);
       }
-    }
-
-    if (existingConversation) {
-      // Return existing conversation
-      return res.json(existingConversation);
     }
 
     // Create new conversation
