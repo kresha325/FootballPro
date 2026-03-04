@@ -40,12 +40,32 @@ exports.getPosts = async (req, res) => {
     });
     // Add like, comment counts, userLiked, and sponsors for each post
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
-      const likesCount = await Like.count({ where: { postId: post.id } });
-      const commentsCount = await Comment.count({ where: { postId: post.id } });
-      const userLiked = req.user ? await Like.findOne({ 
-        where: { postId: post.id, userId: req.user.id },
-        attributes: ['id','userId','postId','createdAt','updatedAt']
-      }) : null;
+      let likesCount = 0;
+      let commentsCount = 0;
+      let userLiked = null;
+      try {
+        likesCount = await Like.count({ where: { postId: post.id } });
+      } catch (e) {
+        console.warn('Could not count likes for post', post.id, e.message);
+        likesCount = 0;
+      }
+      try {
+        commentsCount = await Comment.count({ where: { postId: post.id } });
+      } catch (e) {
+        console.warn('Could not count comments for post', post.id, e.message);
+        commentsCount = 0;
+      }
+      try {
+        if (req.user) {
+          userLiked = await Like.findOne({ 
+            where: { postId: post.id, userId: req.user.id },
+            attributes: ['id','userId','postId','createdAt','updatedAt']
+          });
+        }
+      } catch (e) {
+        console.warn('Could not fetch user like for post', post.id, e.message);
+        userLiked = null;
+      }
       // Get sponsors linked to this post
       const postSponsors = post.Sponsors || [];
       // Get all sponsors of the user
@@ -112,11 +132,32 @@ exports.getUserPosts = async (req, res) => {
     });
     // Add like, comment counts, userLiked, and sponsors for each post
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
-      const likesCount = await Like.count({ where: { postId: post.id } });
-      const commentsCount = await Comment.count({ where: { postId: post.id } });
-      const userLiked = req.user ? await Like.findOne({ 
-        where: { postId: post.id, userId: req.user.id },
-        attributes: ['id','userId','postId','createdAt','updatedAt']
+      let likesCount = 0;
+      let commentsCount = 0;
+      let userLiked = null;
+      try {
+        likesCount = await Like.count({ where: { postId: post.id } });
+      } catch (e) {
+        console.warn('Could not count likes for post', post.id, e.message);
+        likesCount = 0;
+      }
+      try {
+        commentsCount = await Comment.count({ where: { postId: post.id } });
+      } catch (e) {
+        console.warn('Could not count comments for post', post.id, e.message);
+        commentsCount = 0;
+      }
+      try {
+        if (req.user) {
+          userLiked = await Like.findOne({ 
+            where: { postId: post.id, userId: req.user.id },
+            attributes: ['id','userId','postId','createdAt','updatedAt']
+          });
+        }
+      } catch (e) {
+        console.warn('Could not fetch user like for post', post.id, e.message);
+        userLiked = null;
+      }
       }) : null;
       // Get sponsors linked to this post
       const sponsors = post.Sponsors || [];
