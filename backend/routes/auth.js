@@ -19,6 +19,15 @@ const meLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Allow toggling auth-specific rate limiter via env var
+const authRateLimitEnabled = process.env.AUTH_RATE_LIMIT_ENABLED !== 'false';
+
+// middleware wrapper that conditionally applies the limiter
+const maybeMeLimiter = (req, res, next) => {
+  if (!authRateLimitEnabled) return next();
+  return meLimiter(req, res, next);
+};
+
 /**
  * ============================
  * VERIFY JWT TOKEN (for mediasoup-server)
@@ -61,7 +70,7 @@ router.post('/reset-password', resetPassword);
  * GET /api/auth/me
  * ============================
  */
-router.get('/me', meLimiter, auth, async (req, res) => {
+router.get('/me', maybeMeLimiter, auth, async (req, res) => {
   try {
     const cached = meCache.get(req.user.id);
     const now = Date.now();

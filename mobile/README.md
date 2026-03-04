@@ -23,3 +23,18 @@ npm start
 Notes:
 - This is a minimal scaffold. You should configure credentials, environment, and push updates via Expo/EAS if you want OTA updates.
 - The app uses Socket.IO client and will attempt to connect to `BACKEND_URL` on login.
+
+Publish / build commands (examples):
+
+```bash
+# publish OTA (Expo managed)
+expo publish --release-channel production
+
+# or using the npm script
+cd mobile
+npm run publish
+
+# EAS build example (requires eas cli + account)
+eas build -p android --profile production
+npm run eas-build
+```
