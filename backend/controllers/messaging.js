@@ -123,16 +123,15 @@ exports.getOrCreateConversation = async (req, res) => {
     
     // Find conversation where both users are members (efficient, avoids loading all conversations)
     const sequelize = require('../config/database');
-    const convoMatches = await ConversationMember.findAll({
-      where: { userId: { [Op.in]: [req.user.id, targetUserId] } },
-      attributes: ['conversationId'],
-      group: ['conversationId'],
-      // qualify column name in HAVING to avoid Postgres "column does not exist" error
-      having: sequelize.literal('COUNT("ConversationMember"."userId") = 2'),
+    // Use a raw, parameterized SQL query to avoid Sequelize HAVING/name-qualification issues
+    const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
+    const convoMatches = await sequelize.query(sql, {
+      replacements: { a: req.user.id, b: targetUserId },
+      type: sequelize.QueryTypes.SELECT,
     });
 
     if (convoMatches && convoMatches.length > 0) {
-      const conversationId = convoMatches[0].conversationId;
+      const conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
       const existingConversation = await Conversation.findByPk(conversationId, {
         include: [
           { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
