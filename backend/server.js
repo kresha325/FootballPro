@@ -414,8 +414,30 @@ io.on('connection', (socket) => {
 
   socket.on('call:answer', (data) => {
     (async () => {
-      const { to, answer, callId } = data;
-      logSocketEvent(socket, 'call:answer', { from: socket.userId, to, callId });
+      let { to, answer, callId } = data;
+      logSocketEvent(socket, 'call:answer-received', { from: socket.userId, to, callId });
+
+      // If 'to' is missing but callId is present, try to resolve the recipient from DB
+      if ((!to || String(to) === 'undefined') && callId) {
+        try {
+          const vc = await VideoCall.findByPk(callId);
+          if (vc) {
+            // If current socket is receiver, forward to caller; otherwise forward to receiver
+            to = (socket.userId && socket.userId === String(vc.receiverId)) ? vc.callerId : vc.receiverId;
+            logSocketEvent(socket, 'call:answer-resolved-recipient', { callId, resolvedTo: to });
+          }
+        } catch (resolveErr) {
+          console.warn('Failed to resolve call recipient for answer:', resolveErr && resolveErr.message);
+        }
+      }
+
+      if (!to) {
+        logSocketEvent(socket, 'call:answer-no-recipient', { from: socket.userId, callId });
+        socket.emit('call:failed', { reason: 'Recipient not found for answer' });
+        return;
+      }
+
+      logSocketEvent(socket, 'call:answer-forwarding', { from: socket.userId, to, callId });
       io.to(String(to)).emit('call:answered', {
         from: socket.userId,
         answer,
