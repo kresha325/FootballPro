@@ -12,7 +12,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export default function VideoCallSimple({ targetUser, onClose, initialCallId = null }) {
+export default function VideoCallSimple({ targetUser, onClose, initialCallId = null, initialIncomingCall = null }) {
   const { user } = useAuth();
   const { socket, connected } = useSocket();
   const [localStream, setLocalStream] = useState(null);
@@ -149,9 +149,10 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
     setCallStatus('ringing');
   };
 
-  const acceptIncomingCall = async () => {
-    if (!incomingCall) return;
-    const { from, offer } = incomingCall;
+  const acceptIncomingCall = async (callObj = null) => {
+    const incoming = callObj || incomingCall;
+    if (!incoming) return;
+    const { from, offer } = incoming;
     try {
       const stream = localStream || await startLocalStream();
       if (!stream) {
@@ -163,8 +164,8 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit('call:answer', { to: from, answer, callId: incomingCall.callId });
-      if (incomingCall.callId) setCurrentCallId(incomingCall.callId);
+      socket.emit('call:answer', { to: from, answer, callId: incoming.callId });
+      if (incoming.callId) setCurrentCallId(incoming.callId);
       setIncomingCall(null);
       setCallStatus('connected');
     } catch (err) {
@@ -182,6 +183,13 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
     setIncomingCall(null);
     setCallStatus('idle');
   };
+
+  useEffect(() => {
+    if (initialIncomingCall) {
+      setIncomingCall(initialIncomingCall);
+      acceptIncomingCall(initialIncomingCall).catch(() => {});
+    }
+  }, [initialIncomingCall]);
 
   const startLocalStream = async () => {
     try {

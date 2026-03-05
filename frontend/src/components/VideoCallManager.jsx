@@ -20,6 +20,7 @@ export default function VideoCallManager() {
   const [activeCall, setActiveCall] = useState(null);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
+  const [incomingForChild, setIncomingForChild] = useState(null);
   
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -78,69 +79,13 @@ export default function VideoCallManager() {
   const acceptCall = async () => {
     if (!incomingCall) return;
 
-    try {
-      console.log('✅ Accepting call...');
-      
-      // Get local media
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
-      localStreamRef.current = stream;
-
-      // Create peer connection
-      const pc = new RTCPeerConnection(iceServers);
-      peerConnectionRef.current = pc;
-
-      // Add local stream
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
-
-      // Handle remote stream
-      pc.ontrack = (event) => {
-        remoteStreamRef.current = event.streams[0];
-      };
-
-      // Handle ICE candidates
-      pc.onicecandidate = (event) => {
-        if (event.candidate && socket) {
-          socket.emit('call:ice-candidate', {
-            to: incomingCall.caller.id,
-            candidate: event.candidate,
-          });
-        }
-      };
-
-      // Set remote description (offer)
-      await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-
-      // Create answer
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      // Send answer through socket (include callId so backend can mark connected)
-      socket.emit('call:answer', {
-        to: incomingCall.caller.id,
-        answer: answer,
-        callId: incomingCall.callId,
-      });
-
-      if (incomingCall.callId) setCurrentCallId(incomingCall.callId);
-
-      // NOTE: do NOT create a new backend call here — the caller already created the call record.
-      // Creating a call record on accept causes a duplicate outgoing call to be recorded.
-
-      // Show video call UI
-      setActiveCall(incomingCall.caller);
-      setShowVideoCall(true);
-      setIncomingCall(null);
-
-    } catch (error) {
-      console.error('Error accepting call:', error);
-      alert('Failed to accept call: ' + error.message);
-      rejectCall();
-    }
+    // Delegate acceptance to VideoCallSimple: pass the incoming call to child
+    const saved = incomingCall;
+    if (saved.callId) setCurrentCallId(saved.callId);
+    setIncomingForChild(saved);
+    setActiveCall(saved.caller);
+    setShowVideoCall(true);
+    setIncomingCall(null);
   };
 
   const rejectCall = () => {
@@ -169,6 +114,7 @@ export default function VideoCallManager() {
 
     setShowVideoCall(false);
     setActiveCall(null);
+    setIncomingForChild(null);
   };
 
   return (
@@ -188,6 +134,7 @@ export default function VideoCallManager() {
           targetUser={activeCall}
           onClose={closeVideoCall}
           initialCallId={currentCallId}
+          initialIncomingCall={incomingForChild}
         />
       )}
     </>
