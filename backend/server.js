@@ -72,6 +72,7 @@ const { VideoCallHistory } = require('./models');
 // Add other models as needed
 
 const sequelize = require('./config/database');
+const { QueryTypes } = require('sequelize');
 
 // Shto header-in CORS për /uploads
 app.use('/uploads', (req, res, next) => {
@@ -239,10 +240,6 @@ app.get('/', (req, res) => {
 const userSockets = new Map(); // userId -> socketId
 
 const VideoCall = require('./models/VideoCall');
-const { Conversation, ConversationMember } = require('./models/Conversation');
-const Message = require('./models/Message');
-const sequelizeDb = require('./config/database');
-const { QueryTypes } = require('sequelize');
 
 io.on('connection', (socket) => {
     // Multi-user call: join room and log call start
