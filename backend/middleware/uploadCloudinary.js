@@ -100,14 +100,18 @@ function cloudinaryFields(fields) {
 								resource_type = 'video';
 								folder = 'videos';
 							}
-								const cloudRes = await cloudinary.uploader.upload(file.path, {
-								resource_type,
-								folder,
-							});
+								// Request Cloudinary to deliver a browser-friendly format automatically
+								// `fetch_format: 'auto'` + `quality: 'auto'` lets Cloudinary return WebP/AVIF/JPEG depending on client
+								const uploadOptions = {
+									resource_type,
+									folder,
+									transformation: [{ fetch_format: 'auto', quality: 'auto' }],
+								};
+								const cloudRes = await cloudinary.uploader.upload(file.path, uploadOptions);
 							// Attach cloudinary url to req.body for controller
 							req.body[field.name] = cloudRes.secure_url;
 								if (process.env.DEBUG_UPLOADS === 'true') {
-									console.log(`[${new Date().toISOString()}] Uploaded ${file.originalname} -> ${cloudRes.secure_url} (${resource_type})`);
+									console.log(`[${new Date().toISOString()}] Uploaded ${file.originalname} -> ${cloudRes.secure_url} (${resource_type})`, { uploadOptions });
 								}
 							// Remove local file
 							fs.unlink(file.path, () => {});
