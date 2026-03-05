@@ -3,6 +3,10 @@ const ScheduledCall = require('../models/ScheduledCall');
 const User = require('../models/User');
 const { sendNotification, createNotification } = require('./notifications');
 const { Op } = require('sequelize');
+const { Conversation, ConversationMember } = require('../models/Conversation');
+const Message = require('../models/Message');
+const sequelize = require('../config/database');
+const { QueryTypes } = require('sequelize');
 
 // Create a video call
 exports.createVideoCall = async (req, res) => {
@@ -29,6 +33,57 @@ exports.createVideoCall = async (req, res) => {
       status: 'ringing',
       startTime: new Date(),
     });
+
+    console.log('✅ VideoCall created:', videoCall.id, { callerId: videoCall.callerId, receiverId: videoCall.receiverId });
+
+    // Try to save a call entry into messaging so it appears in conversation lists
+    (async () => {
+      try {
+        // Find existing conversation between the two users
+        const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
+        const convoMatches = await sequelize.query(sql, {
+          replacements: { a: req.user.id, b: participantId },
+          type: QueryTypes.SELECT,
+        });
+        let conversationId = null;
+        if (convoMatches && convoMatches.length > 0) {
+          conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
+        }
+        if (!conversationId) {
+          // create conversation
+          const t = await sequelize.transaction();
+          try {
+            const newConv = await Conversation.create({ isGroup: false }, { transaction: t });
+            await ConversationMember.bulkCreate([
+              { conversationId: newConv.id, userId: req.user.id },
+              { conversationId: newConv.id, userId: participantId },
+            ], { transaction: t });
+            await t.commit();
+            conversationId = newConv.id;
+            console.log('Created conversation for call:', conversationId);
+          } catch (txErr) {
+            await t.rollback();
+            console.warn('Failed to create conversation for call:', txErr && txErr.message);
+          }
+        }
+
+        if (conversationId) {
+          const callMessage = await Message.create({
+            conversationId,
+            senderId: req.user.id,
+            content: `${req.user.firstName || 'User'} started a call`,
+            type: 'call',
+            metadata: { callId: videoCall.id, event: 'started' },
+          });
+          console.log('Saved call message for call:', videoCall.id, 'messageId:', callMessage.id);
+          await Conversation.update({ lastMessageAt: new Date() }, { where: { id: conversationId } });
+        } else {
+          console.warn('No conversation available to save call message for call:', videoCall.id);
+        }
+      } catch (e) {
+        console.warn('Failed to persist call message:', e && e.message);
+      }
+    })();
 
     // Notify participant
     await sendNotification(
@@ -60,6 +115,7 @@ exports.startCall = async (req, res) => {
     if (existing) {
       // notify and return existing
       await sendNotification(receiverId, 'Incoming Call', `You have an incoming call from ${req.user.firstName}`, { type: 'call', callId: existing.id });
+      console.log('↩️ startCall returning existing call:', existing.id);
       return res.json(existing);
     }
 
@@ -69,6 +125,7 @@ exports.startCall = async (req, res) => {
       status: 'ringing',
       startTime: new Date(),
     });
+    console.log('✅ startCall created VideoCall:', call.id, { callerId: call.callerId, receiverId: call.receiverId });
     // Notify receiver
     await sendNotification(receiverId, 'Incoming Call', `You have an incoming call from ${req.user.firstName}`, { type: 'call', callId: call.id });
     res.json(call);
@@ -91,6 +148,36 @@ exports.endCall = async (req, res) => {
       call.endTime = new Date();
       call.duration = Math.floor((new Date() - call.startTime) / 1000);
       await call.save();
+
+      // Attempt to record call end in messaging
+      (async () => {
+        try {
+          const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
+          const convoMatches = await sequelize.query(sql, {
+            replacements: { a: call.callerId, b: call.receiverId },
+            type: QueryTypes.SELECT,
+          });
+          let conversationId = null;
+          if (convoMatches && convoMatches.length > 0) {
+            conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
+          }
+          if (conversationId) {
+            const callMessage = await Message.create({
+              conversationId,
+              senderId: req.user.id,
+              content: `${req.user.firstName || 'User'} ended a call`,
+              type: 'call',
+              metadata: { callId: call.id, event: 'ended', duration: call.duration },
+            });
+            console.log('Saved call-end message for call:', call.id, 'messageId:', callMessage.id);
+            await Conversation.update({ lastMessageAt: new Date() }, { where: { id: conversationId } });
+          } else {
+            console.warn('No conversation found to save call-end message for call:', call.id);
+          }
+        } catch (e) {
+          console.warn('Failed to persist call-end message:', e && e.message);
+        }
+      })();
 
       if (wasRinging && req.user.id === call.callerId && call.receiverId) {
         await createNotification({

@@ -55,7 +55,15 @@ function cloudinaryFields(fields) {
 	return async function (req, res, next) {
 		multerFields(req, res, async function (err) {
 			if (err) {
-				console.error('❌ Multer error:', err && err.message);
+				console.error('❌ Multer error:', err && err.message, { code: err && err.code });
+				try {
+					console.error('Multer request files:', Object.keys(req.files || {}).reduce((acc, k) => {
+						acc[k] = (req.files[k] || []).map(f => ({ originalname: f.originalname, mimetype: f.mimetype, size: f.size }));
+						return acc;
+					}, {}));
+				} catch (logErr) {
+					console.error('Failed to log multer req.files:', logErr && logErr.message);
+				}
 				if (err.code === 'LIMIT_FILE_SIZE') {
 					return res.status(413).json({ msg: 'File too large', max: MAX_FILE_SIZE });
 				}
@@ -92,19 +100,28 @@ function cloudinaryFields(fields) {
 								resource_type = 'video';
 								folder = 'videos';
 							}
-							const cloudRes = await cloudinary.uploader.upload(file.path, {
+								const cloudRes = await cloudinary.uploader.upload(file.path, {
 								resource_type,
 								folder,
 							});
 							// Attach cloudinary url to req.body for controller
 							req.body[field.name] = cloudRes.secure_url;
+								if (process.env.DEBUG_UPLOADS === 'true') {
+									console.log(`[${new Date().toISOString()}] Uploaded ${file.originalname} -> ${cloudRes.secure_url} (${resource_type})`);
+								}
 							// Remove local file
 							fs.unlink(file.path, () => {});
 						} catch (e) {
-							console.error('Cloudinary upload error for field', field.name, e && e.message);
-							const msg = e && e.message ? e.message : 'Upload failed';
-							const status = (e && e.http_code) ? e.http_code : 502;
-							return res.status(status).json({ msg: msg, field: field.name, error: msg });
+								console.error('Cloudinary upload error for field', field.name, e && e.message);
+								try {
+									console.error('File info:', { path: file.path, originalname: file.originalname, mimetype: file.mimetype, size: file.size });
+								} catch (fiErr) {
+									console.error('Failed to log file info for cloudinary error:', fiErr && fiErr.message);
+								}
+								console.error(e && e.stack ? e.stack : e);
+								const msg = e && e.message ? e.message : 'Upload failed';
+								const status = (e && e.http_code) ? e.http_code : 502;
+								return res.status(status).json({ msg: msg, field: field.name, error: msg });
 						}
 					}
 				}

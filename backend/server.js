@@ -14,6 +14,16 @@ const morgan = require('morgan');
 
 dotenv.config();
 
+// Simple socket event logger
+function logSocketEvent(socket, event, details) {
+  try {
+    const sid = socket && socket.id ? socket.id : 'no-socket';
+    const t = new Date().toISOString();
+    console.log(`[${t}] [socket:${sid}] ${event} -`, details || {});
+  } catch (e) {
+    console.log('Logger error:', e && e.message);
+  }
+}
 // When behind a proxy (Render, Heroku, etc.) trust the proxy so req.ip is correct
 // This avoids many clients appearing to come from the same IP and hitting the rate limiter
 
@@ -259,7 +269,7 @@ io.on('connection', (socket) => {
       }
       io.to(roomId).emit('call:user-joined', { userId });
     });
-  console.log('✅ User connected:', socket.id);
+  logSocketEvent(socket, 'connected', { userId: socket.handshake.auth.userId });
 
   // Store user authentication from handshake
   const userId = socket.handshake.auth.userId;
@@ -271,7 +281,7 @@ io.on('connection', (socket) => {
       socket.userId = userIdToJoin;
       socket.join(String(userIdToJoin));
       userSockets.set(String(userIdToJoin), socket.id);
-      console.log(`👤 User ${userIdToJoin} joined room ${userIdToJoin}`);
+      logSocketEvent(socket, 'join', { userId: userIdToJoin, room: String(userIdToJoin) });
     }
   });
 
@@ -279,9 +289,9 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (socket.userId) {
       userSockets.delete(String(socket.userId));
-      console.log(`👤 User ${socket.userId} disconnected`);
+      logSocketEvent(socket, 'disconnect', { userId: socket.userId });
     }
-    console.log('❌ Socket disconnected:', socket.id);
+    logSocketEvent(socket, 'socket-disconnected', {});
   });
 
   // Handle notifications
@@ -323,7 +333,7 @@ io.on('connection', (socket) => {
     const targetSocketId = userSockets.get(String(to));
     
     if (targetSocketId) {
-      console.log(`📞 Call offer from user ${from} to user ${to}`);
+      logSocketEvent(socket, 'call:offer', { from, to, callId, targetSocketId });
       io.to(String(to)).emit('call:incoming', {
         from,
         callerName,
@@ -331,7 +341,7 @@ io.on('connection', (socket) => {
         callId,
       });
     } else {
-      console.log(`❌ User ${to} not connected`);
+      logSocketEvent(socket, 'call:offer-failed', { from, to, callId, reason: 'User not connected' });
       socket.emit('call:failed', { reason: 'User not available' });
     }
   });
@@ -339,7 +349,7 @@ io.on('connection', (socket) => {
   socket.on('call:answer', (data) => {
     (async () => {
       const { to, answer, callId } = data;
-      console.log(`✅ Call answer from user ${socket.userId} to user ${to}`);
+      logSocketEvent(socket, 'call:answer', { from: socket.userId, to, callId });
       io.to(String(to)).emit('call:answered', {
         from: socket.userId,
         answer,
@@ -371,6 +381,7 @@ io.on('connection', (socket) => {
 
   socket.on('call:ice-candidate', (data) => {
     const { to, candidate } = data;
+    logSocketEvent(socket, 'call:ice-candidate', { to, hasCandidate: !!candidate });
     io.to(String(to)).emit('call:ice-candidate', {
       from: socket.userId,
       candidate,
@@ -379,7 +390,7 @@ io.on('connection', (socket) => {
 
   socket.on('call:reject', (data) => {
     const { to } = data;
-    console.log(`❌ Call rejected by user ${socket.userId}`);
+    logSocketEvent(socket, 'call:reject', { to });
     io.to(String(to)).emit('call:rejected', {
       from: socket.userId,
     });
@@ -387,7 +398,7 @@ io.on('connection', (socket) => {
 
   socket.on('call:end', async (data) => {
     const { to } = data;
-    console.log(`📴 Call ended by user ${socket.userId}`);
+    logSocketEvent(socket, 'call:end', { to });
     if (to) {
       io.to(String(to)).emit('call:ended', {
         from: socket.userId,
