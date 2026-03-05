@@ -108,8 +108,19 @@ function cloudinaryFields(fields) {
 									transformation: [{ fetch_format: 'auto', quality: 'auto' }],
 								};
 								const cloudRes = await cloudinary.uploader.upload(file.path, uploadOptions);
-							// Attach cloudinary url to req.body for controller
-							req.body[field.name] = cloudRes.secure_url;
+								// Build a delivery URL that requests an automatic browser-friendly format
+								// Use public_id to construct a URL with `fetch_format:auto` so HEIC will be served as WebP/AVIF/JPEG
+								try {
+									const deliveredUrl = cloudinary.url(cloudRes.public_id, {
+										secure: true,
+										resource_type,
+										transformation: [{ fetch_format: 'auto', quality: 'auto' }]
+									});
+									req.body[field.name] = deliveredUrl;
+								} catch (urlErr) {
+									// Fallback to the secure_url from upload if url generation fails
+									req.body[field.name] = cloudRes.secure_url;
+								}
 								if (process.env.DEBUG_UPLOADS === 'true') {
 									console.log(`[${new Date().toISOString()}] Uploaded ${file.originalname} -> ${cloudRes.secure_url} (${resource_type})`, { uploadOptions });
 								}
