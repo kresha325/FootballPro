@@ -12,7 +12,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export default function VideoCallSimple({ targetUser, onClose, initialCallId = null, initialIncomingCall = null }) {
+export default function VideoCallSimple({ targetUser, onClose, initialCallId = null, initialIncomingCall = null, userGestureStream = null }) {
   const { user } = useAuth();
   const { socket, connected } = useSocket();
   const [localStream, setLocalStream] = useState(null);
@@ -29,6 +29,22 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   useEffect(() => {
     if (initialCallId) setCurrentCallId(initialCallId);
   }, [initialCallId]);
+
+  useEffect(() => {
+    if (userGestureStream) {
+      // Accept pre-acquired stream from parent user gesture
+      setLocalStream(userGestureStream);
+      try {
+        if (peerConnectionRef.current) {
+          userGestureStream.getTracks().forEach(track => {
+            peerConnectionRef.current.addTrack(track, userGestureStream);
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to attach userGestureStream to existing peerConnection:', e && e.message);
+      }
+    }
+  }, [userGestureStream]);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -154,7 +170,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
     if (!incoming) return;
     const { from, offer } = incoming;
     try {
-      const stream = localStream || await startLocalStream();
+      const stream = localStream || userGestureStream || await startLocalStream();
       if (!stream) {
         setCallStatus('idle');
         setIncomingCall(null);

@@ -21,6 +21,7 @@ export default function VideoCallManager() {
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
   const [incomingForChild, setIncomingForChild] = useState(null);
+  const [userGestureStream, setUserGestureStream] = useState(null);
   
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -79,7 +80,19 @@ export default function VideoCallManager() {
   const acceptCall = async () => {
     if (!incomingCall) return;
 
-    // Delegate acceptance to VideoCallSimple: pass the incoming call to child
+    // Try to get user media in this direct user gesture so browser grants permission
+    let stream = null;
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        setUserGestureStream(stream);
+      }
+    } catch (err) {
+      console.error('Failed to getUserMedia on accept gesture:', err);
+      // proceed without stream; child will attempt to request media (may be blocked)
+    }
+
+    // Delegate acceptance to VideoCallSimple: pass the incoming call and the obtained stream
     const saved = incomingCall;
     if (saved.callId) setCurrentCallId(saved.callId);
     setIncomingForChild(saved);
@@ -135,6 +148,7 @@ export default function VideoCallManager() {
           onClose={closeVideoCall}
           initialCallId={currentCallId}
           initialIncomingCall={incomingForChild}
+          userGestureStream={userGestureStream}
         />
       )}
     </>
