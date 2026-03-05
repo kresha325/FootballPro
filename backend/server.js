@@ -350,7 +350,7 @@ io.on('connection', (socket) => {
             // Try to persist a message into conversation (best-effort)
             try {
               const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
-              const convoMatches = await sequelizeDb.query(sql, {
+              const convoMatches = await sequelize.query(sql, {
                 replacements: { a: from, b: to },
                 type: QueryTypes.SELECT,
               });
@@ -359,7 +359,7 @@ io.on('connection', (socket) => {
                 conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
               }
               if (!conversationId) {
-                const t = await sequelizeDb.transaction();
+                const t = await sequelize.transaction();
                 try {
                   const newConv = await Conversation.create({ isGroup: false }, { transaction: t });
                   await ConversationMember.bulkCreate([

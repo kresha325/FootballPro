@@ -94,8 +94,15 @@ export default function VideoCallManager() {
 
     // Delegate acceptance to VideoCallSimple: pass the incoming call and the obtained stream
     const saved = incomingCall;
-    if (saved.callId) setCurrentCallId(saved.callId);
-    setIncomingForChild(saved);
+    // Normalize the shape expected by VideoCallSimple: { from, callerName, offer, callId }
+    const normalized = {
+      from: saved.caller?.id || saved.from,
+      callerName: `${saved.caller?.firstName || ''} ${saved.caller?.lastName || ''}`.trim() || saved.callerName,
+      offer: saved.offer,
+      callId: saved.callId,
+    };
+    if (normalized.callId) setCurrentCallId(normalized.callId);
+    setIncomingForChild(normalized);
     setActiveCall(saved.caller);
     setShowVideoCall(true);
     setIncomingCall(null);
