@@ -170,6 +170,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
     if (!incoming) return;
     const { from, offer } = incoming;
     try {
+      console.log('Accepting incoming call from:', from, 'callId:', incoming.callId);
       const stream = localStream || userGestureStream || await startLocalStream();
       if (!stream) {
         setCallStatus('idle');
@@ -183,7 +184,9 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
       socket.emit('call:answer', { to: from, answer, callId: incoming.callId });
       if (incoming.callId) setCurrentCallId(incoming.callId);
       setIncomingCall(null);
-      setCallStatus('connected');
+      // mark as connecting; actual connected state will be set on peerConnection.onconnectionstatechange
+      setCallStatus('connecting');
+      console.log('Emitted call:answer for', from, 'callId:', incoming.callId);
     } catch (err) {
       console.error('Error accepting incoming call:', err);
       socket.emit('call:reject', { to: incomingCall.from });
@@ -366,6 +369,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
           disconnectTimerRef.current = null;
         }
         setCallStatus('connected');
+        console.log('Peer connection established — call connected');
       } else if (pc.connectionState === 'disconnected') {
         if (disconnectTimerRef.current) {
           clearTimeout(disconnectTimerRef.current);
@@ -628,7 +632,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
           </button>
         )}
 
-        {(callStatus === 'calling' || callStatus === 'ringing' || callStatus === 'connected') && (
+        {(callStatus === 'calling' || callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'connected') && (
           <>
             <button
               onClick={toggleMute}
