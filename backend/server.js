@@ -239,6 +239,10 @@ app.get('/', (req, res) => {
 const userSockets = new Map(); // userId -> socketId
 
 const VideoCall = require('./models/VideoCall');
+const { Conversation, ConversationMember } = require('./models/Conversation');
+const Message = require('./models/Message');
+const sequelizeDb = require('./config/database');
+const { QueryTypes } = require('sequelize');
 
 io.on('connection', (socket) => {
     // Multi-user call: join room and log call start
@@ -331,19 +335,84 @@ io.on('connection', (socket) => {
   socket.on('call:offer', (data) => {
     const { to, offer, from, callerName, callId } = data;
     const targetSocketId = userSockets.get(String(to));
-    
-    if (targetSocketId) {
-      logSocketEvent(socket, 'call:offer', { from, to, callId, targetSocketId });
-      io.to(String(to)).emit('call:incoming', {
-        from,
-        callerName,
-        offer,
-        callId,
-      });
-    } else {
-      logSocketEvent(socket, 'call:offer-failed', { from, to, callId, reason: 'User not connected' });
-      socket.emit('call:failed', { reason: 'User not available' });
-    }
+    (async () => {
+      let usedCallId = callId;
+      try {
+        // If no callId provided, create a VideoCall fallback so server-side records exist
+        if (!usedCallId) {
+          try {
+            const created = await VideoCall.create({
+              callerId: from,
+              receiverId: to,
+              status: 'ringing',
+              startTime: new Date(),
+            });
+            usedCallId = created.id;
+            logSocketEvent(socket, 'call:fallback-created', { callId: usedCallId, from, to });
+
+            // Try to persist a message into conversation (best-effort)
+            try {
+              const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
+              const convoMatches = await sequelizeDb.query(sql, {
+                replacements: { a: from, b: to },
+                type: QueryTypes.SELECT,
+              });
+              let conversationId = null;
+              if (convoMatches && convoMatches.length > 0) {
+                conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
+              }
+              if (!conversationId) {
+                const t = await sequelizeDb.transaction();
+                try {
+                  const newConv = await Conversation.create({ isGroup: false }, { transaction: t });
+                  await ConversationMember.bulkCreate([
+                    { conversationId: newConv.id, userId: from },
+                    { conversationId: newConv.id, userId: to },
+                  ], { transaction: t });
+                  await t.commit();
+                  conversationId = newConv.id;
+                  logSocketEvent(socket, 'conversation-created-for-call', { conversationId, callId: usedCallId });
+                } catch (txErr) {
+                  await t.rollback();
+                  console.warn('Failed to create conversation for call fallback:', txErr && txErr.message);
+                }
+              }
+              if (conversationId) {
+                const callMessage = await Message.create({
+                  conversationId,
+                  senderId: from,
+                  content: `Call started`,
+                  type: 'call',
+                  metadata: { callId: usedCallId, event: 'started' },
+                });
+                await Conversation.update({ lastMessageAt: new Date() }, { where: { id: conversationId } });
+                logSocketEvent(socket, 'call-message-saved', { callId: usedCallId, messageId: callMessage.id });
+              }
+            } catch (msgErr) {
+              console.warn('Failed to persist call fallback message:', msgErr && msgErr.message);
+            }
+          } catch (createErr) {
+            console.warn('Failed to create VideoCall fallback:', createErr && createErr.message);
+          }
+        }
+
+        if (targetSocketId) {
+          logSocketEvent(socket, 'call:offer', { from, to, callId: usedCallId, targetSocketId });
+          io.to(String(to)).emit('call:incoming', {
+            from,
+            callerName,
+            offer,
+            callId: usedCallId,
+          });
+        } else {
+          logSocketEvent(socket, 'call:offer-failed', { from, to, callId: usedCallId, reason: 'User not connected' });
+          socket.emit('call:failed', { reason: 'User not available' });
+        }
+      } catch (outerErr) {
+        console.error('Error handling call:offer fallback:', outerErr && outerErr.stack ? outerErr.stack : outerErr);
+        socket.emit('call:failed', { reason: 'Server error' });
+      }
+    })();
   });
 
   socket.on('call:answer', (data) => {
