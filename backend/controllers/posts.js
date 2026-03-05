@@ -247,6 +247,10 @@ exports.createPost = async (req, res) => {
   try {
     console.log('📝 CREATE POST - Body:', req.body);
     console.log('📁 CREATE POST - File:', req.file);
+    if (!req.user || !req.user.id) {
+      console.error('❌ CREATE POST: missing req.user - unauthorized request');
+      return res.status(401).json({ msg: 'Unauthorized' });
+    }
     
     const { content, location, locationLat, locationLng, mentions } = req.body;
     let imageUrl = req.body.image || null;

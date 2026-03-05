@@ -19,6 +19,7 @@ export default function VideoCallManager() {
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [currentCallId, setCurrentCallId] = useState(null);
   
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -43,7 +44,7 @@ export default function VideoCallManager() {
   }, [socket, connected]);
 
   const handleIncomingCall = async (data) => {
-    const { from, callerName, offer } = data;
+    const { from, callerName, offer, callId } = data;
     console.log('📞 Incoming call from:', callerName);
 
     // Fetch caller details
@@ -58,6 +59,7 @@ export default function VideoCallManager() {
           lastName: caller.lastName || callerName.split(' ')[1] || '',
         },
         offer,
+        callId,
       });
     } catch (error) {
       console.error('Error fetching caller details:', error);
@@ -68,6 +70,7 @@ export default function VideoCallManager() {
           lastName: callerName.split(' ')[1] || '',
         },
         offer,
+        callId,
       });
     }
   };
@@ -116,16 +119,17 @@ export default function VideoCallManager() {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      // Send answer through socket
+      // Send answer through socket (include callId so backend can mark connected)
       socket.emit('call:answer', {
         to: incomingCall.caller.id,
         answer: answer,
+        callId: incomingCall.callId,
       });
 
-      // Create backend call record
-      await API.post('/video-calls/start', {
-        receiverId: incomingCall.caller.id,
-      });
+      if (incomingCall.callId) setCurrentCallId(incomingCall.callId);
+
+      // NOTE: do NOT create a new backend call here — the caller already created the call record.
+      // Creating a call record on accept causes a duplicate outgoing call to be recorded.
 
       // Show video call UI
       setActiveCall(incomingCall.caller);
@@ -183,6 +187,7 @@ export default function VideoCallManager() {
         <VideoCallSimple
           targetUser={activeCall}
           onClose={closeVideoCall}
+          initialCallId={currentCallId}
         />
       )}
     </>

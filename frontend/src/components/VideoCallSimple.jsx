@@ -12,7 +12,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export default function VideoCallSimple({ targetUser, onClose }) {
+export default function VideoCallSimple({ targetUser, onClose, initialCallId = null }) {
   const { user } = useAuth();
   const { socket, connected } = useSocket();
   const [localStream, setLocalStream] = useState(null);
@@ -23,7 +23,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null);
+  const [serverConnected, setServerConnected] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
+
+  useEffect(() => {
+    if (initialCallId) setCurrentCallId(initialCallId);
+  }, [initialCallId]);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -52,6 +57,13 @@ export default function VideoCallSimple({ targetUser, onClose }) {
 
     // Listen for incoming call answer
     socket.on('call:answered', handleCallAnswered);
+    // Server-confirmed DB connection
+    socket.on('call:connected', ({ callId }) => {
+      if (callId && callId === currentCallId) {
+        console.log('✅ Server confirmed call connected:', callId);
+        setServerConnected(true);
+      }
+    });
     
     // Listen for ICE candidates
     socket.on('call:ice-candidate', handleRemoteIceCandidate);
@@ -71,6 +83,7 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       socket.off('call:rejected');
       socket.off('call:ended');
       socket.off('call:incoming');
+      socket.off('call:connected');
       cleanup();
     };
   }, [socket, connected]);
@@ -126,13 +139,13 @@ export default function VideoCallSimple({ targetUser, onClose }) {
     }
   }, [localStream]);
   // Handler for incoming call offer
-  const handleIncomingCall = ({ from, callerName, offer }) => {
+  const handleIncomingCall = ({ from, callerName, offer, callId }) => {
     if (!user || !from || !offer) return;
     if (callStatus !== 'idle') {
       socket.emit('call:reject', { to: from });
       return;
     }
-    setIncomingCall({ from, callerName, offer });
+    setIncomingCall({ from, callerName, offer, callId });
     setCallStatus('ringing');
   };
 
@@ -150,7 +163,8 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit('call:answer', { to: from, answer });
+      socket.emit('call:answer', { to: from, answer, callId: incomingCall.callId });
+      if (incomingCall.callId) setCurrentCallId(incomingCall.callId);
       setIncomingCall(null);
       setCallStatus('connected');
     } catch (err) {
@@ -418,13 +432,14 @@ export default function VideoCallSimple({ targetUser, onClose }) {
       });
       await pc.setLocalDescription(offer);
 
-      // Send offer through socket
+      // Send offer through socket (include backend callId)
       console.log('📞 Sending call offer to user:', targetUser.id);
       socket.emit('call:offer', {
         to: targetUser.id,
         from: user.id,
         callerName: `${user.firstName} ${user.lastName}`,
         offer: offer,
+        callId: response.data.id,
       });
 
       setCallStatus('ringing');
@@ -567,6 +582,12 @@ export default function VideoCallSimple({ targetUser, onClose }) {
           <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
             Lidhur
+          </div>
+        )}
+        {/* Server-connected badge */}
+        {serverConnected && (
+          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-green-600 text-white px-3 py-1 rounded-full z-60 text-sm">
+            Lidhuar (server)
           </div>
         )}
       </div>

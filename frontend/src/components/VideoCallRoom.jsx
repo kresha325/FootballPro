@@ -1,5 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import io from 'socket.io-client';
+import axios from 'axios';
+import { API_URL } from '../config/api';
+
+const API = axios.create({ baseURL: API_URL });
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 const SOCKET_URL =
   typeof process !== 'undefined' && process.env && process.env.REACT_APP_SOCKET_URL
@@ -55,9 +64,17 @@ const VideoCallRoom = ({ roomId, userId }) => {
           return [...prev, e.streams[0]];
         });
       };
-      pc.createOffer().then(offer => {
+      pc.createOffer().then(async (offer) => {
         pc.setLocalDescription(offer);
-        socketRef.current.emit('call:offer', { to: remoteUserId, offer, from: userId });
+        // Create backend call record and include callId if available
+        let callId = null;
+        try {
+          const resp = await API.post('/video-calls/create', { participantId: remoteUserId });
+          if (resp && resp.data && resp.data.id) callId = resp.data.id;
+        } catch (e) {
+          console.warn('Could not create backend call record:', e.message);
+        }
+        socketRef.current.emit('call:offer', { to: remoteUserId, offer, from: userId, callId });
       });
     });
     // Handle user left
@@ -70,7 +87,7 @@ const VideoCallRoom = ({ roomId, userId }) => {
       setRemoteStreams(prev => prev.filter(s => s.id !== leftUserId));
     });
     // Handle offer
-    socketRef.current.on('call:incoming', async ({ from, offer }) => {
+    socketRef.current.on('call:incoming', async ({ from, offer, callId }) => {
       setParticipants(prev => prev.includes(from) ? prev : [...prev, from]);
       const pc = new RTCPeerConnection();
       peerConnections.current[from] = pc;
@@ -89,7 +106,7 @@ const VideoCallRoom = ({ roomId, userId }) => {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socketRef.current.emit('call:answer', { to: from, answer });
+      socketRef.current.emit('call:answer', { to: from, answer, callId });
     });
     // Handle answer
     socketRef.current.on('call:answered', async ({ from, answer }) => {

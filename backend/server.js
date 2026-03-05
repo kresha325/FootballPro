@@ -319,7 +319,7 @@ io.on('connection', (socket) => {
 
   // WebRTC signaling for video calls
   socket.on('call:offer', (data) => {
-    const { to, offer, from, callerName } = data;
+    const { to, offer, from, callerName, callId } = data;
     const targetSocketId = userSockets.get(String(to));
     
     if (targetSocketId) {
@@ -328,6 +328,7 @@ io.on('connection', (socket) => {
         from,
         callerName,
         offer,
+        callId,
       });
     } else {
       console.log(`❌ User ${to} not connected`);
@@ -353,6 +354,13 @@ io.on('connection', (socket) => {
             vc.status = 'connected';
             vc.connectedAt = new Date();
             await vc.save();
+            // Notify participants that call is confirmed connected in DB
+            try {
+              io.to(String(vc.callerId)).emit('call:connected', { callId: vc.id });
+              io.to(String(vc.receiverId)).emit('call:connected', { callId: vc.id });
+            } catch (emitErr) {
+              console.warn('Failed to emit call:connected:', emitErr.message);
+            }
           }
         } catch (e) {
           console.warn('Failed to update VideoCall on answer:', e.message);
