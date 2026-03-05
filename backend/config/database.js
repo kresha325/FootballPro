@@ -5,15 +5,23 @@ require('dotenv').config();
 
 
 let sequelize;
+// Respect PGSSLMODE if provided (avoid libpq warning about deprecated aliases)
+const pgSslMode = (process.env.PGSSLMODE || '').toLowerCase();
+const sslRequired = pgSslMode !== 'disable' && pgSslMode !== 'allow' && pgSslMode !== 'prefer' ? true : (pgSslMode === 'prefer' ? true : false);
+// treat 'verify-full' and 'verify-ca' as strict (rejectUnauthorized = true)
+const rejectUnauthorized = ['verify-full', 'verify-ca'].includes(pgSslMode);
+
 if (process.env.NODE_ENV === 'production') {
+  // If a DATABASE_URL contains sslmode param, libpq will still log a warning if it uses legacy aliases.
+  // Best practice: set PGSSLMODE=verify-full in environment and provide CA certs.
+  const dialectOptions = {};
+  if (sslRequired) {
+    dialectOptions.ssl = { require: true, rejectUnauthorized };
+  }
+
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
+    dialectOptions,
   });
 } else {
   const config = {
@@ -25,16 +33,17 @@ if (process.env.NODE_ENV === 'production') {
     dialect: 'postgres',
     ssl: process.env.DB_SSL === 'true'
   };
+
+  const dialectOptions = {};
+  if (config.ssl || sslRequired) {
+    dialectOptions.ssl = { require: true, rejectUnauthorized };
+  }
+
   sequelize = new Sequelize(config.database, config.username, config.password, {
     host: config.host,
     port: config.port,
     dialect: config.dialect,
-    dialectOptions: config.ssl ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    } : {},
+    dialectOptions,
   });
 }
 
