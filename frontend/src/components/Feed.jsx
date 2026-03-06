@@ -318,7 +318,6 @@ const Feed = () => {
         className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700"
         style={{
           backgroundImage: "linear-gradient(180deg, #101214 0%, #1f242b 55%, #0f3d1c 100%)",
-            await fetchPosts({ followedOnly }); // Refresh posts with current filter
           overflow: 'visible'
         }}
       >

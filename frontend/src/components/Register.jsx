@@ -117,6 +117,7 @@ const Register = () => {
                 aria-describedby={error ? "error-message" : undefined}
               />
             </div>
+            <div>
               <label htmlFor="firstName" className="sr-only">First Name</label>
               <input
                 id="firstName"
