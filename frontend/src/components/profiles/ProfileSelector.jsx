@@ -25,6 +25,8 @@ const ProfileSelector = ({ user, profile, isOwner }) => {
       return <ClubProfile profile={profile} isOwner={isOwner} />;
     case 'business':
       return <BusinessProfile profile={profile} />;
+    case 'media':
+      return <BusinessProfile profile={profile} />;
     case 'liga':
       return <LigaProfile profile={profile} />;
     case 'federation':

@@ -100,6 +100,9 @@ const EditProfile = ({ user, onClose }) => {
         {user.role === 'business' && (
           <EditBusinessProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
+        {user.role === 'media' && (
+          <EditBusinessProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+        )}
         {user.role === 'manager' && (
           <EditManagerProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
