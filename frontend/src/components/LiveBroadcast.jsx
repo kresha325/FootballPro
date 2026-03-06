@@ -43,10 +43,24 @@ export default function LiveBroadcast({ streamId }) {
         const mr = new MediaRecorder(stream, options);
         const chunks = [];
         mr.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
-        mr.onstop = () => {
+        mr.onstop = async () => {
           const blob = new Blob(chunks, { type: chunks[0]?.type || 'video/webm' });
           setRecordedBlob(blob);
-          setRecordedBlobUrl(URL.createObjectURL(blob));
+          try {
+            // Upload temp to server for preview/share decision
+            const fd = new FormData();
+            fd.append('video', new File([blob], 'live-session.webm', { type: blob.type }));
+            const res = await streamsAPI.uploadTemp(fd);
+            const tempUrl = res.data && res.data.tempUrl;
+            if (tempUrl) {
+              setRecordedBlobUrl(tempUrl);
+            } else {
+              setRecordedBlobUrl(URL.createObjectURL(blob));
+            }
+          } catch (uploadErr) {
+            console.warn('Temp upload failed, using local preview', uploadErr);
+            setRecordedBlobUrl(URL.createObjectURL(blob));
+          }
           setShowStopModal(true);
         };
         mr.start(1000);

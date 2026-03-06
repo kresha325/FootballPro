@@ -223,6 +223,9 @@ app.use('/api/businesses', require('./routes/business'));
 
 app.use('/api/ligas', require('./routes/liga'));
 
+// Streams routes (live/recording)
+app.use('/api/streams', require('./routes/streams'));
+
 // JonCoin API
 app.use('/api/joncoin', require('./routes/joncoin'));
 

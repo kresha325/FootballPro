@@ -56,6 +56,37 @@ exports.uploadRecording = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Upload temporary recording (store in uploads/, but do not attach to Stream)
+exports.uploadTemp = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const tempPath = `/uploads/${req.file.filename}`;
+    // Do not create DB records here; return path for frontend preview/decide-share
+    try { const io = socketUtil.getIo(); if (io) io.to('streams').emit('stream:tempUploaded', { path: tempPath }); } catch(e) {}
+    res.json({ tempUrl: tempPath });
+  } catch (err) {
+    console.error('Upload temp error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete temporary upload by filename (safe delete)
+exports.deleteTemp = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    if (!filename || filename.includes('..') || filename.includes('/')) return res.status(400).json({ error: 'Invalid filename' });
+    const full = path.join(__dirname, '..', 'uploads', filename);
+    if (fs.existsSync(full)) {
+      fs.unlinkSync(full);
+      return res.json({ message: 'Deleted' });
+    }
+    res.status(404).json({ error: 'Not found' });
+  } catch (err) {
+    console.error('Delete temp error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
 // Nis ose përditëson stream WebRTC si live
 exports.goLiveWebRTC = async (req, res) => {
   try {
