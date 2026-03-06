@@ -20,7 +20,14 @@ exports.uploadRecording = async (req, res) => {
       stream.description = description || stream.description;
       await stream.save();
       console.log('[uploadRecording] Stream updated:', stream.id, stream.videoUrl);
-      try { const io = socketUtil.getIo(); if (io) io.emit('stream:updated', { id: stream.id }); } catch(e) {}
+      try {
+        const io = socketUtil.getIo();
+        if (io) {
+          io.emit('stream:updated', { id: stream.id });
+          io.to('streams').emit('stream:updated', { id: stream.id });
+          io.to(`stream:${stream.id}`).emit('stream:updated', { id: stream.id });
+        }
+      } catch (e) {}
       res.json({ success: true, stream });
     } else {
       // Nëse nuk ka stream live, krijo të ri si më parë
@@ -35,7 +42,13 @@ exports.uploadRecording = async (req, res) => {
         videoUrl: `/uploads/streams/${req.file.filename}`,
       });
       console.log('[uploadRecording] Stream created:', stream.id, stream.videoUrl);
-      try { const io = socketUtil.getIo(); if (io) io.emit('stream:created', { id: stream.id }); } catch(e) {}
+      try {
+        const io = socketUtil.getIo();
+        if (io) {
+          io.emit('stream:created', { id: stream.id });
+          io.to('streams').emit('stream:created', { id: stream.id });
+        }
+      } catch (e) {}
       res.json({ success: true, stream });
     }
   } catch (err) {
@@ -64,7 +77,13 @@ exports.goLiveWebRTC = async (req, res) => {
         stream.description = req.body.description || '';
       await stream.save();
     }
-    try { const io = socketUtil.getIo(); if (io) io.emit('stream:updated', { id: stream.id }); } catch(e) {}
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+      }
+    } catch (e) {}
     res.json({ message: 'WebRTC stream started', stream });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -116,7 +135,13 @@ exports.createStream = async (req, res) => {
       streamKey,
     });
 
-    try { const io = socketUtil.getIo(); if (io) io.emit('stream:created', { id: stream.id }); } catch(e) {}
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:created', { id: stream.id });
+        io.to('streams').emit('stream:created', { id: stream.id });
+      }
+    } catch (e) {}
     res.status(201).json(stream);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -219,7 +244,13 @@ exports.startStream = async (req, res) => {
     stream.isLive = true;
     await stream.save();
 
-    try { const io = socketUtil.getIo(); if (io) io.emit('stream:updated', { id: stream.id }); } catch(e) {}
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+      }
+    } catch (e) {}
     res.json({ message: 'Stream started', stream });
   } catch (error) {
     console.error('Start stream error:', error);
@@ -237,7 +268,14 @@ exports.endStream = async (req, res) => {
 
     stream.isLive = false;
     await stream.save();
-    try { const io = socketUtil.getIo(); if (io) io.emit('stream:ended', { id: stream.id }); } catch(e) {}
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:ended', { id: stream.id });
+        io.to('streams').emit('stream:ended', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:ended', { id: stream.id });
+      }
+    } catch (e) {}
     res.json({ message: 'Stream ended' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -256,7 +294,14 @@ exports.joinStream = async (req, res) => {
 
     stream.viewers += 1;
     await stream.save();
-    try { const io = socketUtil.getIo(); if (io) io.emit('stream:updated', { id: stream.id }); } catch(e) {}
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:viewers', { id: stream.id, viewers: stream.viewers });
+      }
+    } catch (e) {}
     res.json({ message: 'Joined stream' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -272,7 +317,14 @@ exports.leaveStream = async (req, res) => {
     if (stream.viewers > 0) {
       stream.viewers -= 1;
       await stream.save();
-      try { const io = socketUtil.getIo(); if (io) io.emit('stream:updated', { id: stream.id }); } catch(e) {}
+      try {
+        const io = socketUtil.getIo();
+        if (io) {
+          io.emit('stream:updated', { id: stream.id });
+          io.to('streams').emit('stream:updated', { id: stream.id });
+          io.to(`stream:${stream.id}`).emit('stream:viewers', { id: stream.id, viewers: stream.viewers });
+        }
+      } catch (e) {}
     }
     res.json({ message: 'Left stream' });
   } catch (error) {

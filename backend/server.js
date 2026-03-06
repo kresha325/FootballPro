@@ -294,6 +294,41 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Subscribe to stream events (frontend uses this to receive live updates)
+  socket.on('subscribe:streams', () => {
+    try {
+      socket.join('streams');
+      logSocketEvent(socket, 'subscribe:streams', { socketId: socket.id });
+    } catch (e) {
+      console.warn('subscribe:streams error:', e && e.message);
+    }
+  });
+
+  socket.on('unsubscribe:streams', () => {
+    try {
+      socket.leave('streams');
+      logSocketEvent(socket, 'unsubscribe:streams', { socketId: socket.id });
+    } catch (e) {}
+  });
+
+  // Subscribe to a specific stream room to receive viewer updates
+  socket.on('subscribe:stream', (streamId) => {
+    try {
+      if (streamId) {
+        socket.join(`stream:${streamId}`);
+        logSocketEvent(socket, 'subscribe:stream', { streamId, socketId: socket.id });
+      }
+    } catch (e) {
+      console.warn('subscribe:stream error:', e && e.message);
+    }
+  });
+
+  socket.on('unsubscribe:stream', (streamId) => {
+    try {
+      if (streamId) socket.leave(`stream:${streamId}`);
+    } catch (e) {}
+  });
+
   // Handle disconnect
   socket.on('disconnect', () => {
     if (socket.userId) {
