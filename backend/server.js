@@ -162,6 +162,34 @@ app.use('/uploads', (req, res) => {
   res.status(200).send(placeholder);
 });
 
+// Serve favicon and frontend public icons so browser gets icon on all routes
+try {
+  const frontendPublic = path.join(__dirname, '..', 'frontend', 'public');
+  app.get('/favicon.ico', (req, res) => {
+    const p = path.join(frontendPublic, 'footballpro-icon-192.png');
+    if (fs.existsSync(p)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      return res.sendFile(p);
+    }
+    return res.sendStatus(404);
+  });
+  app.get('/footballpro-icon-192.png', (req, res) => {
+    const p = path.join(frontendPublic, 'footballpro-icon-192.png');
+    if (fs.existsSync(p)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      return res.sendFile(p);
+    }
+    return res.sendStatus(404);
+  });
+  // Serve apple-touch-icon and other static icons
+  const iconsDir = path.join(frontendPublic, 'icons');
+  if (fs.existsSync(iconsDir)) {
+    app.use('/icons', express.static(iconsDir, { maxAge: '30d' }));
+  }
+} catch (e) {
+  console.warn('Could not mount frontend public icons:', e && e.message);
+}
+
 // ...frontend serving removed for Render split-service deployment...
 
 // Routes
