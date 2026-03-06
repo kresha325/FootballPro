@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { streamsAPI } from '../services/api';
 import LiveViewer from './LiveViewer';
+import io from 'socket.io-client';
 
 export default function LiveAvatars({ onOpenViewer }) {
   const [liveStreams, setLiveStreams] = useState([]);
+  const socketRef = useRef(null);
 
   const fetchLive = async () => {
     try {
@@ -17,8 +19,26 @@ export default function LiveAvatars({ onOpenViewer }) {
 
   useEffect(() => {
     fetchLive();
+    // Connect socket for realtime updates
+    try {
+      const server = (import.meta.env.VITE_API_URL || '').replace('/api','') || window.location.origin;
+      socketRef.current = io(server, { transports: ['websocket'], reconnectionAttempts: 5 });
+      socketRef.current.on('connect', () => {
+        // subscribe to stream events
+        socketRef.current.emit('subscribe:streams');
+      });
+      socketRef.current.on('stream:created', fetchLive);
+      socketRef.current.on('stream:updated', fetchLive);
+      socketRef.current.on('stream:ended', fetchLive);
+    } catch (e) {
+      // ignore socket errors and fall back to polling
+    }
+
     const interval = setInterval(fetchLive, 8000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      try { if (socketRef.current) socketRef.current.disconnect(); } catch (e) {}
+    };
   }, []);
 
   if (liveStreams.length === 0) return null;
