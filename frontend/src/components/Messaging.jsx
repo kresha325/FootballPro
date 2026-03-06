@@ -295,6 +295,13 @@ function Messaging() {
 
 
       setMessages(prev => [...prev, response.data]);
+      if (socket) {
+        try {
+          socket.emit('sendMessage', { conversationId: selectedConversation.id, message: response.data });
+        } catch (e) {
+          console.warn('[Messaging] socket emit sendMessage failed', e.message || e);
+        }
+      }
       setMessageContent('');
       setFile(null);
       setReplyTo(null);
