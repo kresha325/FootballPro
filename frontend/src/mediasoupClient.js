@@ -10,8 +10,16 @@ const SERVER_URL = import.meta.env.VITE_MEDIASOUP_URL || (BACKEND_URL ? BACKEND_
 export async function startBroadcast(localStream, roomId, userId = null) {
   const token = localStorage.getItem('token');
   const socket = io(SERVER_URL, { query: { userId, token } });
-  await new Promise((resolve) => socket.on('connect', resolve));
-  await new Promise((resolve) => socket.emit('joinRoom', { roomId }, resolve));
+  // Wait for connect with timeout
+  await Promise.race([
+    new Promise((resolve) => socket.on('connect', resolve)),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Socket connect timeout')), 8000))
+  ]);
+  // Join room with timeout
+  await Promise.race([
+    new Promise((resolve) => socket.emit('joinRoom', { roomId }, resolve)),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('joinRoom ack timeout')), 8000))
+  ]);
 
   // 1. Get router RTP capabilities
   const rtpCapabilities = await new Promise((resolve) => {
@@ -52,8 +60,14 @@ export async function startBroadcast(localStream, roomId, userId = null) {
 export async function startViewer(roomId, userId = null) {
   const token = localStorage.getItem('token');
   const socket = io(SERVER_URL, { query: { userId, token } });
-  await new Promise((resolve) => socket.on('connect', resolve));
-  await new Promise((resolve) => socket.emit('joinRoom', { roomId }, resolve));
+  await Promise.race([
+    new Promise((resolve) => socket.on('connect', resolve)),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Socket connect timeout')), 8000))
+  ]);
+  await Promise.race([
+    new Promise((resolve) => socket.emit('joinRoom', { roomId }, resolve)),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('joinRoom ack timeout')), 8000))
+  ]);
 
   // 1. Get router RTP capabilities
   const rtpCapabilities = await new Promise((resolve) => {

@@ -25,7 +25,17 @@ export default function LiveBroadcast({ streamId }) {
         localVideoRef.current.srcObject = stream;
       }
       setBroadcasting(true);
-      const session = await startBroadcast(stream, streamId || (user && user.id), user && user.id);
+      let session;
+      try {
+        session = await startBroadcast(stream, streamId || (user && user.id), user && user.id);
+      } catch (sbErr) {
+        console.error('startBroadcast error:', sbErr);
+        setError('Nuk u mund të lidhet me serverin e transmetimit: ' + (sbErr.message || sbErr));
+        setBroadcasting(false);
+        // stop local tracks we opened
+        if (stream && stream.getTracks) stream.getTracks().forEach(t => t.stop());
+        return;
+      }
       setBroadcastSession(session);
 
       // Start recording locally (for optional save/share)
@@ -70,6 +80,7 @@ export default function LiveBroadcast({ streamId }) {
         console.warn('Recording not supported:', recErr);
       }
     } catch (err) {
+      console.error('Start broadcast error:', err);
       setError('Nuk mund të nisësh transmetimin: ' + (err.message || err));
       setBroadcasting(false);
     } finally {
