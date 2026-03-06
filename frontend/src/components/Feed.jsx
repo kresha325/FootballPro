@@ -23,6 +23,23 @@ const Feed = () => {
     if (/^https?:\/\//.test(normalized)) return normalized;
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
+
+  // Convert Cloudinary-hosted images to browser-friendly formats automatically
+  // e.g. change
+  // https://res.cloudinary.com/xxx/image/upload/v123/.../file.heic
+  // to
+  // https://res.cloudinary.com/xxx/image/upload/f_auto,q_auto/v123/.../file.heic
+  const getCloudinarySafeUrl = (url) => {
+    if (!url) return '';
+    try {
+      if (url.includes('res.cloudinary.com') && url.includes('/image/upload/')) {
+        return url.replace('/image/upload/', '/image/upload/f_auto,q_auto/');
+      }
+    } catch (e) {
+      // fall through
+    }
+    return url;
+  };
   const navigate = useNavigate();
   const { 
     allPosts, 
@@ -438,8 +455,8 @@ const Feed = () => {
                       <img
                         src={
                           post.author?.profilePhoto
-                            ? getFullUrl(post.author.profilePhoto)
-                            : getFullUrl(user.profilePhoto)
+                            ? getCloudinarySafeUrl(getFullUrl(post.author.profilePhoto))
+                            : getCloudinarySafeUrl(getFullUrl(user.profilePhoto))
                         }
                         alt={post.author?.firstName || user?.firstName || 'User'}
                         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
@@ -579,7 +596,7 @@ const Feed = () => {
               )}
               {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                 <img 
-                  src={getFullUrl(post.imageUrl)}
+                  src={getCloudinarySafeUrl(getFullUrl(post.imageUrl))}
                   alt="Post content" 
                   className="w-full rounded-lg mb-4 max-h-96 object-cover"
                   loading="lazy"
@@ -592,7 +609,7 @@ const Feed = () => {
               )}
               {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                 <video 
-                  src={getFullUrl(post.videoUrl || post.imageUrl)}
+                  src={getCloudinarySafeUrl(getFullUrl(post.videoUrl || post.imageUrl))}
                   controls 
                   preload="metadata"
                   className="w-full rounded-lg mb-4 max-h-96"
