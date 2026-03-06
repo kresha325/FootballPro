@@ -289,46 +289,19 @@ const Feed = () => {
       {/* Player Cards Section */}
       <UserCardsSection />
 
-      {/* Create Post Form */}
-      <div
-        className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700"
-        style={{
-          backgroundImage: "linear-gradient(180deg, #101214 0%, #1f242b 55%, #0f3d1c 100%)",
-          overflow: 'visible'
-        }}
-      >
-        <div
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{
-            backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 16px), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 16px)",
-            opacity: 0.35,
-            pointerEvents: 'none'
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute bottom-0 left-0 right-0 h-16"
-          style={{
-            backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.5) 100%)",
-            pointerEvents: 'none'
-          }}
-        />
+      {/* Create Post Form (flat background, no grid overlay) */}
+      <div className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="relative">
         <form onSubmit={handleCreatePost}>
           <label htmlFor="new-post" className="sr-only">What's on your mind?</label>
-          <div className="rounded-lg border-4 border-white/80 bg-white/90 shadow-inner p-2">
+          <div className="rounded-lg border-4 border-white/80 bg-white dark:bg-gray-800 shadow-inner p-2">
             <textarea
               id="new-post"
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
               placeholder="Shoot you penalty"
-              className="w-full p-3 border border-white/60 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white/80 bg-white/95 text-gray-900 placeholder-gray-500"
+              className="w-full p-3 border border-white/60 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white/80 bg-white dark:bg-gray-700 text-gray-900 placeholder-gray-500"
               rows="3"
-              style={{
-                backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 14px), repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 14px)",
-                backgroundSize: 'auto',
-              }}
             />
           </div>
           
