@@ -12,6 +12,8 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [showSplash, setShowSplash] = useState(true);
+  const [seconds, setSeconds] = useState(5);
   const [screen, setScreen] = useState('feed'); // feed | profile | golive
   const socketRef = useRef(null);
 
@@ -35,6 +37,22 @@ export default function App() {
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
+
+  // Splash countdown effect
+  useEffect(() => {
+    if (!showSplash) return;
+    const t = setInterval(() => {
+      setSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(t);
+          setShowSplash(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [showSplash]);
 
   const login = async () => {
     try {
@@ -87,6 +105,19 @@ export default function App() {
     setUser(null);
   };
 
+  if (showSplash) {
+    return (
+      <View style={[styles.container, styles.splashContainer]}>
+        <Text style={styles.splashTitle}>FootballPro</Text>
+        <Text style={styles.splashSubtitle}>Platforma për lojtarë, klube dhe skautim</Text>
+        <View style={{ marginTop: 20, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', marginBottom: 10 }}>Get started in {seconds}s</Text>
+          <Button title="Get Started" onPress={() => setShowSplash(false)} color="#ffffff" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>FootballPro Mobile</Text>
@@ -137,6 +168,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  splashContainer: { backgroundColor: '#0f766e', width: '100%', padding: 24, justifyContent: 'center', alignItems: 'center' },
+  splashTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
+  splashSubtitle: { color: '#e6fffa', marginTop: 8 },
   title: { fontSize: 20, fontWeight: '700', marginBottom: 12 },
   form: { width: '100%', marginTop: 12 },
   input: { borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 10, borderRadius: 6 }
