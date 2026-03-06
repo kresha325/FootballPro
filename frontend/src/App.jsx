@@ -68,7 +68,7 @@ function App() {
           {user && <XPNotificationManager />}
           {user && <VideoCallManager />}
 
-          <main className={user ? "pt-16 px-4 max-w-7xl mx-auto" : ''}>
+          <main className={user ? "pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto" : ''}>
           <Routes>
 
             {/* AUTH */}
