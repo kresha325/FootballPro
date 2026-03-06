@@ -35,6 +35,7 @@ import VideoCallManager from './components/VideoCallManager';
 import VideoCallRoom from './components/VideoCallRoom';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import Splash from './components/Splash';
 
 import { useEffect, useState } from 'react';
 // Hiq importin e applyBackgroundStyle
@@ -121,8 +122,8 @@ function App() {
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
 
-            {/* ROOT */}
-            <Route path="/" element={<Navigate to={user ? "/feed" : "/login"} />} />
+            {/* ROOT - show splash first */}
+            <Route path="/" element={<Splash />} />
 
           </Routes>
         </main>
