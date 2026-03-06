@@ -54,11 +54,7 @@ const Feed = () => {
   const [commentInputs, setCommentInputs] = useState({});
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletingComment, setDeletingComment] = useState(null);
-  const [followedOnly, setFollowedOnly] = useState(() => {
-    try {
-      return localStorage.getItem('feed_followed_only') === 'true';
-    } catch (e) { return false; }
-  });
+  // feed filter is controlled from Navbar (reads/writes localStorage)
 
   // Sponsor state per post
   const [showSponsorModal, setShowSponsorModal] = useState(false);
@@ -136,17 +132,11 @@ const Feed = () => {
     closeSponsorModal();
   };
   useEffect(() => {
-    fetchPosts({ followedOnly });
-    // Stream/livestream fetch removed
-    // Auto-refresh është hequr për performancë më të mirë
-    // Useri mund të refresh manualisht nëse dëshiron
+    const initialFollowedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch (e) { return false; }})();
+    fetchPosts({ followedOnly: initialFollowedOnly });
   }, [fetchPosts]);
 
-  // Persist and refetch when followedOnly changes
-  useEffect(() => {
-    try { localStorage.setItem('feed_followed_only', followedOnly ? 'true' : 'false'); } catch (e) {}
-    fetchPosts({ followedOnly });
-  }, [followedOnly, fetchPosts]);
+  // Note: feed filter UI moved to Navbar; Navbar updates localStorage and calls fetchPosts.
 
   // Scroll to highlighted post
   useEffect(() => {
@@ -294,21 +284,7 @@ const Feed = () => {
         {/* Main Feed Content */}
         <div className="lg:col-span-2">
 
-      {/* Feed Toggle */}
-      <div className="flex items-center justify-end mb-4">
-        <label className="flex items-center gap-3 bg-white/90 dark:bg-gray-800 p-2 rounded-md border border-gray-200 dark:border-gray-700">
-          <span className="text-sm text-gray-700 dark:text-gray-300">Global</span>
-          <button
-            onClick={() => setFollowedOnly(prev => !prev)}
-            aria-pressed={followedOnly}
-            className={`w-12 h-6 rounded-full p-1 transition-colors ${followedOnly ? 'bg-green-500' : 'bg-gray-300'}`}
-            title={followedOnly ? 'Showing followed only' : 'Showing global feed'}
-          >
-            <span className={`block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${followedOnly ? 'translate-x-6' : ''}`} />
-          </button>
-          <span className="text-sm text-gray-700 dark:text-gray-300">Followed</span>
-        </label>
-      </div>
+      {/* Feed Toggle moved to Navbar */}
 
       {/* Player Cards Section */}
       <UserCardsSection />

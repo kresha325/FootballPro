@@ -17,9 +17,9 @@
       "type": "image/png"
     },
     {
-      "src": "/footballpro-icon.svg",
+      "src": "/footballpro-icon.png",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ]
 }
