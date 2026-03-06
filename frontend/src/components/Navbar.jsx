@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
+import { usePosts } from '../contexts/PostsContext';
 import { notificationsAPI } from '../services/api';
 
 
@@ -36,6 +37,12 @@ function Navbar() {
   const [liveTitle, setLiveTitle] = useState('');
   const [liveDescription, setLiveDescription] = useState('');
   const [liveIsPublic, setLiveIsPublic] = useState(false);
+  // Feed toggle (My / All)
+  const { fetchPosts } = usePosts();
+  const initialFollowedOnly = (() => {
+    try { return localStorage.getItem('feed_followed_only') === 'true'; } catch (e) { return false; }
+  })();
+  const [followedOnly, setFollowedOnly] = useState(initialFollowedOnly);
 
 
   useEffect(() => {
@@ -104,6 +111,35 @@ function Navbar() {
           </button>
 
           {/* BURGER MENU BUTTON */}
+          {/* FEED TOGGLE: compact My / All */}
+          <div className="flex items-center ml-1">
+            <button
+              onClick={() => {
+                const newVal = true;
+                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch (e) {}
+                setFollowedOnly(newVal);
+                fetchPosts({ followedOnly: newVal });
+              }}
+              className={`px-2 py-1 text-sm rounded-l-md border ${followedOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              aria-pressed={followedOnly}
+              aria-label="Show My feed"
+            >
+              My
+            </button>
+            <button
+              onClick={() => {
+                const newVal = false;
+                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch (e) {}
+                setFollowedOnly(newVal);
+                fetchPosts({ followedOnly: newVal });
+              }}
+              className={`px-2 py-1 text-sm rounded-r-md border ${!followedOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              aria-pressed={!followedOnly}
+              aria-label="Show All feed"
+            >
+              All
+            </button>
+          </div>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="relative p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
