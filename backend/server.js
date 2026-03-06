@@ -137,6 +137,13 @@ io = socketIo(server, {
     credentials: true
   }
 });
+// Make io available to other modules
+try {
+  const socketUtil = require('./utils/socket');
+  socketUtil.setIo(io);
+} catch (e) {
+  console.warn('Could not set io in utils/socket:', e && e.message);
+}
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
