@@ -1,9 +1,10 @@
 // mediasoupClient.js - Utility for connecting to mediasoup-server
 import io from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
+import { BACKEND_URL } from './config/api';
 
-
-const SERVER_URL = 'http://localhost:4000'; // ndryshoje sipas production
+// Server URL for mediasoup (configurable via VITE_MEDIASOUP_URL). Falls back to backend origin.
+const SERVER_URL = import.meta.env.VITE_MEDIASOUP_URL || (BACKEND_URL ? BACKEND_URL.replace(/\/api\/?$/i, '') : window.location.origin);
 
 // roomId = streamId ose id unik për çdo stream
 export async function startBroadcast(localStream, roomId, userId = null) {
