@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
+import LiveAvatars from './LiveAvatars';
+import LiveViewer from './LiveViewer';
 
 const Streams = () => {
   const [streams, setStreams] = useState([]);
   const [currentStream, setCurrentStream] = useState(null);
+  const [openViewerStream, setOpenViewerStream] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamTitle, setStreamTitle] = useState('');
   const [streamDescription, setStreamDescription] = useState('');
@@ -76,6 +79,12 @@ const Streams = () => {
     socketRef.current.emit('joinStream', stream.id);
     await axios.post(`/api/streams/${stream.id}/join`);
   };
+
+  const openViewer = (stream) => {
+    setOpenViewerStream(stream);
+  };
+
+  const closeViewer = () => setOpenViewerStream(null);
 
   const leaveStream = async () => {
     socketRef.current.emit('leaveStream', currentStream.id);
@@ -173,6 +182,18 @@ const Streams = () => {
           ))}
         </div>
       </div>
+      {/* Live avatars sidebar */}
+      <LiveAvatars onOpenViewer={openViewer} />
+
+      {/* Inline viewer modal */}
+      {openViewerStream && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4 w-full max-w-3xl">
+            <button onClick={closeViewer} className="mb-2 text-sm text-gray-600">Close</button>
+            <LiveViewer streamId={openViewerStream.id} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
