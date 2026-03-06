@@ -13,6 +13,47 @@ const Register = () => {
     dateOfBirth: '',
   });
 
+  // initialize DOB parts from initial formData.dateOfBirth (no effects)
+  const initialDobParts = (() => {
+    if (formData.dateOfBirth) {
+      const parts = formData.dateOfBirth.split('-');
+      if (parts.length === 3) return { year: parts[0], month: parts[1], day: parts[2] };
+    }
+    return { year: '', month: '', day: '' };
+  })();
+
+  const [dobDay, setDobDay] = useState(initialDobParts.day);
+  const [dobMonth, setDobMonth] = useState(initialDobParts.month);
+  const [dobYear, setDobYear] = useState(initialDobParts.year);
+  const [showNativePicker, setShowNativePicker] = useState(false);
+
+  const updateFormDob = (y, m, d) => {
+    if (y && m && d) {
+      const iso = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      setFormData((prev) => ({ ...prev, dateOfBirth: iso }));
+    } else {
+      setFormData((prev) => ({ ...prev, dateOfBirth: '' }));
+    }
+  };
+
+  const handleDobDayChange = (value) => {
+    const v = value.replace(/[^0-9]/g, '').slice(0, 2);
+    setDobDay(v);
+    updateFormDob(dobYear, dobMonth, v);
+  };
+
+  const handleDobMonthChange = (value) => {
+    const v = value;
+    setDobMonth(v);
+    updateFormDob(dobYear, v, dobDay);
+  };
+
+  const handleDobYearChange = (value) => {
+    const v = value.replace(/[^0-9]/g, '').slice(0, 4);
+    setDobYear(v);
+    updateFormDob(v, dobMonth, dobDay);
+  };
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -105,17 +146,82 @@ const Register = () => {
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="dateOfBirth" className="sr-only">Date of birth</label>
-              <input
-                id="dateOfBirth"
-                name="dateOfBirth"
-                type="date"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Date of birth"
-                value={formData.dateOfBirth}
-                onChange={handleChange}
-                aria-describedby={error ? "error-message" : undefined}
-              />
+              <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">Date of birth</label>
+              <div className="mt-1 flex gap-2 items-center">
+                <input
+                  id="dob-day"
+                  name="dobDay"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  placeholder="DD"
+                  value={dobDay}
+                  onChange={(e) => handleDobDayChange(e.target.value)}
+                  className="w-16 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  aria-describedby={error ? "error-message" : undefined}
+                />
+                <select
+                  id="dob-month"
+                  name="dobMonth"
+                  value={dobMonth}
+                  onChange={(e) => handleDobMonthChange(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="">Month</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+                <input
+                  id="dob-year"
+                  name="dobYear"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  placeholder="YYYY"
+                  value={dobYear}
+                  onChange={(e) => handleDobYearChange(e.target.value)}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNativePicker((s) => !s)}
+                  className="ml-1 px-2 py-2 border border-gray-300 rounded-md text-sm bg-white"
+                  aria-label="Toggle calendar picker"
+                >
+                  📅
+                </button>
+              </div>
+              {showNativePicker && (
+                <div className="mt-2">
+                  <input
+                    type="date"
+                    value={formData.dateOfBirth || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({ ...prev, dateOfBirth: val }));
+                      const parts = val.split('-');
+                      if (parts.length === 3) {
+                        setDobYear(parts[0]);
+                        setDobMonth(parts[1]);
+                        setDobDay(parts[2]);
+                      }
+                    }}
+                    className="mt-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+              )}
             </div>
             <div>
               <label htmlFor="firstName" className="sr-only">First Name</label>
