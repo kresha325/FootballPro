@@ -10,22 +10,27 @@ import ForwardButton from './ForwardButton';
 import { API_URL } from '../config/api';
 
 // Modal për shfaqjen e fotove të mëdha
-function ImageModal({ src, alt, onClose }) {
+function MediaModal({ src, alt, onClose }) {
+  const isVideo = typeof src === 'string' && /\.(mp4|mov|webm|avi)$/i.test(src);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
       <div className="relative" onClick={e => e.stopPropagation()}>
-        <img
-          src={src}
-          alt={alt}
-          className="max-h-[90vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
-        />
+        {isVideo ? (
+          <video src={src} controls className="max-h-[90vh] max-w-[90vw] rounded shadow-lg border-4 border-white" />
+        ) : (
+          <img
+            src={src}
+            alt={alt}
+            className="max-h-[90vh] max-w-[90vw] rounded shadow-lg border-4 border-white"
+          />
+        )}
         <a
           href={src}
           download
           className="absolute top-2 right-2 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 px-4 py-2 rounded shadow border border-gray-300 text-sm font-semibold transition"
           onClick={e => e.stopPropagation()}
         >
-          Save photo
+          Save
         </a>
       </div>
     </div>
@@ -396,25 +401,20 @@ function Messaging() {
             <p className="truncate">{message.replyTo.content}</p>
           </div>
         )}
-        {message.type === 'image' && message.fileUrl && (
+        {message.fileUrl && message.type === 'image' && (
           <img
-            src={message.fileUrl.startsWith('/uploads/')
-              ? `${API_URL}${message.fileUrl}`
-              : `${API_URL}${message.fileUrl}`}
+            src={getFullUrl(message.fileUrl)}
             alt={message.fileName || 'Shared'}
             className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
-            onClick={() => setModalImage(message.fileUrl.startsWith('/uploads/')
-              ? `${API_URL}${message.fileUrl}`
-              : `${API_URL}${message.fileUrl}`)}
+            onClick={() => setModalImage(getFullUrl(message.fileUrl))}
           />
         )}
-        {message.type === 'video' && message.fileUrl && (
+        {message.fileUrl && message.type === 'video' && (
           <video
-            src={message.fileUrl.startsWith('/uploads/')
-              ? `${API_URL}${message.fileUrl}`
-              : `${API_URL}${message.fileUrl}`}
+            src={getFullUrl(message.fileUrl)}
             controls
-            className="max-w-xs rounded mb-2"
+            className="max-w-xs rounded mb-2 cursor-pointer"
+            onClick={() => setModalImage(getFullUrl(message.fileUrl))}
           />
         )}
         {message.type === 'file' && message.fileUrl && (
@@ -454,7 +454,7 @@ function Messaging() {
   }
   return (
     <div className="flex h-[calc(100vh-64px)] relative">
-      {modalImage && <ImageModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
+      {modalImage && <MediaModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
       {showCall && selectedConversation && (
         <VideoCallSimple
           targetUser={{
