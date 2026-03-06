@@ -426,10 +426,16 @@ export default function AdminDashboard() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Roles</option>
-                <option value="user">User</option>
-                <option value="player">Player</option>
+                <option value="athlete">Athlete</option>
                 <option value="coach">Coach</option>
                 <option value="scout">Scout</option>
+                <option value="manager">Manager</option>
+                <option value="referee">Referee</option>
+                <option value="club">Club</option>
+                <option value="business">Business</option>
+                <option value="media">Media</option>
+                <option value="federation">Federation</option>
+                <option value="liga">Liga</option>
                 <option value="admin">Admin</option>
               </select>
               <select
@@ -480,11 +486,16 @@ export default function AdminDashboard() {
                         onChange={(e) => handleUpdateRole(u.id, e.target.value)}
                         className="text-sm border border-gray-300 rounded px-2 py-1"
                       >
-                        <option value="user">User</option>
-                        <option value="player">Player</option>
+                        <option value="athlete">Athlete</option>
                         <option value="coach">Coach</option>
                         <option value="scout">Scout</option>
-                        <option value="referee">Referat</option>
+                        <option value="manager">Manager</option>
+                        <option value="referee">Referee</option>
+                        <option value="club">Club</option>
+                        <option value="business">Business</option>
+                        <option value="media">Media</option>
+                        <option value="federation">Federation</option>
+                        <option value="liga">Liga</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>

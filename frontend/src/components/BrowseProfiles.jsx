@@ -34,6 +34,7 @@ const BrowseProfiles = () => {
     { id: 'club', label: 'Clubs', icon: '🏟️', role: 'club' },
     { id: 'manager', label: 'Managers', icon: '💼', role: 'manager' },
     { id: 'business', label: 'Businesses', icon: '🏢', role: 'business' },
+    { id: 'media', label: 'Media', icon: '📺', role: 'media' },
   ];
 
   const ageGroups = [

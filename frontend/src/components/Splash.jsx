@@ -1,20 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Splash() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [seconds, setSeconds] = useState(5)
-
-  useEffect(() => {
-    if (seconds <= 0) {
-      navigate(user ? '/feed' : '/login')
-      return
-    }
-    const t = setTimeout(() => setSeconds((s) => s - 1), 1000)
-    return () => clearTimeout(t)
-  }, [seconds, user, navigate])
+  // No auto-dismiss; user will tap "Get Started" to continue
 
   function handleGetStarted() {
     navigate(user ? '/feed' : '/login')
@@ -50,11 +41,12 @@ export default function Splash() {
             Get Started
           </button>
 
+          {/* Optional: a subtle login link for users who want to sign in directly */}
           <button
-            onClick={() => setSeconds(0)}
+            onClick={() => navigate(user ? '/feed' : '/login')}
             className="bg-white/20 text-white px-4 py-2 rounded border border-white/30"
           >
-            Skip ({seconds}s)
+            Log In
           </button>
         </div>
       </div>
