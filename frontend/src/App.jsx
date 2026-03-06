@@ -34,6 +34,7 @@ import VideoPlayer from './components/VideoPlayer';
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
 import VideoCallRoom from './components/VideoCallRoom';
+import YouTubeLiveTest from './components/YouTubeLiveTest';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import Splash from './components/Splash';
@@ -120,6 +121,7 @@ function App() {
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
+            <Route path="/youtube-test" element={user ? <YouTubeLiveTest /> : <Navigate to="/login" />} />
 
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
