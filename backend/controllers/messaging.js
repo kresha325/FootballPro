@@ -342,6 +342,17 @@ exports.sendMessage = async (req, res) => {
       }
     }
 
+    // Emit newMessage via Socket.IO as a server-side fallback so recipients get it
+    try {
+      const socketHelper = require('../socket');
+      const io = socketHelper.getIo();
+      if (io) {
+        io.to(`conversation-${conversationId}`).emit('newMessage', fullMessage);
+      }
+    } catch (emitErr) {
+      console.warn('Emit newMessage failed in messaging controller', emitErr && emitErr.message);
+    }
+
     console.log('✅ Message sent successfully');
     res.json(fullMessage);
   } catch (err) {

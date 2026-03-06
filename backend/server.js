@@ -565,3 +565,9 @@ app.use((err, req, res, next) => {
   }
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
+// Expose io to controllers via helper
+try {
+  require('./socket').setIo(io);
+} catch (e) {
+  console.warn('Could not set io in socket helper', e && e.message);
+}

@@ -321,6 +321,18 @@ router.post('/:userId', auth, async (req, res) => {
       ],
     });
 
+    // Server-side emit for real-time delivery
+    try {
+      const socketHelper = require('../socket');
+      const io = socketHelper.getIo();
+      if (io) {
+        const convId = parseInt(userId); // legacy uses userId as conversation id
+        io.to(`conversation-${convId}`).emit('newMessage', fullMessage);
+      }
+    } catch (emitErr) {
+      console.warn('Emit newMessage failed in messagingSimple route', emitErr && emitErr.message);
+    }
+
     res.json(fullMessage);
   } catch (error) {
     console.error('Send message error:', error);
