@@ -311,15 +311,34 @@ const Feed = () => {
         <div className="relative">
         <form onSubmit={handleCreatePost}>
           <label htmlFor="new-post" className="sr-only">What's on your mind?</label>
-          <div className="rounded-lg border-4 border-white/80 bg-white dark:bg-gray-800 shadow-inner p-2">
-            <textarea
-              id="new-post"
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-              placeholder="Shoot you penalty"
-              className="w-full p-3 border border-white/60 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-white/80 bg-white dark:bg-gray-700 text-gray-900 placeholder-gray-500"
-              rows="3"
-            />
+          {/* Goal-styled input box */}
+          <div className="relative mx-auto" style={{ maxWidth: 760 }}>
+            {/* Net background */}
+            <div
+              className="rounded-lg p-3"
+              style={{
+                backgroundColor: '#ffffff',
+                backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0 6px, transparent 6px 12px)',
+                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.04)'
+              }}
+            >
+              {/* Left goal post */}
+              <div className="absolute left-0 top-0 bottom-0 w-3 bg-white rounded-r-md shadow" style={{ transform: 'translateX(-100%)' }} aria-hidden />
+              {/* Right goal post */}
+              <div className="absolute right-0 top-0 bottom-0 w-3 bg-white rounded-l-md shadow" style={{ transform: 'translateX(100%)' }} aria-hidden />
+              {/* Crossbar */}
+              <div className="absolute left-0 right-0 top-0 h-3 bg-white shadow" style={{ transform: 'translateY(-100%)' }} aria-hidden />
+
+              <textarea
+                id="new-post"
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                placeholder="Shoot your penalty..."
+                className="w-full p-4 border border-transparent rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-transparent text-gray-900 placeholder-gray-500"
+                rows="3"
+                style={{ minHeight: 96 }}
+              />
+            </div>
           </div>
           
           {/* File Preview */}
