@@ -18,12 +18,14 @@ function PostsProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   // Fetch all posts
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (options = {}) => {
     setLoading(true);
     try {
-      const response = await postsAPI.getPosts();
+      const params = {};
+      if (options.followedOnly) params.followed = true;
+      const response = await postsAPI.getPosts(params);
       setAllPosts(response.data);
-      
+
       // Set liked posts
       const liked = new Set();
       response.data.forEach(post => {

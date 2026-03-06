@@ -158,6 +158,22 @@ const emailTemplates = {
       </div>
     `
   }),
+  parentVerification: (athleteName, token) => ({
+    subject: `Parental confirmation required for ${athleteName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Parental Consent Required</h2>
+        <p>Hi,</p>
+        <p>${athleteName} has registered on FootballPro and requires parental confirmation to continue.</p>
+        <p>Please confirm by clicking the button below:</p>
+        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/parent-verify?token=${token}" 
+           style="background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
+          Confirm Parental Consent
+        </a>
+        <p style="margin-top:12px; color:#6b7280; font-size:12px;">If you did not expect this email, ignore it.</p>
+      </div>
+    `
+  }),
 
   rosterRejected: (data) => ({
     subject: `Roster Request Update from ${data.clubName}`,

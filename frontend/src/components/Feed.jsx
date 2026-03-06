@@ -54,6 +54,11 @@ const Feed = () => {
   const [commentInputs, setCommentInputs] = useState({});
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletingComment, setDeletingComment] = useState(null);
+  const [followedOnly, setFollowedOnly] = useState(() => {
+    try {
+      return localStorage.getItem('feed_followed_only') === 'true';
+    } catch (e) { return false; }
+  });
 
   // Sponsor state per post
   const [showSponsorModal, setShowSponsorModal] = useState(false);
@@ -131,11 +136,17 @@ const Feed = () => {
     closeSponsorModal();
   };
   useEffect(() => {
-    fetchPosts();
+    fetchPosts({ followedOnly });
     // Stream/livestream fetch removed
     // Auto-refresh është hequr për performancë më të mirë
     // Useri mund të refresh manualisht nëse dëshiron
   }, [fetchPosts]);
+
+  // Persist and refetch when followedOnly changes
+  useEffect(() => {
+    try { localStorage.setItem('feed_followed_only', followedOnly ? 'true' : 'false'); } catch (e) {}
+    fetchPosts({ followedOnly });
+  }, [followedOnly, fetchPosts]);
 
   // Scroll to highlighted post
   useEffect(() => {
@@ -173,7 +184,7 @@ const Feed = () => {
     setDeletingPost(postId);
     try {
       await postsAPI.deletePost(postId);
-      await fetchPosts(); // Refresh posts
+      await fetchPosts({ followedOnly }); // Refresh posts
       alert('Post deleted successfully!');
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -242,7 +253,7 @@ const Feed = () => {
       setFilePreview(null);
       setLocation('');
       setShowLocationInput(false);
-      fetchPosts(); // Refresh to get new post with counts
+      await fetchPosts({ followedOnly }); // Refresh to get new post with counts (respect current filter)
     } catch (error) {
       console.error('Error creating post:', error);
     } finally {
@@ -283,6 +294,21 @@ const Feed = () => {
         {/* Main Feed Content */}
         <div className="lg:col-span-2">
 
+      {/* Feed Toggle */}
+      <div className="flex items-center justify-end mb-4">
+        <label className="flex items-center gap-3 bg-white/90 dark:bg-gray-800 p-2 rounded-md border border-gray-200 dark:border-gray-700">
+          <span className="text-sm text-gray-700 dark:text-gray-300">Global</span>
+          <button
+            onClick={() => setFollowedOnly(prev => !prev)}
+            aria-pressed={followedOnly}
+            className={`w-12 h-6 rounded-full p-1 transition-colors ${followedOnly ? 'bg-green-500' : 'bg-gray-300'}`}
+            title={followedOnly ? 'Showing followed only' : 'Showing global feed'}
+          >
+            <span className={`block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${followedOnly ? 'translate-x-6' : ''}`} />
+          </button>
+          <span className="text-sm text-gray-700 dark:text-gray-300">Followed</span>
+        </label>
+      </div>
 
       {/* Player Cards Section */}
       <UserCardsSection />
@@ -292,7 +318,7 @@ const Feed = () => {
         className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700"
         style={{
           backgroundImage: "linear-gradient(180deg, #101214 0%, #1f242b 55%, #0f3d1c 100%)",
-          position: 'relative',
+            await fetchPosts({ followedOnly }); // Refresh posts with current filter
           overflow: 'visible'
         }}
       >

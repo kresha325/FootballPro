@@ -7,6 +7,7 @@ import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
+import ParentVerification from './components/ParentVerification';
 import BrowseProfiles from './components/BrowseProfiles';
 import Gallery from './components/Gallery';
 import Feed from './components/Feed';
@@ -107,6 +108,7 @@ function App() {
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
+                  <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
             {/* <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} /> */}
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />

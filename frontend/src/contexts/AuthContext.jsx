@@ -101,10 +101,10 @@ export const AuthProvider = ({ children }) => {
       console.log('FRONTEND: Sending registration data:', userData);
       const response = await authAPI.register(userData);
       console.log('FRONTEND: Registration response:', response.data);
-      const { token, user: newUser } = response.data;
+      const { token, user: newUser, requiresParentVerification } = response.data;
       localStorage.setItem('token', token);
       setUser({ ...newUser, token });
-      return { success: true };
+      return { success: true, requiresParentVerification };
     } catch (error) {
       console.error('FRONTEND: Registration error:', error);
       console.error('FRONTEND: Error response:', error.response?.data);

@@ -8,7 +8,7 @@ const { sendEmail } = require('../services/emailService');
 exports.register = async (req, res) => {
   console.log('BACKEND: REGISTER BODY:', req.body);
 
-  const { email, password, role, firstName, lastName } = req.body;
+  const { email, password, role, firstName, lastName, dateOfBirth } = req.body;
 
   try {
     // 1. Validim bazë
@@ -30,15 +30,19 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 4. Krijo user real
+    // 4. Krijo user real (inkluziv dateOfBirth nëse ofrohet)
     console.log('BACKEND: Creating user...');
-    const user = await User.create({
+    const userPayload = {
       email,
       password: hashedPassword,
       role: role || 'athlete',
       firstName,
       lastName,
-    });
+    };
+    if (dateOfBirth) {
+      userPayload.dateOfBirth = dateOfBirth;
+    }
+    const user = await User.create(userPayload);
 
     // 4.5 Krijo profile automatikisht
     console.log('BACKEND: Creating profile for user:', user.id);
@@ -47,6 +51,7 @@ exports.register = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      dateOfBirth: user.dateOfBirth || null,
       // Mund të shtosh edhe fusha të tjera bazë nëse duhen
     });
 
@@ -61,23 +66,38 @@ exports.register = async (req, res) => {
       // Don't fail registration if email fails
     }
 
-    // 5. JWT
+    // 5. Check age and JWT
     const payload = { user: { id: user.id } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: '7d',
     });
+
+    // Determine if parent verification is required (under 18)
+    let requiresParentVerification = false;
+    if (user.dateOfBirth) {
+      const today = new Date();
+      const birth = new Date(user.dateOfBirth);
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      if (age < 18) requiresParentVerification = true;
+    }
 
     console.log('BACKEND: Sending success response');
     // 6. Response
     res.status(201).json({
       success: true,
       token,
+      requiresParentVerification,
       user: {
         id: user.id,
         email: user.email,
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        dateOfBirth: user.dateOfBirth || null,
       },
     });
   } catch (err) {

@@ -10,6 +10,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'athlete',
+    dateOfBirth: '',
   });
 
   const [error, setError] = useState('');
@@ -68,12 +69,16 @@ const Register = () => {
       role: formData.role,
       firstName: formData.firstName,
       lastName: formData.lastName,
+      dateOfBirth: formData.dateOfBirth || undefined,
     });
     setLoading(false);
-
     if (result.success) {
-      console.log('FRONTEND: Registration successful, navigating to login');
-      navigate('/login');
+      console.log('FRONTEND: Registration successful');
+      if (result.requiresParentVerification) {
+        navigate('/parent-verification');
+      } else {
+        navigate('/feed');
+      }
     } else {
       console.error('FRONTEND: Registration failed:', result.error);
       setError(result.error || 'Registration failed. Please try again.');
@@ -100,6 +105,18 @@ const Register = () => {
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
+              <label htmlFor="dateOfBirth" className="sr-only">Date of birth</label>
+              <input
+                id="dateOfBirth"
+                name="dateOfBirth"
+                type="date"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Date of birth"
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                aria-describedby={error ? "error-message" : undefined}
+              />
+            </div>
               <label htmlFor="firstName" className="sr-only">First Name</label>
               <input
                 id="firstName"

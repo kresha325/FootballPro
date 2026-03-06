@@ -220,6 +220,21 @@ exports.approveRequest = async (req, res) => {
       await athleteProfile.save();
     }
 
+    // Mark athlete's club verification and finalize `verified` if parent already confirmed
+    try {
+      const athleteUser = await User.findByPk(request.athleteId);
+      if (athleteUser) {
+        athleteUser.clubVerified = true;
+        athleteUser.clubVerifiedAt = new Date();
+        if (athleteUser.parentVerified) {
+          athleteUser.verified = true;
+        }
+        await athleteUser.save();
+      }
+    } catch (e) {
+      console.error('Failed to set athlete club verification:', e && e.message);
+    }
+
     res.json({
       msg: 'Roster request approved',
       request

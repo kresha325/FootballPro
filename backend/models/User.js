@@ -81,6 +81,30 @@ const User = sequelize.define('User', {
     type: DataTypes.BIGINT,
     allowNull: true,
   },
+  parentEmail: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  parentVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  parentVerificationToken: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  parentVerificationExpire: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
+  clubVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  clubVerifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

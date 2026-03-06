@@ -31,13 +31,38 @@ exports.getPosts = async (req, res) => {
 
     const Sponsor = require('../models/Sponsor');
     const PostSponsor = require('../models/PostSponsor');
-    const posts = await Post.findAll({
-      include: [
-        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
-        { model: Sponsor, through: { attributes: [] } }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
+    const Follow = require('../models/Follow');
+
+    const wantFollowed = req.query && (req.query.followed === 'true' || req.query.followed === '1' || req.query.followed === true);
+    let posts;
+    if (wantFollowed) {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ msg: 'Unauthorized' });
+      }
+      // Get list of following user IDs
+      const follows = await Follow.findAll({ where: { followerId: req.user.id, status: 'accepted' } });
+      const followingIds = follows.map(f => f.followingId);
+      if (followingIds.length === 0) {
+        posts = [];
+      } else {
+        posts = await Post.findAll({
+          where: { userId: followingIds },
+          include: [
+            { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+            { model: Sponsor, through: { attributes: [] } }
+          ],
+          order: [['createdAt', 'DESC']]
+        });
+      }
+    } else {
+      posts = await Post.findAll({
+        include: [
+          { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+          { model: Sponsor, through: { attributes: [] } }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+    }
     // Add like, comment counts, userLiked, and sponsors for each post
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       let likesCount = 0;

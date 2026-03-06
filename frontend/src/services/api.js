@@ -97,10 +97,18 @@ export const authAPI = {
 };
 
 /* =========================
+   VERIFICATION
+========================= */
+export const verificationAPI = {
+  parentRequest: (data) => API.post('/verification/parent-request', data),
+  parentConfirm: (token) => API.get(`/verification/parent-confirm?token=${token}`),
+};
+
+/* =========================
    POSTS / FEED ✅ FIX
 ========================= */
 export const postsAPI = {
-  getPosts: () => API.get('/posts'),
+  getPosts: (params) => API.get('/posts', { params }),
   getUserPosts: (userId) => API.get(`/posts/user/${userId}`),
   createPost: (data) => {
     // Check if data is FormData (for file uploads) or regular object
