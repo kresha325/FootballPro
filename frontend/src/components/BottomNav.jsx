@@ -16,8 +16,8 @@ function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 md:right-4 md:top-1/2 md:-translate-y-1/2 md:left-auto md:bottom-auto bg-white dark:bg-gray-800 border-t md:border md:border-gray-200 dark:border-gray-700 md:rounded-full shadow-lg z-40 md:py-4 md:px-2">
-      <div className="flex md:flex-col gap-0 md:gap-6 items-center justify-around md:justify-center py-2 md:py-0">
+    <nav className="fixed bottom-0 left-0 right-0 md:fixed md:right-6 md:top-1/2 md:-translate-y-1/2 md:left-auto md:bottom-auto bg-white dark:bg-gray-800 border-t md:border md:border-gray-200 dark:border-gray-700 md:rounded-full shadow-lg z-50 md:py-4 md:px-2 md:w-auto">
+      <div className="flex md:flex-col gap-0 md:gap-6 items-center justify-around md:justify-center py-2 md:py-0 md:items-center">
 
         <NavLink
           to="/feed"
