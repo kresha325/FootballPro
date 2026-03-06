@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { startBroadcast } from '../mediasoupClient';
 import { useAuth } from '../contexts/AuthContext';
-import { postsAPI } from '../services/api';
+import { postsAPI, streamsAPI } from '../services/api';
 
 export default function LiveBroadcast({ streamId }) {
   const localVideoRef = useRef(null);
@@ -116,17 +116,36 @@ export default function LiveBroadcast({ streamId }) {
     setShowStopModal(false);
     if (share && recordedBlob) {
       try {
-        const fd = new FormData();
-        fd.append('video', new File([recordedBlob], 'live-session.webm', { type: recordedBlob.type }));
-        fd.append('content', 'Live session');
-        await postsAPI.createPost(fd);
-        alert('Transmetimi u ndau dhe u ruajt në gallery!');
+        // If we previously uploaded a temp file and have its server URL, finalize it server-side (upload -> Cloudinary + create Post)
+        if (recordedBlobUrl && recordedBlobUrl.startsWith('/uploads/')) {
+          const res = await streamsAPI.finalize({ tempUrl: recordedBlobUrl, content: 'Live session' });
+          if (res && res.data && res.data.post) {
+            alert('Transmetimi u ndau dhe u ruajt në gallery!');
+          } else {
+            alert('Transmetimi u ndau, por krijimi i postimit dështoi');
+          }
+        } else {
+          // Fallback: upload directly via posts API
+          const fd = new FormData();
+          fd.append('video', new File([recordedBlob], 'live-session.webm', { type: recordedBlob.type }));
+          fd.append('content', 'Live session');
+          await postsAPI.createPost(fd);
+          alert('Transmetimi u ndau dhe u ruajt në gallery!');
+        }
       } catch (err) {
-        console.error('Share upload failed:', err);
+        console.error('Share upload/ finalize failed:', err);
         alert('Ndryshimi në upload dështoi');
       }
     } else {
       // Don't share: discard recorded blob
+      try {
+        if (recordedBlobUrl && recordedBlobUrl.startsWith('/uploads/')) {
+          const filename = recordedBlobUrl.replace('/uploads/', '');
+          await streamsAPI.deleteTemp(filename);
+        }
+      } catch (e) {
+        console.warn('Could not delete temp file:', e);
+      }
       setRecordedBlob(null);
       if (recordedBlobUrl) {
         URL.revokeObjectURL(recordedBlobUrl);

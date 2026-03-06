@@ -15,6 +15,7 @@ router.post('/:id/leave', auth, streamsCtrl.leaveStream);
 // Temp upload: store recording file and return URL
 router.post('/upload-temp', auth, uploadLocal.single('video'), streamsCtrl.uploadTemp);
 router.delete('/temp/:filename', auth, streamsCtrl.deleteTemp);
+router.post('/finalize', auth, streamsCtrl.finalizeTemp);
 
 module.exports = router;
 // Stream/livestream routes removed

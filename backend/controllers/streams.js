@@ -3,6 +3,9 @@
 const path = require('path');
 const fs = require('fs');
 const socketUtil = require('../utils/socket');
+const cloudinary = require('../utils/cloudinary');
+const Gallery = require('../models/Gallery');
+const Post = require('../models/Post');
 exports.uploadRecording = async (req, res) => {
   try {
     console.log('[uploadRecording] req.user:', req.user);
@@ -84,6 +87,89 @@ exports.deleteTemp = async (req, res) => {
     res.status(404).json({ error: 'Not found' });
   } catch (err) {
     console.error('Delete temp error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Finalize a temporary upload: move to Cloudinary (recommended) and create Gallery + Post
+exports.finalizeTemp = async (req, res) => {
+  try {
+    const { tempUrl, content } = req.body;
+    if (!tempUrl) return res.status(400).json({ error: 'tempUrl required' });
+    // Accept cloud URLs directly
+    let imageUrl = null;
+    let videoUrl = null;
+    const isCloudinaryEnabled = !!(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    if (tempUrl.startsWith('/uploads/')) {
+      const filename = tempUrl.replace('/uploads/', '');
+      const full = path.join(__dirname, '..', 'uploads', filename);
+      if (!fs.existsSync(full)) return res.status(404).json({ error: 'File not found' });
+      const ext = path.extname(full).toLowerCase();
+      const isVideo = /\.(mp4|mov|mkv|webm|avi)$/.test(ext);
+
+      if (isCloudinaryEnabled) {
+        const uploadOptions = {
+          resource_type: isVideo ? 'video' : 'image',
+          folder: 'gallery',
+          transformation: [{ fetch_format: 'auto', quality: 'auto' }]
+        };
+        const cloudRes = await cloudinary.uploader.upload(full, uploadOptions);
+        try { fs.unlinkSync(full); } catch (e) {}
+        if (isVideo) videoUrl = cloudRes.secure_url; else imageUrl = cloudRes.secure_url;
+      } else {
+        // Move to uploads/gallery
+        const destDir = path.join(__dirname, '..', 'uploads', 'gallery');
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        const destName = Date.now() + '-' + filename;
+        const dest = path.join(destDir, destName);
+        fs.renameSync(full, dest);
+        const publicPath = `/uploads/gallery/${destName}`;
+        if (isVideo) videoUrl = publicPath; else imageUrl = publicPath;
+      }
+    } else if (/^https?:\/\//.test(tempUrl)) {
+      // Already a public URL (maybe Cloudinary)
+      if (/\.(mp4|mov|mkv|webm|avi)(\?|$)/.test(tempUrl)) videoUrl = tempUrl; else imageUrl = tempUrl;
+    } else {
+      return res.status(400).json({ error: 'Unsupported tempUrl format' });
+    }
+
+    // Create gallery entry if media was produced
+    let galleryItem = null;
+    if (imageUrl || videoUrl) {
+      galleryItem = await Gallery.create({
+        userId: req.user.id,
+        title: content || 'Live session',
+        description: '',
+        imageUrl: imageUrl || null,
+        videoUrl: videoUrl || null,
+        type: videoUrl ? 'video' : 'photo',
+        publicId: null,
+      });
+    }
+
+    // Create post referencing the media
+    const post = await Post.create({
+      userId: req.user.id,
+      content: content || '',
+      imageUrl: imageUrl || null,
+      videoUrl: videoUrl || null,
+    });
+
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('post:created', { id: post.id });
+      }
+    } catch (e) {}
+
+    res.json({ post, gallery: galleryItem });
+  } catch (err) {
+    console.error('Finalize temp error:', err);
     res.status(500).json({ error: err.message });
   }
 };

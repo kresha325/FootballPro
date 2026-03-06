@@ -197,6 +197,7 @@ export const streamsAPI = {
   createStream: (data) => API.post('/streams', data),
   uploadTemp: (formData) => API.post('/streams/upload-temp', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteTemp: (filename) => API.delete(`/streams/temp/${filename}`),
+  finalize: (data) => API.post('/streams/finalize', data),
 };
 
 /* =========================
