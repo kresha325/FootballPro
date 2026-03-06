@@ -18,7 +18,7 @@ import { notificationsAPI } from '../services/api';
 
 
 function Navbar() {
-  const { user, logout, darkMode, toggleDarkMode } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   const getFullUrl = (url) => {
@@ -101,14 +101,7 @@ function Navbar() {
             <span className="text-2xl">🔍</span>
           </Link>
 
-          {/* DARK MODE TOGGLE */}
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Toggle dark mode"
-          >
-            <span className="text-2xl">{darkMode ? '☀️' : '🌙'}</span>
-          </button>
+          {/* Dark mode toggle removed (available in Settings) */}
 
           {/* BURGER MENU BUTTON */}
           {/* FEED TOGGLE: compact My / All */}
