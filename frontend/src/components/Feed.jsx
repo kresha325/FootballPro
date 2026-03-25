@@ -13,7 +13,9 @@ import { API } from '../services/api';
 
 const Feed = () => {
   const { user } = useAuth();
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const apiRoot = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api','')
+    : '';
   const getFullUrl = (url) => {
     if (!url) return '';
     const normalized = url.startsWith('https//')
@@ -36,7 +38,7 @@ const Feed = () => {
       if (url.includes('res.cloudinary.com') && url.includes('/image/upload/')) {
         return url.replace('/image/upload/', '/image/upload/f_auto,q_auto/');
       }
-    } catch (e) {
+    } catch {
       // fall through
     }
     return url;
@@ -51,7 +53,7 @@ const Feed = () => {
     toggleLike, 
     fetchComments, 
     addComment,
-    addPost
+    // addPost // removed unused variable
   } = usePosts();
   
   const [searchParams] = useSearchParams();
@@ -78,7 +80,7 @@ const Feed = () => {
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [activeSponsorPost, setActiveSponsorPost] = useState(null);
   // sponsorData: { [userId]: [sponsor, ...] } (DEPRECATED, now use post.sponsors)
-  const [sponsorData, setSponsorData] = useState({});
+  const [sponsorData] = useState({}); // removed unused setSponsorData
   //useEffect(() => { ... });
   const [tempSponsor, setTempSponsor] = useState({ name: '', link: '', image: null, imagePreview: null });
 
@@ -162,29 +164,25 @@ const Feed = () => {
     try {
       await sponsorAPI.createSponsor(formData);
       // Fetch updated sponsors for the post
-      const res = await sponsorAPI.getSponsorsByPost(activeSponsorPost);
-      const sponsors = res.data.map(s => ({
-        name: s.name,
-        link: s.link,
-        image: s.image,
-        imagePreview: s.image,
-        id: s.id,
-        startDate: s.startDate,
-        endDate: s.endDate
-      }));
+      await sponsorAPI.getSponsorsByPost(activeSponsorPost);
+      // const sponsors = res.data.map(s => ({
+      //   name: s.name,
+      //   link: s.link,
+      //   image: s.image,
+      //   imagePreview: s.image,
+      //   id: s.id,
+      //   startDate: s.startDate,
+      //   endDate: s.endDate
+      // }));
       // Update the post's sponsors in allPosts
-      setAllPosts(prevPosts => prevPosts.map(post =>
-        post.id === activeSponsorPost
-          ? { ...post, sponsors }
-          : post
-      ));
-    } catch (err) {
+      // setAllPosts is not defined or used elsewhere, so this is removed
+    } catch {
       // handle error
     }
     closeSponsorModal();
   };
   useEffect(() => {
-    const initialFollowedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch (e) { return false; }})();
+    const initialFollowedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
     fetchPosts({ followedOnly: initialFollowedOnly });
   }, [fetchPosts]);
 
@@ -226,6 +224,7 @@ const Feed = () => {
     setDeletingPost(postId);
     try {
       await postsAPI.deletePost(postId);
+      const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
       await fetchPosts({ followedOnly }); // Refresh posts
       alert('Post deleted successfully!');
     } catch (error) {
@@ -295,6 +294,7 @@ const Feed = () => {
       setFilePreview(null);
       setLocation('');
       setShowLocationInput(false);
+      const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
       await fetchPosts({ followedOnly }); // Refresh to get new post with counts (respect current filter)
     } catch (error) {
       console.error('Error creating post:', error);
