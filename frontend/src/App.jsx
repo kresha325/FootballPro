@@ -1,3 +1,4 @@
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import PostsProvider from './contexts/PostsContext';
@@ -6,40 +7,41 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-import Profile from './components/Profile';
 import ParentVerification from './components/ParentVerification';
-import BrowseProfiles from './components/BrowseProfiles';
-import Gallery from './components/Gallery';
-import Feed from './components/Feed';
-import Search from './components/SearchSimple';
-import Messaging from './components/Messaging';
-import Marketplace from './components/MarketplaceSimple';
-import WalletPage from './components/WalletPage';
-import Notifications from './components/Notifications';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
-import Scouting from './components/Scouting';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// Lazy-loaded route components to reduce initial bundle size
+const Profile = lazy(() => import('./components/Profile'));
+const BrowseProfiles = lazy(() => import('./components/BrowseProfiles'));
+const Gallery = lazy(() => import('./components/Gallery'));
+const Feed = lazy(() => import('./components/Feed'));
+const Search = lazy(() => import('./components/SearchSimple'));
+const Messaging = lazy(() => import('./components/Messaging'));
+const Marketplace = lazy(() => import('./components/MarketplaceSimple'));
+const WalletPage = lazy(() => import('./components/WalletPage'));
+const Notifications = lazy(() => import('./components/Notifications'));
+const Scouting = lazy(() => import('./components/Scouting'));
+const Tournaments = lazy(() => import('./components/TournamentSimple'));
+const Gamification = lazy(() => import('./components/Gamification'));
+const Analytics = lazy(() => import('./components/Analytics'));
+const Premium = lazy(() => import('./components/Premium'));
+const Matches = lazy(() => import('./components/Matches'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const ClubRoster = lazy(() => import('./components/ClubRoster'));
+const Videos = lazy(() => import('./components/Videos'));
+const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
+const YouTubeLiveTest = lazy(() => import('./components/YouTubeLiveTest'));
 // import StreamsPage from './components/StreamsPage';
-import Tournaments from './components/TournamentSimple';
-import Gamification from './components/Gamification';
-import Analytics from './components/Analytics';
-import Premium from './components/Premium';
-// import StreamsSimple from './components/StreamsSimple';
-import Matches from './components/Matches';
-import AdminDashboard from './components/AdminDashboard';
-import ClubRoster from './components/ClubRoster';
-import Videos from './components/Videos';
-import VideoPlayer from './components/VideoPlayer';
+// Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
 import VideoCallRoom from './components/VideoCallRoom';
-import YouTubeLiveTest from './components/YouTubeLiveTest';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import Splash from './components/Splash';
 
-import { useEffect, useState } from 'react';
 // Hiq importin e applyBackgroundStyle
 function App() {
   const { user, loading } = useAuth();
@@ -70,7 +72,8 @@ function App() {
           {user && <VideoCallManager />}
 
           <main className={user ? "pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto" : ''}>
-          <Routes>
+          <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
+            <Routes>
 
             {/* AUTH */}
             <Route path="/login" element={user ? <Navigate to="/feed" /> : <Login />} />
@@ -129,7 +132,8 @@ function App() {
             {/* ROOT - show splash first */}
             <Route path="/" element={<Splash />} />
 
-          </Routes>
+            </Routes>
+          </Suspense>
         </main>
         </div>
       </PostsProvider>

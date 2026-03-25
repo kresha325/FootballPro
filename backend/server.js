@@ -34,17 +34,9 @@ let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
 
-// Middleware për të vendosur header-in CORS për të gjitha endpointet
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+// CORS is configured centrally below using the `cors` package so preflight and
+// actual responses always return consistent, valid headers. The explicit
+// header middleware was removed to avoid duplication and invalid responses.
 
 // Debug: Log Match model attributes and associations at startup
 const db = require('./models');
@@ -74,11 +66,8 @@ const { VideoCallHistory } = require('./models');
 const sequelize = require('./config/database');
 const { QueryTypes } = require('sequelize');
 
-// Shto header-in CORS për /uploads
-app.use('/uploads', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
-  next();
-});
+// `uploads` static assets are served below; global CORS middleware will set
+// the appropriate headers for those responses. Do not set headers twice.
 
 // Helmet for HTTP headers
 app.use(helmet());
@@ -112,16 +101,31 @@ app.use(xss());
 // NoSQL/SQL injection protection
 app.use(mongoSanitize());
 
-// CORS configuration
-const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com'; // Vendos URL-n e frontend-it në .env për prodhim
+// CORS configuration: use a dynamic origin function so preflight and actual
+// responses consistently return a valid Access-Control-Allow-Origin. In
+// development we allow requests from any origin; in production only configured
+// origins are accepted.
+const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com'; // set in .env for prod
 const allowedOrigins = allowedOrigin === '*'
-  ? '*'
+  ? ['*']
   : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
+
+function dynamicOrigin(origin, callback) {
+  // No origin (server-to-server or same-origin tools) -> allow
+  if (!origin) return callback(null, true);
+  // Development: allow any origin (echo handled by cors package)
+  if (process.env.NODE_ENV !== 'production') return callback(null, true);
+  // Production: only allow configured origins
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error('Not allowed by CORS'));
+}
+
 app.use(cors({
-  origin: allowedOrigins,
+  origin: dynamicOrigin,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200,
 }));
 app.options('*', cors());
 
@@ -129,10 +133,11 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
-// Socket.io CORS
+// Socket.io CORS — socket.io accepts an array or '*' for origin.
+const socketCorsOrigin = (allowedOrigins.length === 1 && allowedOrigins[0] === '*') ? '*' : allowedOrigins;
 io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: socketCorsOrigin,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true
   }

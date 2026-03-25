@@ -1,12 +1,3 @@
-{/* JonCoin Wallet */}
-            <Link 
-              to="/wallet" 
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <span className="text-2xl">💰</span>
-              <span className="font-medium">JonCoin Wallet</span>
-            </Link>
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -20,7 +11,8 @@ import { notificationsAPI } from '../services/api';
 function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const rawApiUrl = import.meta.env.VITE_API_URL || '';
+  const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
   const getFullUrl = (url) => {
     if (!url) return '';
     const normalized = url.startsWith('https//')

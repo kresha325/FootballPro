@@ -34,8 +34,14 @@ if (process.env.NODE_ENV === 'production') {
     ssl: process.env.DB_SSL === 'true'
   };
 
+  // If connecting to localhost, force SSL off for developer convenience
+  const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes((config.host || '').toLowerCase());
+  if (isLocalHost) {
+    config.ssl = false;
+  }
+
   const dialectOptions = {};
-  if (config.ssl || sslRequired) {
+  if ((config.ssl || sslRequired) && !isLocalHost) {
     dialectOptions.ssl = { require: true, rejectUnauthorized };
   }
 

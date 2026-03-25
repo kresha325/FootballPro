@@ -38,6 +38,38 @@ exports.getTournaments = async (req, res) => {
   }
 };
 
+// Trending tournaments (created inside the platform)
+exports.getTrendingTournaments = async (req, res) => {
+  try {
+    const statusFilter = req.query.status || 'open';
+
+    const tournaments = await Tournament.findAll({
+      where: statusFilter ? { status: statusFilter } : {},
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'participants', through: { attributes: [] } },
+      ],
+    });
+
+    // Only platform-created tournaments (creatorId present)
+    const platformCreated = tournaments.filter(t => !!t.creatorId);
+
+    // Sort by participants count desc, then newest first
+    platformCreated.sort((a, b) => {
+      const pa = (a.participants && a.participants.length) || 0;
+      const pb = (b.participants && b.participants.length) || 0;
+      if (pb !== pa) return pb - pa;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    // Return top 5 by default
+    res.json(platformCreated.slice(0, 5));
+  } catch (err) {
+    console.error('Get trending tournaments error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 exports.getTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id, {

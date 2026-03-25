@@ -1,0 +1,85 @@
+---
+- hosts: mediasoup
+  become: yes
+  vars_files:
+    - ../.env.example
+  tasks:
+    - name: Ensure apt cache is updated
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install packages
+      apt:
+        name:
+          - build-essential
+          - git
+          - curl
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - ffmpeg
+          - coturn
+          - nginx
+          - ufw
+        state: present
+
+    - name: Install Node LTS
+      shell: curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && apt-get install -y nodejs
+      args:
+        creates: /usr/bin/node
+
+    - name: Create mediasoup user
+      user:
+        name: mediasoup
+        system: yes
+        create_home: yes
+
+    - name: Create app dir
+      file:
+        path: /srv/mediasoup
+        owner: mediasoup
+        group: mediasoup
+        state: directory
+        mode: "0755"
+
+    - name: Clone repo (adjust URL)
+      git:
+        repo: "https://github.com/kresha325/FootballPro.git"
+        dest: /srv/mediasoup
+        version: main
+        force: yes
+      become_user: mediasoup
+
+    - name: Install npm deps if package.json exists
+      npm:
+        path: /srv/mediasoup/mediasoup-server
+        production: yes
+      become_user: mediasoup
+      when: "ansible.builtin.stat(path='/srv/mediasoup/mediasoup-server/package.json').stat.exists"
+
+    - name: Copy systemd service
+      copy:
+        src: ../mediasoup.service
+        dest: /etc/systemd/system/mediasoup.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Enable and start mediasoup
+      systemd:
+        name: mediasoup
+        enabled: yes
+        state: started
+
+    - name: Copy nginx config and reload
+      copy:
+        src: ../nginx_mediasoup.conf
+        dest: /etc/nginx/sites-available/mediasoup.conf
+      notify: reload nginx
+
+  handlers:
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded

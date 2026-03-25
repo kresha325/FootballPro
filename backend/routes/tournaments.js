@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const {
   createTournament,
   getTournaments,
+  getTrendingTournaments,
   getTournament,
   joinTournament,
   leaveTournament,
@@ -24,6 +25,8 @@ const {
 // Tournament CRUD
 router.post('/', auth, createTournament);
 router.get('/', auth, getTournaments);
+// Trending (auth required)
+router.get('/trending', auth, getTrendingTournaments);
 router.get('/:id', auth, getTournament);
 router.delete('/:id', auth, async (req, res) => {
   try {

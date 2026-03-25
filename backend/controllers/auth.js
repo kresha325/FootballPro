@@ -44,16 +44,19 @@ exports.register = async (req, res) => {
     }
     const user = await User.create(userPayload);
 
-    // 4.5 Krijo profile automatikisht
-    console.log('BACKEND: Creating profile for user:', user.id);
-    await Profile.create({
-      userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      dateOfBirth: user.dateOfBirth || null,
-      // Mund të shtosh edhe fusha të tjera bazë nëse duhen
-    });
+    // 4.5 Krijo profile automatikisht (best-effort)
+    console.log('BACKEND: Creating profile for user (best-effort):', user.id);
+    try {
+      await Profile.create({
+        userId: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        dateOfBirth: user.dateOfBirth || null,
+      }, { fields: ['userId', 'firstName', 'lastName', 'email', 'dateOfBirth'] });
+    } catch (profileErr) {
+      console.warn('BACKEND: Profile creation failed (non-fatal):', profileErr && profileErr.message);
+    }
 
     console.log('BACKEND: User created successfully:', user.id);
 
@@ -68,7 +71,7 @@ exports.register = async (req, res) => {
 
     // 5. Check age and JWT
     const payload = { user: { id: user.id } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
       expiresIn: '7d',
     });
 
@@ -126,14 +129,15 @@ exports.login = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // Krijo profil automatikisht nëse nuk ekziston
-    const existingProfile = await Profile.findOne({ where: { userId: user.id } });
+    // Krijo profil automatikisht nëse nuk ekziston (best-effort)
+    const existingProfile = await Profile.findOne({ where: { userId: user.id }, attributes: ['id', 'userId'] });
     if (!existingProfile) {
-      await Profile.create({
-        userId: user.id,
-        // Mund të shtosh edhe fusha të tjera bazë nëse duhen
-      });
-      console.log('BACKEND: Profile created automatically for user:', user.id);
+      try {
+        await Profile.create({ userId: user.id }, { fields: ['userId'] });
+        console.log('BACKEND: Profile created automatically for user:', user.id);
+      } catch (profileErr) {
+        console.warn('BACKEND: Failed to auto-create profile for user (non-fatal):', profileErr && profileErr.message);
+      }
     }
 
     const payload = {
@@ -143,7 +147,7 @@ exports.login = async (req, res) => {
       }
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
       expiresIn: '7d',
     });
     console.log('BACKEND: Login successful, sending token');
@@ -159,8 +163,8 @@ exports.login = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    console.error('BACKEND: LOGIN ERROR:', err);
+    res.status(500).json({ msg: 'Server error', error: err && err.message });
   }
 };
 

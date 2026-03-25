@@ -3,7 +3,8 @@ import { useAuth } from "../contexts/AuthContext";
 
 function BottomNav() {
   const { user } = useAuth();
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const rawApiUrl = import.meta.env.VITE_API_URL || '';
+  const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
   const getFullUrl = (url) => {
     if (!url) return '';
     const normalized = url.startsWith('https//')

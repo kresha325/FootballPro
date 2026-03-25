@@ -9,6 +9,7 @@ import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookI
 import AdSlider from './AdSlider';
 import SponsorBanner from './SponsorBanner.jsx';
 import UserCardsSection from './UserCardsSection';
+import { API } from '../services/api';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -106,6 +107,40 @@ const Feed = () => {
     setActiveSponsorPost(null);
     setTempSponsor({ name: '', link: '', image: null, imagePreview: null });
   };
+
+  // Trending tournaments (sidebar)
+  const [trending, setTrending] = useState([]);
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const res = await API.get('/tournaments/trending?status=open');
+        setTrending(res.data || []);
+      } catch (err) {
+        console.error('Error fetching trending tournaments:', err);
+      }
+    };
+    fetchTrending();
+  }, []);
+
+  // My tournaments (sidebar): tournaments where user is creator or participant
+  const [myTournaments, setMyTournaments] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    const fetchMine = async () => {
+      try {
+        const res = await API.get('/tournaments');
+        const list = (res.data || []).filter(t => {
+          const isCreator = t.creatorId === user.id;
+          const isParticipant = (t.participants || []).some(p => p.id === user.id);
+          return isCreator || isParticipant;
+        });
+        setMyTournaments(list.slice(0, 6));
+      } catch (err) {
+        console.error('Error fetching my tournaments:', err);
+      }
+    };
+    fetchMine();
+  }, [user]);
 
   const saveSponsorData = async () => {
     if (!activeSponsorPost || !user) return;
@@ -811,27 +846,62 @@ const Feed = () => {
         </div>
 
         {/* Ad 2 - Trending Tournaments */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <span>🔥</span> Trending Tournaments
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-blue-600">🏆</span>
-              <span className="text-gray-700 dark:text-gray-300">Champions League</span>
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <span>🔥</span> Trending Tournaments
+            </h3>
+            <div className="space-y-3">
+              {/* Render fetched trending tournaments */}
+              {trending && trending.length > 0 ? (
+                trending.map(t => (
+                  <div key={t.id} className="flex items-center gap-2 text-sm">
+                    <span className="text-blue-600">🏆</span>
+                    <button
+                      onClick={() => navigate(`/tournaments`)}
+                      className="text-gray-700 dark:text-gray-300 text-left truncate"
+                      title={t.name}
+                    >
+                      {t.name} {t.participants && `· ${t.participants.length}`}
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500">No trending tournaments yet</div>
+              )}
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-green-600">🏆</span>
-              <span className="text-gray-700 dark:text-gray-300">Local Cup Finals</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-purple-600">🏆</span>
-              <span className="text-gray-700 dark:text-gray-300">Youth Tournament</span>
-            </div>
+            <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition text-sm">
+              View All
+            </button>
           </div>
-          <button className="w-full mt-3 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition text-sm">
-            View All
-          </button>
+
+          {/* My Tournaments widget */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <span>⭐</span> My Tournaments
+            </h3>
+            <div className="space-y-2 text-sm">
+              {user ? (
+                myTournaments && myTournaments.length > 0 ? (
+                  myTournaments.map(t => (
+                    <div key={t.id} className="flex items-center gap-2">
+                      <span className="text-yellow-600">🏆</span>
+                      <button onClick={() => navigate(`/tournaments`)} className="text-gray-700 dark:text-gray-300 text-left truncate" title={t.name}>
+                        {t.name}
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">You have no tournaments</div>
+                )
+              ) : (
+                <div className="text-sm text-gray-500">Log in to see your tournaments</div>
+              )}
+            </div>
+            <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 rounded-md hover:bg-gray-300 transition text-sm">
+              Manage Tournaments
+            </button>
+          </div>
         </div>
 
         {/* Ad 3 - Sponsor Banner */}

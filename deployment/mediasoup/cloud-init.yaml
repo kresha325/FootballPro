@@ -1,0 +1,58 @@
+#cloud-config
+# Cloud-init for Ubuntu 22.04 mediasoup node
+package_upgrade: true
+packages:
+  - build-essential
+  - git
+  - curl
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - nodejs
+  - ffmpeg
+  - coturn
+  - nginx
+  - ufw
+  - python3
+  - python3-pip
+
+users:
+  - name: mediasoup
+    gecos: "mediasoup user"
+    groups: sudo
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: $6$rounds=4096$example$EXAMPLEHASH
+
+runcmd:
+  # setup Node LTS (deb nodesource)
+  - curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+  - apt-get install -y nodejs
+  - mkdir -p /srv/mediasoup
+  - chown mediasoup:mediasoup /srv/mediasoup
+  # Optionally, clone your repo (replace with your git url)
+  - su - mediasoup -c "git clone https://github.com/kresha325/FootballPro.git /srv/mediasoup || true"
+  - cd /srv/mediasoup/mediasoup-server || true
+  - su - mediasoup -c "cd /srv/mediasoup/mediasoup-server && npm ci --production || true"
+  # Copy example env to /etc/mediasoup.env
+  - if [ ! -f /etc/mediasoup.env ]; then cp /srv/mediasoup/deployment/mediasoup/.env.example /etc/mediasoup.env; fi
+  - chmod 600 /etc/mediasoup.env || true
+  # Install systemd unit
+  - cp /srv/mediasoup/deployment/mediasoup/mediasoup.service /etc/systemd/system/mediasoup.service || true
+  - systemctl daemon-reload
+  - systemctl enable mediasoup || true
+  # Copy nginx config and reload
+  - cp /srv/mediasoup/deployment/mediasoup/nginx_mediasoup.conf /etc/nginx/sites-available/mediasoup.conf || true
+  - ln -sf /etc/nginx/sites-available/mediasoup.conf /etc/nginx/sites-enabled/mediasoup.conf || true
+  - systemctl restart nginx || true
+  # Open firewall
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 4000/tcp
+  - ufw allow proto udp from any to any port 40000:49999
+  - ufw --force enable
+  # Start mediasoup service (will use /etc/mediasoup.env)
+  - systemctl start mediasoup || true
+final_message: "Mediasoup node setup finished. Edit /etc/mediasoup.env to configure ANNOUNCED_IP, TURN credentials and backend API then restart mediasoup."

@@ -1,0 +1,16 @@
+[Unit]
+Description=Mediasoup Signaling Server
+After=network.target
+
+[Service]
+Type=simple
+User=mediasoup
+WorkingDirectory=/srv/mediasoup
+EnvironmentFile=/etc/mediasoup.env
+Restart=on-failure
+RestartSec=5
+ExecStart=/usr/bin/node server.js
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
