@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -115,11 +115,24 @@ function AppTabs() {
     return () => clearInterval(id);
   }, [refreshBadges]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshBadges();
+    }, [refreshBadges])
+  );
+
   return (
     <Tabs.Navigator
+      screenListeners={{
+        state: () => {
+          refreshBadges();
+        },
+      }}
       screenOptions={({ route }) => ({
         headerTitleAlign: 'center',
         tabBarActiveTintColor: '#0f766e',
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarHideOnKeyboard: true,
         tabBarIcon: ({ color, size }) => {
           const iconMap = {
             Feed: 'home-outline',
@@ -134,14 +147,15 @@ function AppTabs() {
         },
       })}
     >
-      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false }} />
-      <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
+      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Feed' }} />
+      <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace', tabBarLabel: 'Market' }} />
       <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <Tabs.Screen
         name="Messages"
         component={MessagingNavigator}
         options={{
           headerShown: false,
+          tabBarLabel: 'Chats',
           tabBarBadge: messagesBadge > 0 ? messagesBadge : undefined,
         }}
       />
@@ -158,6 +172,7 @@ function AppTabs() {
         component={ProfileNavigator}
         options={{
           headerShown: false,
+          tabBarLabel: 'Me',
         }}
       />
     </Tabs.Navigator>

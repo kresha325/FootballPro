@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "publish": "expo publish --release-channel production",
-    "eas-build": "eas build --platform android --profile production"
+    "eas-build": "eas build --platform android --profile production",
+    "smoke:checklist": "node scripts/smoke-checklist.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.17.11",
