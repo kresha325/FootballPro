@@ -255,6 +255,8 @@ const Profile = () => {
   const [liveDescription, setLiveDescription] = useState('');
   const [liveIsPublic, setLiveIsPublic] = useState(false);
   const [liveStreamId, setLiveStreamId] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
   const [stats, setStats] = useState({
     posts: 0,
     followers: 0,
@@ -262,6 +264,7 @@ const Profile = () => {
   });
   // Shtojme state per modalin e fotos full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
+  const livePreviewRef = useRef(null);
 
   // Set gallery image as profile or cover photo
 
@@ -338,6 +341,11 @@ const Profile = () => {
 
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
+    if (!cameraReady) {
+      alert('Open camera first before starting live.');
+      return;
+    }
+
     try {
       const payload = {
         title: liveTitle?.trim() || 'Live Stream',
@@ -376,6 +384,46 @@ const Profile = () => {
       alert('Failed to start live stream. Please try again.');
     }
   };
+
+  const stopCameraPreview = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+    }
+    setCameraStream(null);
+    setCameraReady(false);
+    if (livePreviewRef.current) {
+      livePreviewRef.current.srcObject = null;
+    }
+  };
+
+  const handleOpenCameraFirst = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setCameraStream(stream);
+      setCameraReady(true);
+      if (livePreviewRef.current) {
+        livePreviewRef.current.srcObject = stream;
+        await livePreviewRef.current.play?.();
+      }
+    } catch (err) {
+      console.error('Camera open failed:', err);
+      alert('Camera/Microphone permission is required.');
+    }
+  };
+
+  useEffect(() => {
+    if (!showLiveModal) {
+      stopCameraPreview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLiveModal]);
+
+  useEffect(() => {
+    return () => {
+      stopCameraPreview();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchSponsors = async (userId) => {
     if (!userId) return;
@@ -1492,8 +1540,20 @@ const Profile = () => {
                 <label className="block text-sm font-medium mb-1">Public</label>
                 <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
               </div>
+              <button
+                type="button"
+                onClick={handleOpenCameraFirst}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium mt-1"
+              >
+                {cameraReady ? 'Camera ready' : 'Open camera first'}
+              </button>
+              {cameraStream ? (
+                <div className="mt-3">
+                  <video ref={livePreviewRef} autoPlay muted playsInline className="w-full rounded border" />
+                </div>
+              ) : null}
               <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
-              <button type="button" onClick={() => setShowLiveModal(false)} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
+              <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
             </form>
 
             {liveStreamId ? (
