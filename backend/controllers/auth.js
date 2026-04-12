@@ -60,14 +60,15 @@ exports.register = async (req, res) => {
 
     console.log('BACKEND: User created successfully:', user.id);
 
-    // 4.6 Send welcome email
-    try {
-      await sendEmail(user.email, 'welcome', user.firstName);
-      console.log('BACKEND: Welcome email sent');
-    } catch (emailError) {
-      console.error('BACKEND: Email sending failed:', emailError);
-      // Don't fail registration if email fails
-    }
+    // 4.6 Send welcome email in background (do not block auth flow)
+    Promise.resolve()
+      .then(() => sendEmail(user.email, 'welcome', user.firstName))
+      .then(() => {
+        console.log('BACKEND: Welcome email sent');
+      })
+      .catch((emailError) => {
+        console.error('BACKEND: Email sending failed:', emailError);
+      });
 
     // 5. Check age and JWT
     const payload = { user: { id: user.id } };
