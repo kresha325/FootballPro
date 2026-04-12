@@ -6,6 +6,7 @@ import {
   Image,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ import {
   likePostRequest,
   postCommentsRequest,
   postsRequest,
+  streamsRequest,
   unlikePostRequest,
 } from '../api/client';
 
@@ -133,6 +135,7 @@ export default function FeedScreen({ navigation }) {
   const [commentsLoadingPostId, setCommentsLoadingPostId] = useState(null);
   const [commentDraftByPostId, setCommentDraftByPostId] = useState({});
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
+  const [liveStreams, setLiveStreams] = useState([]);
 
   const loadPosts = useCallback(async ({ silent, useCache } = { silent: false, useCache: false }) => {
     if (!silent) {
@@ -154,9 +157,15 @@ export default function FeedScreen({ navigation }) {
     }
 
     try {
-      const response = await postsRequest();
-      const data = Array.isArray(response.data) ? response.data : [];
+      const [postsRes, liveRes] = await Promise.all([
+        postsRequest(),
+        streamsRequest({ isLive: true, limit: 12 }),
+      ]);
+
+      const data = Array.isArray(postsRes.data) ? postsRes.data : [];
+      const liveData = Array.isArray(liveRes.data) ? liveRes.data : [];
       setPosts(data);
+      setLiveStreams(liveData);
       await AsyncStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load feed'));
@@ -304,6 +313,45 @@ export default function FeedScreen({ navigation }) {
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
       ListHeaderComponent={
         <View>
+          {liveStreams.length > 0 ? (
+            <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
+              <View style={styles.liveHeaderRow}>
+                <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('GoLive')}>
+                  <Text style={styles.liveSeeAll}>See all</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.liveUsersRow}>
+                {liveStreams.map((stream) => {
+                  const streamer = stream?.streamer || {};
+                  const name = `${streamer?.firstName || ''} ${streamer?.lastName || ''}`.trim() || stream?.title || 'Live user';
+                  const photo = streamer?.photoUrl || streamer?.profilePhoto || null;
+                  return (
+                    <TouchableOpacity
+                      key={`live-user-${stream.id}`}
+                      style={styles.liveUserChip}
+                      onPress={() => navigation.navigate('GoLive')}
+                    >
+                      {photo ? (
+                        <Image source={{ uri: photo }} style={styles.liveAvatar} />
+                      ) : (
+                        <View style={styles.liveAvatarFallback}>
+                          <Text style={styles.liveAvatarText}>{name.charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <Text numberOfLines={1} style={[styles.liveName, isDark && styles.textPrimaryDark]}>{name}</Text>
+                      <View style={styles.liveDotWrap}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.liveTag}>LIVE</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
+
           <View style={styles.feedActionsWrap}>
             <TouchableOpacity style={styles.createPostButton} onPress={() => navigation.navigate('CreatePost')}>
               <Text style={styles.createPostButtonText}>Create Post</Text>
@@ -556,6 +604,87 @@ const styles = StyleSheet.create({
   feedActionsWrap: {
     flexDirection: 'row',
     marginBottom: 10,
+  },
+  liveWidget: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+  },
+  liveWidgetDark: {
+    backgroundColor: '#0f172a',
+    borderColor: '#7f1d1d',
+  },
+  liveHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  liveTitle: {
+    fontWeight: '800',
+    color: '#991b1b',
+    fontSize: 16,
+  },
+  liveSeeAll: {
+    color: '#0f766e',
+    fontWeight: '700',
+  },
+  liveUsersRow: {
+    paddingRight: 6,
+  },
+  liveUserChip: {
+    width: 96,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  liveAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    backgroundColor: '#e2e8f0',
+  },
+  liveAvatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    backgroundColor: '#b91c1c',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveAvatarText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  liveName: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  liveDotWrap: {
+    marginTop: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    marginRight: 4,
+  },
+  liveTag: {
+    color: '#ef4444',
+    fontWeight: '800',
+    fontSize: 11,
   },
   createPostButton: {
     flex: 1,
