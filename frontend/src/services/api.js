@@ -224,6 +224,10 @@ export const liveStreamAPI = {
   getActive: () => API.get('/live-stream/active'),
 };
 
+export const livekitAPI = {
+  createToken: (payload) => API.post('/livekit/token', payload),
+};
+
 /* =========================
    MARKETPLACE
 ========================= */
