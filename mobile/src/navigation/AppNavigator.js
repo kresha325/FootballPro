@@ -42,19 +42,19 @@ const formatBadge = (value) => {
 
 function MessagingNavigator() {
   return (
-    <MessagingStack.Navigator>
-      <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: 'Messages' }} />
-      <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Conversation' }} />
+    <MessagingStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
+      <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: 'Jon Sport' }} />
+      <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Jon Sport' }} />
     </MessagingStack.Navigator>
   );
 }
 
 function FeedNavigator() {
   return (
-    <FeedStack.Navigator>
-      <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: 'Feed' }} />
-      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: 'Create Post' }} />
-      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: 'My Gallery' }} />
+    <FeedStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
+      <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: 'Jon Sport' }} />
+      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: 'Jon Sport' }} />
+      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: 'Jon Sport' }} />
     </FeedStack.Navigator>
   );
 }
@@ -63,7 +63,7 @@ function ProfileNavigator() {
   const { logout } = useAuth();
 
   return (
-    <ProfileStack.Navigator>
+    <ProfileStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
       <ProfileStack.Screen
         name="MyProfile"
         component={ProfileScreen}
@@ -78,23 +78,23 @@ function ProfileNavigator() {
           ),
         }}
       />
-      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
-      <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: 'Browse Profiles' }} />
-      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: 'Profile' }} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Jon Sport' }} />
+      <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: 'Jon Sport' }} />
+      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: 'Jon Sport' }} />
     </ProfileStack.Navigator>
   );
 }
 
 function MoreNavigator() {
   return (
-    <MoreStack.Navigator>
-      <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: 'More' }} />
-      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
-      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
-      <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Tournaments' }} />
-      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Scouting' }} />
-      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
-      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
+    <MoreStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
+      <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Jon Sport' }} />
     </MoreStack.Navigator>
   );
 }
@@ -136,6 +136,7 @@ function AppTabs() {
         },
       }}
       screenOptions={({ route }) => ({
+        headerTitle: 'Jon Sport',
         headerTitleAlign: 'center',
         tabBarActiveTintColor: '#0f766e',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },

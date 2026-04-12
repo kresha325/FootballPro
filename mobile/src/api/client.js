@@ -84,6 +84,10 @@ export const updateMyProfileRequest = (payload = {}) => {
   const form = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'object' && value?.uri && value?.name && value?.type) {
+      form.append(key, value);
+      return;
+    }
     if (typeof value === 'object') {
       form.append(key, JSON.stringify(value));
       return;
@@ -98,6 +102,9 @@ export const likePostRequest = (postId) => api.post(`/api/likes/${postId}`);
 export const unlikePostRequest = (postId) => api.delete(`/api/likes/${postId}`);
 export const postCommentsRequest = (postId) => api.get(`/api/comments/${postId}`);
 export const createCommentRequest = (postId, content) => api.post(`/api/comments/${postId}`, { content });
+export const followUserRequest = (userId) => api.post(`/api/profiles/${userId}/follow`);
+export const unfollowUserRequest = (userId) => api.delete(`/api/profiles/${userId}/unfollow`);
+export const followStatusRequest = (userId) => api.get(`/api/profiles/${userId}/follow-status`);
 export const myGalleryRequest = () => api.get('/api/gallery');
 export const userGalleryRequest = (userId) => api.get(`/api/gallery/user/${userId}`);
 export const createGalleryItemRequest = (payload = {}) => {
@@ -115,9 +122,12 @@ export const createStreamRequest = (payload) => api.post('/api/streams', payload
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
+export const startAudioCallRequest = (receiverId) => api.post('/api/video-calls/start', { receiverId });
+export const createVideoCallRequest = (participantId) => api.post('/api/video-calls/create', { participantId });
 
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
 export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');
+export const getOrCreateConversationRequest = (userId) => api.get(`/api/messaging/conversations/user/${userId}`);
 export const conversationMessagesRequest = (conversationId, params = {}) =>
   api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
 export const sendConversationMessageRequest = (conversationId, content) =>
@@ -176,5 +186,37 @@ export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournam
 
 export const scoutingRecommendationsRequest = (params = {}) =>
   api.get('/api/scouting/recommendations', { params });
+
+export const sponsorsRequest = () => api.get('/api/sponsors/all');
+export const createSponsorRequest = (payload = {}) => {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'object' && value?.uri && value?.name && value?.type) {
+      form.append(key, value);
+      return;
+    }
+    form.append(key, String(value));
+  });
+  return api.post('/api/sponsors', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const adsRequest = () => api.get('/api/ads');
+export const createAdRequest = (payload = {}) => {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'object' && value?.uri && value?.name && value?.type) {
+      form.append(key, value);
+      return;
+    }
+    form.append(key, String(value));
+  });
+  return api.post('/api/ads', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 
 export default api;

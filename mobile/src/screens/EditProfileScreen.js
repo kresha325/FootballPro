@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { createMyProfileRequest, extractErrorMessage, myProfileRequest, updateMyProfileRequest } from '../api/client';
 
 export default function EditProfileScreen({ navigation }) {
@@ -16,6 +17,8 @@ export default function EditProfileScreen({ navigation }) {
     club: '',
     position: '',
   });
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+  const [coverPhotoFile, setCoverPhotoFile] = useState(null);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -46,6 +49,33 @@ export default function EditProfileScreen({ navigation }) {
     load();
   }, []);
 
+  const pickImage = async (type) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Please allow media library access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const asset = result.assets[0];
+      const file = {
+        uri: asset.uri,
+        name: `${type}-${Date.now()}.jpg`,
+        type: asset.mimeType || 'image/jpeg',
+      };
+      if (type === 'profilePhoto') {
+        setProfilePhotoFile(file);
+      } else {
+        setCoverPhotoFile(file);
+      }
+    }
+  };
+
   const onSave = async () => {
     setSaving(true);
     try {
@@ -59,6 +89,8 @@ export default function EditProfileScreen({ navigation }) {
         country: form.country.trim() || undefined,
         club: form.club.trim() || undefined,
         position: form.position.trim() || undefined,
+        profilePhoto: profilePhotoFile || undefined,
+        coverPhoto: coverPhotoFile || undefined,
       };
 
       try {
@@ -92,6 +124,18 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.label}>Avatar (profile photo)</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => pickImage('profilePhoto')}>
+        <Text style={styles.secondaryButtonText}>{profilePhotoFile ? 'Change Avatar' : 'Choose Avatar'}</Text>
+      </TouchableOpacity>
+      {profilePhotoFile ? <Image source={{ uri: profilePhotoFile.uri }} style={styles.avatarPreview} /> : null}
+
+      <Text style={styles.label}>Cover photo</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => pickImage('coverPhoto')}>
+        <Text style={styles.secondaryButtonText}>{coverPhotoFile ? 'Change Cover' : 'Choose Cover'}</Text>
+      </TouchableOpacity>
+      {coverPhotoFile ? <Image source={{ uri: coverPhotoFile.uri }} style={styles.coverPreview} /> : null}
+
       <Text style={styles.label}>First name</Text>
       <TextInput style={styles.input} value={form.firstName} onChangeText={(v) => setField('firstName', v)} />
 
@@ -139,6 +183,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginBottom: 12,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginBottom: 10,
+  },
+  secondaryButtonText: {
+    color: '#0f766e',
+    fontWeight: '700',
+  },
+  avatarPreview: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    marginBottom: 12,
+    backgroundColor: '#e2e8f0',
+  },
+  coverPreview: {
+    width: '100%',
+    height: 130,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#e2e8f0',
   },
   multiline: { minHeight: 90, textAlignVertical: 'top' },
   button: {
