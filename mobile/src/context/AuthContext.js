@@ -52,6 +52,8 @@ export const AuthProvider = ({ children }) => {
     socketRef.current = socket;
   };
 
+  const getSocket = () => socketRef.current;
+
   const logout = async () => {
     setToken(null);
     setUser(null);
@@ -202,6 +204,7 @@ export const AuthProvider = ({ children }) => {
     () => ({
       token,
       user,
+      getSocket,
       isBootstrapping,
       isSubmitting,
       login,

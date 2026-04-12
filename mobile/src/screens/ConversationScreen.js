@@ -18,6 +18,15 @@ import {
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+const upsertMessage = (prev, incoming) => {
+  if (!incoming?.id) return prev;
+  const idx = prev.findIndex((m) => m.id === incoming.id);
+  if (idx === -1) return [...prev, incoming];
+  const next = [...prev];
+  next[idx] = incoming;
+  return next;
+};
+
 function MessageBubble({ message, mine }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
@@ -34,7 +43,7 @@ function MessageBubble({ message, mine }) {
 
 export default function ConversationScreen({ route }) {
   const { conversationId } = route.params;
-  const { user } = useAuth();
+  const { user, getSocket } = useAuth();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -65,6 +74,37 @@ export default function ConversationScreen({ route }) {
     loadMessages();
   }, [loadMessages]);
 
+  useEffect(() => {
+    const socket = getSocket?.();
+    if (!socket || !conversationId) {
+      return undefined;
+    }
+
+    const roomId = String(conversationId);
+    socket.emit('joinConversation', roomId);
+
+    const onNewMessage = (message) => {
+      if (String(message?.conversationId) !== roomId) {
+        return;
+      }
+
+      setMessages((prev) => upsertMessage(prev, message));
+
+      if (message?.senderId !== user?.id) {
+        markConversationReadRequest(conversationId).catch(() => {
+          // Ignore read-marking errors to keep chat flow smooth.
+        });
+      }
+    };
+
+    socket.on('newMessage', onNewMessage);
+
+    return () => {
+      socket.off('newMessage', onNewMessage);
+      socket.emit('leaveConversation', roomId);
+    };
+  }, [conversationId, getSocket, user?.id]);
+
   const onSend = async () => {
     const content = draft.trim();
     if (!content || sending) return;
@@ -75,7 +115,7 @@ export default function ConversationScreen({ route }) {
       const response = await sendConversationMessageRequest(conversationId, content);
       setDraft('');
       if (response?.data) {
-        setMessages((prev) => [...prev, response.data]);
+        setMessages((prev) => upsertMessage(prev, response.data));
       } else {
         await loadMessages();
       }

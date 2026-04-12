@@ -23,6 +23,8 @@ import GoLiveScreen from '../screens/GoLiveScreen';
 import MessagingScreen from '../screens/MessagingScreen';
 import ConversationScreen from '../screens/ConversationScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import SponsorsScreen from '../screens/SponsorsScreen';
+import AdsScreen from '../screens/AdsScreen';
 import { useAuth } from '../context/AuthContext';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 
@@ -95,6 +97,8 @@ function MoreNavigator() {
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: 'Jon Sport' }} />
     </MoreStack.Navigator>
   );
 }

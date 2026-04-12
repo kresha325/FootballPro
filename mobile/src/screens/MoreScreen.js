@@ -29,6 +29,8 @@ export default function MoreScreen({ navigation }) {
       {canUseScouting ? <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} /> : null}
       <MenuButton title="Notifications" subtitle="Your latest updates" onPress={() => navigation.navigate('Notifications')} />
       <MenuButton title="Go Live" subtitle="Start a live session" onPress={() => navigation.navigate('GoLive')} />
+      <MenuButton title="Sponsors" subtitle="Create and view sponsor deals" onPress={() => navigation.navigate('Sponsors')} />
+      <MenuButton title="Ads" subtitle="Create and view active ads" onPress={() => navigation.navigate('Ads')} />
 
       {!canUseScouting ? (
         <View style={styles.noteCard}>
