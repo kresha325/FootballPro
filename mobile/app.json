@@ -23,7 +23,10 @@
       }
     },
     "ios": {
-      "bundleIdentifier": "com.kresha325.footballpromobile"
+      "bundleIdentifier": "com.kresha325.footballpromobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
