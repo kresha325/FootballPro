@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import * as Linking from 'expo-linking';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   createStreamRequest,
@@ -11,12 +10,11 @@ import {
   streamsRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { BACKEND_URL } from '../config/constants';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
 
-export default function GoLiveScreen({ route }) {
+export default function GoLiveScreen({ route, navigation }) {
   const { user } = useAuth();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
@@ -31,14 +29,8 @@ export default function GoLiveScreen({ route }) {
   const [cameraChecked, setCameraChecked] = useState(false);
   const focusStreamId = route?.params?.streamId;
 
-  const frontendBase = BACKEND_URL.replace(/\/api\/?$/, '');
-  const openViewer = async (streamId) => {
-    const target = `${frontendBase}/live/${streamId}`;
-    try {
-      await Linking.openURL(target);
-    } catch (err) {
-      Alert.alert('Could not open viewer', extractErrorMessage(err, 'Failed to open live viewer'));
-    }
+  const openViewer = (streamId) => {
+    navigation.navigate('LiveViewer', { streamId });
   };
 
   const loadStreams = async () => {

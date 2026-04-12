@@ -32,6 +32,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ClubRosterScreen from '../screens/ClubRosterScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
+import LiveViewerScreen from '../screens/LiveViewerScreen';
 import { useAuth } from '../context/AuthContext';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 
@@ -113,6 +114,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="LiveViewer" component={LiveViewerScreen} options={{ title: 'Jon Sport' }} />
     </MoreStack.Navigator>
   );
 }
