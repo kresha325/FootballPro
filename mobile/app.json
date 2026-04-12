@@ -4,9 +4,32 @@
     "slug": "footballpro-mobile",
     "version": "1.0.0",
     "sdkVersion": "48.0.0",
-    "platforms": ["ios","android","web"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "android": {
+      "package": "com.kresha325.footballpromobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "extra": {
-      "BACKEND_URL": "https://footballpro.onrender.com"
+      "BACKEND_URL": "https://footballpro.onrender.com",
+      "eas": {
+        "projectId": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
+      }
     }
   }
 }
