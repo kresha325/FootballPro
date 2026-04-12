@@ -22,6 +22,9 @@
         "backgroundColor": "#0f172a"
       }
     },
+    "ios": {
+      "bundleIdentifier": "com.kresha325.footballpromobile"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
