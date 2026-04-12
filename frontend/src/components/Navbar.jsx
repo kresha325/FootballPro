@@ -51,17 +51,6 @@ function Navbar() {
     }
   }, [user]);
 
-  // Allow other components to open the Go Live modal via a window event
-  useEffect(() => {
-    const openHandler = async (event) => {
-      setShowLiveModal(true);
-      if (event?.detail?.openCameraFirst) {
-        await handleOpenCameraFirst();
-      }
-    };
-    window.addEventListener('open-live-modal', openHandler);
-    return () => window.removeEventListener('open-live-modal', openHandler);
-  }, [handleOpenCameraFirst]);
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
@@ -140,6 +129,18 @@ function Navbar() {
       alert('Camera/Microphone permission is required.');
     }
   }, [cameraReady]);
+
+  // Allow other components to open the Go Live modal via a window event
+  useEffect(() => {
+    const openHandler = async (event) => {
+      setShowLiveModal(true);
+      if (event?.detail?.openCameraFirst) {
+        await handleOpenCameraFirst();
+      }
+    };
+    window.addEventListener('open-live-modal', openHandler);
+    return () => window.removeEventListener('open-live-modal', openHandler);
+  }, [handleOpenCameraFirst]);
 
   useEffect(() => {
     if (!showLiveModal) {
