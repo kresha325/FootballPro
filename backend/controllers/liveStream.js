@@ -47,7 +47,7 @@ exports.getActiveLiveStreams = async (req, res) => {
     const streams = await LiveStream.findAll({
       where: {
         status: 'live',
-        endedAt: { [Op.or]: [null, { [Op.gt]: new Date(Date.now() - 45 * 60 * 1000)] } },
+        endedAt: { [Op.or]: [null, { [Op.gt]: new Date(Date.now() - 45 * 60 * 1000) }] },
       },
       include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'profilePhoto'] }],
       order: [['startedAt', 'DESC']],
