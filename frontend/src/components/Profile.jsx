@@ -347,10 +347,10 @@ const Profile = () => {
 
       let res;
       try {
-        res = await liveStreamAPI.start(payload);
-      } catch (_liveErr) {
-        // Keep compatibility with older deployments that only expose /streams.
         res = await streamsAPI.createStream({ ...payload, isPremium: false });
+      } catch (_streamErr) {
+        // Keep compatibility with deployments that still use /live-stream.
+        res = await liveStreamAPI.start(payload);
       }
 
       const createdId =

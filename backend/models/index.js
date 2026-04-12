@@ -48,6 +48,7 @@ const PostSponsor = require('./PostSponsor');
 const EngagementMetrics = require('./EngagementMetrics');
 const VideoCallHistory = require('./VideoCallHistory')(sequelize, DataTypes);
 const LiveStream = require('./LiveStream');
+const Stream = require('./Stream');
 
 
 
@@ -103,6 +104,7 @@ module.exports = {
   EngagementMetrics,
   MatchScorer,
   VideoCallHistory,
+  Stream,
   JonCoinTransaction,
   LiveStream
 };
