@@ -34,39 +34,63 @@ const getFullUrl = (url) => {
   return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
 };
 
+const getApiUrl = (path) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (apiRoot) return `${apiRoot}${normalizedPath}`;
+  return normalizedPath;
+};
+
+const fetchJsonSafe = async (path, options = {}) => {
+  const response = await fetch(getApiUrl(path), options);
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  if (!contentType.includes('application/json')) {
+    const bodyPreview = (await response.text()).slice(0, 80);
+    throw new Error(`Expected JSON but received: ${bodyPreview}`);
+  }
+  return response.json();
+};
+
 // Komponenti Chat Live për modalin e stream-it
 function LiveStreamChat({ streamId, userId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
 
   useEffect(() => {
-    // Fetch messages
-    fetch(`/api/live-chat/${streamId}`)
-      .then(res => res.json())
-      .then(setMessages);
+    const loadMessages = async () => {
+      try {
+        const data = await fetchJsonSafe(`/api/live-chat/${streamId}`);
+        setMessages(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Live chat fetch error:', err?.message || err);
+      }
+    };
+
+    loadMessages();
+
     // Optional: Polling for new messages every 2s
     const interval = setInterval(() => {
-      fetch(`/api/live-chat/${streamId}`)
-        .then(res => res.json())
-        .then(setMessages);
+      loadMessages();
     }, 2000);
     return () => clearInterval(interval);
   }, [streamId]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!input.trim()) return;
-    fetch('/api/live-chat/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ streamId, userId, message: input })
-    })
-      .then(res => res.json())
-      .then(() => {
-        setInput('');
-        fetch(`/api/live-chat/${streamId}`)
-          .then(res => res.json())
-          .then(setMessages);
+    try {
+      await fetchJsonSafe('/api/live-chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ streamId, userId, message: input })
       });
+      setInput('');
+      const data = await fetchJsonSafe(`/api/live-chat/${streamId}`);
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Live chat send error:', err?.message || err);
+    }
   };
 
   return (
@@ -103,29 +127,35 @@ function LiveStreamReactions({ streamId, userId }) {
   const [reactions, setReactions] = useState([]);
 
   useEffect(() => {
-    fetch(`/api/live-reaction/${streamId}`)
-      .then(res => res.json())
-      .then(setReactions);
+    const loadReactions = async () => {
+      try {
+        const data = await fetchJsonSafe(`/api/live-reaction/${streamId}`);
+        setReactions(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Live reactions fetch error:', err?.message || err);
+      }
+    };
+
+    loadReactions();
+
     const interval = setInterval(() => {
-      fetch(`/api/live-reaction/${streamId}`)
-        .then(res => res.json())
-        .then(setReactions);
+      loadReactions();
     }, 2000);
     return () => clearInterval(interval);
   }, [streamId]);
 
-  const sendReaction = emoji => {
-    fetch('/api/live-reaction/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ streamId, userId, emoji })
-    })
-      .then(res => res.json())
-      .then(() => {
-        fetch(`/api/live-reaction/${streamId}`)
-          .then(res => res.json())
-          .then(setReactions);
+  const sendReaction = async (emoji) => {
+    try {
+      await fetchJsonSafe('/api/live-reaction/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ streamId, userId, emoji })
       });
+      const data = await fetchJsonSafe(`/api/live-reaction/${streamId}`);
+      setReactions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Live reaction send error:', err?.message || err);
+    }
   };
 
   return (
@@ -157,31 +187,37 @@ function LiveStreamGuests({ streamId, userId }) {
   const [inviteId, setInviteId] = useState('');
 
   useEffect(() => {
-    fetch(`/api/live-stream-guest/${streamId}`)
-      .then(res => res.json())
-      .then(setGuests);
+    const loadGuests = async () => {
+      try {
+        const data = await fetchJsonSafe(`/api/live-stream-guest/${streamId}`);
+        setGuests(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Live guests fetch error:', err?.message || err);
+      }
+    };
+
+    loadGuests();
+
     const interval = setInterval(() => {
-      fetch(`/api/live-stream-guest/${streamId}`)
-        .then(res => res.json())
-        .then(setGuests);
+      loadGuests();
     }, 2000);
     return () => clearInterval(interval);
   }, [streamId]);
 
-  const inviteGuest = () => {
+  const inviteGuest = async () => {
     if (!inviteId.trim()) return;
-    fetch('/api/live-stream-guest/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ streamId, userId: inviteId, invitedBy: userId })
-    })
-      .then(res => res.json())
-      .then(() => {
-        setInviteId('');
-        fetch(`/api/live-stream-guest/${streamId}`)
-          .then(res => res.json())
-          .then(setGuests);
+    try {
+      await fetchJsonSafe('/api/live-stream-guest/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ streamId, userId: inviteId, invitedBy: userId })
       });
+      setInviteId('');
+      const data = await fetchJsonSafe(`/api/live-stream-guest/${streamId}`);
+      setGuests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Live guest invite error:', err?.message || err);
+    }
   };
 
   return (
