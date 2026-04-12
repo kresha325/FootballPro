@@ -6,6 +6,39 @@ const api = axios.create({
   timeout: 15000,
 });
 
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+const MAX_GET_RETRIES = 2;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error?.config;
+    const method = String(config?.method || '').toLowerCase();
+    const status = error?.response?.status;
+    const isNetworkError = !error?.response;
+
+    if (!config || method !== 'get') {
+      return Promise.reject(error);
+    }
+
+    config.__retryCount = config.__retryCount || 0;
+    const canRetry =
+      config.__retryCount < MAX_GET_RETRIES &&
+      (isNetworkError || RETRYABLE_STATUS.has(status));
+
+    if (!canRetry) {
+      return Promise.reject(error);
+    }
+
+    config.__retryCount += 1;
+    const delayMs = 300 * Math.pow(2, config.__retryCount - 1);
+    await sleep(delayMs);
+    return api.request(config);
+  }
+);
+
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;

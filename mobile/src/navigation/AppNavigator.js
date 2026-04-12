@@ -33,6 +33,13 @@ const MessagingStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const MoreStack = createNativeStackNavigator();
 
+const formatBadge = (value) => {
+  const n = Number(value || 0);
+  if (!n || n <= 0) return undefined;
+  if (n > 99) return '99+';
+  return n;
+};
+
 function MessagingNavigator() {
   return (
     <MessagingStack.Navigator>
@@ -156,7 +163,7 @@ function AppTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Chats',
-          tabBarBadge: messagesBadge > 0 ? messagesBadge : undefined,
+          tabBarBadge: formatBadge(messagesBadge),
         }}
       />
       <Tabs.Screen
@@ -164,7 +171,7 @@ function AppTabs() {
         component={MoreNavigator}
         options={{
           headerShown: false,
-          tabBarBadge: notificationsBadge > 0 ? notificationsBadge : undefined,
+          tabBarBadge: formatBadge(notificationsBadge),
         }}
       />
       <Tabs.Screen
