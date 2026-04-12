@@ -148,7 +148,7 @@ function AppTabs() {
         tabBarIcon: ({ color, size }) => {
           const iconMap = {
             Feed: 'home-outline',
-            Marketplace: 'bag-outline',
+            Marketplace: 'cart-outline',
             Videos: 'videocam-outline',
             Messages: 'chatbubble-ellipses-outline',
             More: 'grid-outline',
