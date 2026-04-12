@@ -96,4 +96,31 @@ export const unreadNotificationsCountRequest = () => api.get('/api/notifications
 export const markNotificationReadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/read`);
 export const markAllNotificationsReadRequest = () => api.put('/api/notifications/mark-all-read');
 
+export const productsRequest = () => api.get('/api/products');
+export const productByIdRequest = (id) => api.get(`/api/products/${id}`);
+export const createOrderRequest = (products) => api.post('/api/orders', { products });
+export const myOrdersRequest = () => api.get('/api/orders');
+
+export const joncoinBalanceRequest = () => api.get('/api/joncoin/balance');
+export const joncoinTransactionsRequest = () => api.get('/api/joncoin/transactions');
+export const joncoinPurchaseRequest = (amount) => api.post('/api/joncoin/purchase', { amount });
+export const joncoinWithdrawRequest = (amount) => api.post('/api/joncoin/withdraw', { amount });
+export const joncoinTransferRequest = (toUserId, amount, description = '') =>
+  api.post('/api/joncoin/transfer', { toUserId, amount, description });
+
+export const videosRequest = (params = {}) => api.get('/api/videos', { params });
+export const trendingVideosRequest = (params = {}) => api.get('/api/videos/trending', { params });
+export const likeVideoRequest = (videoId) => api.post(`/api/videos/${videoId}/like`);
+export const uploadVideoRequest = (payload = {}) => {
+  const form = new FormData();
+  if (payload.title) form.append('title', String(payload.title));
+  if (payload.description) form.append('description', String(payload.description));
+  if (payload.category) form.append('category', String(payload.category));
+  if (payload.tags) form.append('tags', String(payload.tags));
+  if (payload.video) form.append('video', payload.video);
+  return api.post('/api/videos/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 export default api;

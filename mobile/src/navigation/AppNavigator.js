@@ -7,6 +7,9 @@ import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import GalleryScreen from '../screens/GalleryScreen';
+import MarketplaceScreen from '../screens/MarketplaceScreen';
+import WalletScreen from '../screens/WalletScreen';
+import VideosScreen from '../screens/VideosScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
@@ -77,6 +80,9 @@ function AppTabs() {
       }}
     >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false }} />
+      <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
+      <Tabs.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
+      <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <Tabs.Screen name="Messages" component={MessagingNavigator} options={{ headerShown: false }} />
       <Tabs.Screen name="Notifications" component={NotificationsScreen} />
       <Tabs.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
