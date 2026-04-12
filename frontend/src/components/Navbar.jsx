@@ -3,7 +3,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
-import { liveStreamAPI, notificationsAPI, streamsAPI } from '../services/api';
+import { Room, createLocalTracks } from 'livekit-client';
+import { liveStreamAPI, livekitAPI, notificationsAPI, streamsAPI } from '../services/api';
 
 
 
@@ -31,7 +32,11 @@ function Navbar() {
   const [liveIsPublic, setLiveIsPublic] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
+  const [activeLiveStreamId, setActiveLiveStreamId] = useState(null);
+  const [isEndingLive, setIsEndingLive] = useState(false);
   const livePreviewRef = useRef(null);
+  const livekitRoomRef = useRef(null);
+  const livekitTracksRef = useRef([]);
   // Feed toggle (My / All)
   const { fetchPosts } = usePosts();
   const initialFollowedOnly = (() => {
@@ -95,6 +100,32 @@ function Navbar() {
         await streamsAPI.startStream(createdId);
       } catch (_startErr) {}
 
+      const roomName = `stream-${createdId}`;
+      const tokenRes = await livekitAPI.createToken({
+        roomName,
+        participantName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || String(user?.id || 'streamer'),
+        metadata: { streamId: createdId, role: 'broadcaster' },
+        canPublish: true,
+        canSubscribe: true,
+      });
+
+      const wsUrl = tokenRes?.data?.wsUrl;
+      const token = tokenRes?.data?.token;
+
+      if (!wsUrl || !token) {
+        throw new Error('LiveKit token response is invalid');
+      }
+
+      const room = new Room();
+      await room.connect(wsUrl, token, { autoSubscribe: true });
+      const localTracks = await createLocalTracks({ audio: true, video: true });
+      for (const track of localTracks) {
+        await room.localParticipant.publishTrack(track);
+      }
+      livekitRoomRef.current = room;
+      livekitTracksRef.current = localTracks;
+      setActiveLiveStreamId(createdId);
+
       alert('Live stream started.');
       setShowLiveModal(false);
     } catch (err) {
@@ -111,6 +142,36 @@ function Navbar() {
     setCameraReady(false);
     if (livePreviewRef.current) {
       livePreviewRef.current.srcObject = null;
+    }
+  };
+
+  const handleEndLiveStream = async () => {
+    if (!activeLiveStreamId) return;
+
+    setIsEndingLive(true);
+    try {
+      if (livekitTracksRef.current?.length) {
+        livekitTracksRef.current.forEach((track) => {
+          try {
+            track.stop();
+          } catch (_e) {}
+        });
+      }
+      livekitTracksRef.current = [];
+
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+        livekitRoomRef.current = null;
+      }
+
+      await streamsAPI.endStream(activeLiveStreamId);
+      setActiveLiveStreamId(null);
+      alert('Live stream ended.');
+    } catch (err) {
+      console.error('Failed to end live stream:', err);
+      alert('Failed to end live stream. Please try again.');
+    } finally {
+      setIsEndingLive(false);
     }
   };
 
@@ -152,6 +213,18 @@ function Navbar() {
   useEffect(() => {
     return () => {
       stopCameraPreview();
+      if (livekitTracksRef.current?.length) {
+        livekitTracksRef.current.forEach((track) => {
+          try {
+            track.stop();
+          } catch (_e) {}
+        });
+        livekitTracksRef.current = [];
+      }
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+        livekitRoomRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -435,6 +508,16 @@ function Navbar() {
                 </div>
               ) : null}
               <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
+              {activeLiveStreamId ? (
+                <button
+                  type="button"
+                  onClick={handleEndLiveStream}
+                  disabled={isEndingLive}
+                  className="ml-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium mt-2"
+                >
+                  {isEndingLive ? 'Ending...' : 'End Current Live'}
+                </button>
+              ) : null}
               <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
             </form>
           </div>

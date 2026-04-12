@@ -350,7 +350,7 @@ exports.getStream = async (req, res) => {
     if (!stream) return res.status(404).json({ error: 'Stream not found' });
 
     // Check if premium stream and user is not premium
-    if (stream.isPremium && !req.user.premium) {
+    if (stream.isPremium && !req.user?.premium) {
       return res.status(403).json({ error: 'Premium stream requires subscription' });
     }
 

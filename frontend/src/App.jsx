@@ -33,6 +33,7 @@ const ClubRoster = lazy(() => import('./components/ClubRoster'));
 const Videos = lazy(() => import('./components/Videos'));
 const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
 const YouTubeLiveTest = lazy(() => import('./components/YouTubeLiveTest'));
+const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
 // import StreamsPage from './components/StreamsPage';
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
@@ -125,6 +126,7 @@ function App() {
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
             <Route path="/youtube-test" element={user ? <YouTubeLiveTest /> : <Navigate to="/login" />} />
+            <Route path="/live/:streamId" element={user ? <LiveStreamViewer /> : <Navigate to="/login" />} />
 
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />

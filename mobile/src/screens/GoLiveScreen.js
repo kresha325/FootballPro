@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as Linking from 'expo-linking';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   createStreamRequest,
@@ -10,11 +11,12 @@ import {
   streamsRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { BACKEND_URL } from '../config/constants';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
 
-export default function GoLiveScreen() {
+export default function GoLiveScreen({ route }) {
   const { user } = useAuth();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
@@ -27,6 +29,17 @@ export default function GoLiveScreen() {
   const [myStreams, setMyStreams] = useState([]);
   const [loadError, setLoadError] = useState('');
   const [cameraChecked, setCameraChecked] = useState(false);
+  const focusStreamId = route?.params?.streamId;
+
+  const frontendBase = BACKEND_URL.replace(/\/api\/?$/, '');
+  const openViewer = async (streamId) => {
+    const target = `${frontendBase}/live/${streamId}`;
+    try {
+      await Linking.openURL(target);
+    } catch (err) {
+      Alert.alert('Could not open viewer', extractErrorMessage(err, 'Failed to open live viewer'));
+    }
+  };
 
   const loadStreams = async () => {
     setLoadingLists(true);
@@ -172,11 +185,18 @@ export default function GoLiveScreen() {
     <View style={styles.streamCard}>
       <Text style={[styles.streamTitle, isDark && styles.textPrimaryDark]}>{item.title || 'Untitled stream'}</Text>
       <Text style={[styles.streamMeta, isDark && styles.textMutedDark]}>ID: {item.id} | Live: {String(item.isLive)} | Viewers: {item.viewers || 0}</Text>
-      {own && item.isLive ? (
-        <TouchableOpacity style={styles.endBtn} onPress={() => onEndStream(item.id)}>
-          <Text style={styles.endBtnText}>End Stream</Text>
-        </TouchableOpacity>
-      ) : null}
+      <View style={styles.streamActions}>
+        {item.isLive ? (
+          <TouchableOpacity style={styles.viewBtn} onPress={() => openViewer(item.id)}>
+            <Text style={styles.viewBtnText}>View Live</Text>
+          </TouchableOpacity>
+        ) : null}
+        {own && item.isLive ? (
+          <TouchableOpacity style={styles.endBtn} onPress={() => onEndStream(item.id)}>
+            <Text style={styles.endBtnText}>End Stream</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -259,7 +279,14 @@ export default function GoLiveScreen() {
 
           <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
           {liveStreams.length === 0 ? <Text style={[styles.empty, isDark && styles.textMutedDark]}>No active streams right now.</Text> : null}
-          {liveStreams.map((item) => (
+          {[...liveStreams]
+            .sort((a, b) => {
+              if (!focusStreamId) return 0;
+              if (String(a.id) === String(focusStreamId)) return -1;
+              if (String(b.id) === String(focusStreamId)) return 1;
+              return 0;
+            })
+            .map((item) => (
             <View key={`live-${item.id}`}>{renderStreamItem({ item, own: false })}</View>
           ))}
     </ScrollView>
@@ -289,13 +316,28 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   input: {
-    borderWidth: 1,
     borderColor: '#cbd5e1',
     backgroundColor: '#fff',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 10,
+  streamActions: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  viewBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#0f766e',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  viewBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   },
   inputDark: {
     backgroundColor: '#0b1220',

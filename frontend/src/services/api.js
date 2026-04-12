@@ -212,8 +212,12 @@ export const notificationsAPI = {
 ========================= */
 export const streamsAPI = {
   getStreams: () => API.get('/streams'),
+  getStream: (streamId) => API.get(`/streams/${streamId}`),
   createStream: (data) => API.post('/streams', data),
   startStream: (streamId) => API.put(`/streams/${streamId}/start`),
+  endStream: (streamId) => API.put(`/streams/${streamId}/end`),
+  joinStream: (streamId) => API.post(`/streams/${streamId}/join`),
+  leaveStream: (streamId) => API.post(`/streams/${streamId}/leave`),
   uploadTemp: (formData) => API.post('/streams/upload-temp', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteTemp: (filename) => API.delete(`/streams/temp/${filename}`),
   finalize: (data) => API.post('/streams/finalize', data),

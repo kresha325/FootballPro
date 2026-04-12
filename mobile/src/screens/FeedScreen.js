@@ -331,7 +331,7 @@ export default function FeedScreen({ navigation }) {
                     <TouchableOpacity
                       key={`live-user-${stream.id}`}
                       style={styles.liveUserChip}
-                      onPress={() => navigation.navigate('GoLive')}
+                      onPress={() => navigation.navigate('GoLive', { streamId: stream.id })}
                     >
                       {photo ? (
                         <Image source={{ uri: photo }} style={styles.liveAvatar} />
