@@ -55,7 +55,7 @@ function BottomNav() {
 
         {user && (
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('open-live-modal'))}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-live-modal', { detail: { openCameraFirst: true } }))}
             className={`flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 text-red-600`}
             aria-label="Go Live"
           >

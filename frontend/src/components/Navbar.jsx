@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { liveStreamAPI, notificationsAPI, streamsAPI } from '../services/api';
 
@@ -53,10 +53,15 @@ function Navbar() {
 
   // Allow other components to open the Go Live modal via a window event
   useEffect(() => {
-    const openHandler = () => setShowLiveModal(true);
+    const openHandler = async (event) => {
+      setShowLiveModal(true);
+      if (event?.detail?.openCameraFirst) {
+        await handleOpenCameraFirst();
+      }
+    };
     window.addEventListener('open-live-modal', openHandler);
     return () => window.removeEventListener('open-live-modal', openHandler);
-  }, []);
+  }, [handleOpenCameraFirst]);
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
@@ -120,7 +125,8 @@ function Navbar() {
     }
   };
 
-  const handleOpenCameraFirst = async () => {
+  const handleOpenCameraFirst = useCallback(async () => {
+    if (cameraReady) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setCameraStream(stream);
@@ -133,7 +139,7 @@ function Navbar() {
       console.error('Camera open failed:', err);
       alert('Camera/Microphone permission is required.');
     }
-  };
+  }, [cameraReady]);
 
   useEffect(() => {
     if (!showLiveModal) {
