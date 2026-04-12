@@ -218,6 +218,12 @@ export const streamsAPI = {
   finalize: (data) => API.post('/streams/finalize', data),
 };
 
+export const liveStreamAPI = {
+  start: (data) => API.post('/live-stream/start', data),
+  end: (streamId) => API.post(`/live-stream/${streamId}/end`),
+  getActive: () => API.get('/live-stream/active'),
+};
+
 /* =========================
    MARKETPLACE
 ========================= */

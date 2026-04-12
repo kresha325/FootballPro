@@ -228,6 +228,7 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/football', require('./routes/football'));
 app.use('/api/live-chat', require('./routes/liveChat'));
 app.use('/api/live-reaction', require('./routes/liveReaction'));
+app.use('/api/live-stream', require('./routes/liveStream'));
 app.use('/api/live-stream-guest', require('./routes/liveStreamGuest'));
 app.use('/api/live-stream-analytics', require('./routes/liveStreamAnalytics'));
 app.use('/api/live-chat-moderation', require('./routes/liveChatModeration'));

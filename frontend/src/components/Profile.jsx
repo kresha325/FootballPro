@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
-import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI, streamsAPI } from '../services/api';
+import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';
@@ -342,11 +342,17 @@ const Profile = () => {
       const payload = {
         title: liveTitle?.trim() || 'Live Stream',
         description: liveDescription?.trim() || '',
-        isPremium: false,
         isPublic: !!liveIsPublic,
       };
 
-      const res = await streamsAPI.createStream(payload);
+      let res;
+      try {
+        res = await liveStreamAPI.start(payload);
+      } catch (_liveErr) {
+        // Keep compatibility with older deployments that only expose /streams.
+        res = await streamsAPI.createStream({ ...payload, isPremium: false });
+      }
+
       const createdId =
         res?.data?.id ||
         res?.data?.stream?.id ||
