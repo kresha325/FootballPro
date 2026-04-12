@@ -16,17 +16,6 @@ export default defineConfig({
   ],
   build: {
     chunkSizeWarningLimit: 2000, // default është 500kb, rritet në 2000kb
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) return 'vendor_react';
-            if (id.includes('mediasoup-client')) return 'vendor_mediasoup';
-            return 'vendor';
-          }
-        }
-      }
-    }
   },
   test: {
     environment: 'jsdom',
