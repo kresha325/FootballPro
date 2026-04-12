@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
+import CreatePostScreen from '../screens/CreatePostScreen';
+import GalleryScreen from '../screens/GalleryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
@@ -17,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
+const FeedStack = createNativeStackNavigator();
 const MessagingStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 
@@ -29,10 +32,35 @@ function MessagingNavigator() {
   );
 }
 
+function FeedNavigator() {
+  return (
+    <FeedStack.Navigator>
+      <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: 'Feed' }} />
+      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: 'Create Post' }} />
+      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: 'My Gallery' }} />
+    </FeedStack.Navigator>
+  );
+}
+
 function ProfileNavigator() {
+  const { logout } = useAuth();
+
   return (
     <ProfileStack.Navigator>
-      <ProfileStack.Screen name="MyProfile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <ProfileStack.Screen
+        name="MyProfile"
+        component={ProfileScreen}
+        options={{
+          title: 'My Profile',
+          headerRight: () => (
+            <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
+              <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Logout</Text>
+              </View>
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: 'Browse Profiles' }} />
       <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: 'Profile' }} />
@@ -41,8 +69,6 @@ function ProfileNavigator() {
 }
 
 function AppTabs() {
-  const { logout } = useAuth();
-
   return (
     <Tabs.Navigator
       screenOptions={{
@@ -50,7 +76,7 @@ function AppTabs() {
         tabBarActiveTintColor: '#0f766e',
       }}
     >
-      <Tabs.Screen name="Feed" component={FeedScreen} />
+      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false }} />
       <Tabs.Screen name="Messages" component={MessagingNavigator} options={{ headerShown: false }} />
       <Tabs.Screen name="Notifications" component={NotificationsScreen} />
       <Tabs.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
@@ -59,13 +85,6 @@ function AppTabs() {
         component={ProfileNavigator}
         options={{
           headerShown: false,
-          headerRight: () => (
-            <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
-              <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Logout</Text>
-              </View>
-            </TouchableOpacity>
-          ),
         }}
       />
     </Tabs.Navigator>

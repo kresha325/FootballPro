@@ -121,7 +121,7 @@ function FeedSkeleton({ isDark }) {
   );
 }
 
-export default function FeedScreen() {
+export default function FeedScreen({ navigation }) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const [posts, setPosts] = useState([]);
@@ -303,11 +303,21 @@ export default function FeedScreen() {
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
       ListHeaderComponent={
-        error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{error}</Text>
+        <View>
+          <View style={styles.feedActionsWrap}>
+            <TouchableOpacity style={styles.createPostButton} onPress={() => navigation.navigate('CreatePost')}>
+              <Text style={styles.createPostButtonText}>Create Post</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.galleryButton} onPress={() => navigation.navigate('Gallery')}>
+              <Text style={styles.galleryButtonText}>My Gallery</Text>
+            </TouchableOpacity>
           </View>
-        ) : null
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          ) : null}
+        </View>
       }
       renderItem={({ item }) => (
         <PostCard
@@ -541,6 +551,35 @@ const styles = StyleSheet.create({
   },
   retryBtnText: {
     color: '#fff',
+    fontWeight: '700',
+  },
+  feedActionsWrap: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  createPostButton: {
+    flex: 1,
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  createPostButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  galleryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  galleryButtonText: {
+    color: '#0f766e',
     fontWeight: '700',
   },
   skelRow: {

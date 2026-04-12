@@ -28,6 +28,21 @@ export const registerRequest = (payload) => api.post('/api/auth/register', paylo
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
 export const meRequest = () => api.get('/api/auth/me');
 export const postsRequest = () => api.get('/api/posts');
+export const createPostRequest = (payload = {}) => {
+  const form = new FormData();
+  if (payload.content) {
+    form.append('content', String(payload.content));
+  }
+  if (payload.image) {
+    form.append('image', payload.image);
+  }
+  if (payload.video) {
+    form.append('video', payload.video);
+  }
+  return api.post('/api/posts', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const myProfileRequest = () => api.get('/api/profiles/me');
 export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
 export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });
@@ -50,6 +65,19 @@ export const likePostRequest = (postId) => api.post(`/api/likes/${postId}`);
 export const unlikePostRequest = (postId) => api.delete(`/api/likes/${postId}`);
 export const postCommentsRequest = (postId) => api.get(`/api/comments/${postId}`);
 export const createCommentRequest = (postId, content) => api.post(`/api/comments/${postId}`, { content });
+export const myGalleryRequest = () => api.get('/api/gallery');
+export const userGalleryRequest = (userId) => api.get(`/api/gallery/user/${userId}`);
+export const createGalleryItemRequest = (payload = {}) => {
+  const form = new FormData();
+  if (payload.title) form.append('title', String(payload.title));
+  if (payload.description) form.append('description', String(payload.description));
+  if (payload.type) form.append('type', String(payload.type));
+  if (payload.file) form.append('image', payload.file);
+  return api.post('/api/gallery', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+export const deleteGalleryItemRequest = (itemId) => api.delete(`/api/gallery/${itemId}`);
 export const createStreamRequest = (payload) => api.post('/api/streams', payload);
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);

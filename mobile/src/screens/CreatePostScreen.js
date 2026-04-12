@@ -1,0 +1,146 @@
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ResizeMode, Video } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
+import { createPostRequest, extractErrorMessage } from '../api/client';
+
+export default function CreatePostScreen({ navigation }) {
+  const [content, setContent] = useState('');
+  const [media, setMedia] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const pickMedia = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Please allow media library access to create a post.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      quality: 0.85,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const asset = result.assets[0];
+      const isVideo = asset.type === 'video' || String(asset.mimeType || '').startsWith('video/');
+      const extension = isVideo ? 'mp4' : 'jpg';
+      setMedia({
+        uri: asset.uri,
+        type: asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
+        name: `mobile-upload-${Date.now()}.${extension}`,
+        kind: isVideo ? 'video' : 'image',
+      });
+    }
+  };
+
+  const onPublish = async () => {
+    if (!content.trim() && !media) {
+      Alert.alert('Missing content', 'Add text or choose an image/video.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = { content: content.trim() };
+      if (media?.kind === 'image') {
+        payload.image = { uri: media.uri, name: media.name, type: media.type };
+      }
+      if (media?.kind === 'video') {
+        payload.video = { uri: media.uri, name: media.name, type: media.type };
+      }
+
+      await createPostRequest(payload);
+      Alert.alert('Success', 'Post created successfully.');
+      navigation.goBack();
+    } catch (err) {
+      Alert.alert('Create failed', extractErrorMessage(err, 'Could not create post'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.label}>Post content</Text>
+      <TextInput
+        style={[styles.input, styles.multiline]}
+        value={content}
+        onChangeText={setContent}
+        placeholder="Write something for your audience"
+        multiline
+      />
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={pickMedia}>
+        <Text style={styles.secondaryButtonText}>{media ? 'Change Media' : 'Choose Image/Video'}</Text>
+      </TouchableOpacity>
+
+      {media?.kind === 'image' ? <Image source={{ uri: media.uri }} style={styles.previewImage} resizeMode="cover" /> : null}
+      {media?.kind === 'video' ? (
+        <View style={styles.videoWrap}>
+          <Video source={{ uri: media.uri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+        </View>
+      ) : null}
+
+      <TouchableOpacity style={[styles.primaryButton, saving && styles.disabled]} onPress={onPublish} disabled={saving}>
+        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Publish Post</Text>}
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  content: { padding: 16, paddingBottom: 28 },
+  label: { color: '#334155', marginBottom: 6, fontWeight: '700' },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  multiline: { minHeight: 120, textAlignVertical: 'top' },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  secondaryButtonText: {
+    color: '#0f766e',
+    fontWeight: '700',
+  },
+  previewImage: {
+    marginTop: 12,
+    width: '100%',
+    height: 220,
+    borderRadius: 10,
+    backgroundColor: '#e2e8f0',
+  },
+  videoWrap: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  video: {
+    width: '100%',
+    height: 240,
+  },
+  primaryButton: {
+    marginTop: 14,
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  primaryButtonText: { color: '#fff', fontWeight: '700' },
+  disabled: { opacity: 0.7 },
+});
