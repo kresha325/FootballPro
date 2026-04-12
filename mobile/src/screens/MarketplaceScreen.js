@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createOrderRequest, extractErrorMessage, joncoinBalanceRequest, productsRequest } from '../api/client';
 
+const PAGE_SIZE = 8;
+
 function ProductCard({ item, onBuy }) {
   return (
     <View style={styles.card}>
@@ -25,6 +27,7 @@ export default function MarketplaceScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -33,6 +36,7 @@ export default function MarketplaceScreen() {
       const [productsRes, balanceRes] = await Promise.all([productsRequest(), joncoinBalanceRequest()]);
       setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
       setBalance(Number(balanceRes?.data?.balance || 0));
+      setVisibleCount(PAGE_SIZE);
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load marketplace'));
     } finally {
@@ -74,7 +78,7 @@ export default function MarketplaceScreen() {
 
   return (
     <FlatList
-      data={products}
+      data={products.slice(0, visibleCount)}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.listContent}
       ListHeaderComponent={
@@ -84,6 +88,13 @@ export default function MarketplaceScreen() {
         </View>
       }
       renderItem={({ item }) => <ProductCard item={item} onBuy={onBuy} />}
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (visibleCount < products.length) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, products.length));
+        }
+      }}
+      ListFooterComponent={visibleCount < products.length ? <Text style={styles.footer}>Loading more...</Text> : null}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -129,5 +140,6 @@ const styles = StyleSheet.create({
   buyBtn: { backgroundColor: '#0f766e', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
   buyBtnText: { color: '#fff', fontWeight: '700' },
   error: { color: '#b91c1c', textAlign: 'center' },
+  footer: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 30 },
 });

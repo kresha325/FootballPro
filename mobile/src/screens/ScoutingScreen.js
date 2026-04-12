@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { extractErrorMessage, scoutingRecommendationsRequest } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+
+const PAGE_SIZE = 10;
 
 function RecommendationCard({ item }) {
   return (
@@ -14,11 +17,14 @@ function RecommendationCard({ item }) {
 }
 
 export default function ScoutingScreen() {
+  const { user } = useAuth();
+  const canUseScouting = user?.role === 'scout' || user?.role === 'club';
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [position, setPosition] = useState('');
   const [recommendations, setRecommendations] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const loadData = useCallback(async ({ silent, customPosition } = { silent: false, customPosition: '' }) => {
     if (!silent) setLoading(true);
@@ -29,6 +35,7 @@ export default function ScoutingScreen() {
         limit: 20,
       });
       setRecommendations(Array.isArray(res?.data?.recommendations) ? res.data.recommendations : []);
+      setVisibleCount(PAGE_SIZE);
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load scouting recommendations'));
     } finally {
@@ -38,8 +45,21 @@ export default function ScoutingScreen() {
   }, [position]);
 
   useEffect(() => {
+    if (!canUseScouting) {
+      setLoading(false);
+      return;
+    }
     loadData({ customPosition: '' });
-  }, [loadData]);
+  }, [canUseScouting, loadData]);
+
+  if (!canUseScouting) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.accessTitle}>Scouting access is restricted</Text>
+        <Text style={styles.accessText}>Only users with scout or club role can use scouting recommendations.</Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -51,7 +71,7 @@ export default function ScoutingScreen() {
 
   return (
     <FlatList
-      data={recommendations}
+      data={recommendations.slice(0, visibleCount)}
       keyExtractor={(item, idx) => String(item?.playerId || idx)}
       contentContainerStyle={styles.content}
       refreshControl={
@@ -80,6 +100,15 @@ export default function ScoutingScreen() {
         </View>
       }
       renderItem={({ item }) => <RecommendationCard item={item} />}
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (visibleCount < recommendations.length) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, recommendations.length));
+        }
+      }}
+      ListFooterComponent={
+        visibleCount < recommendations.length ? <Text style={styles.footerText}>Loading more...</Text> : null
+      }
       ListEmptyComponent={<Text style={styles.empty}>No recommendations found.</Text>}
     />
   );
@@ -120,5 +149,8 @@ const styles = StyleSheet.create({
   meta: { color: '#475569', marginTop: 4 },
   reasons: { color: '#64748b', marginTop: 6 },
   error: { marginTop: 8, color: '#b91c1c' },
+  footerText: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
+  accessTitle: { color: '#0f172a', fontWeight: '800', fontSize: 18, textAlign: 'center' },
+  accessText: { color: '#475569', marginTop: 8, textAlign: 'center' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

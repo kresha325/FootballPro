@@ -7,6 +7,8 @@ import {
   trendingTournamentsRequest,
 } from '../api/client';
 
+const PAGE_SIZE = 8;
+
 function TournamentCard({ item, onJoin }) {
   const participants = Array.isArray(item?.participants) ? item.participants.length : 0;
 
@@ -29,6 +31,7 @@ export default function TournamentsScreen() {
   const [error, setError] = useState('');
   const [trending, setTrending] = useState([]);
   const [allTournaments, setAllTournaments] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -37,6 +40,7 @@ export default function TournamentsScreen() {
       const [trendingRes, allRes] = await Promise.all([trendingTournamentsRequest(), tournamentsRequest()]);
       setTrending(Array.isArray(trendingRes.data) ? trendingRes.data : []);
       setAllTournaments(Array.isArray(allRes.data) ? allRes.data : []);
+      setVisibleCount(PAGE_SIZE);
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load tournaments'));
     } finally {
@@ -71,7 +75,7 @@ export default function TournamentsScreen() {
 
   return (
     <FlatList
-      data={merged}
+      data={merged.slice(0, visibleCount)}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.content}
       refreshControl={
@@ -91,6 +95,13 @@ export default function TournamentsScreen() {
         </View>
       }
       renderItem={({ item }) => <TournamentCard item={item} onJoin={onJoin} />}
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (visibleCount < merged.length) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, merged.length));
+        }
+      }}
+      ListFooterComponent={visibleCount < merged.length ? <Text style={styles.footer}>Loading more...</Text> : null}
       ListEmptyComponent={<Text style={styles.empty}>No tournaments available.</Text>}
     />
   );
@@ -122,5 +133,6 @@ const styles = StyleSheet.create({
   joinBtn: { marginTop: 6, backgroundColor: '#0f766e', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
   joinBtnText: { color: '#fff', fontWeight: '700' },
   error: { marginTop: 6, color: '#b91c1c' },
+  footer: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

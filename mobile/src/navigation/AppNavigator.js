@@ -13,6 +13,7 @@ import VideosScreen from '../screens/VideosScreen';
 import InsightsScreen from '../screens/InsightsScreen';
 import TournamentsScreen from '../screens/TournamentsScreen';
 import ScoutingScreen from '../screens/ScoutingScreen';
+import MoreScreen from '../screens/MoreScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
@@ -28,6 +29,7 @@ const Tabs = createBottomTabNavigator();
 const FeedStack = createNativeStackNavigator();
 const MessagingStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
+const MoreStack = createNativeStackNavigator();
 
 function MessagingNavigator() {
   return (
@@ -74,6 +76,20 @@ function ProfileNavigator() {
   );
 }
 
+function MoreNavigator() {
+  return (
+    <MoreStack.Navigator>
+      <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: 'More' }} />
+      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
+      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
+      <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Tournaments' }} />
+      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Scouting' }} />
+      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
+    </MoreStack.Navigator>
+  );
+}
+
 function AppTabs() {
   return (
     <Tabs.Navigator
@@ -84,14 +100,9 @@ function AppTabs() {
     >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false }} />
       <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
-      <Tabs.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
       <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
-      <Tabs.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
-      <Tabs.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Tournaments' }} />
-      <Tabs.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Scouting' }} />
       <Tabs.Screen name="Messages" component={MessagingNavigator} options={{ headerShown: false }} />
-      <Tabs.Screen name="Notifications" component={NotificationsScreen} />
-      <Tabs.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false }} />
       <Tabs.Screen
         name="Profile"
         component={ProfileNavigator}
