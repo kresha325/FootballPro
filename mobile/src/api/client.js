@@ -123,4 +123,24 @@ export const uploadVideoRequest = (payload = {}) => {
   });
 };
 
+export const dashboardAnalyticsRequest = (period = 30) =>
+  api.get('/api/analytics/dashboard', { params: { period } });
+export const followerGrowthAnalyticsRequest = (period = 30) =>
+  api.get('/api/analytics/follower-growth', { params: { period } });
+export const engagementRateAnalyticsRequest = (period = 30) =>
+  api.get('/api/analytics/engagement-rate', { params: { period } });
+
+export const gamificationUserRequest = () => api.get('/api/gamification/user');
+export const gamificationAchievementsRequest = () => api.get('/api/gamification/achievements');
+export const gamificationBadgesRequest = () => api.get('/api/gamification/badges');
+export const gamificationLeaderboardRequest = () => api.get('/api/gamification/leaderboard');
+
+export const tournamentsRequest = () => api.get('/api/tournaments');
+export const trendingTournamentsRequest = () => api.get('/api/tournaments/trending');
+export const joinTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/join`);
+export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournaments/${tournamentId}/leave`);
+
+export const scoutingRecommendationsRequest = (params = {}) =>
+  api.get('/api/scouting/recommendations', { params });
+
 export default api;

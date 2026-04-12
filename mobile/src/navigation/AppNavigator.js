@@ -10,6 +10,9 @@ import GalleryScreen from '../screens/GalleryScreen';
 import MarketplaceScreen from '../screens/MarketplaceScreen';
 import WalletScreen from '../screens/WalletScreen';
 import VideosScreen from '../screens/VideosScreen';
+import InsightsScreen from '../screens/InsightsScreen';
+import TournamentsScreen from '../screens/TournamentsScreen';
+import ScoutingScreen from '../screens/ScoutingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
@@ -83,6 +86,9 @@ function AppTabs() {
       <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
       <Tabs.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
       <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
+      <Tabs.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
+      <Tabs.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Tournaments' }} />
+      <Tabs.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Scouting' }} />
       <Tabs.Screen name="Messages" component={MessagingNavigator} options={{ headerShown: false }} />
       <Tabs.Screen name="Notifications" component={NotificationsScreen} />
       <Tabs.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Go Live' }} />
