@@ -7,6 +7,16 @@ import {
   gamificationUserRequest,
 } from '../api/client';
 
+function InsightsSkeleton() {
+  return (
+    <View style={styles.content}>
+      {[1, 2, 3].map((i) => (
+        <View key={`i-${i}`} style={[styles.card, styles.skeletonBlock]} />
+      ))}
+    </View>
+  );
+}
+
 export default function InsightsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,11 +51,7 @@ export default function InsightsScreen() {
   }, [loadData]);
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
-      </View>
-    );
+    return <InsightsSkeleton />;
   }
 
   return (
@@ -125,5 +131,6 @@ const styles = StyleSheet.create({
   rankName: { color: '#0f172a', fontWeight: '700' },
   rankMeta: { color: '#475569', marginTop: 4 },
   error: { color: '#b91c1c', marginBottom: 10 },
+  skeletonBlock: { height: 90, backgroundColor: '#e2e8f0' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

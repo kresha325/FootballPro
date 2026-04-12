@@ -9,6 +9,16 @@ import {
   joncoinWithdrawRequest,
 } from '../api/client';
 
+function WalletSkeleton() {
+  return (
+    <View style={styles.listContent}>
+      {[1, 2, 3].map((i) => (
+        <View key={`w-${i}`} style={[styles.card, styles.skeletonBlock]} />
+      ))}
+    </View>
+  );
+}
+
 export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
@@ -76,11 +86,7 @@ export default function WalletScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
-      </View>
-    );
+    return <WalletSkeleton />;
   }
 
   return (
@@ -192,5 +198,6 @@ const styles = StyleSheet.create({
   txType: { color: '#0f172a', fontWeight: '700' },
   txAmount: { color: '#0f766e', fontWeight: '800', marginTop: 4 },
   txDesc: { color: '#475569', marginTop: 4 },
+  skeletonBlock: { height: 90, backgroundColor: '#e2e8f0' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

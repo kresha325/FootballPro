@@ -4,6 +4,16 @@ import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { extractErrorMessage, likeVideoRequest, uploadVideoRequest, videosRequest } from '../api/client';
 
+function VideosSkeleton() {
+  return (
+    <View style={styles.listContent}>
+      {[1, 2].map((i) => (
+        <View key={`v-${i}`} style={[styles.card, styles.skeletonBlock]} />
+      ))}
+    </View>
+  );
+}
+
 function VideoCard({ item, onLike }) {
   const author = item?.User ? `${item.User.firstName || ''} ${item.User.lastName || ''}`.trim() : 'Unknown';
 
@@ -110,11 +120,7 @@ export default function VideosScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
-      </View>
-    );
+    return <VideosSkeleton />;
   }
 
   return (
@@ -219,5 +225,6 @@ const styles = StyleSheet.create({
   meta: { color: '#475569' },
   likeBtn: { backgroundColor: '#1d4ed8', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   likeBtnText: { color: '#fff', fontWeight: '700' },
+  skeletonBlock: { height: 220, backgroundColor: '#e2e8f0' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

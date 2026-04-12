@@ -84,6 +84,7 @@ export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
 
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
+export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');
 export const conversationMessagesRequest = (conversationId, params = {}) =>
   api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
 export const sendConversationMessageRequest = (conversationId, content) =>

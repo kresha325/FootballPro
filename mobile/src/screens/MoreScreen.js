@@ -14,6 +14,7 @@ function MenuButton({ title, subtitle, onPress }) {
 export default function MoreScreen({ navigation }) {
   const { user } = useAuth();
   const canUseScouting = user?.role === 'scout' || user?.role === 'club';
+  const canUseInsights = ['athlete', 'coach', 'club', 'scout', 'manager', 'business', 'federation', 'admin'].includes(user?.role);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -23,9 +24,9 @@ export default function MoreScreen({ navigation }) {
       </View>
 
       <MenuButton title="Wallet" subtitle="JonCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
-      <MenuButton title="Insights" subtitle="Analytics and gamification" onPress={() => navigation.navigate('Insights')} />
+      {canUseInsights ? <MenuButton title="Insights" subtitle="Analytics and gamification" onPress={() => navigation.navigate('Insights')} /> : null}
       <MenuButton title="Tournaments" subtitle="Trending and join flow" onPress={() => navigation.navigate('Tournaments')} />
-      <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} />
+      {canUseScouting ? <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} /> : null}
       <MenuButton title="Notifications" subtitle="Your latest updates" onPress={() => navigation.navigate('Notifications')} />
       <MenuButton title="Go Live" subtitle="Start a live session" onPress={() => navigation.navigate('GoLive')} />
 
