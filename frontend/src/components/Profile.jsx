@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
-import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI } from '../services/api';
+import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI, streamsAPI } from '../services/api';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';
@@ -254,6 +254,7 @@ const Profile = () => {
   const [liveTitle, setLiveTitle] = useState('');
   const [liveDescription, setLiveDescription] = useState('');
   const [liveIsPublic, setLiveIsPublic] = useState(false);
+  const [liveStreamId, setLiveStreamId] = useState(null);
   const [stats, setStats] = useState({
     posts: 0,
     followers: 0,
@@ -325,6 +326,42 @@ const Profile = () => {
         console.error('Error opening/creating conversation:', err);
         alert('Failed to open or create conversation.');
       }
+    }
+  };
+
+  const userId = user?.id || profile?.id || null;
+
+  const getLiveStreamShareLink = (streamId) => {
+    if (!streamId) return window.location.href;
+    return `${window.location.origin}/live/${streamId}`;
+  };
+
+  const handleStartLiveStream = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        title: liveTitle?.trim() || 'Live Stream',
+        description: liveDescription?.trim() || '',
+        isPremium: false,
+        isPublic: !!liveIsPublic,
+      };
+
+      const res = await streamsAPI.createStream(payload);
+      const createdId =
+        res?.data?.id ||
+        res?.data?.stream?.id ||
+        res?.data?.liveStream?.id ||
+        null;
+
+      if (!createdId) {
+        throw new Error('Stream was created but no stream ID was returned.');
+      }
+
+      setLiveStreamId(createdId);
+      alert('Live stream started. You can now share the link.');
+    } catch (err) {
+      console.error('Failed to start live stream:', err);
+      alert('Failed to start live stream. Please try again.');
     }
   };
 
@@ -1447,26 +1484,30 @@ const Profile = () => {
               <button type="button" onClick={() => setShowLiveModal(false)} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
             </form>
 
-            {/* Share Link */}
-            <button
-              onClick={() => {
-                const link = getLiveStreamShareLink(liveStreamId);
-                navigator.clipboard.writeText(link);
-                alert('Linku u kopjua!');
-              }}
-              style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '4px' }}
-            >
-              Kopjo Linkun e Stream-it
-            </button>
+            {liveStreamId ? (
+              <>
+                {/* Share Link */}
+                <button
+                  onClick={() => {
+                    const link = getLiveStreamShareLink(liveStreamId);
+                    navigator.clipboard.writeText(link);
+                    alert('Linku u kopjua!');
+                  }}
+                  style={{ marginTop: '10px', padding: '8px 16px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '4px' }}
+                >
+                  Kopjo Linkun e Stream-it
+                </button>
 
-            {/* Chat Live */}
-            <LiveStreamChat streamId={liveStreamId} userId={userId} />
+                {/* Chat Live */}
+                <LiveStreamChat streamId={liveStreamId} userId={userId} />
 
-            {/* Reactions/Emoji */}
-            <LiveStreamReactions streamId={liveStreamId} userId={userId} />
+                {/* Reactions/Emoji */}
+                <LiveStreamReactions streamId={liveStreamId} userId={userId} />
 
-            {/* Invite Guests */}
-            <LiveStreamGuests streamId={liveStreamId} userId={userId} />
+                {/* Invite Guests */}
+                <LiveStreamGuests streamId={liveStreamId} userId={userId} />
+              </>
+            ) : null}
           </div>
         </div>
       )}
