@@ -363,6 +363,12 @@ const Profile = () => {
         throw new Error('Stream was created but no stream ID was returned.');
       }
 
+      try {
+        await streamsAPI.startStream(createdId);
+      } catch (_startErr) {
+        // Some deployments may already create live streams directly.
+      }
+
       setLiveStreamId(createdId);
       alert('Live stream started. You can now share the link.');
     } catch (err) {
