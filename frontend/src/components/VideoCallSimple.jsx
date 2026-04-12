@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { PhoneIcon, PhoneXMarkIcon, VideoCameraIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
+import { Room, RoomEvent, createLocalTracks } from 'livekit-client';
 import { API_URL } from '../config/api';
 
 const API = axios.create({ baseURL: API_URL });
@@ -25,6 +26,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   const [currentCallId, setCurrentCallId] = useState(null);
   const [serverConnected, setServerConnected] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [usingLiveKit, setUsingLiveKit] = useState(false);
 
   useEffect(() => {
     if (initialCallId) setCurrentCallId(initialCallId);
@@ -53,6 +55,8 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   const callStatusRef = useRef(callStatus);
   const disconnectTimerRef = useRef(null);
   const ringtoneRef = useRef({ ctx: null, osc: null, gain: null, intervalId: null });
+  const livekitRoomRef = useRef(null);
+  const livekitTracksRef = useRef([]);
 
   // Thirrja niset vetëm me klikim (jo automatikisht)
 
@@ -156,7 +160,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   }, [localStream]);
   // Handler for incoming call offer
   const handleIncomingCall = ({ from, callerName, offer, callId }) => {
-    if (!user || !from || !offer) return;
+    if (!user || !from) return;
     if (callStatus !== 'idle') {
       socket.emit('call:reject', { to: from });
       return;
@@ -168,7 +172,21 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   const acceptIncomingCall = async (callObj = null) => {
     const incoming = callObj || incomingCall;
     if (!incoming) return;
-    const { from, offer } = incoming;
+    const { from, offer, callId } = incoming;
+
+    if (callId) {
+      try {
+        await joinLiveKitRoom(callId);
+        socket.emit('call:answer', { to: from, answer: { type: 'livekit-accepted' }, callId });
+        if (callId) setCurrentCallId(callId);
+        setIncomingCall(null);
+        setCallStatus('connected');
+        return;
+      } catch (err) {
+        console.error('LiveKit accept failed, falling back to legacy WebRTC:', err);
+      }
+    }
+
     try {
       console.log('Accepting incoming call from:', from, 'callId:', incoming.callId);
       const stream = localStream || userGestureStream || await startLocalStream();
@@ -275,6 +293,74 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
       alert(errorMessage);
       return null;
     }
+  };
+
+  const joinLiveKitRoom = async (callId) => {
+    if (!callId) {
+      throw new Error('Missing callId for LiveKit room');
+    }
+
+    const roomName = `call-${callId}`;
+    const tokenResponse = await API.post('/livekit/token', {
+      roomName,
+      participantName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || String(user?.id || 'user'),
+      metadata: {
+        userId: user?.id,
+        targetUserId: targetUser?.id,
+        callId,
+      },
+    });
+
+    const wsUrl = tokenResponse?.data?.wsUrl;
+    const token = tokenResponse?.data?.token;
+
+    if (!wsUrl || !token) {
+      throw new Error('LiveKit token response is invalid');
+    }
+
+    if (livekitRoomRef.current) {
+      try {
+        await livekitRoomRef.current.disconnect();
+      } catch (_e) {}
+      livekitRoomRef.current = null;
+    }
+
+    const room = new Room();
+
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === 'video' && remoteVideoRef.current) {
+        track.attach(remoteVideoRef.current);
+      }
+      if (track.kind === 'audio' && remoteAudioRef.current) {
+        track.attach(remoteAudioRef.current);
+      }
+    });
+
+    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach();
+    });
+
+    room.on(RoomEvent.Disconnected, () => {
+      if (callStatusRef.current !== 'ended') {
+        setCallStatus('ended');
+      }
+    });
+
+    await room.connect(wsUrl, token, { autoSubscribe: true });
+
+    const localTracks = await createLocalTracks({ audio: true, video: true });
+    for (const track of localTracks) {
+      await room.localParticipant.publishTrack(track);
+      if (track.kind === 'video' && localVideoRef.current) {
+        track.attach(localVideoRef.current);
+      }
+    }
+
+    livekitTracksRef.current = localTracks;
+    livekitRoomRef.current = room;
+    setUsingLiveKit(true);
+    setCallStatus('connected');
+    setServerConnected(true);
   };
 
   const startRingtone = () => {
@@ -395,6 +481,10 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   const handleCallAnswered = async ({ from, answer }) => {
     console.log('✅ Call answered by user:', from);
     try {
+      if (answer?.type === 'livekit-accepted' && currentCallId) {
+        await joinLiveKitRoom(currentCallId);
+        return;
+      }
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
         setCallStatus('connected');
@@ -436,29 +526,18 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
 
     try {
       setCallStatus('calling');
-      // Lejo UI të rifreskohet para operacionit të rëndë
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const stream = localStream || await startLocalStream();
-      if (!stream) {
-        setCallStatus('idle');
-        setLoading(false);
-        return;
-      }
 
       // Create backend call record
       const response = await API.post('/video-calls/start', {
         receiverId: targetUser.id,
       });
-      setCurrentCallId(response.data.id);
 
-      // Create peer connection and offer
-      const pc = createPeerConnection(stream);
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
-      await pc.setLocalDescription(offer);
+      const createdCallId = response?.data?.id;
+      setCurrentCallId(createdCallId);
+
+      if (createdCallId) {
+        await joinLiveKitRoom(createdCallId);
+      }
 
       // Send offer through socket (include backend callId)
       console.log('📞 Sending call offer to user:', targetUser.id);
@@ -466,8 +545,8 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
         to: targetUser.id,
         from: user.id,
         callerName: `${user.firstName} ${user.lastName}`,
-        offer: offer,
-        callId: response.data.id,
+        offer: { type: 'livekit-invite' },
+        callId: createdCallId,
       });
 
       setCallStatus('ringing');
@@ -515,13 +594,35 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
     }
+    if (livekitRoomRef.current) {
+      livekitRoomRef.current.disconnect();
+      livekitRoomRef.current = null;
+    }
+    if (livekitTracksRef.current?.length) {
+      livekitTracksRef.current.forEach((track) => {
+        try {
+          track.stop();
+          track.detach();
+        } catch (_e) {}
+      });
+      livekitTracksRef.current = [];
+    }
     setLocalStream(null);
     setRemoteStream(null);
     setPeerConnection(null);
     peerConnectionRef.current = null;
+    setUsingLiveKit(false);
   };
 
   const toggleMute = () => {
+    if (usingLiveKit && livekitRoomRef.current) {
+      const audioPublication = Array.from(livekitRoomRef.current.localParticipant.trackPublications.values())
+        .find((publication) => publication.kind === 'audio');
+      const enabled = !!audioPublication?.track && isMuted;
+      audioPublication?.track?.setEnabled(enabled);
+      setIsMuted(!enabled);
+      return;
+    }
     if (localStream) {
       const audioTrack = localStream.getAudioTracks()[0];
       if (audioTrack) {
@@ -532,6 +633,14 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   };
 
   const toggleVideo = () => {
+    if (usingLiveKit && livekitRoomRef.current) {
+      const videoPublication = Array.from(livekitRoomRef.current.localParticipant.trackPublications.values())
+        .find((publication) => publication.kind === 'video');
+      const enabled = !!videoPublication?.track && isVideoOff;
+      videoPublication?.track?.setEnabled(enabled);
+      setIsVideoOff(!enabled);
+      return;
+    }
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack) {
