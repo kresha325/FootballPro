@@ -29,6 +29,23 @@ export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-passw
 export const meRequest = () => api.get('/api/auth/me');
 export const postsRequest = () => api.get('/api/posts');
 export const myProfileRequest = () => api.get('/api/profiles/me');
+export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
+export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });
+export const createMyProfileRequest = (payload = {}) => api.post('/api/profiles/me', payload);
+export const updateMyProfileRequest = (payload = {}) => {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'object') {
+      form.append(key, JSON.stringify(value));
+      return;
+    }
+    form.append(key, String(value));
+  });
+  return api.put('/api/profiles/me', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const likePostRequest = (postId) => api.post(`/api/likes/${postId}`);
 export const unlikePostRequest = (postId) => api.delete(`/api/likes/${postId}`);
 export const postCommentsRequest = (postId) => api.get(`/api/comments/${postId}`);
@@ -37,5 +54,18 @@ export const createStreamRequest = (payload) => api.post('/api/streams', payload
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
+
+export const conversationsRequest = () => api.get('/api/messaging/conversations');
+export const conversationMessagesRequest = (conversationId, params = {}) =>
+  api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
+export const sendConversationMessageRequest = (conversationId, content) =>
+  api.post(`/api/messaging/conversations/${conversationId}/messages`, { content });
+export const markConversationReadRequest = (conversationId) =>
+  api.put(`/api/messaging/conversations/${conversationId}/read`);
+
+export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });
+export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');
+export const markNotificationReadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/read`);
+export const markAllNotificationsReadRequest = () => api.put('/api/notifications/mark-all-read');
 
 export default api;

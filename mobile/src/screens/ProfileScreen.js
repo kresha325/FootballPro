@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { extractErrorMessage, myProfileRequest } from '../api/client';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,6 +71,15 @@ export default function ProfileScreen() {
         <Text style={styles.row}>Club: {profile?.club || 'N/A'}</Text>
         <Text style={styles.row}>Followers: {profile?.followers || 0}</Text>
         <Text style={styles.row}>Following: {profile?.following || 0}</Text>
+
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('EditProfile')}>
+            <Text style={styles.primaryButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('BrowseProfiles')}>
+            <Text style={styles.secondaryButtonText}>Browse Profiles</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -115,5 +124,34 @@ const styles = StyleSheet.create({
   error: {
     color: '#b91c1c',
     textAlign: 'center',
+  },
+  actions: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  primaryButton: {
+    flex: 1,
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  secondaryButtonText: {
+    color: '#0f766e',
+    fontWeight: '700',
   },
 });
