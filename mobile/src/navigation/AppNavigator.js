@@ -25,6 +25,13 @@ import ConversationScreen from '../screens/ConversationScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SponsorsScreen from '../screens/SponsorsScreen';
 import AdsScreen from '../screens/AdsScreen';
+import SearchScreen from '../screens/SearchScreen';
+import MatchesScreen from '../screens/MatchesScreen';
+import PremiumScreen from '../screens/PremiumScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import ClubRosterScreen from '../screens/ClubRosterScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import { useAuth } from '../context/AuthContext';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 
@@ -99,6 +106,13 @@ function MoreNavigator() {
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: 'Jon Sport' }} />
     </MoreStack.Navigator>
   );
 }

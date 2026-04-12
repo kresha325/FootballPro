@@ -15,6 +15,9 @@ export default function MoreScreen({ navigation }) {
   const { user } = useAuth();
   const canUseScouting = user?.role === 'scout' || user?.role === 'club';
   const canUseInsights = ['athlete', 'coach', 'club', 'scout', 'manager', 'business', 'federation', 'admin'].includes(user?.role);
+  const isAdmin = user?.role === 'admin';
+  const isClub = user?.role === 'club';
+  const canUseParentVerification = user?.role === 'athlete';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -28,9 +31,26 @@ export default function MoreScreen({ navigation }) {
       <MenuButton title="Tournaments" subtitle="Trending and join flow" onPress={() => navigation.navigate('Tournaments')} />
       {canUseScouting ? <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} /> : null}
       <MenuButton title="Notifications" subtitle="Your latest updates" onPress={() => navigation.navigate('Notifications')} />
+      <MenuButton title="Search" subtitle="Users, posts and discovery" onPress={() => navigation.navigate('Search')} />
+      <MenuButton title="Matches" subtitle="View and schedule matches" onPress={() => navigation.navigate('Matches')} />
       <MenuButton title="Go Live" subtitle="Start a live session" onPress={() => navigation.navigate('GoLive')} />
+      <MenuButton title="Premium" subtitle="Membership plans and perks" onPress={() => navigation.navigate('Premium')} />
       <MenuButton title="Sponsors" subtitle="Create and view sponsor deals" onPress={() => navigation.navigate('Sponsors')} />
       <MenuButton title="Ads" subtitle="Create and view active ads" onPress={() => navigation.navigate('Ads')} />
+      <MenuButton title="Settings" subtitle="Profile and app preferences" onPress={() => navigation.navigate('Settings')} />
+      {canUseParentVerification ? (
+        <MenuButton
+          title="Parent Verification"
+          subtitle="Send parent verification email"
+          onPress={() => navigation.navigate('ParentVerification')}
+        />
+      ) : null}
+      {isClub ? (
+        <MenuButton title="Club Roster" subtitle="Manage requests and squad" onPress={() => navigation.navigate('ClubRoster')} />
+      ) : null}
+      {isAdmin ? (
+        <MenuButton title="Admin Dashboard" subtitle="Users and platform analytics" onPress={() => navigation.navigate('AdminDashboard')} />
+      ) : null}
 
       {!canUseScouting ? (
         <View style={styles.noteCard}>

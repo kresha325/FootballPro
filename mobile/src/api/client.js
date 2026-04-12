@@ -180,12 +180,50 @@ export const gamificationBadgesRequest = () => api.get('/api/gamification/badges
 export const gamificationLeaderboardRequest = () => api.get('/api/gamification/leaderboard');
 
 export const tournamentsRequest = () => api.get('/api/tournaments');
+export const tournamentByIdRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}`);
 export const trendingTournamentsRequest = () => api.get('/api/tournaments/trending');
 export const joinTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/join`);
 export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournaments/${tournamentId}/leave`);
 
 export const scoutingRecommendationsRequest = (params = {}) =>
   api.get('/api/scouting/recommendations', { params });
+
+export const searchEverythingRequest = (params = {}) => api.get('/api/search', { params });
+export const searchUsersRequest = (params = {}) => api.get('/api/search/users', { params });
+export const searchPostsRequest = (params = {}) => api.get('/api/search/posts', { params });
+export const searchSuggestionsRequest = (params = {}) => api.get('/api/search/suggestions', { params });
+export const trendingSearchUsersRequest = () => api.get('/api/search/trending/users');
+export const trendingSearchPostsRequest = () => api.get('/api/search/trending/posts');
+export const recommendedUsersRequest = () => api.get('/api/search/recommended');
+
+export const matchesRequest = () => api.get('/api/matches');
+export const createMatchRequest = (payload) => api.post('/api/matches', payload);
+export const updateMatchRequest = (matchId, payload) => api.put(`/api/matches/${matchId}`, payload);
+export const updateMatchScoreRequest = (matchId, payload) => api.put(`/api/matches/${matchId}/score`, payload);
+
+export const adminAnalyticsRequest = () => api.get('/api/admin/analytics');
+export const adminUsersRequest = (params = {}) => api.get('/api/admin/users', { params });
+export const adminPostsRequest = (params = {}) => api.get('/api/admin/posts', { params });
+export const adminTogglePremiumRequest = (userId) => api.post(`/api/admin/users/${userId}/premium`);
+export const adminVerifyUserRequest = (userId) => api.post(`/api/admin/users/${userId}/verify`);
+export const adminBanUserRequest = (userId, reason = 'Admin action') =>
+  api.post(`/api/admin/users/${userId}/ban`, { reason });
+export const adminDeleteUserRequest = (userId) => api.delete(`/api/admin/users/${userId}`);
+export const adminUpdateUserRoleRequest = (userId, role) => api.put(`/api/admin/users/${userId}/role`, { role });
+export const adminResetUserPasswordRequest = (userId, newPassword) =>
+  api.post(`/api/admin/users/${userId}/reset-password`, { newPassword });
+export const adminDeletePostRequest = (postId) => api.delete(`/api/admin/posts/${postId}`);
+
+export const clubRosterRequestsRequest = () => api.get('/api/club-roster/requests');
+export const clubRosterPendingRequest = () => api.get('/api/club-roster/pending');
+export const submitClubRosterRequest = (payload) => api.post('/api/club-roster/request', payload);
+export const approveClubRosterRequest = (requestId) => api.put(`/api/club-roster/requests/${requestId}/approve`);
+export const rejectClubRosterRequest = (requestId) => api.put(`/api/club-roster/requests/${requestId}/reject`);
+export const removeClubRosterRequest = (requestId) => api.delete(`/api/club-roster/requests/${requestId}`);
+export const clubRosterByClubRequest = (clubId) => api.get(`/api/club-roster/club/${clubId}`);
+
+export const parentVerificationRequest = (parentEmail) =>
+  api.post('/api/verification/parent-request', { parentEmail });
 
 export const sponsorsRequest = () => api.get('/api/sponsors/all');
 export const createSponsorRequest = (payload = {}) => {
