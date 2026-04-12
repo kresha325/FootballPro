@@ -9,6 +9,8 @@ router.get('/:id', streamsCtrl.getStream);
 router.post('/', auth, streamsCtrl.createStream);
 router.put('/:id/start', auth, streamsCtrl.startStream);
 router.put('/:id/end', auth, streamsCtrl.endStream);
+router.put('/:id/viewers', streamsCtrl.updateViewersInternal);
+router.put('/:id/end-internal', streamsCtrl.endStreamInternal);
 router.post('/:id/join', auth, streamsCtrl.joinStream);
 router.post('/:id/leave', auth, streamsCtrl.leaveStream);
 

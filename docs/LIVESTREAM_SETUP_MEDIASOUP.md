@@ -54,6 +54,14 @@ Ky udhëzim shpjegon si të përdorësh funksionalitetin e ri të livestream-it 
 - Variablat e nevojshme në .env:
   - `MEDIASOUP_ADMIN_TOKEN` (për komunikim të sigurt me backend)
   - `FOOTBALLPRO_API_URL` (URL e backend-it)
+  - `MEDIASOUP_CORS_ORIGIN` (origin i frontend-it për Socket.IO)
+  - `FRONTEND_URL` (fallback për CORS nëse nuk vendoset `MEDIASOUP_CORS_ORIGIN`)
+  - `ANNOUNCED_IP` (IP/domain publik për WebRTC)
+
+### Kontroll i Sigurt në Nisje (Fail-Fast)
+
+- MediaSoup server tani nuk niset nëse mungon `MEDIASOUP_ADMIN_TOKEN` ose `FOOTBALLPRO_API_URL`.
+- Kjo shmang startime të rreme ku stream-i duket aktiv por callback-et e viewers/end dështojnë gjatë runtime.
 
 ---
 

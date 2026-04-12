@@ -89,22 +89,39 @@ export async function startViewer(roomId, userId = null) {
     socket.emit('connectTransport', { roomId, transportId: recvTransport.id, dtlsParameters }, callback);
   });
 
-  // 5. Merr producerId nga backend
-  const res = await fetch(`${SERVER_URL}/api/mediasoup/producer/${roomId}`);
-  if (!res.ok) throw new Error('Producer nuk u gjet');
-  const { producerId } = await res.json();
+  // 5. Merr producer-at (audio/video) nga backend
+  const producersRes = await fetch(`${SERVER_URL}/api/mediasoup/producers/${roomId}`);
+  if (!producersRes.ok) throw new Error('Producer-at nuk u gjeten');
 
-  // 6. Consume
-  const { id, kind, rtpParameters } = await new Promise((resolve) => {
-    socket.emit('consume', {
-      roomId,
-      transportId: recvTransport.id,
-      producerId,
-      rtpCapabilities: device.rtpCapabilities
-    }, resolve);
-  });
+  const producersPayload = await producersRes.json();
+  const producers = Array.isArray(producersPayload.producers) ? producersPayload.producers : [];
+  if (producers.length === 0) throw new Error('Nuk ka producer aktiv');
 
-  const consumer = await recvTransport.consume({ id, producerId, kind, rtpParameters });
-  const stream = new MediaStream([consumer.track]);
-  return { socket, device, recvTransport, consumer, stream };
+  // 6. Consume secilin producer dhe krijo stream me të gjitha tracks
+  const consumers = [];
+  const tracks = [];
+
+  for (const producerInfo of producers) {
+    const { producerId } = producerInfo;
+    const consumeParams = await new Promise((resolve) => {
+      socket.emit('consume', {
+        roomId,
+        transportId: recvTransport.id,
+        producerId,
+        rtpCapabilities: device.rtpCapabilities
+      }, resolve);
+    });
+
+    if (consumeParams && consumeParams.error) {
+      throw new Error(consumeParams.error);
+    }
+
+    const { id, kind, rtpParameters } = consumeParams;
+    const consumer = await recvTransport.consume({ id, producerId, kind, rtpParameters });
+    consumers.push(consumer);
+    tracks.push(consumer.track);
+  }
+
+  const stream = new MediaStream(tracks);
+  return { socket, device, recvTransport, consumers, stream };
 }

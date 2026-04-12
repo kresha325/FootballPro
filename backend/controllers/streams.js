@@ -237,6 +237,17 @@ exports.getMyStreamInfo = async (req, res) => {
 const { Stream, User, Profile } = require('../models');
 const { Op } = require('sequelize');
 
+function isMediasoupInternalAuthorized(req) {
+  const configuredToken = process.env.MEDIASOUP_ADMIN_TOKEN;
+  if (!configuredToken) {
+    return false;
+  }
+
+  const authHeader = req.header('Authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  return bearerToken && bearerToken === configuredToken;
+}
+
 exports.createStream = async (req, res) => {
   try {
     const { title, description, isPremium } = req.body;
@@ -394,6 +405,71 @@ exports.endStream = async (req, res) => {
       }
     } catch (e) {}
     res.json({ message: 'Stream ended' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateViewersInternal = async (req, res) => {
+  try {
+    if (!isMediasoupInternalAuthorized(req)) {
+      return res.status(401).json({ error: 'Unauthorized mediasoup call' });
+    }
+
+    const { id } = req.params;
+    const rawViewers = req.body.viewers;
+    const viewers = Number.isFinite(Number(rawViewers)) ? Math.max(0, Number(rawViewers)) : NaN;
+
+    if (Number.isNaN(viewers)) {
+      return res.status(400).json({ error: 'Invalid viewers value' });
+    }
+
+    const stream = await Stream.findByPk(id);
+    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+
+    stream.viewers = viewers;
+    await stream.save();
+
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:viewers', { id: stream.id, viewers: stream.viewers });
+      }
+    } catch (e) {}
+
+    res.json({ message: 'Viewers updated', id: stream.id, viewers: stream.viewers });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.endStreamInternal = async (req, res) => {
+  try {
+    if (!isMediasoupInternalAuthorized(req)) {
+      return res.status(401).json({ error: 'Unauthorized mediasoup call' });
+    }
+
+    const { id } = req.params;
+    const stream = await Stream.findByPk(id);
+    if (!stream) {
+      return res.status(404).json({ error: 'Stream not found' });
+    }
+
+    stream.isLive = false;
+    await stream.save();
+
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:ended', { id: stream.id });
+        io.to('streams').emit('stream:ended', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:ended', { id: stream.id });
+      }
+    } catch (e) {}
+
+    res.json({ message: 'Stream ended by mediasoup', id: stream.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

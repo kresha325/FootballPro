@@ -13,10 +13,10 @@ const getBackendURL = () => {
 
   // Fallback to current origin (works in dev when VITE_API_URL not set)
   try {
-    // If running on localhost during development, default to backend on :5000
+    // If running on localhost during development, default to backend on :10000
     const origin = window.location.hostname;
     if (!envUrl && (origin === 'localhost' || origin === '127.0.0.1')) {
-      return 'http://localhost:5000';
+      return 'http://localhost:10000';
     }
     return window.location.origin.replace(/\/api\/?$/i, '');
   } catch (e) {

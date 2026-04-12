@@ -30,9 +30,27 @@ export const ligaAPI = {
 };
 import axios from 'axios';
 
+const resolveApiBaseUrl = () => {
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  if (envApiUrl && typeof envApiUrl === 'string' && envApiUrl.length > 0) {
+    return envApiUrl.replace(/\/$/, '');
+  }
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:10000/api';
+  }
+
+  return `${window.location.origin.replace(/\/$/, '')}/api`;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_BASE_URL,
 });
+
+console.log('FRONTEND: API baseURL =', API_BASE_URL);
 
 // Interceptor për Authorization header
 API.interceptors.request.use(config => {

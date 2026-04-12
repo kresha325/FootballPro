@@ -7,18 +7,26 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
-    ,"publish": "expo publish --release-channel production",
+    "web": "expo start --web",
+    "publish": "expo publish --release-channel production",
     "eas-build": "eas build --platform android --profile production"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.17.11",
+    "@react-navigation/bottom-tabs": "^6.5.20",
+    "@react-navigation/native": "^6.1.18",
+    "@react-navigation/native-stack": "^6.11.0",
+    "axios": "^1.4.0",
     "expo": "48.0.0",
+    "expo-av": "~13.2.1",
+    "expo-constants": "~14.2.1",
+    "expo-secure-store": "~12.1.1",
     "expo-status-bar": "~1.4.4",
     "react": "18.2.0",
-    "react-native": "0.71.8",
-    "axios": "^1.4.0",
-    "socket.io-client": "^4.8.1",
-    "expo-secure-store": "^11.3.0"
+    "react-native": "^0.71.14",
+    "react-native-safe-area-context": "4.5.0",
+    "react-native-screens": "~3.20.0",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
