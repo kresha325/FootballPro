@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   createStreamRequest,
@@ -25,6 +26,7 @@ export default function GoLiveScreen() {
   const [liveStreams, setLiveStreams] = useState([]);
   const [myStreams, setMyStreams] = useState([]);
   const [loadError, setLoadError] = useState('');
+  const [cameraChecked, setCameraChecked] = useState(false);
 
   const loadStreams = async () => {
     setLoadingLists(true);
@@ -65,9 +67,37 @@ export default function GoLiveScreen() {
     }
   };
 
+  const openCameraCheck = async () => {
+    const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
+    const micPerm = ImagePicker.requestMicrophonePermissionsAsync
+      ? await ImagePicker.requestMicrophonePermissionsAsync()
+      : { granted: true };
+
+    if (!cameraPerm.granted || !micPerm.granted) {
+      throw new Error('Camera and microphone permissions are required.');
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      quality: 0.5,
+      allowsEditing: false,
+      videoMaxDuration: 10,
+    });
+
+    if (result.canceled) {
+      throw new Error('Camera was closed before starting live.');
+    }
+
+    setCameraChecked(true);
+  };
+
   const onGoLive = async () => {
     setLoading(true);
     try {
+      if (!cameraChecked) {
+        await openCameraCheck();
+      }
+
       const createRes = await createStreamRequest({ title, description, isPremium: false });
       const stream = createRes?.data;
       const streamId = stream?.id;
@@ -81,6 +111,7 @@ export default function GoLiveScreen() {
       await loadStreams();
       Alert.alert('Success', 'Stream created and marked as live.');
     } catch (err) {
+      console.error('Go Live failed:', err?.response?.data || err?.message || err);
       Alert.alert('Go Live failed', extractErrorMessage(err, 'Could not start stream'));
     } finally {
       setLoading(false);
@@ -173,6 +204,19 @@ export default function GoLiveScreen() {
         placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
         multiline
       />
+
+      <TouchableOpacity
+        style={styles.cameraButton}
+        onPress={async () => {
+          try {
+            await openCameraCheck();
+          } catch (err) {
+            Alert.alert('Camera check failed', extractErrorMessage(err, 'Could not open camera'));
+          }
+        }}
+      >
+        <Text style={styles.cameraButtonText}>{cameraChecked ? 'Camera ready' : 'Open camera first'}</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={onGoLive} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start Live</Text>}
@@ -268,6 +312,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 12,
+  },
+  cameraButton: {
+    marginTop: 4,
+    marginBottom: 8,
+    backgroundColor: '#1d4ed8',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  cameraButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
   buttonText: {
     color: '#fff',
