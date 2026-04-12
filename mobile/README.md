@@ -38,3 +38,31 @@ npm run publish
 eas build -p android --profile production
 npm run eas-build
 ```
+
+EAS setup prepared in this folder:
+
+- `eas.json` is added with `development`, `preview`, and `production` profiles.
+- `app.config.js` is added so `BACKEND_URL` can be injected from EAS env at build time.
+
+Recommended deploy flow (Android):
+
+```bash
+cd mobile
+
+# 1) login once
+eas login
+
+# 2) initialize project on Expo (first time only)
+eas init
+
+# 3) build test APK (internal testing)
+eas build -p android --profile preview
+
+# 4) build production AAB (Play Store)
+eas build -p android --profile production
+```
+
+If backend URL changes:
+
+1. Update `BACKEND_URL` values in `eas.json`, or
+2. Set env on EAS and keep config dynamic via `app.config.js`.
