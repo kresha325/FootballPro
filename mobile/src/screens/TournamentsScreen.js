@@ -16,7 +16,16 @@ function TournamentCard({ item, onJoin }) {
     <View style={styles.card}>
       <Text style={styles.name}>{item?.name || 'Tournament'}</Text>
       <Text style={styles.description}>{item?.description || 'No description'}</Text>
-      <Text style={styles.meta}>Type: {item?.type || 'N/A'} | Status: {item?.status || 'open'}</Text>
+      <Text style={styles.meta}>
+        Type: {item?.type || 'N/A'} |{' '}
+        {(item?.participantType || 'individual') === 'club'
+          ? 'Vetëm klube'
+          : (item?.participantType || 'individual') === 'mixed'
+            ? 'Klub+atlet'
+            : 'Individë'}{' '}
+        | Status:{' '}
+        {item?.status || 'open'}
+      </Text>
       <Text style={styles.meta}>Participants: {participants}/{item?.maxParticipants || '-'}</Text>
       <TouchableOpacity style={styles.joinBtn} onPress={() => onJoin(item.id)}>
         <Text style={styles.joinBtnText}>Join</Text>

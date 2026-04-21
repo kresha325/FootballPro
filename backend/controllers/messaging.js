@@ -7,6 +7,62 @@ const { sendEmail } = require('../services/emailService');
 const { Op, QueryTypes } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
+
+/** Sender + Profile për avatar në chat */
+const SENDER_WITH_PROFILE = {
+  model: User,
+  as: 'sender',
+  attributes: ['id', 'firstName', 'lastName'],
+  include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+};
+
+const REPLY_TO_WITH_SENDER = {
+  model: Message,
+  as: 'replyTo',
+  attributes: ['id', 'content', 'senderId'],
+  include: [
+    {
+      model: User,
+      as: 'sender',
+      attributes: ['firstName', 'lastName'],
+      include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+    },
+  ],
+};
+
+function shapeSender(sender, req) {
+  if (!sender) return null;
+  const plain = typeof sender.get === 'function' ? sender.get({ plain: true }) : { ...sender };
+  const photo = plain.Profile?.profilePhoto;
+  delete plain.Profile;
+  plain.profilePhoto = photo ? toAbsoluteUploadsUrl(req, photo) : null;
+  return plain;
+}
+
+function shapeMemberRow(member, req) {
+  if (!member) return member;
+  const plain = typeof member.get === 'function' ? member.get({ plain: true }) : { ...member };
+  const photo = plain.Profile?.profilePhoto;
+  delete plain.Profile;
+  return {
+    ...plain,
+    profilePhoto: photo ? toAbsoluteUploadsUrl(req, photo) : null,
+  };
+}
+
+function shapeMessage(message, req) {
+  if (!message) return message;
+  const plain = typeof message.get === 'function' ? message.get({ plain: true }) : { ...message };
+  if (plain.sender) plain.sender = shapeSender(plain.sender, req);
+  if (plain.replyTo) {
+    const r = { ...plain.replyTo };
+    if (r.sender) r.sender = shapeSender(r.sender, req);
+    plain.replyTo = r;
+  }
+  if (plain.fileUrl) plain.fileUrl = toAbsoluteUploadsUrl(req, plain.fileUrl);
+  return plain;
+}
 
 // Multer setup for file uploads
 const storage = multer.diskStorage({
@@ -43,6 +99,7 @@ exports.getConversations = async (req, res) => {
           model: User,
           as: 'members',
           attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
           through: { attributes: [] },
         },
         {
@@ -50,13 +107,7 @@ exports.getConversations = async (req, res) => {
           as: 'messages',
           limit: 1,
           order: [['createdAt', 'DESC']],
-          include: [
-            {
-              model: User,
-              as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
-            },
-          ],
+          include: [SENDER_WITH_PROFILE],
         },
       ],
       order: [['lastMessageAt', 'DESC']],
@@ -72,6 +123,7 @@ exports.getConversations = async (req, res) => {
           where: {
             conversationId: conv.id,
             senderId: { [Op.ne]: req.user.id },
+            deleted: false,
             createdAt: {
               [Op.gt]: membership.lastReadAt || new Date(0),
             },
@@ -79,6 +131,9 @@ exports.getConversations = async (req, res) => {
         });
 
         const convData = conv.toJSON();
+        if (Array.isArray(convData.members)) {
+          convData.members = convData.members.map((m) => shapeMemberRow(m, req));
+        }
         const lastMessage = convData.messages && convData.messages[0]
           ? convData.messages[0].content
           : null;
@@ -135,11 +190,21 @@ exports.getOrCreateConversation = async (req, res) => {
       const existingConversation = await Conversation.findByPk(conversationId, {
         include: [
           { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
-          { model: User, as: 'members', attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } },
+          {
+            model: User,
+            as: 'members',
+            attributes: ['id', 'firstName', 'lastName'],
+            include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+            through: { attributes: [] },
+          },
         ],
       });
       if (existingConversation && !existingConversation.isGroup) {
-        return res.json(existingConversation);
+        const data = existingConversation.toJSON();
+        if (Array.isArray(data.members)) {
+          data.members = data.members.map((m) => shapeMemberRow(m, req));
+        }
+        return res.json(data);
       }
     }
 
@@ -159,11 +224,21 @@ exports.getOrCreateConversation = async (req, res) => {
       const fullConversation = await Conversation.findByPk(newConversation.id, {
         include: [
           { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
-          { model: User, as: 'members', attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } },
+          {
+            model: User,
+            as: 'members',
+            attributes: ['id', 'firstName', 'lastName'],
+            include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+            through: { attributes: [] },
+          },
         ],
       });
 
-      return res.json(fullConversation);
+      const data = fullConversation.toJSON();
+      if (Array.isArray(data.members)) {
+        data.members = data.members.map((m) => shapeMemberRow(m, req));
+      }
+      return res.json(data);
     } catch (txErr) {
       await t.rollback();
       // cleanup if partially created
@@ -180,6 +255,53 @@ exports.getOrCreateConversation = async (req, res) => {
     console.error('Get or create conversation error:', err);
     console.error(err.stack);
     res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Get one conversation by id (must be a member)
+exports.getConversationById = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    if (Number.isNaN(conversationId)) {
+      return res.status(400).json({ msg: 'Invalid conversation id' });
+    }
+
+    const membership = await ConversationMember.findOne({
+      where: { conversationId, userId: req.user.id },
+    });
+    if (!membership) {
+      return res.status(403).json({ msg: 'Not authorized' });
+    }
+
+    const conversation = await Conversation.findByPk(conversationId, {
+      include: [
+        {
+          model: ConversationMember,
+          as: 'memberships',
+          attributes: ['userId', 'lastReadAt', 'role'],
+        },
+        {
+          model: User,
+          as: 'members',
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ msg: 'Conversation not found' });
+    }
+
+    const data = conversation.toJSON();
+    if (Array.isArray(data.members)) {
+      data.members = data.members.map((m) => shapeMemberRow(m, req));
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('Get conversation by id error:', err);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
@@ -207,32 +329,16 @@ exports.getMessages = async (req, res) => {
         conversationId,
         deleted: false,
       },
-      include: [
-        {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-        {
-          model: Message,
-          as: 'replyTo',
-          attributes: ['id', 'content', 'senderId'],
-          include: [
-            {
-              model: User,
-              as: 'sender',
-              attributes: ['firstName', 'lastName'],
-            },
-          ],
-        },
-      ],
+      include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
 
+    const shaped = messages.rows.map((m) => shapeMessage(m, req)).reverse();
+
     res.json({
-      messages: messages.rows.reverse(), // Show oldest first
+      messages: shaped,
       total: messages.count,
       page: parseInt(page),
       pages: Math.ceil(messages.count / limit),
@@ -299,21 +405,11 @@ exports.sendMessage = async (req, res) => {
       { where: { id: conversationId } }
     );
 
-    // Get full message with sender info (removed profilePhoto as it's in Profile model)
     const fullMessage = await Message.findByPk(message.id, {
-      include: [
-        {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-        {
-          model: Message,
-          as: 'replyTo',
-          attributes: ['id', 'content', 'senderId'],
-        },
-      ],
+      include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
     });
+
+    const payload = shapeMessage(fullMessage, req);
 
     // Send notifications to other members
     const members = await ConversationMember.findAll({
@@ -328,7 +424,7 @@ exports.sendMessage = async (req, res) => {
     const senderName = `${sender.firstName} ${sender.lastName}`;
     
     for (const member of members) {
-      await notifyMessage(member.userId, req.user.id, fullMessage);
+      await notifyMessage(member.userId, req.user.id, payload);
       
       // Send email notification
       try {
@@ -347,14 +443,14 @@ exports.sendMessage = async (req, res) => {
       const socketHelper = require('../socket');
       const io = socketHelper.getIo();
       if (io) {
-        io.to(`conversation-${conversationId}`).emit('newMessage', fullMessage);
+        io.to(`conversation-${conversationId}`).emit('newMessage', payload);
       }
     } catch (emitErr) {
       console.warn('Emit newMessage failed in messaging controller', emitErr && emitErr.message);
     }
 
     console.log('✅ Message sent successfully');
-    res.json(fullMessage);
+    res.json(payload);
   } catch (err) {
     console.error('❌ Send message error:', err);
     console.error('❌ Error stack:', err.stack);
@@ -419,13 +515,18 @@ exports.createGroup = async (req, res) => {
         {
           model: User,
           as: 'members',
-          attributes: ['id', 'firstName', 'lastName', 'profilePhoto'],
+          attributes: ['id', 'firstName', 'lastName'],
+          include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
           through: { attributes: ['role'] },
         },
       ],
     });
 
-    res.json(fullConversation);
+    const data = fullConversation.toJSON();
+    if (Array.isArray(data.members)) {
+      data.members = data.members.map((m) => shapeMemberRow(m, req));
+    }
+    res.json(data);
   } catch (err) {
     console.error('Create group error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -454,7 +555,25 @@ exports.editMessage = async (req, res) => {
       edited: true,
     });
 
-    res.json(message);
+    await message.reload({
+      include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
+    });
+
+    const payload = shapeMessage(message, req);
+    try {
+      const socketHelper = require('../socket');
+      const io = socketHelper.getIo();
+      if (io && payload.conversationId) {
+        io.to(`conversation-${payload.conversationId}`).emit('messageUpdated', {
+          conversationId: payload.conversationId,
+          message: payload,
+        });
+      }
+    } catch (emitErr) {
+      console.warn('Emit messageUpdated failed', emitErr && emitErr.message);
+    }
+
+    res.json(payload);
   } catch (err) {
     console.error('Edit message error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -477,7 +596,21 @@ exports.deleteMessage = async (req, res) => {
       return res.status(404).json({ msg: 'Message not found' });
     }
 
+    const convId = message.conversationId;
     await message.update({ deleted: true });
+
+    try {
+      const socketHelper = require('../socket');
+      const io = socketHelper.getIo();
+      if (io && convId) {
+        io.to(`conversation-${convId}`).emit('messageDeleted', {
+          conversationId: convId,
+          messageId: message.id,
+        });
+      }
+    } catch (emitErr) {
+      console.warn('Emit messageDeleted failed', emitErr && emitErr.message);
+    }
 
     res.json({ msg: 'Message deleted' });
   } catch (err) {

@@ -57,6 +57,33 @@ const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 
+/** Map free-text / locale labels to User.gender ENUM (male | female | other). */
+function normalizeGenderInput(raw) {
+  const t = String(raw ?? '').trim();
+  if (t === '') return { value: null };
+  const s = t.toLowerCase();
+  const male = new Set(['m', 'male', 'mashkull', 'mask', 'masc', 'man', 'guy', 'männlich', 'mannlich']);
+  const female = new Set(['f', 'female', 'femër', 'femer', 'femra', 'woman', 'girl', 'lady', 'frau', 'feminine']);
+  const other = new Set(['o', 'other', 'tjetër', 'tjeter', 'prefer not', 'non-binary', 'nonbinary', 'nb']);
+  if (male.has(s)) return { value: 'male' };
+  if (female.has(s)) return { value: 'female' };
+  if (other.has(s)) return { value: 'other' };
+  return { invalid: true };
+}
+
+/** Accept YYYY-MM-DD only; invalid input must not reach Sequelize DATEONLY. */
+function parseDateOnlyInput(raw) {
+  const t = String(raw ?? '').trim();
+  if (t === '') return { value: null };
+  const s = t.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return { invalid: true };
+  const d = new Date(`${s}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return { invalid: true };
+  const [Y, M, D] = s.split('-').map(Number);
+  if (d.getUTCFullYear() !== Y || d.getUTCMonth() + 1 !== M || d.getUTCDate() !== D) return { invalid: true };
+  return { value: s };
+}
+
 // Configure multer for profile photos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -259,10 +286,43 @@ exports.updateProfile = async (req, res) => {
     console.log('📝 UPDATE PROFILE - Body:', req.body);
     console.log('📁 UPDATE PROFILE - Files:', req.files);
 
+    let nextGender = undefined;
+    if (req.body.gender !== undefined) {
+      const g = normalizeGenderInput(req.body.gender);
+      if (g.invalid) {
+        return res.status(400).json({
+          msg: 'Invalid gender. Use male, female, or other (e.g. Mashkull / Femër / Other).',
+          field: 'gender',
+        });
+      }
+      nextGender = g.value;
+    }
+    let nextDateOfBirth = undefined;
+    if (req.body.dateOfBirth !== undefined) {
+      const dob = parseDateOnlyInput(req.body.dateOfBirth);
+      if (dob.invalid) {
+        return res.status(400).json({
+          msg: 'Invalid date of birth. Use format YYYY-MM-DD.',
+          field: 'dateOfBirth',
+        });
+      }
+      nextDateOfBirth = dob.value;
+    }
+
     // Build updateData dynamically from req.body for Profile fields
     const profileFields = [
-      'bio', 'city', 'country', 'club', 'clubId', 'clubLogo', 'position', 'stats', 'careerHistory', 'contact',
-      // add more profile fields here if needed
+      'bio',
+      'city',
+      'country',
+      'club',
+      'clubId',
+      'clubLogo',
+      'position',
+      'stats',
+      'careerHistory',
+      'contact',
+      'coachAffiliation',
+      'coachCategory',
     ];
     let updateData = {};
     for (const key in req.body) {
@@ -279,7 +339,8 @@ exports.updateProfile = async (req, res) => {
           try {
             updateData[key] = JSON.parse(req.body[key]);
           } catch {
-            updateData[key] = undefined;
+            // careerHistory is often plain text on the web form; keep the string
+            updateData[key] = key === 'careerHistory' ? req.body[key] : undefined;
           }
         } else {
           updateData[key] = req.body[key];
@@ -374,16 +435,23 @@ exports.updateProfile = async (req, res) => {
       await profile.update(updateData);
     }
 
-    // Update all user base info if provided
-    if (req.body.firstName || req.body.lastName || req.body.dateOfBirth || req.body.gender) {
+    // Update User fields (ENUM/date validation — free-text gender used to cause 500 from Sequelize)
+    const hasUserPatch =
+      req.body.firstName !== undefined ||
+      req.body.lastName !== undefined ||
+      req.body.dateOfBirth !== undefined ||
+      req.body.gender !== undefined;
+    if (hasUserPatch) {
       const user = await User.findByPk(req.user.id);
       if (user) {
-        await user.update({
-          firstName: req.body.firstName || user.firstName,
-          lastName: req.body.lastName || user.lastName,
-          dateOfBirth: req.body.dateOfBirth || user.dateOfBirth,
-          gender: req.body.gender || user.gender,
-        });
+        const patch = {};
+        if (req.body.firstName !== undefined) patch.firstName = req.body.firstName || user.firstName;
+        if (req.body.lastName !== undefined) patch.lastName = req.body.lastName || user.lastName;
+        if (nextGender !== undefined) patch.gender = nextGender;
+        if (nextDateOfBirth !== undefined) patch.dateOfBirth = nextDateOfBirth;
+        if (Object.keys(patch).length) {
+          await user.update(patch);
+        }
       }
     }
 

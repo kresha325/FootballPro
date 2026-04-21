@@ -1,20 +1,36 @@
 import React, { useState, useEffect } from 'react';
-// Hiq importin e applyBackgroundStyle
 import { useAuth } from '../contexts/AuthContext';
+import { profileAPI } from '../services/api';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
+const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
 
 const Settings = () => {
-  // Hiq kodin e background-it, mbetet vetëm darkMode, notifications, profile
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [profile, setProfile] = useState({
-    name: user?.firstName || '',
-    email: user?.email || '',
-    bio: user?.bio || ''
+    name: '',
+    email: '',
+    bio: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
 
+  useEffect(() => {
+    setDarkMode(localStorage.getItem('theme') === 'dark');
+    setNotifications(localStorage.getItem(NOTIFICATIONS_PREF_KEY) === 'true');
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    setProfile({
+      name: displayName || user.firstName || '',
+      email: user.email || '',
+      bio: user.bio || '',
+    });
+  }, [user]);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -28,10 +44,39 @@ const Settings = () => {
     }
   };
 
-  const handleProfileUpdate = (e) => {
+  const toggleNotifications = () => {
+    const next = !notifications;
+    setNotifications(next);
+    localStorage.setItem(NOTIFICATIONS_PREF_KEY, next ? 'true' : 'false');
+  };
+
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    // TODO: Implement profile update API call
-    console.log('Updating profile:', profile);
+    setSaveMessage({ type: '', text: '' });
+    const trimmedName = profile.name.trim();
+    if (!trimmedName) {
+      setSaveMessage({ type: 'error', text: 'Shkruaj të paktën emrin.' });
+      return;
+    }
+    const parts = trimmedName.split(/\s+/);
+    const firstName = parts[0];
+    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+
+    setSaving(true);
+    try {
+      const form = new FormData();
+      form.append('firstName', firstName);
+      form.append('lastName', lastName);
+      form.append('bio', profile.bio || '');
+      await profileAPI.updateProfile(form);
+      await refreshUser();
+      setSaveMessage({ type: 'ok', text: 'Profili u përditësua.' });
+    } catch (err) {
+      const msg = err?.response?.data?.msg || err?.message || 'Përditësimi dështoi.';
+      setSaveMessage({ type: 'error', text: msg });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -73,7 +118,8 @@ const Settings = () => {
         <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <span className="text-gray-700 dark:text-gray-300">Enable Notifications</span>
           <button
-            onClick={() => setNotifications(!notifications)}
+            type="button"
+            onClick={toggleNotifications}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               notifications ? 'bg-primary' : 'bg-gray-200'
             }`}
@@ -94,9 +140,20 @@ const Settings = () => {
           Profile
         </h2>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
+          {saveMessage.text ? (
+            <p
+              className={`text-sm rounded-md px-3 py-2 ${
+                saveMessage.type === 'ok'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+              }`}
+            >
+              {saveMessage.text}
+            </p>
+          ) : null}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Name
+              Emri (emër dhe mbiemër)
             </label>
             <input
               type="text"
@@ -112,9 +169,10 @@ const Settings = () => {
             <input
               type="email"
               value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              readOnly
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 cursor-not-allowed"
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ndryshimi i email-it kërkon flow të veçantë në server.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -129,9 +187,10 @@ const Settings = () => {
           </div>
           <button
             type="submit"
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors"
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors disabled:opacity-50"
           >
-            Update Profile
+            {saving ? 'Duke ruajtur…' : 'Ruaj profilin'}
           </button>
         </form>
       </div>

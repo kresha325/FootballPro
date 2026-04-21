@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { Tournament } = require('../models/Tournament');
 const {
   createTournament,
   getTournaments,
@@ -9,10 +10,12 @@ const {
   joinTournament,
   leaveTournament,
   getLeaderboard,
+  getStandings,
   generateBracket,
   getBracket,
   updateMatchScore,
   getMatches,
+  getTournamentMatchDetail,
   scheduleMatch,
   getTournamentStats,
   startTournamentAndGenerateMatches,
@@ -27,7 +30,7 @@ router.post('/', auth, createTournament);
 router.get('/', auth, getTournaments);
 // Trending (auth required)
 router.get('/trending', auth, getTrendingTournaments);
-router.get('/:id', auth, getTournament);
+
 router.delete('/:id', auth, async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
@@ -49,14 +52,18 @@ router.put('/:id/participants/:userId/accept', auth, acceptParticipant);
 router.put('/:id/participants/:userId/reject', auth, rejectParticipant);
 router.delete('/:id/participants/:userId', auth, removeParticipant);
 
-// Leaderboard
+// Leaderboard & standings (tabela sipas rregullave të turneut)
 router.get('/:id/leaderboard', auth, getLeaderboard);
+router.get('/:id/standings', auth, getStandings);
+
+router.get('/:id', auth, getTournament);
 
 // Bracket (knockout/cup)
 router.post('/:id/bracket/generate', auth, generateBracket);
 router.get('/:id/bracket', auth, getBracket);
 
-// Matches
+// Matches (detail para listës që të mos përplaset me segmente të tjera)
+router.get('/:id/matches/:matchId', auth, getTournamentMatchDetail);
 router.get('/:id/matches', auth, getMatches);
 router.put('/matches/:matchId/score', auth, updateMatchScore);
 router.put('/matches/:matchId/result', auth, updateMatchResultForTournament);

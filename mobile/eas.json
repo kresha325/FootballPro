@@ -11,7 +11,8 @@
         "buildType": "apk"
       },
       "env": {
-        "BACKEND_URL": "https://footballpro.onrender.com"
+        "BACKEND_URL": "https://footballpro.onrender.com",
+        "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     },
     "preview": {
@@ -20,7 +21,8 @@
         "buildType": "apk"
       },
       "env": {
-        "BACKEND_URL": "https://footballpro.onrender.com"
+        "BACKEND_URL": "https://footballpro.onrender.com",
+        "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     },
     "production": {
@@ -28,7 +30,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "BACKEND_URL": "https://footballpro.onrender.com"
+        "BACKEND_URL": "https://footballpro.onrender.com",
+        "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     }
   },

@@ -47,6 +47,27 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
+  const refreshUser = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      return;
+    }
+    try {
+      const res = await authAPI.me();
+      let userData = { ...res.data, token };
+      try {
+        const profileRes = await profileAPI.getProfile(userData.id);
+        userData = { ...userData, ...profileRes.data };
+      } catch (_profileErr) {
+        // ignore
+      }
+      setUser(userData);
+    } catch (_err) {
+      localStorage.removeItem('token');
+      setUser(null);
+    }
+  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -132,6 +153,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
     loading,
     darkMode,
     toggleDarkMode,

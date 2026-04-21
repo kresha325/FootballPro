@@ -3,12 +3,16 @@ const Match = require('../models/Match');
 const Bracket = require('../models/Bracket');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
 const { notifyMessage } = require('./notifications');
 
 exports.createTournament = async (req, res) => {
   try {
-    const { name, description, type, startDate, endDate, maxParticipants } = req.body;
+    const { name, description, type, startDate, endDate, maxParticipants, participantType } = req.body;
+    let pt = 'individual';
+    if (participantType === 'club') pt = 'club';
+    else if (participantType === 'mixed') pt = 'mixed';
     const tournament = await Tournament.create({
       name,
       description,
@@ -16,6 +20,7 @@ exports.createTournament = async (req, res) => {
       startDate,
       endDate,
       maxParticipants,
+      participantType: pt,
       creatorId: req.user.id,
     });
     res.status(201).json(tournament);
@@ -29,7 +34,7 @@ exports.getTournaments = async (req, res) => {
     const tournaments = await Tournament.findAll({
       include: [
         { model: User, as: 'creator', attributes: ['firstName', 'lastName'] },
-        { model: User, as: 'participants', through: { attributes: [] } },
+        { model: User, as: 'participants', attributes: ['id', 'firstName', 'lastName', 'role'], through: { attributes: [] } },
       ],
     });
     res.json(tournaments);
@@ -47,7 +52,7 @@ exports.getTrendingTournaments = async (req, res) => {
       where: statusFilter ? { status: statusFilter } : {},
       include: [
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
-        { model: User, as: 'participants', through: { attributes: [] } },
+        { model: User, as: 'participants', attributes: ['id', 'firstName', 'lastName', 'role'], through: { attributes: [] } },
       ],
     });
 
@@ -75,7 +80,13 @@ exports.getTournament = async (req, res) => {
     const tournament = await Tournament.findByPk(req.params.id, {
       include: [
         { model: User, as: 'creator', attributes: ['firstName', 'lastName'] },
-        { model: User, as: 'participants', through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst'] } },
+        {
+          model: User,
+          as: 'participants',
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status'] },
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
+        },
         { model: Match, include: [{ model: User, as: 'homeUser' }, { model: User, as: 'awayUser' }] },
       ],
     });
@@ -92,12 +103,177 @@ exports.joinTournament = async (req, res) => {
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
     if (tournament.status !== 'open') return res.status(400).json({ msg: 'Tournament not open for joining' });
 
+    const participantType = tournament.participantType || 'individual';
+    if (participantType === 'club' && req.user.role !== 'club') {
+      return res.status(400).json({
+        msg: 'Ky turne është vetëm për klube — vetëm llogaria me rol «club» mund të bashkohet.',
+      });
+    }
+    if (participantType === 'mixed' && !['club', 'athlete'].includes(req.user.role)) {
+      return res.status(400).json({
+        msg: 'Ky turne pranon vetëm klube dhe athletë. Përdorni një llogari «club» ose «athlete».',
+      });
+    }
+    if (participantType === 'individual' && req.user.role === 'club') {
+      return res.status(400).json({
+        msg: 'Ky turne është për individë (jo klub si pjesëmarrës). Zgjidhni turne «klub», «klub + athletë» ose krijoni turne për klube.',
+      });
+    }
+
     const participants = await TournamentParticipant.findAll({ where: { tournamentId: req.params.id } });
     if (participants.length >= tournament.maxParticipants) return res.status(400).json({ msg: 'Tournament full' });
+
+    const already = participants.some((p) => p.userId === req.user.id);
+    if (already) return res.status(400).json({ msg: 'Already joined this tournament' });
 
     await TournamentParticipant.create({ tournamentId: req.params.id, userId: req.user.id });
     res.json({ msg: 'Joined tournament' });
   } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+/** Renditje: ligë = pikë + diferencë gola (FIFA); cup/knockout = nga ndeshjet e përfunduara (përmbledhje), bracket për eliminim. */
+function sortStandingsRows(rows) {
+  return [...rows].sort((a, b) => {
+    const pa = a.points ?? 0;
+    const pb = b.points ?? 0;
+    if (pb !== pa) return pb - pa;
+    const gda = (a.goalsFor ?? 0) - (a.goalsAgainst ?? 0);
+    const gdb = (b.goalsFor ?? 0) - (b.goalsAgainst ?? 0);
+    if (gdb !== gda) return gdb - gda;
+    const gfa = a.goalsFor ?? 0;
+    const gfb = b.goalsFor ?? 0;
+    if (gfb !== gfa) return gfb - gfa;
+    return (b.wins ?? 0) - (a.wins ?? 0);
+  });
+}
+
+async function standingsFromFinishedMatches(tournamentId, participantUserIds) {
+  const ids = [...new Set(participantUserIds.map(Number))].filter((id) => Number.isFinite(id));
+  const stats = {};
+  for (const uid of ids) {
+    stats[uid] = {
+      userId: uid,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      points: 0,
+    };
+  }
+  const matches = await Match.findAll({
+    where: { tournamentId, status: 'finished' },
+    attributes: ['homeUserId', 'awayUserId', 'scoreHome', 'scoreAway'],
+  });
+  for (const m of matches) {
+    const h = m.homeUserId;
+    const a = m.awayUserId;
+    if (!stats[h] || !stats[a]) continue;
+    const sh = Number(m.scoreHome) || 0;
+    const sa = Number(m.scoreAway) || 0;
+    stats[h].played += 1;
+    stats[a].played += 1;
+    stats[h].goalsFor += sh;
+    stats[h].goalsAgainst += sa;
+    stats[a].goalsFor += sa;
+    stats[a].goalsAgainst += sh;
+    if (sh > sa) {
+      stats[h].wins += 1;
+      stats[h].points += 3;
+      stats[a].losses += 1;
+    } else if (sa > sh) {
+      stats[a].wins += 1;
+      stats[a].points += 3;
+      stats[h].losses += 1;
+    } else {
+      stats[h].draws += 1;
+      stats[a].draws += 1;
+      stats[h].points += 1;
+      stats[a].points += 1;
+    }
+  }
+  return Object.values(stats).map((r) => ({
+    ...r,
+    goalDifference: r.goalsFor - r.goalsAgainst,
+  }));
+}
+
+exports.getStandings = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+
+    const participants = await TournamentParticipant.findAll({
+      where: { tournamentId: req.params.id },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
+        },
+      ],
+    });
+
+    const fromTable = participants.map((p) => {
+      const gf = Number(p.goalsFor) || 0;
+      const ga = Number(p.goalsAgainst) || 0;
+      return {
+        userId: p.userId,
+        played: (Number(p.wins) || 0) + (Number(p.draws) || 0) + (Number(p.losses) || 0),
+        points: Number(p.points) || 0,
+        wins: Number(p.wins) || 0,
+        draws: Number(p.draws) || 0,
+        losses: Number(p.losses) || 0,
+        goalsFor: gf,
+        goalsAgainst: ga,
+        goalDifference: gf - ga,
+        participantStatus: p.status,
+        User: p.User,
+      };
+    });
+
+    let rankingMode;
+    let rows;
+
+    if (tournament.type === 'league') {
+      rankingMode = 'points_table';
+      rows = sortStandingsRows(fromTable).map((r, i) => ({ rank: i + 1, ...r }));
+    } else {
+      rankingMode = 'matches_derived';
+      const ids = participants.map((p) => p.userId);
+      const derived = sortStandingsRows(await standingsFromFinishedMatches(tournament.id, ids));
+      const userById = Object.fromEntries(participants.map((p) => [p.userId, p.User]));
+      rows = derived.map((r, i) => ({
+        rank: i + 1,
+        userId: r.userId,
+        played: r.played,
+        points: r.points,
+        wins: r.wins,
+        draws: r.draws,
+        losses: r.losses,
+        goalsFor: r.goalsFor,
+        goalsAgainst: r.goalsAgainst,
+        goalDifference: r.goalDifference,
+        User: userById[r.userId] || null,
+      }));
+    }
+
+    res.json({
+      tournamentId: tournament.id,
+      tournamentType: tournament.type,
+      participantType: tournament.participantType || 'individual',
+      rankingMode,
+      caption:
+        tournament.type === 'league'
+          ? 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore.'
+          : 'Për cup/knockout, kjo tabelë përmbledh statistikat nga ndeshjet e përfunduara; kalimi në raund tjetër varet nga bracket-i / rezultatet.',
+      rows,
+    });
+  } catch (err) {
+    console.error('getStandings:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -109,8 +285,8 @@ exports.getLeaderboard = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'position'] }],
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club'] }],
         },
       ],
       order: [['points', 'DESC'], ['wins', 'DESC'], ['goalsFor', 'DESC']],
@@ -157,6 +333,7 @@ exports.generateBracket = async (req, res) => {
           awayUserId: shuffled[i + 1].userId,
           round,
           status: 'scheduled',
+          matchDate: new Date(Date.now() + Math.floor(i / 2) * 86400000),
         });
 
         await Bracket.create({
@@ -356,14 +533,14 @@ exports.getMatches = async (req, res) => {
         {
           model: User,
           as: 'homeUser',
-          attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePhoto'] }],
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club'] }],
         },
         {
           model: User,
           as: 'awayUser',
-          attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePhoto'] }],
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club'] }],
         },
       ],
       order: [['round', 'ASC'], ['matchDate', 'ASC']],
@@ -372,6 +549,72 @@ exports.getMatches = async (req, res) => {
     res.json(matches);
   } catch (err) {
     console.error('Get matches error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+/** Detaj i plotë i një ndeshjeje brenda turneut (për modal statistikash). */
+exports.getTournamentMatchDetail = async (req, res) => {
+  try {
+    const tournamentId = parseInt(req.params.id, 10);
+    const matchId = parseInt(req.params.matchId, 10);
+    if (!Number.isFinite(tournamentId) || !Number.isFinite(matchId)) {
+      return res.status(400).json({ msg: 'ID të pavlefshëm' });
+    }
+
+    const match = await Match.findOne({
+      where: { id: matchId, tournamentId },
+      include: [
+        {
+          model: Tournament,
+          attributes: ['id', 'name', 'type', 'status', 'participantType'],
+        },
+        {
+          model: User,
+          as: 'homeUser',
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
+        },
+        {
+          model: User,
+          as: 'awayUser',
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
+        },
+        {
+          model: MatchScorer,
+          required: false,
+          include: [
+            {
+              model: User,
+              attributes: ['id', 'firstName', 'lastName', 'role'],
+              include: [{ model: Profile, attributes: ['profilePhoto', 'position'] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!match) return res.status(404).json({ msg: 'Match not found' });
+
+    const scorers = (match.MatchScorers || []).slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const homeId = match.homeUserId;
+    const awayId = match.awayUserId;
+    const homeScorers = scorers.filter((s) => s.userId === homeId);
+    const awayScorers = scorers.filter((s) => s.userId === awayId);
+
+    const sumGoals = (arr) => arr.reduce((acc, s) => acc + (Number(s.goals) || 0), 0);
+
+    res.json({
+      match,
+      scorersBySide: { home: homeScorers, away: awayScorers },
+      scorerTotals: {
+        home: sumGoals(homeScorers),
+        away: sumGoals(awayScorers),
+      },
+    });
+  } catch (err) {
+    console.error('getTournamentMatchDetail:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -443,16 +686,61 @@ exports.getTournamentStats = async (req, res) => {
       p.points > (max?.points || 0) ? p : max
     , null);
 
+    const scheduledMatches = matches.filter((m) => m.status === 'scheduled').length;
+
+    const recentResults = await Match.findAll({
+      where: { tournamentId: req.params.id, status: 'finished' },
+      include: [
+        { model: User, as: 'homeUser', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'awayUser', attributes: ['id', 'firstName', 'lastName'] },
+      ],
+      order: [['matchDate', 'DESC']],
+      limit: 12,
+    });
+
+    let topScorerName = null;
+    let topTeamName = null;
+    if (topScorer?.userId) {
+      const u = await User.findByPk(topScorer.userId, {
+        attributes: ['firstName', 'lastName'],
+        include: [{ model: Profile, attributes: ['club'] }],
+      });
+      if (u) {
+        topScorerName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.Profile?.club || null;
+      }
+    }
+    if (topTeam?.userId) {
+      const u = await User.findByPk(topTeam.userId, {
+        attributes: ['firstName', 'lastName'],
+        include: [{ model: Profile, attributes: ['club'] }],
+      });
+      if (u) {
+        topTeamName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.Profile?.club || null;
+      }
+    }
+
     const stats = {
       totalParticipants: participants.length,
       totalMatches: matches.length,
       finishedMatches,
+      scheduledMatches,
       totalGoals,
       avgGoalsPerMatch: finishedMatches > 0 ? (totalGoals / finishedMatches).toFixed(2) : 0,
       topScorerId: topScorer?.userId,
       topScorerGoals: topScorer?.goalsFor || 0,
+      topScorerName,
       topTeamId: topTeam?.userId,
       topTeamPoints: topTeam?.points || 0,
+      topTeamName,
+      recentResults: recentResults.map((m) => ({
+        id: m.id,
+        round: m.round,
+        matchDate: m.matchDate,
+        scoreHome: m.scoreHome,
+        scoreAway: m.scoreAway,
+        homeName: m.homeUser ? [m.homeUser.firstName, m.homeUser.lastName].filter(Boolean).join(' ').trim() : '',
+        awayName: m.awayUser ? [m.awayUser.firstName, m.awayUser.lastName].filter(Boolean).join(' ').trim() : '',
+      })),
     };
 
     res.json(stats);

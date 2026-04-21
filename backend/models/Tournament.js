@@ -24,6 +24,13 @@ const Tournament = sequelize.define('Tournament', {
     type: DataTypes.ENUM('open', 'ongoing', 'finished'),
     defaultValue: 'open',
   },
+  /** `individual` = jo-klub; `club` = vetëm klube; `mixed` = klube + athletë në të njëjtin turne. */
+  participantType: {
+    type: DataTypes.STRING(16),
+    allowNull: false,
+    defaultValue: 'individual',
+    validate: { isIn: [['individual', 'club', 'mixed']] },
+  },
   creatorId: {
     type: DataTypes.INTEGER,
     references: {
@@ -97,5 +104,6 @@ const TournamentParticipant = sequelize.define('TournamentParticipant', {
 
 Tournament.belongsToMany(User, { through: TournamentParticipant, foreignKey: 'tournamentId', as: 'participants' });
 User.belongsToMany(Tournament, { through: TournamentParticipant, foreignKey: 'userId', as: 'tournaments' });
+TournamentParticipant.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = { Tournament, TournamentParticipant };

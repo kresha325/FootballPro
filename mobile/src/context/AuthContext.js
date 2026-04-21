@@ -38,6 +38,10 @@ export const AuthProvider = ({ children }) => {
       transports: ['polling', 'websocket'],
       path: '/socket.io',
       withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
     });
 
     socket.on('connect', () => {

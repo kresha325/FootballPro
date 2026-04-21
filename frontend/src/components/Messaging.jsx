@@ -1,13 +1,58 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
-import { FiPhone, FiVideo } from 'react-icons/fi';
+import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
 import ForwardButton from './ForwardButton';
 
-import { API_URL } from '../config/api';
+import { API_URL, BACKEND_URL } from '../config/api';
+
+const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
+
+function Linkify({ text, className, linkClassName }) {
+  const parts = String(text).split(/(https?:\/\/[^\s]+)/g);
+  const linkCls = linkClassName || 'underline break-all opacity-95 hover:opacity-100';
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkCls}
+            onClick={e => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </span>
+  );
+}
+
+function dayKey(d) {
+  if (d == null) return '';
+  const x = new Date(d);
+  if (Number.isNaN(x.getTime())) return '';
+  return `${x.getFullYear()}-${x.getMonth() + 1}-${x.getDate()}`;
+}
+
+function dayDividerLabel(d) {
+  const messageDate = new Date(d);
+  if (Number.isNaN(messageDate.getTime())) return '';
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dayKey(messageDate) === dayKey(today)) return 'Sot';
+  if (dayKey(messageDate) === dayKey(yesterday)) return 'Dje';
+  return messageDate.toLocaleDateString('sq-AL', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 // Modal për shfaqjen e fotove të mëdha
 function MediaModal({ src, alt, onClose }) {
@@ -52,9 +97,19 @@ function Messaging() {
   const [replyTo, setReplyTo] = useState(null);
   const [showCall, setShowCall] = useState(false);
   const [callType, setCallType] = useState('video'); // 'video' or 'audio'
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [threadSearch, setThreadSearch] = useState('');
+  const [messagePagination, setMessagePagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [showEmojiBar, setShowEmojiBar] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const loadingOlderRef = useRef(false);
 
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -72,8 +127,81 @@ function Messaging() {
         ? url.replace('http//', 'http://')
         : url;
     if (/^https?:\/\//.test(normalized)) return normalized;
-    return API_URL + (normalized.startsWith('/') ? normalized : '/' + normalized);
+    const base = (BACKEND_URL || '').replace(/\/$/, '');
+    const path = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return `${base}${path}`;
   };
+
+  const getOtherMember = (conversation) => {
+    if (!conversation) {
+      return { name: 'Unknown', profilePhoto: '', id: null };
+    }
+    if (conversation.isGroup) {
+      return {
+        name: conversation.name || 'Group Chat',
+        profilePhoto: conversation.avatar,
+        id: null,
+      };
+    }
+    if (!conversation.members || !Array.isArray(conversation.members)) {
+      return { name: 'Unknown', profilePhoto: '', id: null };
+    }
+    const otherMember = conversation.members.find(m => m.id !== user?.id);
+    if (!otherMember) {
+      return { name: 'Unknown', profilePhoto: '', id: null };
+    }
+    return {
+      name: `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || 'Unknown',
+      profilePhoto:
+        otherMember.profilePhoto ||
+        otherMember.Profile?.profilePhoto ||
+        '',
+      id: otherMember.id || null,
+    };
+  };
+
+  const formatTime = (date) => {
+    if (date == null) return '';
+    const messageDate = new Date(date);
+    if (Number.isNaN(messageDate.getTime())) return '';
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (messageDate.toDateString() === today.toDateString()) {
+      return messageDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return messageDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+  };
+
+  const filteredConversations = useMemo(() => {
+    const q = conversationSearch.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter(conv => {
+      const other = getOtherMember(conv);
+      return (other.name || '').toLowerCase().includes(q);
+    });
+  }, [conversations, conversationSearch, user?.id]);
+
+  const displayedMessages = useMemo(() => {
+    const q = threadSearch.trim().toLowerCase();
+    if (!q) return messages;
+    return messages.filter(m => {
+      if (m.deleted) return false;
+      const c = (m.content || '').toLowerCase();
+      const f = (m.fileName || '').toLowerCase();
+      return c.includes(q) || f.includes(q);
+    });
+  }, [messages, threadSearch]);
 
   // Ngarko bisedat sapo hapet komponenti
   useEffect(() => {
@@ -90,8 +218,8 @@ function Messaging() {
           const other = conv.members.find(m => m.id !== user.id);
           if (other && other.id) {
             try {
-              const res = await axios.get(`${API_URL}/users/${other.id}/online`);
-              statusObj[other.id] = res.data.online;
+              const res = await api.get(`/users/${other.id}/online`);
+              statusObj[other.id] = !!res.data?.online;
             } catch {
               statusObj[other.id] = false;
             }
@@ -112,7 +240,7 @@ function Messaging() {
         setSelectedConversation(conv);
       } else {
         // Merr bisedën nga backend nëse nuk është në listë
-        api.get(`/messaging/conversations/${conversationId}`)
+        api.get(`/messaging/conversations/detail/${conversationId}`)
           .then(res => {
             if (res.data && res.data.id) {
               setSelectedConversation(res.data);
@@ -151,16 +279,27 @@ function Messaging() {
       // Asnjë query param, zgjidh automatikisht të parën
       setSelectedConversation(conversations[0]);
     }
-  }, [location.state, conversations]);
+  }, [location.state, location.search, conversations, conversationId, userId, selectedConversation]);
+
+  useEffect(() => {
+    setThreadSearch('');
+    setEditingMessage(null);
+    setShowEmojiBar(false);
+    setMessagePagination({ page: 1, pages: 1, total: 0 });
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     if (socket) {
       socket.on('newMessage', handleNewMessage);
+      socket.on('messageUpdated', handleMessageUpdated);
+      socket.on('messageDeleted', handleMessageDeleted);
       socket.on('userTyping', handleUserTyping);
       socket.on('userStoppedTyping', handleUserStoppedTyping);
 
       return () => {
         socket.off('newMessage', handleNewMessage);
+        socket.off('messageUpdated', handleMessageUpdated);
+        socket.off('messageDeleted', handleMessageDeleted);
         socket.off('userTyping', handleUserTyping);
         socket.off('userStoppedTyping', handleUserStoppedTyping);
       };
@@ -182,10 +321,6 @@ function Messaging() {
     }
   }, [selectedConversation]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messaging/conversations');
@@ -197,37 +332,106 @@ function Messaging() {
     }
   };
 
-  const fetchMessages = async (conversationId) => {
+  const scrollToBottom = (instant) => {
+    const run = () => messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' });
+    if (instant) run();
+    else requestAnimationFrame(run);
+  };
+
+  const fetchMessages = async (cid) => {
     try {
-      const response = await api.get(`/messaging/conversations/${conversationId}/messages`);
-      setMessages(response.data.messages);
-      // Mark as read
-      await api.put(`/messaging/conversations/${conversationId}/read`);
-      // Update unread count in conversation list
+      const response = await api.get(`/messaging/conversations/${cid}/messages`, {
+        params: { page: 1, limit: 50 },
+      });
+      const { messages: rows, page, pages, total } = response.data;
+      setMessages(rows || []);
+      setMessagePagination({ page: page || 1, pages: pages || 1, total: total || 0 });
+      await api.put(`/messaging/conversations/${cid}/read`);
       setConversations(prev =>
         prev.map(conv =>
-          conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+          conv.id === cid || conv.id === Number(cid) ? { ...conv, unreadCount: 0 } : conv
         )
       );
+      requestAnimationFrame(() => scrollToBottom(true));
     } catch (err) {
       console.error('Fetch messages error:', err);
     }
   };
 
+  const loadOlderMessages = async () => {
+    if (!selectedConversation || loadingOlder) return;
+    const { page, pages } = messagePagination;
+    if (page >= pages) return;
+    const el = messagesListRef.current;
+    const prevScrollHeight = el?.scrollHeight ?? 0;
+    const nextPage = page + 1;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const response = await api.get(
+        `/messaging/conversations/${selectedConversation.id}/messages`,
+        { params: { page: nextPage, limit: 50 } }
+      );
+      const { messages: rows, page: newPage, pages: newPages, total } = response.data;
+      setMessages(prev => [...(rows || []), ...prev]);
+      setMessagePagination({ page: newPage, pages: newPages, total: total || 0 });
+      setTimeout(() => {
+        if (messagesListRef.current) {
+          const newH = messagesListRef.current.scrollHeight;
+          messagesListRef.current.scrollTop = newH - prevScrollHeight;
+        }
+        loadingOlderRef.current = false;
+      }, 0);
+    } catch (err) {
+      console.error('Load older messages error:', err);
+      loadingOlderRef.current = false;
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
   const handleNewMessage = (message) => {
-    if (selectedConversation && message.conversationId === selectedConversation.id) {
-      setMessages(prev => [...prev, message]);
-      // Mark as read immediately if conversation is open
+    if (
+      selectedConversation &&
+      message &&
+      String(message.conversationId) === String(selectedConversation.id)
+    ) {
+      setMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
       api.put(`/messaging/conversations/${selectedConversation.id}/read`);
-    } else {
+      if (!loadingOlderRef.current) {
+        requestAnimationFrame(() => scrollToBottom(false));
+      }
+    } else if (message?.conversationId != null) {
       // Update unread count
+      const cid = String(message.conversationId);
       setConversations(prev =>
         prev.map(conv =>
-          conv.id === message.conversationId
+          String(conv.id) === cid
             ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
             : conv
         )
       );
+    }
+  };
+
+  const handleMessageUpdated = (payload) => {
+    const convId = payload?.conversationId;
+    const msg = payload?.message;
+    if (!convId || !msg?.id) return;
+    if (selectedConversation && String(selectedConversation.id) === String(convId)) {
+      setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, ...msg } : m)));
+    }
+  };
+
+  const handleMessageDeleted = (payload) => {
+    const convId = payload?.conversationId;
+    const mid = payload?.messageId;
+    if (!convId || mid == null) return;
+    if (selectedConversation && String(selectedConversation.id) === String(convId)) {
+      setMessages(prev => prev.filter(m => m.id !== mid));
     }
   };
 
@@ -268,6 +472,10 @@ function Messaging() {
 
   const sendMessage = async (e) => {
     e.preventDefault();
+    if (editingMessage) {
+      await saveEditedMessage();
+      return;
+    }
     if (sending) return; // Parandalon dërgimin e dyfishtë
     if ((!messageContent.trim() && !file) || !selectedConversation) return;
 
@@ -294,7 +502,10 @@ function Messaging() {
 
 
 
-      setMessages(prev => [...prev, response.data]);
+      setMessages(prev => {
+        if (prev.some(m => m.id === response.data.id)) return prev;
+        return [...prev, response.data];
+      });
       if (socket) {
         try {
           socket.emit('sendMessage', { conversationId: selectedConversation.id, message: response.data });
@@ -302,6 +513,7 @@ function Messaging() {
           console.warn('[Messaging] socket emit sendMessage failed', e.message || e);
         }
       }
+      requestAnimationFrame(() => scrollToBottom(false));
       setMessageContent('');
       setFile(null);
       setReplyTo(null);
@@ -323,50 +535,22 @@ function Messaging() {
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const getOtherMember = (conversation) => {
-    if (conversation.isGroup) {
-      return {
-        name: conversation.name || 'Group Chat',
-        profilePhoto: conversation.avatar,
-        id: null,
-      };
-    }
-    if (!conversation.members || !Array.isArray(conversation.members)) {
-      return { name: 'Unknown', profilePhoto: '', id: null };
-    }
-    const otherMember = conversation.members.find(m => m.id !== user.id);
-    if (!otherMember) {
-      return { name: 'Unknown', profilePhoto: '', id: null };
-    }
-    return {
-      name: `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || 'Unknown',
-      profilePhoto: otherMember.profilePhoto || '',
-      id: otherMember.id || null,
-    };
-  };
-
-  const formatTime = (date) => {
-    const messageDate = new Date(date);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (messageDate.toDateString() === today.toDateString()) {
-      return messageDate.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
+  const saveEditedMessage = async () => {
+    if (!editingMessage || !editingMessage.content?.trim() || sending) return;
+    setSending(true);
+    try {
+      const mid = editingMessage.id;
+      const { data } = await api.put(`/messaging/messages/${mid}`, {
+        content: editingMessage.content.trim(),
       });
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return messageDate.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
+      setMessages(prev =>
+        prev.map(m => (m.id === mid ? { ...m, ...data, edited: true } : m))
+      );
+      setEditingMessage(null);
+    } catch (err) {
+      console.error('Edit message error:', err);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -380,17 +564,26 @@ function Messaging() {
     }
   };
 
-  const renderMessageContent = (message) => {
+  const copyText = (text) => {
+    const t = (text || '').trim();
+    if (!t) return;
+    navigator.clipboard.writeText(t).catch(() => {});
+  };
+
+  const renderMessageContent = (message, isMine) => {
     if (message.deleted) {
       return <span className="italic text-gray-400">Message deleted</span>;
     }
+    const fileLinkClass = isMine
+      ? 'flex items-center gap-2 text-blue-100 hover:underline mb-2'
+      : 'flex items-center gap-2 text-blue-500 hover:underline mb-2';
     return (
       <>
         {message.replyTo && (
           <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500 flex items-center gap-2">
             {message.replyTo.sender && message.replyTo.sender.profilePhoto ? (
               <img
-                src={message.replyTo.sender.profilePhoto.startsWith('http') ? message.replyTo.sender.profilePhoto : `${API_URL}${message.replyTo.sender.profilePhoto}`}
+                src={getFullUrl(message.replyTo.sender.profilePhoto)}
                 alt={message.replyTo.sender.firstName}
                 className="w-6 h-6 rounded-full object-cover"
                 onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
@@ -426,11 +619,9 @@ function Messaging() {
         )}
         {message.type === 'file' && message.fileUrl && (
           <a
-            href={message.fileUrl.startsWith('/uploads/')
-              ? `${API_URL}${message.fileUrl}`
-              : `${API_URL}${message.fileUrl}`}
+            href={getFullUrl(message.fileUrl)}
             download={message.fileName}
-            className="flex items-center gap-2 text-blue-500 hover:underline mb-2"
+            className={fileLinkClass}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -438,13 +629,29 @@ function Messaging() {
             {message.fileName}
           </a>
         )}
-        {message.content && <p>{message.content}</p>}
-        {message.edited && <span className="text-xs text-gray-400 ml-2">(edited)</span>}
+        {message.content && (
+          <p className={`whitespace-pre-wrap break-words ${isMine ? 'text-white' : ''}`}>
+            <Linkify
+              text={message.content}
+              className={isMine ? 'text-white' : ''}
+              linkClassName={isMine ? 'underline break-all text-blue-100 hover:text-white' : 'underline break-all opacity-95 hover:opacity-100'}
+            />
+          </p>
+        )}
+        {message.edited && (
+          <span className={`text-xs ml-2 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>(edited)</span>
+        )}
         <ForwardButton message={message} />
       </>
     );
   };
-  const typingDisplay = Object.values(typingUsers).join(', ');
+  const typingNames = Object.values(typingUsers).filter(Boolean);
+  const typingDisplay =
+    typingNames.length === 0
+      ? ''
+      : typingNames.length === 1
+        ? `${typingNames[0]} po shkruan…`
+        : `${typingNames.join(', ')} po shkruajnë…`;
 
   // --- WebRTC/Call logic ---
   function startCall(isVideo) {
@@ -475,20 +682,33 @@ function Messaging() {
         />
       )}
       {/* Conversations List */}
-      <div className="w-80 border-r bg-white dark:bg-gray-800 overflow-y-auto">
-        <div className="p-4 border-b dark:border-gray-700">
-          <h2 className="text-xl font-bold dark:text-white">Messages</h2>
+      <div className="w-80 border-r bg-white dark:bg-gray-800 flex flex-col min-h-0">
+        <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-xl font-bold dark:text-white mb-3">Mesazhet</h2>
+          <div className="relative">
+            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="search"
+              value={conversationSearch}
+              onChange={e => setConversationSearch(e.target.value)}
+              placeholder="Kërko bisedë…"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
         {conversations.length === 0 ? (
           <div className="p-8 text-center">
             <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 mb-2">No conversations yet</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">Start a conversation by visiting a user's profile</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-2">Ende nuk ke biseda</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Fillo nga profili i një përdoruesi</p>
           </div>
+        ) : filteredConversations.length === 0 ? (
+          <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">Nuk u gjet asnjë bisedë për këtë kërkim.</div>
         ) : (
-          conversations.map(conv => {
+          filteredConversations.map(conv => {
             const other = getOtherMember(conv);
             return (
               <div
@@ -538,134 +758,233 @@ function Messaging() {
             );
           })
         )}
+        </div>
       </div>
 
       {/* Messages Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 relative">
+        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 relative min-h-0">
           {/* Header */}
-          <div className="p-4 border-b dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-3 justify-between">
-            <div className="flex items-center gap-3">
-              {(() => {
-                const other = getOtherMember(selectedConversation);
-                return (
-                  <>
-                    {other.profilePhoto ? (
-                      <img
-                        src={getFullUrl(other.profilePhoto)}
-                        alt={other.name}
-                        className={`w-10 h-10 rounded-full object-cover border-4 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-400'}`}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-                        {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
+          <div className="p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 space-y-2 flex-shrink-0">
+            <div className="flex items-center gap-3 justify-between min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                {(() => {
+                  const other = getOtherMember(selectedConversation);
+                  return (
+                    <>
+                      <div className="relative flex-shrink-0">
+                        {other.profilePhoto ? (
+                          <img
+                            src={getFullUrl(other.profilePhoto)}
+                            alt={other.name}
+                            className={`w-10 h-10 rounded-full object-cover border-2 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'}`}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">
+                            {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
+                          </div>
+                        )}
+                        <span
+                          title={onlineStatus[other.id] === true ? 'Online' : 'Offline'}
+                          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${onlineStatus[other.id] === true ? 'bg-green-500' : 'bg-gray-400'}`}
+                        />
                       </div>
-                    )}
-                    {/* Online/offline dot */}
-                    <span
-                      title={onlineStatus[other.id] === true ? 'Online' : 'Offline'}
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${onlineStatus[other.id] === true ? 'bg-green-500' : 'bg-gray-400'}`}
-                    ></span>
-                    <h3 className="font-semibold dark:text-white">{other.name}</h3>
-                  </>
-                );
-              })()}
+                      <h3 className="font-semibold dark:text-white truncate">{other.name}</h3>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  title="Thirrje zanore"
+                  className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
+                  onClick={() => startCall(false)}
+                >
+                  <FiPhone className="w-5 h-5 text-blue-500" />
+                </button>
+                <button
+                  type="button"
+                  title="Video thirrje"
+                  className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
+                  onClick={() => startCall(true)}
+                >
+                  <FiVideo className="w-5 h-5 text-blue-500" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                title="Audio Call"
-                className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
-                onClick={() => startCall(false)}
-              >
-                <FiPhone className="w-6 h-6 text-blue-500" />
-              </button>
-              <button
-                title="Video Call"
-                className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
-                onClick={() => startCall(true)}
-              >
-                <FiVideo className="w-6 h-6 text-blue-500" />
-              </button>
+            <div className="relative">
+              <FiSearch className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="search"
+                value={threadSearch}
+                onChange={e => setThreadSearch(e.target.value)}
+                placeholder="Kërko në këtë bisedë…"
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
 
           {/* Messages List */}
-          <div className="flex-1 overflow-y-auto px-4 pb-32">
-            {messages.map((message, idx) => {
+          <div
+            ref={messagesListRef}
+            onScroll={e => {
+              const t = e.currentTarget;
+              const dist = t.scrollHeight - t.scrollTop - t.clientHeight;
+              setShowScrollDown(dist > 280);
+            }}
+            className="flex-1 overflow-y-auto px-4 pb-36 min-h-0 relative"
+          >
+            {messagePagination.pages > 1 && messagePagination.page < messagePagination.pages && (
+              <div className="flex justify-center py-3 sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={loadOlderMessages}
+                  disabled={loadingOlder}
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 px-3 py-1 rounded-full bg-white dark:bg-gray-800 shadow border dark:border-gray-700"
+                >
+                  {loadingOlder ? 'Duke ngarkuar…' : 'Mesazhe më të vjetra'}
+                </button>
+              </div>
+            )}
+            {displayedMessages.map((message, idx) => {
+              const prev = displayedMessages[idx - 1];
+              const showDay = !prev || dayKey(prev.createdAt) !== dayKey(message.createdAt);
               const isMine = message.sender && user && message.sender.id === user.id;
               return (
-                <div
-                  key={message.id || idx}
-                  className={`mb-4 flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      isMine
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700'
-                    }`}
-                  >
-                    {/* Show sender name for group messages if not mine */}
-                    {!isMine && selectedConversation.isGroup && message && message.sender && (
-                      <p className="text-xs font-semibold mb-1">
-                        {message.sender.firstName} {message.sender.lastName}
-                      </p>
-                    )}
-                    {renderMessageContent(message)}
-                    <div className="flex items-center justify-between mt-1 gap-2">
-                      <span className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                        {formatTime(message.createdAt)}
+                <Fragment key={message.id || `m-${idx}`}>
+                  {showDay && (
+                    <div className="flex justify-center my-5">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-3 py-1 rounded-full shadow-sm border dark:border-gray-700">
+                        {dayDividerLabel(message.createdAt)}
                       </span>
-                      {isMine && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => setReplyTo(message)}
-                            className={`text-xs hover:underline ${isMine ? 'text-blue-100' : ''}`}
-                          >
-                            Reply
-                          </button>
-                          <button
-                            onClick={() => deleteMessage(message.id)}
-                            className={`text-xs hover:underline ${isMine ? 'text-blue-100' : ''}`}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                    </div>
+                  )}
+                  <div className={`mb-3 flex gap-2 items-end ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    {!isMine && (
+                      <div className="flex-shrink-0">
+                        {message.sender?.profilePhoto ? (
+                          <img
+                            src={getFullUrl(message.sender.profilePhoto)}
+                            alt=""
+                            className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-600"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold">
+                            {`${message.sender?.firstName?.charAt(0) || ''}${message.sender?.lastName?.charAt(0) || ''}`.trim() || '?'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[min(85%,28rem)] rounded-2xl px-3 py-2 shadow-md ${
+                        isMine
+                          ? 'bg-blue-600 text-white rounded-br-md'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700 rounded-bl-md'
+                      }`}
+                    >
+                      {!isMine && selectedConversation.isGroup && message.sender && (
+                        <p className="text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300">
+                          {message.sender.firstName} {message.sender.lastName}
+                        </p>
                       )}
+                      {renderMessageContent(message, isMine)}
+                      <div
+                        className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-2 pt-1 border-t ${
+                          isMine ? 'border-white/20' : 'border-gray-100 dark:border-gray-700'
+                        }`}
+                      >
+                        <span className={`text-[11px] tabular-nums ${isMine ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {formatTime(message.createdAt)}
+                        </span>
+                        {!message.deleted && (
+                          <div className={`flex flex-wrap gap-2 text-[11px] ${isMine ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                            <button type="button" className="hover:underline" onClick={() => setReplyTo(message)}>
+                              Përgjigju
+                            </button>
+                            {!!message.content?.trim() && (
+                              <button type="button" className="hover:underline" onClick={() => copyText(message.content)}>
+                                Kopjo
+                              </button>
+                            )}
+                            {isMine && message.content?.trim() && !message.fileUrl && (
+                              <button
+                                type="button"
+                                className="hover:underline"
+                                onClick={() => setEditingMessage({ id: message.id, content: message.content })}
+                              >
+                                Ndrysho
+                              </button>
+                            )}
+                            {isMine && (
+                              <button type="button" className="hover:underline" onClick={() => deleteMessage(message.id)}>
+                                Fshi
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Fragment>
               );
             })}
             {typingDisplay && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic">{typingDisplay} is typing...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic py-2">{typingDisplay}</p>
             )}
             <div ref={messagesEndRef} />
           </div>
 
+          {showScrollDown && (
+            <button
+              type="button"
+              aria-label="Shko poshtë"
+              onClick={() => scrollToBottom(false)}
+              className="absolute bottom-40 right-4 z-40 rounded-full bg-blue-600 text-white p-3 shadow-lg hover:bg-blue-700 transition md:bottom-36"
+            >
+              <FiChevronDown className="w-5 h-5" />
+            </button>
+          )}
+
           {/* Input */}
           <form
             onSubmit={sendMessage}
-            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto"
+            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto flex-shrink-0"
           >
-            {replyTo && (
-              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded flex justify-between items-center">
-                <div className="text-sm dark:text-gray-200">
-                  <span className="font-medium">Replying to:</span>{' '}
-                  <span className="text-gray-600 dark:text-gray-400">{replyTo.content}</span>
+            {editingMessage && (
+              <div className="mb-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl flex justify-between items-start gap-2">
+                <div className="text-sm dark:text-gray-200 min-w-0">
+                  <span className="font-medium text-amber-800 dark:text-amber-200">Po ndryshon mesazhin</span>
+                  <p className="text-gray-600 dark:text-gray-400 truncate mt-0.5">{editingMessage.content}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setReplyTo(null)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  onClick={() => setEditingMessage(null)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 flex-shrink-0"
+                  aria-label="Anulo ndryshimin"
                 >
                   ✕
                 </button>
               </div>
             )}
-            {file && (
-              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded flex justify-between items-center">
-                <span className="text-sm dark:text-gray-200">{file.name}</span>
+            {replyTo && !editingMessage && (
+              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center gap-2">
+                <div className="text-sm dark:text-gray-200 min-w-0">
+                  <span className="font-medium">Përgjigje te:</span>{' '}
+                  <span className="text-gray-600 dark:text-gray-400 truncate">{replyTo.content}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyTo(null)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex-shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {file && !editingMessage && (
+              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center">
+                <span className="text-sm dark:text-gray-200 truncate">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -678,39 +997,87 @@ function Messaging() {
                 </button>
               </div>
             )}
-            <div className="flex gap-2">
+            {showEmojiBar && !editingMessage && (
+              <div className="mb-2 flex flex-wrap gap-1 p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700">
+                {QUICK_EMOJIS.map(em => (
+                  <button
+                    key={em}
+                    type="button"
+                    className="text-xl p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded"
+                    onClick={() => {
+                      setMessageContent(c => `${c}${em}`);
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 items-end">
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={(e) => setFile(e.target.files[0])}
                 className="hidden"
+                disabled={!!editingMessage}
                 accept="image/*,video/*,.pdf,.doc,.docx,.mp3,.wav"
               />
               <button
                 type="button"
+                title="Bashkëngjit skedar"
+                disabled={!!editingMessage}
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                 </svg>
               </button>
+              <button
+                type="button"
+                title="Emoji të shpejta"
+                disabled={!!editingMessage}
+                onClick={() => setShowEmojiBar(v => !v)}
+                className={`p-2 rounded-lg ${showEmojiBar ? 'bg-blue-100 dark:bg-blue-900 text-blue-600' : 'text-gray-500 dark:text-gray-400'} hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40`}
+              >
+                <FiSmile className="w-6 h-6" />
+              </button>
               <textarea
-                rows={1}
-                value={messageContent}
+                ref={textareaRef}
+                rows={editingMessage ? 2 : 2}
+                value={editingMessage ? editingMessage.content : messageContent}
                 onChange={(e) => {
-                  setMessageContent(e.target.value);
-                  handleTyping();
+                  if (editingMessage) {
+                    setEditingMessage({ ...editingMessage, content: e.target.value });
+                  } else {
+                    setMessageContent(e.target.value);
+                    handleTyping();
+                  }
                 }}
-                placeholder="Type a message..."
-                className="flex-1 border dark:border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white resize-none"
+                onKeyDown={e => {
+                  if (e.key === 'Escape') {
+                    setReplyTo(null);
+                    setEditingMessage(null);
+                    setShowEmojiBar(false);
+                  }
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage(e);
+                  }
+                }}
+                placeholder={editingMessage ? 'Ndrysho mesazhin…' : 'Shkruaj mesazhin… (⌘/Ctrl+Enter për dërguar)'}
+                className="flex-1 border dark:border-gray-600 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white resize-none min-h-[44px] max-h-32"
               />
               <button
                 type="submit"
-                disabled={sending || (!messageContent.trim() && !file)}
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={
+                  sending ||
+                  (editingMessage ? !editingMessage.content?.trim() : !messageContent.trim() && !file)
+                }
+                className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {sending ? 'Sending...' : 'Send'}
+                {sending ? '…' : editingMessage ? 'Ruaj' : 'Dërgo'}
               </button>
             </div>
           </form>
@@ -721,8 +1088,11 @@ function Messaging() {
             <svg className="w-20 h-20 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 text-lg">Select a conversation to start messaging</p>
-            <p className="text-red-500 font-bold mt-2">(Debug) Nuk ka bisedë të hapur! Kontrollo nëse conversationId ose userId është në URL dhe nëse API kthen bisedën.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">Zgjidh një bisedë për të vazhduar</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2 max-w-sm mx-auto">
+              Nëse ke lidhur nga një link me <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">conversationId</code> ose{' '}
+              <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">userId</code>, biseda duhet të hapet automatikisht pasi të ngarkohet lista.
+            </p>
           </div>
         </div>
       )}

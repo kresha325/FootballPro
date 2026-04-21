@@ -80,6 +80,17 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.secondaryButtonText}>Browse Profiles</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={styles.publicProfileButton}
+          onPress={() => {
+            const uid = profile?.id ?? profile?.userId;
+            if (uid == null) return;
+            navigation.navigate('PublicProfile', { userId: uid });
+          }}
+          disabled={profile == null || (profile?.id == null && profile?.userId == null)}
+        >
+          <Text style={styles.publicProfileButtonText}>View public profile</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -129,6 +140,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
     flexDirection: 'row',
     gap: 10,
+  },
+  publicProfileButton: {
+    marginTop: 12,
+    borderWidth: 2,
+    borderColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+  },
+  publicProfileButtonText: {
+    color: '#0f766e',
+    fontWeight: '800',
+    fontSize: 15,
   },
   primaryButton: {
     flex: 1,

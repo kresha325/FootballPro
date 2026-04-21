@@ -302,6 +302,15 @@ const Profile = () => {
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const livePreviewRef = useRef(null);
 
+  useEffect(() => {
+    if (!fullScreenImage) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setFullScreenImage(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullScreenImage]);
+
   // Set gallery image as profile or cover photo
 
   const setAsProfilePhoto = async (imageUrl, type) => {
@@ -548,7 +557,7 @@ const Profile = () => {
         await fetchSponsors(id);
 
         // Fetch JonCoin balance
-        const balance = await getJonCoinBalance(id);
+        const { balance } = await getJonCoinBalance();
         setJonCoinBalance(Number(balance) || 0);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
@@ -681,10 +690,20 @@ const Profile = () => {
           <img
             src={getFullUrl(profile.coverPhoto)}
             alt="Cover"
-            className="w-full h-full object-cover bg-black/10 rounded-md"
+            className="w-full h-full object-cover bg-black/10 rounded-md cursor-pointer"
             loading="lazy"
             decoding="async"
             style={{ background: '#f3f4f6' }}
+            title="View full size"
+            tabIndex={0}
+            role="button"
+            onClick={() => setFullScreenImage(getFullUrl(profile.coverPhoto))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setFullScreenImage(getFullUrl(profile.coverPhoto));
+              }
+            }}
           />
         )}
         {/* Upload cover photo button (only for owner) */}
@@ -707,10 +726,20 @@ const Profile = () => {
                   <img
                     src={getFullUrl(profile.profilePhoto)}
                     alt={`${profile.firstName} ${profile.lastName}`}
-                    className="w-full h-full object-cover bg-white"
+                    className="w-full h-full object-cover bg-white cursor-pointer"
                     loading="lazy"
                     decoding="async"
                     style={{ background: '#f3f4f6' }}
+                    title="View full size"
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => setFullScreenImage(getFullUrl(profile.profilePhoto))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setFullScreenImage(getFullUrl(profile.profilePhoto));
+                      }
+                    }}
                     onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                   />
                 ) : (
@@ -1547,11 +1576,25 @@ const Profile = () => {
 
       {/* Full Screen Image Modal */}
       {fullScreenImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90" onClick={() => setFullScreenImage(null)}>
-          <img src={fullScreenImage} alt="Full Screen" className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"
+          onClick={() => setFullScreenImage(null)}
+          role="presentation"
+        >
+          <img
+            src={fullScreenImage}
+            alt="Preview"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
           <button
-            className="absolute top-6 right-8 text-white text-3xl font-bold bg-black bg-opacity-40 rounded-full px-4 py-2"
-            onClick={() => setFullScreenImage(null)}
+            type="button"
+            className="absolute top-6 right-8 text-white text-3xl font-bold bg-black bg-opacity-40 rounded-full px-4 py-2 hover:bg-opacity-60"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFullScreenImage(null);
+            }}
+            aria-label="Close"
           >
             ×
           </button>

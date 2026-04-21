@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { APP_BRAND_NAME } from '../config/branding';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -42,7 +43,7 @@ const Login = () => {
             <span className="text-6xl">⚽</span>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome to JonSport
+            Welcome to {APP_BRAND_NAME}
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

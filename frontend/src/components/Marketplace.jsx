@@ -22,7 +22,7 @@ const Marketplace = () => {
     ]);
     // Fetch JonCoin balance for logged-in user
     if (user?.id) {
-      getJonCoinBalance(user.id).then(balance => setJonCoinBalance(Number(balance) || 0));
+      getJonCoinBalance().then(({ balance }) => setJonCoinBalance(Number(balance) || 0));
     }
   }, [user]);
 

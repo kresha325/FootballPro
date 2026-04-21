@@ -11,6 +11,22 @@ const transporter = nodemailer.createTransport({
 
 // Email templates
 const emailTemplates = {
+  passwordReset: (firstName, resetUrl) => ({
+    subject: '🔐 Reset your FootballPro password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #2563eb;">Password reset</h1>
+        <p>Hi ${firstName || 'there'},</p>
+        <p>We received a request to reset your FootballPro password. Click the button below to choose a new password. This link expires in one hour.</p>
+        <a href="${resetUrl}"
+           style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
+          Reset password
+        </a>
+        <p style="margin-top: 20px; color: #6b7280; font-size: 12px;">If you did not request this, you can ignore this email.</p>
+      </div>
+    `
+  }),
+
   welcome: (firstName) => ({
     subject: '🏆 Welcome to FootballPro!',
     html: `

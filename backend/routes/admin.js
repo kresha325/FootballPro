@@ -12,6 +12,7 @@ const {
   verifyUser,
   togglePremium,
   resetUserPassword,
+  getPendingJonCoinTransactions,
 } = require('../controllers/admin');
 
 // All admin routes require admin middleware
@@ -32,5 +33,8 @@ router.delete('/posts/:postId', deletePost);
 
 // Analytics
 router.get('/analytics', getAnalytics);
+
+// JonCoin moderation
+router.get('/joncoin/pending', getPendingJonCoinTransactions);
 
 module.exports = router;

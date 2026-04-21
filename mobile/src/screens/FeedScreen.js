@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
   FlatList,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -15,8 +16,10 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import {
+  adsRequest,
   createCommentRequest,
   extractErrorMessage,
   likePostRequest,
@@ -25,56 +28,230 @@ import {
   streamsRequest,
   unlikePostRequest,
 } from '../api/client';
+import FeedAdSlot from '../components/FeedAdSlot';
+import PostSponsorStrip from '../components/PostSponsorStrip';
+import { useAuth } from '../context/AuthContext';
 
-const FEED_CACHE_KEY = 'mobile_feed_cache_v1';
+function postAuthorId(item) {
+  if (!item || typeof item !== 'object') return null;
+  const a = item.author;
+  const id = a && typeof a === 'object' ? a.id : null;
+  return id != null ? id : item.userId ?? null;
+}
+
+const FEED_CACHE_KEY_PREFIX = 'mobile_feed_cache_v2';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
+const FEED_FILTER_KEY = 'feed_followed_only';
 
-function PostCard({ item, onToggleLike, onToggleComments, commentsOpen, commentsData, loadingComments, newComment, setNewComment, onAddComment, isSendingComment, isDark }) {
+function feedCacheKey(scope, userId) {
+  const sid = userId != null ? String(userId) : 'anon';
+  return `${FEED_CACHE_KEY_PREFIX}:${scope}:${sid}`;
+}
+
+function shuffleAds(array) {
+  const arr = Array.isArray(array) ? [...array] : [];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Pas çdo 3 posteve një rresht reklamë (si `Feed.jsx` në web). */
+function mergePostsWithAdSlots(postsList) {
+  const list = Array.isArray(postsList) ? postsList : [];
+  const out = [];
+  list.forEach((post, i) => {
+    out.push({ type: 'post', post, key: `post-${post.id}` });
+    if ((i + 1) % 3 === 0) {
+      out.push({ type: 'ad', key: `ad-after-${post.id}-${i}` });
+    }
+  });
+  return out;
+}
+
+function postSponsorsList(item) {
+  const raw = item?.sponsors ?? item?.Sponsors;
+  return Array.isArray(raw) ? raw : [];
+}
+
+function PostCard({
+  item,
+  onToggleLike,
+  onToggleComments,
+  commentsOpen,
+  commentsData,
+  loadingComments,
+  newComment,
+  setNewComment,
+  onAddComment,
+  isSendingComment,
+  isDark,
+  onOpenPost,
+  onOpenAuthorProfile,
+}) {
   const author = item?.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
   const avatarUrl = item?.author?.profilePhoto || null;
+  const authorId = postAuthorId(item);
   const isLiked = !!item?.isLiked;
+  const sponsors = postSponsorsList(item);
+  const hasSponsors = sponsors.length > 0;
 
-  const hasImage = !!item?.imageUrl;
+  const imageUrl = item?.imageUrl;
   const hasVideo = !!item?.videoUrl;
+  const imageIsVideo =
+    imageUrl && typeof imageUrl === 'string' && /\.(mp4|mov|avi|webm)$/i.test(imageUrl);
+  const hasImage = !!imageUrl && !imageIsVideo;
+
+  const dateStr = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '';
+
+  const openLocation = () => {
+    const loc = item?.location;
+    if (!loc || typeof loc !== 'string') return;
+    const lat = item?.locationLat;
+    const lng = item?.locationLng;
+    const url =
+      lat != null && lng != null
+        ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+    Linking.openURL(url).catch(() => {});
+  };
 
   return (
-    <View style={[styles.card, isDark && styles.cardDark]}>
-      <View style={styles.authorRow}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarFallbackText}>{(author || 'U').charAt(0).toUpperCase()}</Text>
+    <View
+      style={[
+        styles.card,
+        isDark && styles.cardDark,
+        hasSponsors && styles.cardSponsored,
+        isDark && hasSponsors && styles.cardSponsoredDark,
+      ]}
+    >
+      {hasSponsors ? (
+        <View style={styles.sponsoredBanner}>
+          <Text style={styles.sponsoredBannerText}>Sponsored</Text>
+        </View>
+      ) : null}
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onOpenAuthorProfile?.(authorId)}
+        disabled={!authorId || !onOpenAuthorProfile}
+        accessibilityRole="button"
+        accessibilityLabel="Hap profilin e autorit"
+        style={styles.authorRowHit}
+      >
+        <View style={styles.authorHeaderRow}>
+          <View style={styles.authorHeaderLeft}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarFallback, isDark && styles.avatarFallbackDark]}>
+                <Text style={styles.avatarFallbackText}>
+                  {`${(item?.author?.firstName || author || 'U').charAt(0).toUpperCase()}${(item?.author?.lastName || '').charAt(0).toUpperCase()}`}
+                </Text>
+              </View>
+            )}
+            <View style={styles.authorTextCol}>
+              <Text style={[styles.authorName, isDark && styles.textPrimaryDark]} numberOfLines={1}>
+                {author}
+              </Text>
+              {dateStr ? (
+                <Text style={[styles.authorDate, isDark && styles.textMutedDark]}>{dateStr}</Text>
+              ) : null}
+            </View>
           </View>
-        )}
-        <Text style={[styles.author, isDark && styles.textPrimaryDark]}>{author}</Text>
-      </View>
-      <Text style={[styles.content, isDark && styles.textSecondaryDark]}>{item?.content || 'No text content'}</Text>
-      {hasImage ? <Image source={{ uri: item.imageUrl }} style={styles.media} resizeMode="cover" /> : null}
-      {hasVideo ? (
-        <View style={styles.videoWrap}>
+          {hasSponsors ? (
+            <View style={styles.headerSponsorWrap}>
+              <PostSponsorStrip sponsors={sponsors} isDark={isDark} variant="overlay" />
+            </View>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.92}
+        onPress={() => onOpenPost?.(item)}
+        disabled={!onOpenPost}
+        accessibilityRole="button"
+        accessibilityLabel="Hap postin në ekran të plotë"
+      >
+        {item?.content ? (
+          <Text style={[styles.content, isDark && styles.textBodyDark]}>{item.content}</Text>
+        ) : null}
+        {hasImage ? <Image source={{ uri: imageUrl }} style={styles.media} resizeMode="cover" /> : null}
+      </TouchableOpacity>
+
+      {item?.location ? (
+        <TouchableOpacity style={styles.locationRow} onPress={openLocation} activeOpacity={0.8}>
+          <Text style={styles.locationEmoji}>📍</Text>
+          <Text style={[styles.locationText, isDark && styles.locationTextDark]} numberOfLines={2}>
+            {item.location}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {hasVideo || imageIsVideo ? (
+        <View style={[styles.videoWrap, isDark && styles.videoWrapDark]}>
           <Video
-            source={{ uri: item.videoUrl }}
+            source={{ uri: hasVideo ? item.videoUrl : imageUrl }}
             style={styles.videoPlayer}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
             isLooping={false}
           />
+          {onOpenPost ? (
+            <TouchableOpacity
+              style={styles.videoFsBtn}
+              onPress={() => onOpenPost(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Hap videon në ekran të plotë"
+            >
+              <Ionicons name="expand" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
-      <Text style={[styles.meta, isDark && styles.textMutedDark]}>Likes: {item?.likes || 0} | Comments: {item?.comments || 0}</Text>
 
       <View style={styles.rowActions}>
-        <TouchableOpacity style={[styles.actionBtn, isLiked && styles.actionBtnActive]} onPress={() => onToggleLike(item)}>
-          <Text style={[styles.actionText, isLiked && styles.actionTextActive]}>{isLiked ? 'Unlike' : 'Like'}</Text>
+        <TouchableOpacity
+          style={[
+            styles.pillBtn,
+            isLiked ? styles.pillBtnLikeActive : styles.pillBtnNeutral,
+            isDark && !isLiked && styles.pillBtnNeutralDark,
+            isDark && isLiked && styles.pillBtnLikeActiveDark,
+          ]}
+          onPress={() => onToggleLike(item)}
+        >
+          <Text style={styles.pillEmoji}>👍</Text>
+          <Text
+            style={[
+              styles.pillCount,
+              isLiked ? styles.pillCountActive : styles.pillCountNeutral,
+              isDark && !isLiked && styles.pillCountNeutralDark,
+              isDark && isLiked && styles.pillCountActiveDark,
+            ]}
+          >
+            {item?.likes || 0}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, isDark && styles.actionBtnDark]} onPress={() => onToggleComments(item.id)}>
-          <Text style={[styles.actionText, isDark && styles.textSecondaryDark]}>{commentsOpen ? 'Hide Comments' : 'Comments'}</Text>
+        <TouchableOpacity
+          style={[
+            styles.pillBtn,
+            styles.pillBtnNeutral,
+            isDark && styles.pillBtnNeutralDark,
+            commentsOpen && styles.pillBtnCommentOpen,
+          ]}
+          onPress={() => onToggleComments(item.id)}
+        >
+          <Text style={styles.pillEmoji}>💬</Text>
+          <Text style={[styles.pillCount, styles.pillCountNeutral, isDark && styles.pillCountNeutralDark]}>
+            {item?.comments || 0}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {commentsOpen ? (
-        <View style={styles.commentsWrap}>
+        <View style={[styles.commentsWrap, isDark && styles.commentsWrapDark]}>
           {loadingComments ? <ActivityIndicator color="#0f766e" /> : null}
           {(commentsData || []).map((comment) => {
             const commentUser = comment?.User;
@@ -124,8 +301,21 @@ function FeedSkeleton({ isDark }) {
 }
 
 export default function FeedScreen({ navigation }) {
+  const { user } = useAuth();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
+  const navigateToGoLive = useCallback(
+    (params) => {
+      const parent = navigation.getParent?.();
+      if (parent?.navigate) {
+        parent.navigate('More', { screen: 'GoLive', params: params || undefined });
+      } else {
+        navigation.navigate('GoLive', params);
+      }
+    },
+    [navigation]
+  );
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,8 +326,43 @@ export default function FeedScreen({ navigation }) {
   const [commentDraftByPostId, setCommentDraftByPostId] = useState({});
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
   const [liveStreams, setLiveStreams] = useState([]);
+  const [feedAds, setFeedAds] = useState([]);
+  const [feedScope, setFeedScope] = useState('all');
 
-  const loadPosts = useCallback(async ({ silent, useCache } = { silent: false, useCache: false }) => {
+  const feedListData = useMemo(() => mergePostsWithAdSlots(posts), [posts]);
+
+  const openPostFullscreen = useCallback(
+    (post) => {
+      const index = posts.findIndex((p) => p.id === post.id);
+      navigation.navigate('FeedPostPager', {
+        posts,
+        initialIndex: Math.max(0, index),
+        onPostUpdated: (postId, updates) => {
+          setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...updates } : p)));
+        },
+      });
+    },
+    [navigation, posts]
+  );
+
+  const openAuthorProfile = useCallback(
+    (authorId) => {
+      if (authorId == null) return;
+      const parent = navigation.getParent?.();
+      if (!parent?.navigate) return;
+      const mine = user?.id != null && String(authorId) === String(user.id);
+      if (mine) {
+        parent.navigate('Profile', { screen: 'MyProfile' });
+        return;
+      }
+      parent.navigate('Profile', { screen: 'PublicProfile', params: { userId: authorId } });
+    },
+    [navigation, user?.id]
+  );
+
+  const loadPosts = useCallback(async ({ silent, useCache, scope } = { silent: false, useCache: false, scope: feedScope }) => {
+    const selectedScope = scope || feedScope;
+    const cacheKey = feedCacheKey(selectedScope, user?.id);
     if (!silent) {
       setLoading(true);
     }
@@ -145,7 +370,7 @@ export default function FeedScreen({ navigation }) {
 
     if (useCache) {
       try {
-        const cachedRaw = await AsyncStorage.getItem(FEED_CACHE_KEY);
+        const cachedRaw = await AsyncStorage.getItem(cacheKey);
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
           if (cached?.ts && Array.isArray(cached?.data) && Date.now() - cached.ts < FEED_CACHE_TTL_MS) {
@@ -157,23 +382,70 @@ export default function FeedScreen({ navigation }) {
     }
 
     try {
-      const [postsRes, liveRes] = await Promise.all([
-        postsRequest(),
-        streamsRequest({ isLive: true, limit: 12 }),
-      ]);
-
+      const postsRes = await postsRequest({ followed: selectedScope === 'my' ? true : undefined });
       const data = Array.isArray(postsRes.data) ? postsRes.data : [];
-      const liveData = Array.isArray(liveRes.data) ? liveRes.data : [];
       setPosts(data);
-      setLiveStreams(liveData);
-      await AsyncStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+      await AsyncStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load feed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+
+    try {
+      const adsRes = await adsRequest();
+      const raw = Array.isArray(adsRes?.data) ? adsRes.data : [];
+      setFeedAds(shuffleAds(raw));
+    } catch (_err) {
+      setFeedAds([]);
+    }
+
+    try {
+      const liveRes = await streamsRequest({ isLive: true, limit: 12 });
+      const liveData = Array.isArray(liveRes.data) ? liveRes.data : [];
+      setLiveStreams(liveData);
+    } catch (_err) {
+      setLiveStreams([]);
+    }
+  }, [feedScope, user?.id]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FEED_FILTER_KEY)
+      .then((v) => {
+        if (v === 'true') setFeedScope('my');
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(FEED_FILTER_KEY, feedScope === 'my' ? 'true' : 'false').catch(() => {});
+  }, [feedScope]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerScopeWrap}>
+          <TouchableOpacity
+            onPress={() => setFeedScope('my')}
+            style={[styles.headerScopeBtn, feedScope === 'my' && styles.headerScopeBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Show My feed"
+          >
+            <Text style={[styles.headerScopeBtnText, feedScope === 'my' && styles.headerScopeBtnTextActive]}>My</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFeedScope('all')}
+            style={[styles.headerScopeBtn, feedScope === 'all' && styles.headerScopeBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Show All feed"
+          >
+            <Text style={[styles.headerScopeBtnText, feedScope === 'all' && styles.headerScopeBtnTextActive]}>All</Text>
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [feedScope, navigation]);
 
   useEffect(() => {
     loadPosts({ useCache: true });
@@ -308,8 +580,8 @@ export default function FeedScreen({ navigation }) {
 
   return (
     <FlatList
-      data={posts}
-      keyExtractor={(item, idx) => String(item?.id || idx)}
+      data={feedListData}
+      keyExtractor={(item) => item.key}
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
       ListHeaderComponent={
         <View>
@@ -317,7 +589,7 @@ export default function FeedScreen({ navigation }) {
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
               <View style={styles.liveHeaderRow}>
                 <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('GoLive')}>
+                <TouchableOpacity onPress={() => navigateToGoLive()}>
                   <Text style={styles.liveSeeAll}>See all</Text>
                 </TouchableOpacity>
               </View>
@@ -331,7 +603,7 @@ export default function FeedScreen({ navigation }) {
                     <TouchableOpacity
                       key={`live-user-${stream.id}`}
                       style={styles.liveUserChip}
-                      onPress={() => navigation.navigate('GoLive', { streamId: stream.id })}
+                      onPress={() => navigateToGoLive({ streamId: stream.id })}
                     >
                       {photo ? (
                         <Image source={{ uri: photo }} style={styles.liveAvatar} />
@@ -367,21 +639,27 @@ export default function FeedScreen({ navigation }) {
           ) : null}
         </View>
       }
-      renderItem={({ item }) => (
-        <PostCard
-          item={item}
-          onToggleLike={onToggleLike}
-          onToggleComments={onToggleComments}
-          commentsOpen={openCommentsPostId === item.id}
-          commentsData={commentsByPostId[item.id]}
-          loadingComments={commentsLoadingPostId === item.id}
-          newComment={commentDraftByPostId[item.id] || ''}
-          setNewComment={(value) => setCommentDraftByPostId((prev) => ({ ...prev, [item.id]: value }))}
-          onAddComment={onAddComment}
-          isSendingComment={sendingCommentPostId === item.id}
-          isDark={isDark}
-        />
-      )}
+      renderItem={({ item }) =>
+        item.type === 'ad' ? (
+          <FeedAdSlot ads={feedAds} isDark={isDark} />
+        ) : (
+          <PostCard
+            item={item.post}
+            onToggleLike={onToggleLike}
+            onToggleComments={onToggleComments}
+            commentsOpen={openCommentsPostId === item.post.id}
+            commentsData={commentsByPostId[item.post.id]}
+            loadingComments={commentsLoadingPostId === item.post.id}
+            newComment={commentDraftByPostId[item.post.id] || ''}
+            setNewComment={(value) => setCommentDraftByPostId((prev) => ({ ...prev, [item.post.id]: value }))}
+            onAddComment={onAddComment}
+            isSendingComment={sendingCommentPostId === item.post.id}
+            isDark={isDark}
+            onOpenPost={openPostFullscreen}
+            onOpenAuthorProfile={openAuthorProfile}
+          />
+        )
+      }
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -405,53 +683,112 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   listContent: {
-    padding: 14,
-    backgroundColor: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 28,
+    backgroundColor: '#f1f5f9',
     minHeight: '100%',
   },
   screenDark: {
     backgroundColor: '#020617',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+    marginBottom: 22,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cardDark: {
     backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
+    borderColor: '#334155',
+    shadowOpacity: 0.2,
   },
-  authorRow: {
+  cardSponsored: {
+    borderColor: '#86efac',
+    backgroundColor: '#f0fdf4',
+  },
+  cardSponsoredDark: {
+    borderColor: '#166534',
+    backgroundColor: 'rgba(6,78,59,0.22)',
+  },
+  sponsoredBanner: {
+    marginBottom: 12,
+  },
+  sponsoredBannerText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ca8a04',
+    letterSpacing: 0.5,
+  },
+  authorRowHit: {
+    alignSelf: 'stretch',
+    marginBottom: 16,
+  },
+  authorHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  authorHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  authorTextCol: {
+    flex: 1,
+    marginLeft: 12,
+    minWidth: 0,
+  },
+  headerSponsorWrap: {
+    marginLeft: 8,
+    width: '44%',
+    alignItems: 'flex-end',
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    marginRight: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#e2e8f0',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   avatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    marginRight: 8,
-    backgroundColor: '#0f766e',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3b82f6',
+    borderWidth: 2,
+    borderColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarFallbackDark: {
+    borderColor: '#1e293b',
+    backgroundColor: '#2563eb',
+  },
   avatarFallbackText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
   },
-  author: {
+  authorName: {
     fontWeight: '700',
+    fontSize: 16,
     color: '#0f172a',
+  },
+  authorDate: {
+    marginTop: 2,
+    fontSize: 13,
+    color: '#64748b',
   },
   textPrimaryDark: {
     color: '#e2e8f0',
@@ -459,72 +796,134 @@ const styles = StyleSheet.create({
   textSecondaryDark: {
     color: '#cbd5e1',
   },
+  textBodyDark: {
+    color: '#e2e8f0',
+  },
   textMutedDark: {
     color: '#94a3b8',
   },
   content: {
-    color: '#1f2937',
-    marginBottom: 8,
+    color: '#1e293b',
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  locationEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+    marginTop: 1,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
+    textDecorationLine: 'underline',
+  },
+  locationTextDark: {
+    color: '#60a5fa',
   },
   media: {
     width: '100%',
-    height: 190,
-    borderRadius: 10,
-    marginBottom: 8,
+    height: 240,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f1f5f9',
   },
   videoWrap: {
     overflow: 'hidden',
-    borderRadius: 10,
-    marginBottom: 8,
+    borderRadius: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  videoWrapDark: {
+    borderColor: '#334155',
+  },
+  videoFsBtn: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    backgroundColor: 'rgba(15,23,42,0.65)',
+    borderRadius: 10,
+    padding: 8,
   },
   videoPlayer: {
     width: '100%',
-    height: 220,
-  },
-  meta: {
-    color: '#64748b',
-    fontSize: 12,
+    height: 240,
   },
   rowActions: {
     flexDirection: 'row',
-    marginTop: 10,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 4,
   },
-  actionBtn: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+  pillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginRight: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 12,
+    marginTop: 8,
   },
-  actionBtnDark: {
-    borderColor: '#334155',
-    backgroundColor: '#0b1220',
+  pillBtnNeutral: {
+    backgroundColor: '#f1f5f9',
   },
-  actionBtnActive: {
+  pillBtnNeutralDark: {
+    backgroundColor: '#334155',
+  },
+  pillBtnLikeActive: {
+    backgroundColor: '#fee2e2',
+  },
+  pillBtnLikeActiveDark: {
+    backgroundColor: '#7f1d1d',
+  },
+  pillBtnCommentOpen: {
+    borderWidth: 1,
     borderColor: '#0f766e',
-    backgroundColor: '#e6fffa',
   },
-  actionText: {
-    color: '#334155',
-    fontWeight: '600',
+  pillEmoji: {
+    fontSize: 16,
+    marginRight: 6,
   },
-  actionTextActive: {
-    color: '#0f766e',
+  pillCount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  pillCountNeutral: {
+    color: '#475569',
+  },
+  pillCountNeutralDark: {
+    color: '#cbd5e1',
+  },
+  pillCountActive: {
+    color: '#dc2626',
+  },
+  pillCountActiveDark: {
+    color: '#fca5a5',
   },
   commentsWrap: {
-    marginTop: 10,
+    marginTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingTop: 10,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 14,
+  },
+  commentsWrapDark: {
+    borderTopColor: '#334155',
   },
   commentItem: {
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 6,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
   },
   commentItemDark: {
     backgroundColor: '#111827',
@@ -604,6 +1003,31 @@ const styles = StyleSheet.create({
   feedActionsWrap: {
     flexDirection: 'row',
     marginBottom: 10,
+  },
+  headerScopeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 9,
+    overflow: 'hidden',
+    marginRight: 2,
+  },
+  headerScopeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#fff',
+  },
+  headerScopeBtnActive: {
+    backgroundColor: '#0f766e',
+  },
+  headerScopeBtnText: {
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  headerScopeBtnTextActive: {
+    color: '#fff',
   },
   liveWidget: {
     backgroundColor: '#ffffff',
@@ -717,11 +1141,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   skelAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#e2e8f0',
-    marginRight: 8,
+    marginRight: 12,
   },
   skelLine: {
     height: 12,

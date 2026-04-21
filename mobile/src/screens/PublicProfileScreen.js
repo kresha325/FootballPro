@@ -1,46 +1,177 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  createVideoCallRequest,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ImageBackground,
+  Linking,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  clubStaffAssignmentsRequest,
   extractErrorMessage,
   followStatusRequest,
   followUserRequest,
   getOrCreateConversationRequest,
   profileByIdRequest,
-  startAudioCallRequest,
+  sponsorsByUserRequest,
+  transferHistoryByUserRequest,
   unfollowUserRequest,
+  userGalleryRequest,
+  userPostsRequest,
+  userVideosRequest,
 } from '../api/client';
+import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
+import PublicProfileContactTab from '../components/publicProfile/PublicProfileContactTab';
+import PublicProfileGalleryTab from '../components/publicProfile/PublicProfileGalleryTab';
+import PublicProfileOverviewTab from '../components/publicProfile/PublicProfileOverviewTab';
+import PublicProfilePostsTab from '../components/publicProfile/PublicProfilePostsTab';
+import PublicProfileSponsorsTab from '../components/publicProfile/PublicProfileSponsorsTab';
+import PublicProfileTabBar from '../components/publicProfile/PublicProfileTabBar';
+import PublicProfileVideosTab from '../components/publicProfile/PublicProfileVideosTab';
+import { useAuth } from '../context/AuthContext';
+import { APP_BRAND_NAME } from '../config/branding';
+
+const COVER_HEIGHT = 168;
+const AVATAR_SIZE = 96;
+
+function roleLabel(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'trajner') return 'Coach';
+  if (!r) return '';
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
 
 export default function PublicProfileScreen({ route, navigation }) {
-  const { userId } = route.params;
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+  const insets = useSafeAreaInsets();
+  const { user: me } = useAuth();
+
   const [profile, setProfile] = useState(null);
+  const [postCount, setPostCount] = useState(0);
+  const [posts, setPosts] = useState([]);
+  const [gallery, setGallery] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [staffAssignments, setStaffAssignments] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
+  /** Profile tab key (avoid name `activeTab` — clashes with some tooling / stale bundles). */
+  const [profileTab, setProfileTab] = useState('posts');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Full-screen preview for cover or profile photo */
+  const [headerImagePreview, setHeaderImagePreview] = useState(null);
 
-  const loadProfile = useCallback(async ({ silent } = { silent: false }) => {
-    if (!silent) setLoading(true);
-    setError('');
-    try {
-      const [profileRes, followRes] = await Promise.all([
-        profileByIdRequest(userId),
-        followStatusRequest(userId),
-      ]);
-      const response = profileRes;
-      setProfile(response.data || null);
-      setFollowing(!!(followRes?.data?.isFollowing || followRes?.data?.following));
-    } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to load profile'));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const userId = useMemo(() => {
+    const p = route.params || {};
+    const raw = p.userId ?? p.id;
+    if (raw != null && raw !== '') return raw;
+    return me?.id ?? null;
+  }, [route.params, me?.id]);
+
+  const isSelf = me?.id != null && userId != null && String(me.id) === String(userId);
+
+  useEffect(() => {
+    setProfileTab('posts');
   }, [userId]);
 
+  useEffect(() => {
+    if (!isSelf && profileTab === 'sponsors') {
+      setProfileTab('posts');
+    }
+  }, [isSelf, profileTab]);
+
+  const displayName = useMemo(() => {
+    if (!profile) return APP_BRAND_NAME;
+    const n = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+    return n || 'User';
+  }, [profile]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: displayName,
+      headerTitle: displayName,
+    });
+  }, [navigation, displayName]);
+
+  const loadProfile = useCallback(
+    async ({ silent } = { silent: false }) => {
+      if (!silent) setLoading(true);
+      setError('');
+      try {
+        const profileRes = await profileByIdRequest(userId);
+        const p = profileRes.data || null;
+        setProfile(p);
+        const role = String(p?.role || '').toLowerCase();
+
+        const [
+          followRes,
+          postsRes,
+          galleryRes,
+          videosRes,
+          transferRes,
+          staffRes,
+          sponsorsRes,
+        ] = await Promise.all([
+          isSelf ? Promise.resolve({ data: {} }) : followStatusRequest(userId),
+          userPostsRequest(userId).catch(() => ({ data: [] })),
+          userGalleryRequest(userId).catch(() => ({ data: [] })),
+          userVideosRequest(userId).catch(() => ({ data: [] })),
+          role === 'athlete' || role === 'coach' || role === 'trajner'
+            ? transferHistoryByUserRequest(userId).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          role === 'coach' || role === 'trajner'
+            ? clubStaffAssignmentsRequest(userId).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          isSelf ? sponsorsByUserRequest(userId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+        ]);
+
+        if (!isSelf) {
+          setFollowing(!!(followRes?.data?.isFollowing || followRes?.data?.following));
+        }
+        const postsData = Array.isArray(postsRes?.data) ? postsRes.data : [];
+        setPosts(postsData);
+        setPostCount(postsData.length);
+        setGallery(Array.isArray(galleryRes?.data) ? galleryRes.data : []);
+        setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
+        setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
+        setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
+        setSponsors(Array.isArray(sponsorsRes?.data) ? sponsorsRes.data : []);
+      } catch (err) {
+        setError(extractErrorMessage(err, 'Failed to load profile'));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [userId, isSelf]
+  );
+
+  useEffect(() => {
+    if (userId == null || userId === '') {
+      setError('Missing user');
+      setLoading(false);
+      return;
+    }
+    loadProfile();
+  }, [loadProfile, userId]);
+
   const onToggleFollow = async () => {
-    if (busy) return;
+    if (busy || isSelf) return;
     setBusy(true);
     try {
       if (following) {
@@ -52,7 +183,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       }
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Follow action failed', extractErrorMessage(err, 'Could not update follow status'));
+      Alert.alert('Follow', extractErrorMessage(err, 'Could not update follow status'));
     } finally {
       setBusy(false);
     }
@@ -62,43 +193,59 @@ export default function PublicProfileScreen({ route, navigation }) {
     try {
       const res = await getOrCreateConversationRequest(userId);
       const conversationId = res?.data?.id;
-      if (!conversationId) {
-        throw new Error('Conversation could not be created');
+      if (!conversationId) throw new Error('Conversation could not be created');
+      const parent = navigation.getParent?.();
+      if (parent?.navigate) {
+        parent.navigate('Messages', { screen: 'Conversation', params: { conversationId } });
+      } else {
+        navigation.navigate('Messages', { screen: 'Conversation', params: { conversationId } });
       }
-      navigation.navigate('Messages', {
-        screen: 'Conversation',
-        params: { conversationId },
-      });
     } catch (err) {
-      Alert.alert('Message error', extractErrorMessage(err, 'Could not open conversation'));
+      Alert.alert('Message', extractErrorMessage(err, 'Could not open conversation'));
     }
   };
 
-  const onAudioCall = async () => {
-    try {
-      const res = await startAudioCallRequest(userId);
-      Alert.alert('Audio call', `Call started. ID: ${res?.data?.id || 'N/A'}`);
-    } catch (err) {
-      Alert.alert('Call failed', extractErrorMessage(err, 'Could not start call'));
-    }
+  const onVideoCall = () => {
+    navigation.navigate('OutgoingCall', { targetUserId: userId, audioOnly: false });
   };
 
-  const onVideoCall = async () => {
-    try {
-      const res = await createVideoCallRequest(userId);
-      Alert.alert('Video call', `Video call started. ID: ${res?.data?.id || 'N/A'}`);
-    } catch (err) {
-      Alert.alert('Video call failed', extractErrorMessage(err, 'Could not start video call'));
-    }
+  const openSocial = (baseUrl, handle) => {
+    if (!handle) return;
+    const h = String(handle).replace(/^@/, '');
+    Linking.openURL(`${baseUrl}${encodeURIComponent(h)}`).catch(() => {});
   };
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  const theme = useMemo(
+    () => ({
+      isDark,
+      bg: isDark ? '#020617' : '#f1f5f9',
+      card: isDark ? '#0f172a' : '#ffffff',
+      border: isDark ? '#1e293b' : '#e2e8f0',
+      text: isDark ? '#f8fafc' : '#0f172a',
+      muted: isDark ? '#94a3b8' : '#64748b',
+      chipBg: isDark ? '#1e293b' : '#f1f5f9',
+      chipText: isDark ? '#e2e8f0' : '#334155',
+      coverFallback: isDark ? ['#1e3a8a', '#5b21b6'] : ['#3b82f6', '#7c3aed'],
+    }),
+    [isDark]
+  );
+
+  const tabs = useMemo(() => {
+    const base = [
+      { key: 'overview', label: '🏠 Overview' },
+      { key: 'posts', label: '📝 Posts' },
+      { key: 'gallery', label: '🖼️ Gallery' },
+      { key: 'videos', label: '🎥 Videos' },
+      { key: 'about', label: 'ℹ️ About' },
+      { key: 'contact', label: '✉️ Contact' },
+    ];
+    if (isSelf) base.push({ key: 'sponsors', label: '🤝 Sponsors' });
+    return base;
+  }, [isSelf]);
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: theme.bg }]}>
         <ActivityIndicator size="large" color="#0f766e" />
       </View>
     );
@@ -106,16 +253,46 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   if (error && !profile) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.error}>{error}</Text>
+      <View style={[styles.centered, { backgroundColor: theme.bg, padding: 24 }]}>
+        <Text style={[styles.error, { color: '#f87171' }]}>{error}</Text>
       </View>
     );
   }
 
+  if (!profile) {
+    return (
+      <View style={[styles.centered, { backgroundColor: theme.bg }]}>
+        <Text style={{ color: theme.muted }}>Profile not found</Text>
+      </View>
+    );
+  }
+
+  const initials = `${(profile.firstName || 'U').charAt(0)}${(profile.lastName || '').charAt(0)}`.toUpperCase();
+  const coverUri = profile.coverPhoto && typeof profile.coverPhoto === 'string' ? profile.coverPhoto : null;
+  const photoUri = profile.profilePhoto && typeof profile.profilePhoto === 'string' ? profile.profilePhoto : null;
+  const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
+  const contact = profile.contact && typeof profile.contact === 'object' ? profile.contact : {};
+
+  const bioSnippet =
+    profile.bio && profile.bio.length > 120 ? `${profile.bio.slice(0, 120)}…` : profile.bio;
+
+  const Chip = ({ icon, children }) =>
+    children ? (
+      <View style={[styles.chip, { backgroundColor: theme.chipBg }]}>
+        {icon ? <Ionicons name={icon} size={14} color={theme.chipText} style={{ marginRight: 4 }} /> : null}
+        <Text style={[styles.chipText, { color: theme.chipText }]} numberOfLines={2}>
+          {children}
+        </Text>
+      </View>
+    ) : null;
+
+  const closeHeaderPreview = () => setHeaderImagePreview(null);
+
   return (
+    <>
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
+      style={[styles.root, { backgroundColor: theme.bg }]}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -127,81 +304,405 @@ export default function PublicProfileScreen({ route, navigation }) {
         />
       }
     >
-      <View style={styles.card}>
-        <Text style={styles.name}>{`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || 'Unknown user'}</Text>
-        <Text style={styles.role}>Role: {profile?.role || 'N/A'}</Text>
-        <Text style={styles.row}>City: {profile?.city || 'N/A'}</Text>
-        <Text style={styles.row}>Country: {profile?.country || 'N/A'}</Text>
-        <Text style={styles.row}>Club: {profile?.club || 'N/A'}</Text>
-        <Text style={styles.row}>Position: {profile?.position || 'N/A'}</Text>
-        <Text style={styles.row}>Followers: {profile?.followers || 0}</Text>
-        <Text style={styles.row}>Following: {profile?.following || 0}</Text>
-        <Text style={styles.bio}>{profile?.bio || 'No bio yet.'}</Text>
+      <View style={{ paddingTop: insets.top ? 0 : 0 }}>
+        {coverUri ? (
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => setHeaderImagePreview(coverUri)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel="View cover photo"
+          >
+            <ImageBackground source={{ uri: coverUri }} style={styles.cover} imageStyle={styles.coverImage}>
+              <View style={styles.coverTint} />
+            </ImageBackground>
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={[
+              styles.cover,
+              { backgroundColor: theme.coverFallback[0] },
+            ]}
+          />
+        )}
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={onToggleFollow} disabled={busy}>
-            <Text style={styles.primaryBtnText}>{following ? 'Unfollow' : 'Follow'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={onSendMessage}>
-            <Text style={styles.secondaryBtnText}>Send Message</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={[styles.headerBlock, { marginTop: -AVATAR_SIZE / 2 }]}>
+          <View style={styles.avatarWrap}>
+            <TouchableOpacity
+              activeOpacity={photoUri ? 0.88 : 1}
+              disabled={!photoUri}
+              onPress={() => photoUri && setHeaderImagePreview(photoUri)}
+              accessibilityRole={photoUri ? 'imagebutton' : 'none'}
+              accessibilityLabel={photoUri ? 'View profile photo' : undefined}
+            >
+            <View
+              style={[
+                styles.avatarRing,
+                { borderColor: theme.card, backgroundColor: theme.card },
+              ]}
+            >
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.avatarImg} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: '#0f766e' }]}>
+                  <Text style={styles.avatarFallbackText}>{initials}</Text>
+                </View>
+              )}
+            </View>
+            </TouchableOpacity>
+            {profile.verified ? (
+              <View style={[styles.verifiedBadge, { backgroundColor: theme.card }]}>
+                <Ionicons name="checkmark-circle" size={26} color="#2563eb" />
+              </View>
+            ) : null}
+          </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.callBtn} onPress={onAudioCall}>
-            <Text style={styles.callBtnText}>Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.videoBtn} onPress={onVideoCall}>
-            <Text style={styles.videoBtnText}>Video Call</Text>
-          </TouchableOpacity>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                shadowColor: '#000',
+              },
+            ]}
+          >
+            <Text style={[styles.name, { color: theme.text }]}>{displayName}</Text>
+            <Text style={styles.roleLine}>{roleLabel(profile.role)}</Text>
+
+            {profile.bio ? (
+              <Text style={[styles.bio, { color: theme.muted }]}>{bioSnippet}</Text>
+            ) : null}
+
+            <View style={styles.chipRow}>
+              {profile.age != null && profile.ageGroup ? (
+                <Chip icon="calendar-outline">
+                  {profile.age} yrs ({profile.ageGroup})
+                </Chip>
+              ) : null}
+              {profile.position ? <Chip icon="football-outline">{profile.position}</Chip> : null}
+              {profile.club ? <Chip icon="business-outline">{profile.club}</Chip> : null}
+              {stats.jerseyNumber != null && String(stats.jerseyNumber) !== '' ? (
+                <Chip icon="shirt-outline">#{stats.jerseyNumber}</Chip>
+              ) : null}
+              {profile.city || profile.country ? (
+                <Chip icon="location-outline">
+                  {[profile.city, profile.country].filter(Boolean).join(', ')}
+                </Chip>
+              ) : null}
+            </View>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statCell}>
+                <Text style={[styles.statNum, { color: theme.text }]}>{postCount}</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Posts</Text>
+              </View>
+              <View style={styles.statCell}>
+                <Text style={[styles.statNum, { color: theme.text }]}>{profile.followers ?? 0}</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Followers</Text>
+              </View>
+              <View style={styles.statCell}>
+                <Text style={[styles.statNum, { color: theme.text }]}>{profile.following ?? 0}</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Following</Text>
+              </View>
+            </View>
+
+            {(contact.instagram || contact.twitter || contact.facebook) && !isSelf ? (
+              <View style={styles.socialRow}>
+                {contact.instagram ? (
+                  <TouchableOpacity
+                    style={[styles.socialBtn, { backgroundColor: '#c026d3' }]}
+                    onPress={() => openSocial('https://instagram.com/', contact.instagram)}
+                  >
+                    <Ionicons name="logo-instagram" size={20} color="#fff" />
+                  </TouchableOpacity>
+                ) : null}
+                {contact.twitter ? (
+                  <TouchableOpacity
+                    style={[styles.socialBtn, { backgroundColor: '#1d9bf0' }]}
+                    onPress={() => openSocial('https://twitter.com/', contact.twitter)}
+                  >
+                    <Ionicons name="logo-twitter" size={20} color="#fff" />
+                  </TouchableOpacity>
+                ) : null}
+                {contact.facebook ? (
+                  <TouchableOpacity
+                    style={[styles.socialBtn, { backgroundColor: '#1877f2' }]}
+                    onPress={() => Linking.openURL(`https://facebook.com/${String(contact.facebook).replace(/^\//, '')}`)}
+                  >
+                    <Ionicons name="logo-facebook" size={20} color="#fff" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+
+            {!isSelf ? (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.followBtn,
+                    following && {
+                      backgroundColor: 'transparent',
+                      borderWidth: 2,
+                      borderColor: isDark ? '#475569' : '#cbd5e1',
+                    },
+                  ]}
+                  onPress={onToggleFollow}
+                  disabled={busy}
+                >
+                  <Text
+                    style={[
+                      styles.followBtnText,
+                      following && { color: theme.muted },
+                    ]}
+                  >
+                    {busy ? '…' : following ? 'Following' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.msgBtn,
+                    { backgroundColor: isDark ? '#334155' : '#e2e8f0' },
+                  ]}
+                  onPress={onSendMessage}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.text} />
+                  <Text style={[styles.msgBtnText, { color: theme.text }]}>Message</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.videoBtn} onPress={onVideoCall}>
+                  <Ionicons name="videocam-outline" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={[styles.selfHint, { color: theme.muted }]}>This is your profile — use Me tab to edit.</Text>
+            )}
+
+            <PublicProfileTabBar tabs={tabs} activeKey={profileTab} onChange={setProfileTab} theme={theme} />
+            <View style={styles.tabPanel}>
+              {profileTab === 'overview' ? (
+                <PublicProfileOverviewTab
+                  profile={profile}
+                  theme={theme}
+                  staffAssignments={staffAssignments}
+                />
+              ) : null}
+              {profileTab === 'posts' ? <PublicProfilePostsTab posts={posts} theme={theme} /> : null}
+              {profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
+              {profileTab === 'videos' ? <PublicProfileVideosTab videos={videos} theme={theme} /> : null}
+              {profileTab === 'about' ? (
+                <PublicProfileAboutTab profile={profile} transfers={transfers} theme={theme} />
+              ) : null}
+              {profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
+              {profileTab === 'sponsors' && isSelf ? (
+                <PublicProfileSponsorsTab sponsors={sponsors} theme={theme} />
+              ) : null}
+            </View>
+          </View>
         </View>
       </View>
     </ScrollView>
+
+    <Modal visible={!!headerImagePreview} transparent animationType="fade" onRequestClose={closeHeaderPreview}>
+      <View style={styles.previewModalRoot}>
+        <Pressable style={styles.previewModalBackdrop} onPress={closeHeaderPreview} accessibilityLabel="Close preview" />
+        <View style={styles.previewModalLayer} pointerEvents="box-none">
+          <Pressable
+            onPress={closeHeaderPreview}
+            style={[
+              styles.previewModalClose,
+              { top: insets.top + 10, right: Math.max(insets.right, 12) + 4 },
+            ]}
+            hitSlop={16}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <View style={styles.previewModalCloseInner}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </View>
+          </Pressable>
+          {headerImagePreview ? (
+            <View style={styles.previewModalImgWrap} pointerEvents="auto">
+              <Image source={{ uri: headerImagePreview }} style={styles.previewModalImg} resizeMode="contain" />
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  content: { padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  card: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', padding: 16 },
-  name: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
-  role: { marginTop: 6, marginBottom: 14, color: '#0f766e', fontWeight: '600' },
-  row: { marginBottom: 8, color: '#334155' },
-  bio: { marginTop: 10, color: '#334155', lineHeight: 20 },
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  primaryBtn: {
-    flex: 1,
-    backgroundColor: '#0f766e',
-    borderRadius: 10,
-    paddingVertical: 10,
+  root: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  cover: {
+    width: '100%',
+    height: COVER_HEIGHT,
+  },
+  coverImage: { resizeMode: 'cover' },
+  coverTint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.12)' },
+  headerBlock: {
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
-  primaryBtnText: { color: '#fff', fontWeight: '700' },
-  secondaryBtn: {
-    flex: 1,
+  avatarWrap: {
+    marginBottom: 8,
+    position: 'relative',
+  },
+  avatarRing: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 4,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: { color: '#fff', fontSize: 32, fontWeight: '800' },
+  verifiedBadge: {
+    position: 'absolute',
+    right: -4,
+    bottom: 4,
+    borderRadius: 20,
+  },
+  card: {
+    width: '100%',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#0f766e',
+    padding: 18,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+  },
+  name: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  roleLine: {
+    marginTop: 4,
+    textAlign: 'center',
+    color: '#0f766e',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  bio: { marginTop: 10, textAlign: 'center', lineHeight: 22, fontSize: 15 },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    maxWidth: '100%',
+  },
+  chipText: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 22,
+    paddingHorizontal: 8,
+  },
+  statCell: { alignItems: 'center', minWidth: 72 },
+  statNum: { fontSize: 22, fontWeight: '800' },
+  statLabel: { fontSize: 12, marginTop: 2, fontWeight: '600' },
+  socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 16,
+  },
+  socialBtn: {
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 18,
+    flexWrap: 'wrap',
+  },
+  followBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: 10,
+    minWidth: 108,
     alignItems: 'center',
   },
-  secondaryBtnText: { color: '#0f766e', fontWeight: '700' },
-  callBtn: {
-    flex: 1,
-    backgroundColor: '#1d4ed8',
-    borderRadius: 10,
-    paddingVertical: 10,
+  followBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  msgBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
-  callBtnText: { color: '#fff', fontWeight: '700' },
+  msgBtnText: { fontWeight: '700', fontSize: 15 },
   videoBtn: {
-    flex: 1,
-    backgroundColor: '#7c3aed',
+    backgroundColor: '#16a34a',
+    width: 46,
+    height: 46,
     borderRadius: 10,
-    paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  videoBtnText: { color: '#fff', fontWeight: '700' },
-  error: { color: '#b91c1c', textAlign: 'center' },
+  selfHint: { textAlign: 'center', marginTop: 16, fontSize: 14 },
+  tabPanel: {
+    marginTop: 8,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  error: { textAlign: 'center' },
+  previewModalRoot: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+  },
+  previewModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  previewModalLayer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  previewModalClose: {
+    position: 'absolute',
+    zIndex: 20,
+    elevation: 20,
+  },
+  previewModalCloseInner: {
+    padding: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  previewModalImgWrap: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  previewModalImg: {
+    width: '100%',
+    height: '80%',
+  },
 });

@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   MagnifyingGlassIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import {
   LineChart,
@@ -45,6 +46,8 @@ export default function AdminDashboard() {
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [resetPasswordModal, setResetPasswordModal] = useState({ show: false, userId: null, email: '' });
   const [newPassword, setNewPassword] = useState('');
+  const [joncoinPending, setJoncoinPending] = useState([]);
+  const [joncoinLoading, setJoncoinLoading] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -57,6 +60,8 @@ export default function AdminDashboard() {
       fetchUsers();
     } else if (activeTab === 'content') {
       fetchPosts();
+    } else if (activeTab === 'joncoin') {
+      fetchJoncoinPending();
     }
   }, [activeTab, searchTerm, filters, pagination.page]);
 
@@ -104,6 +109,32 @@ export default function AdminDashboard() {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchJoncoinPending = async () => {
+    setJoncoinLoading(true);
+    try {
+      const res = await api.get('/admin/joncoin/pending');
+      setJoncoinPending(res.data.transactions || []);
+    } catch (error) {
+      console.error('Error fetching JonCoin pending:', error);
+      setJoncoinPending([]);
+    } finally {
+      setJoncoinLoading(false);
+    }
+  };
+
+  const handleJoncoinDecision = async (txId, status) => {
+    const label = status === 'completed' ? 'approve' : 'reject';
+    if (!window.confirm(`${label === 'approve' ? 'Approve' : 'Reject'} this JonCoin transaction?`)) return;
+    try {
+      await api.patch(`/joncoin/transaction/${txId}`, { status });
+      await fetchJoncoinPending();
+    } catch (error) {
+      console.error('JonCoin transaction update:', error);
+      const msg = error.response?.data?.error || error.response?.data?.msg || error.message;
+      window.alert(msg || 'Update failed');
     }
   };
 
@@ -232,6 +263,17 @@ export default function AdminDashboard() {
         >
           <DocumentTextIcon className="w-5 h-5 inline mr-2" />
           Content
+        </button>
+        <button
+          onClick={() => setActiveTab('joncoin')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'joncoin'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <BanknotesIcon className="w-5 h-5 inline mr-2" />
+          JonCoin
         </button>
       </div>
 
@@ -631,6 +673,91 @@ export default function AdminDashboard() {
 
           {/* Pagination */}
           <Pagination pagination={pagination} setPagination={setPagination} />
+        </div>
+      )}
+
+      {activeTab === 'joncoin' && (
+        <div className="space-y-4">
+          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Pending purchases, withdrawals, and other JonCoin rows awaiting approval.
+            </p>
+            <button
+              type="button"
+              onClick={() => fetchJoncoinPending()}
+              className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {joncoinLoading ? (
+            <div className="text-gray-500 text-sm">Loading…</div>
+          ) : joncoinPending.length === 0 ? (
+            <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500 text-sm">
+              No pending JonCoin transactions.
+            </div>
+          ) : (
+            <div className="bg-white shadow rounded-lg overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">ID</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">User</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Type</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-700">Amount</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Description</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Created</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {joncoinPending.map((tx) => {
+                    const u = tx.User || tx.user;
+                    return (
+                      <tr key={tx.id}>
+                        <td className="px-4 py-2 text-gray-900">{tx.id}</td>
+                        <td className="px-4 py-2">
+                          <div className="text-gray-900">
+                            {u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email : '—'}
+                          </div>
+                          {u?.email && (
+                            <div className="text-xs text-gray-500">{u.email}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-gray-800">{tx.type}</td>
+                        <td className="px-4 py-2 text-right font-mono">{tx.amount}</td>
+                        <td className="px-4 py-2 text-gray-600 max-w-xs truncate" title={tx.description}>
+                          {tx.description || '—'}
+                        </td>
+                        <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                          {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleJoncoinDecision(tx.id, 'completed')}
+                            className="inline-flex items-center px-2 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700"
+                          >
+                            <CheckCircleIcon className="w-4 h-4 mr-1" />
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleJoncoinDecision(tx.id, 'rejected')}
+                            className="inline-flex items-center px-2 py-1 rounded bg-gray-200 text-gray-800 text-xs hover:bg-gray-300"
+                          >
+                            <XCircleIcon className="w-4 h-4 mr-1" />
+                            Reject
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -192,6 +192,9 @@ exports.notifyMessage = async (recipientId, senderId, message) => {
   let preview = '';
   if (typeof message === 'string' && message) {
     preview = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+  } else if (message && typeof message.content === 'string' && message.content.trim()) {
+    const c = message.content.trim();
+    preview = c.substring(0, 50) + (c.length > 50 ? '...' : '');
   } else if (message && message.fileName) {
     preview = `[Media] ${message.fileName}`;
   } else {

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { Room, createLocalTracks } from 'livekit-client';
 import { liveStreamAPI, livekitAPI, notificationsAPI, streamsAPI } from '../services/api';
+import { APP_BRAND_NAME } from '../config/branding';
 
 
 
@@ -237,7 +238,7 @@ function Navbar() {
 
         {/* LOGO */}
         <Link to="/feed" className="text-2xl font-bold text-primary">
-          JonSport
+          {APP_BRAND_NAME}
         </Link>
 
         {/* RIGHT SECTION: Search + Dark Mode + Burger Menu */}

@@ -1,3 +1,8 @@
+/**
+ * VARSHËM: ky skript përdor `sequelize.sync({ alter: true })` — përshtat tabela sipas modeleve.
+ * Për mjedise të përbashkëta / prod / CI përdorni VETËM migracionet (`sequelize-cli db:migrate`),
+ * jo këtë skript, që historia e skemës të jetë e gjurmueshme dhe e ripërsëritshme.
+ */
 require('dotenv').config();
 const sequelize = require('./config/database');
 
@@ -37,7 +42,7 @@ const Follow = require('./models/Follow');
 const Ad = require('./models/Ad');
 const Sponsor = require('./models/Sponsor');
 
-console.log('🔄 Starting database sync...\n');
+console.log('🔄 Starting database sync (alter) — vetëm për dev lokal; përndryshe migrime.\n');
 
 const syncDatabase = async () => {
   try {
@@ -46,6 +51,7 @@ const syncDatabase = async () => {
     console.log('✅ Database connection established successfully.\n');
 
     // Sync all models with database (alter: true will update existing tables)
+    // Prefer migrations for any durable schema change.
     await sequelize.sync({ alter: true });
     
     console.log('✅ All models synchronized successfully!\n');

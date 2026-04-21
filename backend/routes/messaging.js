@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const {
   getConversations,
   getOrCreateConversation,
+  getConversationById,
   getMessages,
   sendMessage,
   markAsRead,
@@ -44,6 +45,9 @@ router.get('/conversations', auth, getConversations);
 
 // Get or create 1-on-1 conversation with specific user
 router.get('/conversations/user/:userId', auth, getOrCreateConversation);
+
+// Single conversation by id (member-only); path avoids clash with /conversations/user/...
+router.get('/conversations/detail/:conversationId', auth, getConversationById);
 
 // Create group conversation
 router.post('/conversations/group', auth, createGroup);

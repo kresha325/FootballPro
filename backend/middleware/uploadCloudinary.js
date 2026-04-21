@@ -44,6 +44,13 @@ const MAX_FILE_SIZE = parseInt(process.env.CLOUDINARY_MAX_FILE_SIZE || '10485760
 
 function fileFilter(req, file, cb) {
 	if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) return cb(null, true);
+	// React Native / some clients send image/jpg or octet-stream for picked photos
+	if (String(file.mimetype || '').toLowerCase() === 'image/jpg') return cb(null, true);
+	const ext = path.extname(file.originalname || '').toLowerCase();
+	const imageExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.bmp'];
+	if (String(file.mimetype || '').toLowerCase() === 'application/octet-stream' && imageExt.includes(ext)) {
+		return cb(null, true);
+	}
 	cb(new Error('Invalid image file'));
 }
 

@@ -46,18 +46,11 @@ export default function MarketplaceSimple() {
     fetchProducts();
 
     // Fetch JonCoin balance
-    getJonCoinBalance().then(bal => setJonCoinBalance(Number(bal) || 0));
+    getJonCoinBalance().then(({ balance: bal }) => setJonCoinBalance(Number(bal) || 0));
     
-    // Check for payment success/cancel
     const success = searchParams.get('success');
     const canceled = searchParams.get('canceled');
-    
-    if (success) {
-      alert('✅ Pagesa u krye me sukses! Porosia juaj është duke u përpunuar.');
-      window.history.replaceState({}, '', '/marketplace');
-    }
-    if (canceled) {
-      alert('❌ Pagesa u anulua.');
+    if (success || canceled) {
       window.history.replaceState({}, '', '/marketplace');
     }
   }, [category, searchParams]);
@@ -111,21 +104,24 @@ export default function MarketplaceSimple() {
     }
   };
 
-  const createOrder = async (productId) => {
-    if (!window.confirm('Konfirmo blerjen?')) return;
-    
+  const buyWithJonCoin = async (productId) => {
+    if (!window.confirm('Konfirmo blerjen me JonCoin nga wallet-i?')) return false;
+
     setCheckingOut(true);
     try {
-      const response = await API.post('/payments/create-checkout-session', {
-        productId,
-        quantity: 1,
+      await API.post('/orders', {
+        products: [{ productId, quantity: 1 }],
       });
-      
-      // Redirect to Stripe Checkout
-      window.location.href = response.data.url;
+      alert('✅ Blerja u krye me JonCoin.');
+      await fetchProducts();
+      const { balance: bal } = await getJonCoinBalance();
+      setJonCoinBalance(Number(bal) || 0);
+      return true;
     } catch (error) {
-      console.error('Error creating checkout:', error);
-      alert(error.response?.data?.msg || 'Failed to start checkout');
+      console.error('Error purchasing with JonCoin:', error);
+      alert(error.response?.data?.msg || 'Blerja dështoi');
+      return false;
+    } finally {
       setCheckingOut(false);
     }
   };
@@ -202,7 +198,7 @@ export default function MarketplaceSimple() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((product) => {
           const isOwner = product.sellerId === user?.id;
-          const isSold = product.status === 'sold';
+          const isSold = Number(product.stock || 0) <= 0 || product.status === 'sold';
 
           return (
             <div
@@ -243,7 +239,7 @@ export default function MarketplaceSimple() {
 
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    €{product.price}
+                    {product.price} JonCoin
                   </span>
                   <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium capitalize">
                     {product.condition}
@@ -275,11 +271,12 @@ export default function MarketplaceSimple() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      createOrder(product.id);
+                      buyWithJonCoin(product.id);
                     }}
-                    className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    disabled={checkingOut}
+                    className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
                   >
-                    Bli Tani
+                    {checkingOut ? '…' : 'Bli me JonCoin'}
                   </button>
                 )}
               </div>
@@ -355,7 +352,7 @@ export default function MarketplaceSimple() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Çmimi (€)
+                  Çmimi (JonCoin)
                 </label>
                 <input
                   type="number"
@@ -453,7 +450,7 @@ export default function MarketplaceSimple() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                  €{selectedProduct.price}
+                  {selectedProduct.price} JonCoin
                 </span>
                 <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium capitalize">
                   {selectedProduct.condition}
@@ -502,15 +499,18 @@ export default function MarketplaceSimple() {
                 </div>
               </div>
 
-              {selectedProduct.sellerId !== user?.id && selectedProduct.status !== 'sold' && (
+              {selectedProduct.sellerId !== user?.id &&
+                Number(selectedProduct.stock || 0) > 0 &&
+                selectedProduct.status !== 'sold' && (
                 <button
-                  onClick={() => {
-                    createOrder(selectedProduct.id);
-                    setSelectedProduct(null);
+                  onClick={async () => {
+                    const ok = await buyWithJonCoin(selectedProduct.id);
+                    if (ok) setSelectedProduct(null);
                   }}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
+                  disabled={checkingOut}
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg disabled:opacity-50"
                 >
-                  🛒 Bli Tani - €{selectedProduct.price}
+                  {checkingOut ? '…' : `🛒 Bli me JonCoin — ${selectedProduct.price}`}
                 </button>
               )}
 

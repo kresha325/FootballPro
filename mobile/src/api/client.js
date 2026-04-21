@@ -60,7 +60,8 @@ export const loginRequest = (email, password) => api.post('/api/auth/login', { e
 export const registerRequest = (payload) => api.post('/api/auth/register', payload);
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
 export const meRequest = () => api.get('/api/auth/me');
-export const postsRequest = () => api.get('/api/posts');
+export const postsRequest = (params = {}) => api.get('/api/posts', { params });
+export const userPostsRequest = (userId) => api.get(`/api/posts/user/${userId}`);
 export const createPostRequest = (payload = {}) => {
   const form = new FormData();
   if (payload.content) {
@@ -76,9 +77,12 @@ export const createPostRequest = (payload = {}) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+export const setPostSponsorsRequest = (postId, sponsorIds = []) =>
+  api.post(`/api/posts/${postId}/sponsors`, { sponsorIds });
 export const myProfileRequest = () => api.get('/api/profiles/me');
 export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
 export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });
+export const clubMembersRequestMembership = (payload) => api.post('/api/club-members/request', payload);
 export const createMyProfileRequest = (payload = {}) => api.post('/api/profiles/me', payload);
 export const updateMyProfileRequest = (payload = {}) => {
   const form = new FormData();
@@ -130,10 +134,19 @@ export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-
 export const getOrCreateConversationRequest = (userId) => api.get(`/api/messaging/conversations/user/${userId}`);
 export const conversationMessagesRequest = (conversationId, params = {}) =>
   api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
-export const sendConversationMessageRequest = (conversationId, content) =>
-  api.post(`/api/messaging/conversations/${conversationId}/messages`, { content });
+export const sendConversationMessageRequest = (conversationId, content, replyToId) => {
+  const fd = new FormData();
+  fd.append('content', content || '');
+  if (replyToId != null) fd.append('replyToId', String(replyToId));
+  return api.post(`/api/messaging/conversations/${conversationId}/messages`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const markConversationReadRequest = (conversationId) =>
   api.put(`/api/messaging/conversations/${conversationId}/read`);
+export const editMessageRequest = (messageId, content) =>
+  api.put(`/api/messaging/messages/${messageId}`, { content });
+export const deleteMessageRequest = (messageId) => api.delete(`/api/messaging/messages/${messageId}`);
 
 export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });
 export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');
@@ -153,6 +166,7 @@ export const joncoinTransferRequest = (toUserId, amount, description = '') =>
   api.post('/api/joncoin/transfer', { toUserId, amount, description });
 
 export const videosRequest = (params = {}) => api.get('/api/videos', { params });
+export const userVideosRequest = (userId) => api.get(`/api/videos/user/${userId}`);
 export const trendingVideosRequest = (params = {}) => api.get('/api/videos/trending', { params });
 export const likeVideoRequest = (videoId) => api.post(`/api/videos/${videoId}/like`);
 export const uploadVideoRequest = (payload = {}) => {
@@ -176,6 +190,8 @@ export const engagementRateAnalyticsRequest = (period = 30) =>
 
 export const gamificationUserRequest = () => api.get('/api/gamification/user');
 export const gamificationAchievementsRequest = () => api.get('/api/gamification/achievements');
+export const transferHistoryByUserRequest = (userId) => api.get(`/api/transfer-history/user/${userId}`);
+export const clubStaffAssignmentsRequest = (staffId) => api.get(`/api/club-staff/staff/${staffId}`);
 export const gamificationBadgesRequest = () => api.get('/api/gamification/badges');
 export const gamificationLeaderboardRequest = () => api.get('/api/gamification/leaderboard');
 
@@ -226,6 +242,7 @@ export const parentVerificationRequest = (parentEmail) =>
   api.post('/api/verification/parent-request', { parentEmail });
 
 export const sponsorsRequest = () => api.get('/api/sponsors/all');
+export const sponsorsByUserRequest = (userId) => api.get(`/api/sponsors/user/${userId}`);
 export const createSponsorRequest = (payload = {}) => {
   const form = new FormData();
   Object.entries(payload).forEach(([key, value]) => {

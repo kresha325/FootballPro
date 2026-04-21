@@ -34,7 +34,8 @@ const Videos = lazy(() => import('./components/Videos'));
 const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
 const YouTubeLiveTest = lazy(() => import('./components/YouTubeLiveTest'));
 const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
-// import StreamsPage from './components/StreamsPage';
+const StreamsPage = lazy(() => import('./components/StreamsPage'));
+const EmbedOutboundCall = lazy(() => import('./components/EmbedOutboundCall'));
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
@@ -109,12 +110,13 @@ function App() {
             <Route path="/gallery/:id" element={user ? <Gallery /> : <Navigate to="/login" />} />
             <Route path="/search" element={user ? <Search /> : <Navigate to="/login" />} />
             <Route path="/messaging" element={user ? <Messaging /> : <Navigate to="/login" />} />
+            <Route path="/embed-call" element={user ? <EmbedOutboundCall /> : <Navigate to="/login" />} />
             <Route path="/marketplace" element={user ? <Marketplace /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
                   <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
-            {/* <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} /> */}
+            <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <Gamification /> : <Navigate to="/login" />} />

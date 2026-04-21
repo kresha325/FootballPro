@@ -7,6 +7,7 @@ import {
   joncoinTransactionsRequest,
   joncoinTransferRequest,
   joncoinWithdrawRequest,
+  myOrdersRequest,
 } from '../api/client';
 
 function WalletSkeleton() {
@@ -22,19 +23,29 @@ function WalletSkeleton() {
 export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [buyAmount, setBuyAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawFeePct, setWithdrawFeePct] = useState(5);
   const [toUserId, setToUserId] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
     try {
-      const [balanceRes, txRes] = await Promise.all([joncoinBalanceRequest(), joncoinTransactionsRequest()]);
+      const [balanceRes, txRes, ordersRes] = await Promise.all([
+        joncoinBalanceRequest(),
+        joncoinTransactionsRequest(),
+        myOrdersRequest(),
+      ]);
       setBalance(Number(balanceRes?.data?.balance || 0));
+      const pct = balanceRes?.data?.withdrawCommissionPercent;
+      setWithdrawFeePct(Number.isFinite(Number(pct)) ? Number(pct) : 5);
       setTransactions(Array.isArray(txRes.data) ? txRes.data : []);
+      const ord = ordersRes?.data;
+      setOrders(Array.isArray(ord) ? ord.slice(0, 15) : []);
     } catch (err) {
       Alert.alert('Wallet error', extractErrorMessage(err, 'Could not load wallet data'));
     } finally {
@@ -51,7 +62,13 @@ export default function WalletScreen() {
     const amount = Number(buyAmount);
     if (!amount || amount <= 0) return;
     try {
-      await joncoinPurchaseRequest(amount);
+      const res = await joncoinPurchaseRequest(amount);
+      const auto = res?.data?.autoCompleted;
+      if (auto) {
+        Alert.alert('JonCoin', 'Blerja u krye; balanca u përditësua.');
+      } else {
+        Alert.alert('JonCoin', 'Kërkesa u regjistrua (në pritje të konfirmimit).');
+      }
       setBuyAmount('');
       await loadData({ silent: true });
     } catch (err) {
@@ -63,7 +80,13 @@ export default function WalletScreen() {
     const amount = Number(withdrawAmount);
     if (!amount || amount <= 0) return;
     try {
-      await joncoinWithdrawRequest(amount);
+      const res = await joncoinWithdrawRequest(amount);
+      const d = res?.data || {};
+      const msg =
+        d.netPayout != null && d.feeAmount != null
+          ? `Request sent. Gross ${d.grossAmount}, fee ${d.commissionPercent}% (${d.feeAmount}), net payout ${d.netPayout}.`
+          : 'Withdrawal request sent.';
+      Alert.alert('Withdraw', msg);
       setWithdrawAmount('');
       await loadData({ silent: true });
     } catch (err) {
@@ -121,6 +144,7 @@ export default function WalletScreen() {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Withdraw JonCoin</Text>
+            <Text style={styles.feeHint}>{withdrawFeePct}% withdrawal fee applies to the amount you cash out.</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={withdrawAmount} onChangeText={setWithdrawAmount} placeholder="Amount" />
             <TouchableOpacity style={styles.warningBtn} onPress={withdraw}>
               <Text style={styles.primaryBtnText}>Withdraw</Text>
@@ -135,6 +159,19 @@ export default function WalletScreen() {
               <Text style={styles.primaryBtnText}>Transfer</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.sectionTitle}>Recent orders (marketplace)</Text>
+          {orders.length === 0 ? (
+            <Text style={styles.emptyInline}>No orders yet.</Text>
+          ) : (
+            orders.map((o) => (
+              <View key={String(o.id)} style={styles.orderRow}>
+                <Text style={styles.orderText}>
+                  #{o.id} · {o.totalAmount} JC · {o.status || '—'}
+                </Text>
+              </View>
+            ))
+          )}
 
           <Text style={styles.sectionTitle}>Transactions</Text>
         </View>
@@ -173,6 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardTitle: { color: '#0f172a', fontWeight: '800', marginBottom: 8 },
+  feeHint: { color: '#64748b', fontSize: 12, marginBottom: 8 },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -200,4 +238,14 @@ const styles = StyleSheet.create({
   txDesc: { color: '#475569', marginTop: 4 },
   skeletonBlock: { height: 90, backgroundColor: '#e2e8f0' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
+  emptyInline: { color: '#64748b', marginBottom: 10, fontSize: 13 },
+  orderRow: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+  },
+  orderText: { color: '#334155', fontSize: 13 },
 });

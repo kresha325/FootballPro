@@ -1,4 +1,4 @@
-const { User, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Match } = require('../models');
+const { User, Profile, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Match } = require('../models');
 const sequelize = require('sequelize');
 
 // Award points and level up
@@ -36,6 +36,38 @@ async function getUserGamification(req, res) {
       },
       order: [['matchDate', 'DESC'], ['id', 'DESC']],
     });
+
+    const profileRow = await Profile.findOne({ where: { userId } });
+    const pStats =
+      profileRow && profileRow.stats && typeof profileRow.stats === 'object' && !Array.isArray(profileRow.stats)
+        ? profileRow.stats
+        : {};
+
+    const participationCount = matches.length;
+    let goalsFromMatches = 0;
+    let goalsInMatchMax = 0;
+    let cleanSheetCount = 0;
+    for (const m of matches) {
+      const isHome = m.homeUserId === userId;
+      const userScore = isHome ? Number(m.scoreHome || 0) : Number(m.scoreAway || 0);
+      const oppScore = isHome ? Number(m.scoreAway || 0) : Number(m.scoreHome || 0);
+      goalsFromMatches += userScore;
+      if (userScore > goalsInMatchMax) goalsInMatchMax = userScore;
+      if (oppScore === 0 && userScore > 0) cleanSheetCount += 1;
+    }
+
+    const numStat = (v, fallback = 0) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const goals =
+      pStats.goals !== undefined && pStats.goals !== null && String(pStats.goals).trim() !== ''
+        ? numStat(pStats.goals, goalsFromMatches)
+        : goalsFromMatches;
+    const assists =
+      pStats.assists !== undefined && pStats.assists !== null && String(pStats.assists).trim() !== ''
+        ? numStat(pStats.assists, 0)
+        : matches.reduce((sum, m) => sum + numStat(m.assists, 0), 0);
     const wins = matches.filter(m =>
       (m.homeUserId === userId && m.scoreHome > m.scoreAway) ||
       (m.awayUserId === userId && m.scoreAway > m.scoreHome)
@@ -100,7 +132,7 @@ async function getUserGamification(req, res) {
         });
       }
       const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
-      if (!hasAchievement && postsCount >= milestone) {
+      if (!hasAchievement && participationCount >= milestone) {
         await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
         const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
         if (!hasBadge) {
@@ -150,6 +182,13 @@ async function getUserGamification(req, res) {
           case 'comments': unlocked = commentsCount >= criteria.value; break;
           case 'level': unlocked = user.level >= criteria.value; break;
           case 'points': unlocked = user.points >= criteria.value; break;
+          case 'goals': unlocked = goals >= criteria.value; break;
+          case 'assists': unlocked = assists >= criteria.value; break;
+          case 'matches': unlocked = participationCount >= criteria.value; break;
+          case 'participation': unlocked = participationCount >= criteria.value; break;
+          case 'streak': unlocked = streak >= criteria.value; break;
+          case 'goalsInMatch': unlocked = goalsInMatchMax >= criteria.value; break;
+          case 'cleanSheet': unlocked = cleanSheetCount >= criteria.value; break;
         }
         if (unlocked) {
           await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
@@ -167,13 +206,6 @@ async function getUserGamification(req, res) {
     const userAchievements = await UserAchievement.findAll({ where: { userId }, attributes: ['achievementId', 'unlockedAt'] });
     const unlockedMap = {};
     userAchievements.forEach(ua => { unlockedMap[ua.achievementId] = ua.unlockedAt; });
-    // Statistika të avancuara për progres custom
-    // Merr statistika të user-it (goals, assists, matches, winStreak, blocks, keyPasses, captain, cleanSheet, etj.)
-    // Këtu mund të shtosh query të tjera për statistika sipas nevojës
-    // Shembull: goalsCount, assistsCount, matchesCount, winStreak, blocksCount, keyPassesCount, captainCount, cleanSheetCount
-    // Për demonstrim, vendos vlera default 0
-    // TODO: Shto query reale për statistika të avancuara
-    // Për demonstrim, përdor vlera default 0
     const stats = {
       posts: postsCount,
       followers: followersCount,
@@ -181,17 +213,18 @@ async function getUserGamification(req, res) {
       comments: commentsCount,
       level: user.level,
       points: user.points,
-      goals: 0, // Shto query për numrin e golave
-      goalsInMatch: 0, // Shto query për golat në një ndeshje
-      assists: 0, // Shto query për asistet
-      matches: matches ? matches.length : 0,
+      goals,
+      goalsInMatch: goalsInMatchMax,
+      assists,
+      matches: participationCount,
+      participation: participationCount,
       winStreak: streak,
-      blocks: 0, // Shto query për bllokimet
-      keyPasses: 0, // Shto query për pasimet kyçe
-      captain: 0, // Shto query për ndeshjet si kapiten
-      cleanSheet: 0 // Shto query për clean sheets
+      streak,
+      blocks: numStat(pStats.blocks, 0),
+      keyPasses: numStat(pStats.keyPasses, 0),
+      captain: numStat(pStats.captain, 0),
+      cleanSheet: cleanSheetCount,
     };
-    // TODO: Shto query për statistika reale nga modelet për secilën fushë
     const achievements = achievementsRaw.map(achievement => {
       const unlocked = !!unlockedMap[achievement.id];
       let progress = 0;

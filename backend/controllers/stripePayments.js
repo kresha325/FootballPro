@@ -5,52 +5,11 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
 
-// Create Stripe Checkout Session
+// Marketplace përdor JonCoin (shiko orders.createOrder). Endpoint mbetet për klientë të vjetër.
 exports.createCheckoutSession = async (req, res) => {
-  try {
-    const { productId, quantity = 1 } = req.body;
-
-    const product = await Product.findByPk(productId);
-    if (!product) {
-      return res.status(404).json({ msg: 'Product not found' });
-    }
-
-    if (product.stock < quantity) {
-      return res.status(400).json({ msg: 'Not enough stock' });
-    }
-
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: product.name,
-              description: product.description,
-              images: product.imageUrl ? [`${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}${product.imageUrl}`] : [],
-            },
-            unit_amount: Math.round(product.price * 100), // Convert to cents
-          },
-          quantity,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/marketplace?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/marketplace?canceled=true`,
-      metadata: {
-        userId: req.user.id,
-        productId: product.id,
-        quantity,
-      },
-    });
-
-    res.json({ sessionId: session.id, url: session.url });
-  } catch (error) {
-    console.error('Stripe checkout error:', error);
-    res.status(500).json({ msg: 'Failed to create checkout session', error: error.message });
-  }
+  return res.status(400).json({
+    msg: 'Marketplace purchases use JonCoin. Use POST /api/orders with { products: [{ productId, quantity }] } from your wallet balance.',
+  });
 };
 
 // Stripe Webhook - Handle payment success

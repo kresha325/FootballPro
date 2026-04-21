@@ -53,7 +53,7 @@ export default function MarketplaceScreen() {
     try {
       const quantity = 1;
       await createOrderRequest([{ productId: product.id, quantity }]);
-      Alert.alert('Order created', 'Your order was created successfully.');
+      Alert.alert('Blerja', 'Porosia u krye me JonCoin.');
       await loadData({ silent: true });
     } catch (err) {
       Alert.alert('Purchase failed', extractErrorMessage(err, 'Could not create order'));

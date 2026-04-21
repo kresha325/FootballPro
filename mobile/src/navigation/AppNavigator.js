@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
+import FeedPostPagerScreen from '../screens/FeedPostPagerScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import MarketplaceScreen from '../screens/MarketplaceScreen';
@@ -19,6 +20,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
+import OutgoingCallScreen from '../screens/OutgoingCallScreen';
 import GoLiveScreen from '../screens/GoLiveScreen';
 import MessagingScreen from '../screens/MessagingScreen';
 import ConversationScreen from '../screens/ConversationScreen';
@@ -35,6 +37,7 @@ import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import LiveViewerScreen from '../screens/LiveViewerScreen';
 import { useAuth } from '../context/AuthContext';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
+import { APP_BRAND_NAME } from '../config/branding';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -52,19 +55,20 @@ const formatBadge = (value) => {
 
 function MessagingNavigator() {
   return (
-    <MessagingStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
-      <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: 'Jon Sport' }} />
-      <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Jon Sport' }} />
+    <MessagingStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+      <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
+      <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: APP_BRAND_NAME }} />
     </MessagingStack.Navigator>
   );
 }
 
 function FeedNavigator() {
   return (
-    <FeedStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
-      <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: 'Jon Sport' }} />
-      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: 'Jon Sport' }} />
-      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: 'Jon Sport' }} />
+    <FeedStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+      <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: APP_BRAND_NAME }} />
+      <FeedStack.Screen name="FeedPostPager" component={FeedPostPagerScreen} options={{ headerShown: false }} />
+      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: APP_BRAND_NAME }} />
+      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: APP_BRAND_NAME }} />
     </FeedStack.Navigator>
   );
 }
@@ -73,7 +77,7 @@ function ProfileNavigator() {
   const { logout } = useAuth();
 
   return (
-    <ProfileStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
+    <ProfileStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
       <ProfileStack.Screen
         name="MyProfile"
         component={ProfileScreen}
@@ -88,38 +92,44 @@ function ProfileNavigator() {
           ),
         }}
       />
-      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Jon Sport' }} />
-      <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: 'Jon Sport' }} />
-      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: 'Jon Sport' }} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: APP_BRAND_NAME }} />
+      <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: APP_BRAND_NAME }} />
+      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
+      <ProfileStack.Screen
+        name="OutgoingCall"
+        component={OutgoingCallScreen}
+        options={{ title: 'Thirrje', headerBackTitleVisible: true }}
+      />
     </ProfileStack.Navigator>
   );
 }
 
 function MoreNavigator() {
   return (
-    <MoreStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
-      <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: 'Jon Sport' }} />
-      <MoreStack.Screen name="LiveViewer" component={LiveViewerScreen} options={{ title: 'Jon Sport' }} />
+    <MoreStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+      <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="LiveViewer" component={LiveViewerScreen} options={{ title: APP_BRAND_NAME }} />
     </MoreStack.Navigator>
   );
 }
 
 function AppTabs() {
+  const { getSocket } = useAuth();
   const [notificationsBadge, setNotificationsBadge] = React.useState(0);
   const [messagesBadge, setMessagesBadge] = React.useState(0);
 
@@ -130,7 +140,9 @@ function AppTabs() {
         messagingUnreadCountRequest(),
       ]);
       setNotificationsBadge(Number(notifRes?.data?.count || notifRes?.data?.unread || 0));
-      setMessagesBadge(Number(msgRes?.data?.count || msgRes?.data?.unreadCount || 0));
+      setMessagesBadge(
+        Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0)
+      );
     } catch (_err) {
       // Keep previous badge values on failure.
     }
@@ -148,6 +160,22 @@ function AppTabs() {
     }, [refreshBadges])
   );
 
+  React.useEffect(() => {
+    const socket = getSocket?.();
+    if (!socket) return undefined;
+    const bumpMessages = () => {
+      refreshBadges();
+    };
+    socket.on('newMessage', bumpMessages);
+    socket.on('messageUpdated', bumpMessages);
+    socket.on('messageDeleted', bumpMessages);
+    return () => {
+      socket.off('newMessage', bumpMessages);
+      socket.off('messageUpdated', bumpMessages);
+      socket.off('messageDeleted', bumpMessages);
+    };
+  }, [getSocket, refreshBadges]);
+
   return (
     <Tabs.Navigator
       screenListeners={{
@@ -156,7 +184,7 @@ function AppTabs() {
         },
       }}
       screenOptions={({ route }) => ({
-        headerTitle: 'Jon Sport',
+        headerTitle: APP_BRAND_NAME,
         headerTitleAlign: 'center',
         tabBarActiveTintColor: '#0f766e',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
@@ -202,6 +230,12 @@ function AppTabs() {
           headerShown: false,
           tabBarLabel: 'Me',
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('Profile', { screen: 'MyProfile' });
+          },
+        })}
       />
     </Tabs.Navigator>
   );

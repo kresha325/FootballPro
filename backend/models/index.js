@@ -2,10 +2,18 @@ const sequelize = require('../config/database');
 const { DataTypes } = require('sequelize');
 const User = require('./User');
 const JonCoinTransaction = require('./JonCoinTransaction')(sequelize, DataTypes);
+const WithdrawalRequest = require('./WithdrawalRequest')(sequelize, DataTypes);
 const Product = require('./Product');
+const Payment = require('./Payment');
+const Order = require('./Order');
 // Product/Seller association
 Product.belongsTo(User, { as: 'Seller', foreignKey: 'sellerId' });
 User.hasMany(Product, { as: 'Products', foreignKey: 'sellerId' });
+// JonCoin / User
+User.hasMany(JonCoinTransaction, { foreignKey: 'userId' });
+JonCoinTransaction.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(WithdrawalRequest, { foreignKey: 'userId' });
+WithdrawalRequest.belongsTo(User, { foreignKey: 'userId' });
 const ProfileView = require('./ProfileView');
 const TournamentModule = require('./Tournament');
 const Tournament = TournamentModule.Tournament;
@@ -82,6 +90,8 @@ Like.belongsTo(Post, { foreignKey: 'postId' });
 module.exports = {
   User,
   Product,
+  Payment,
+  Order,
   Match,
   Sponsor,
   Ad,
@@ -106,6 +116,7 @@ module.exports = {
   VideoCallHistory,
   Stream,
   JonCoinTransaction,
+  WithdrawalRequest,
   LiveStream
 };
 

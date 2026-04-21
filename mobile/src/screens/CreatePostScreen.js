@@ -2,12 +2,35 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import { createPostRequest, extractErrorMessage } from '../api/client';
+import { createPostRequest, extractErrorMessage, setPostSponsorsRequest, sponsorsByUserRequest } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function CreatePostScreen({ navigation }) {
+  const { user } = useAuth();
   const [content, setContent] = useState('');
   const [media, setMedia] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [mySponsors, setMySponsors] = useState([]);
+  const [selectedSponsorIds, setSelectedSponsorIds] = useState([]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const loadMySponsors = async () => {
+      try {
+        if (!user?.id) return;
+        const res = await sponsorsByUserRequest(user.id);
+        if (!mounted) return;
+        setMySponsors(Array.isArray(res?.data) ? res.data : []);
+      } catch (_err) {
+        if (!mounted) return;
+        setMySponsors([]);
+      }
+    };
+    loadMySponsors();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,7 +74,11 @@ export default function CreatePostScreen({ navigation }) {
         payload.video = { uri: media.uri, name: media.name, type: media.type };
       }
 
-      await createPostRequest(payload);
+      const created = await createPostRequest(payload);
+      const createdPostId = created?.data?.id;
+      if (createdPostId && selectedSponsorIds.length > 0) {
+        await setPostSponsorsRequest(createdPostId, selectedSponsorIds);
+      }
       Alert.alert('Success', 'Post created successfully.');
       navigation.goBack();
     } catch (err) {
@@ -80,6 +107,32 @@ export default function CreatePostScreen({ navigation }) {
       {media?.kind === 'video' ? (
         <View style={styles.videoWrap}>
           <Video source={{ uri: media.uri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+        </View>
+      ) : null}
+
+      {mySponsors.length > 0 ? (
+        <View style={styles.sponsorsWrap}>
+          <Text style={styles.label}>Sponsors on this post</Text>
+          <View style={styles.sponsorsRow}>
+            {mySponsors.map((s) => {
+              const active = selectedSponsorIds.includes(s.id);
+              return (
+                <TouchableOpacity
+                  key={String(s.id)}
+                  style={[styles.sponsorChip, active && styles.sponsorChipActive]}
+                  onPress={() =>
+                    setSelectedSponsorIds((prev) =>
+                      prev.includes(s.id) ? prev.filter((id) => id !== s.id) : [...prev, s.id]
+                    )
+                  }
+                >
+                  <Text style={[styles.sponsorChipText, active && styles.sponsorChipTextActive]} numberOfLines={1}>
+                    {s?.name || 'Sponsor'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
@@ -133,6 +186,37 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     height: 240,
+  },
+  sponsorsWrap: {
+    marginTop: 14,
+  },
+  sponsorsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  sponsorChip: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    maxWidth: '100%',
+  },
+  sponsorChipActive: {
+    borderColor: '#0f766e',
+    backgroundColor: '#ccfbf1',
+  },
+  sponsorChipText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sponsorChipTextActive: {
+    color: '#0f766e',
   },
   primaryButton: {
     marginTop: 14,

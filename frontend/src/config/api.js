@@ -1,26 +1,25 @@
 // Automatic backend URL detection with safe fallbacks
 const getBackendURL = () => {
-  const hostname = window.location.hostname;
-
-  // Explicit localtunnel override
-  if (hostname.includes('loca.lt')) return 'https://tired-birds-rest.loca.lt';
-
-  // Prefer explicit env var if provided
   const envUrl = import.meta?.env?.VITE_API_URL;
   if (envUrl && typeof envUrl === 'string' && envUrl.length) {
     return envUrl.replace(/\/api\/?$/i, '');
   }
 
-  // Fallback to current origin (works in dev when VITE_API_URL not set)
+  const hostname = window.location.hostname;
+  if (hostname.includes('loca.lt')) {
+    const tunnel = import.meta?.env?.VITE_LOCAL_TUNNEL_BACKEND_URL;
+    if (tunnel && typeof tunnel === 'string' && tunnel.trim().length) {
+      return tunnel.replace(/\/api\/?$/i, '').replace(/\/$/, '');
+    }
+  }
+
   try {
-    // If running on localhost during development, default to backend on :10000
     const origin = window.location.hostname;
-    if (!envUrl && (origin === 'localhost' || origin === '127.0.0.1')) {
+    if (origin === 'localhost' || origin === '127.0.0.1') {
       return 'http://localhost:10000';
     }
     return window.location.origin.replace(/\/api\/?$/i, '');
   } catch (e) {
-    // Last-resort empty string to avoid throwing errors in code that imports this file
     return '';
   }
 };
@@ -28,4 +27,6 @@ const getBackendURL = () => {
 export const BACKEND_URL = getBackendURL();
 export const API_URL = BACKEND_URL ? `${BACKEND_URL}/api` : '/api';
 
-console.log('🔗 Backend URL:', BACKEND_URL);
+if (import.meta.env.DEV) {
+  console.log('🔗 Backend URL:', BACKEND_URL);
+}

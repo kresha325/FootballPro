@@ -57,6 +57,8 @@ const Message = sequelize.define('Message', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+}, {
+  timestamps: true,
 });
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });

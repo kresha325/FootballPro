@@ -50,7 +50,9 @@ const API = axios.create({
   baseURL: API_BASE_URL,
 });
 
-console.log('FRONTEND: API baseURL =', API_BASE_URL);
+if (import.meta.env.DEV) {
+  console.log('FRONTEND: API baseURL =', API_BASE_URL);
+}
 
 // Interceptor për Authorization header
 API.interceptors.request.use(config => {

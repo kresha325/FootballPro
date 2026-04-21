@@ -13,7 +13,61 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export default function VideoCallSimple({ targetUser, onClose, initialCallId = null, initialIncomingCall = null, userGestureStream = null }) {
+/**
+ * STUN publik + opsionale TURN nga env (për NAT strikte).
+ * - VITE_WEBRTC_ICE_SERVERS: JSON array, shembull: [{"urls":"turn:host:3478","username":"u","credential":"p"}]
+ * - ose VITE_TURN_URLS (lista me presje) + VITE_TURN_USERNAME + VITE_TURN_CREDENTIAL
+ */
+function getWebRtcIceConfiguration() {
+  const defaults = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+  ];
+  const servers = [...defaults];
+  try {
+    const raw = import.meta.env.VITE_WEBRTC_ICE_SERVERS;
+    if (raw && String(raw).trim()) {
+      const parsed = JSON.parse(String(raw));
+      if (Array.isArray(parsed)) {
+        for (const entry of parsed) {
+          if (!entry) continue;
+          if (entry.urls) servers.push(entry);
+          else if (entry.url) servers.push({ urls: entry.url, username: entry.username, credential: entry.credential });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[WebRTC] VITE_WEBRTC_ICE_SERVERS parse error:', e?.message);
+  }
+  const turnUrls = import.meta.env.VITE_TURN_URLS;
+  const turnUser = import.meta.env.VITE_TURN_USERNAME;
+  const turnCred = import.meta.env.VITE_TURN_CREDENTIAL;
+  if (turnUrls && turnUser !== undefined && turnUser !== '' && turnCred !== undefined && turnCred !== '') {
+    const urls = String(turnUrls)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (urls.length) {
+      servers.push({
+        urls,
+        username: String(turnUser),
+        credential: String(turnCred),
+      });
+    }
+  }
+  return { iceServers: servers };
+}
+
+export default function VideoCallSimple({
+  targetUser,
+  onClose,
+  initialCallId = null,
+  initialIncomingCall = null,
+  userGestureStream = null,
+  /** Thirrje vetëm zanore — pa kamerë lokale (LiveKit + WebRTC fallback) */
+  audioOnly = false,
+}) {
   const { user } = useAuth();
   const { socket, connected } = useSocket();
   const [localStream, setLocalStream] = useState(null);
@@ -31,6 +85,10 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   useEffect(() => {
     if (initialCallId) setCurrentCallId(initialCallId);
   }, [initialCallId]);
+
+  useEffect(() => {
+    if (audioOnly) setIsVideoOff(true);
+  }, [audioOnly]);
 
   useEffect(() => {
     if (userGestureStream) {
@@ -59,15 +117,6 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   const livekitTracksRef = useRef([]);
 
   // Thirrja niset vetëm me klikim (jo automatikisht)
-
-  // ICE servers configuration
-  const iceServers = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-    ],
-  };
 
   useEffect(() => {
     if (!socket || !connected) {
@@ -253,15 +302,17 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: isMobile ? 640 : 1280 },
-          height: { ideal: isMobile ? 480 : 720 },
-          facingMode: 'user' // Front camera për mobile
-        },
+        video: audioOnly
+          ? false
+          : {
+              width: { ideal: isMobile ? 640 : 1280 },
+              height: { ideal: isMobile ? 480 : 720 },
+              facingMode: 'user',
+            },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
         },
       });
       
@@ -348,7 +399,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
 
     await room.connect(wsUrl, token, { autoSubscribe: true });
 
-    const localTracks = await createLocalTracks({ audio: true, video: true });
+    const localTracks = await createLocalTracks({ audio: true, video: !audioOnly });
     for (const track of localTracks) {
       await room.localParticipant.publishTrack(track);
       if (track.kind === 'video' && localVideoRef.current) {
@@ -402,7 +453,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
   };
 
   const createPeerConnection = (streamOverride) => {
-    const pc = new RTCPeerConnection(iceServers);
+    const pc = new RTCPeerConnection(getWebRtcIceConfiguration());
     peerConnectionRef.current = pc;
 
     // Add local stream to peer connection
@@ -701,7 +752,7 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
         )}
 
         {/* Local Video (Picture in Picture) - Responsive */}
-        {localStream && (
+        {localStream && !audioOnly && (
           <div className="absolute top-2 right-2 sm:top-4 sm:right-4 w-20 h-28 sm:w-32 sm:h-48 bg-gray-800 rounded-lg overflow-hidden shadow-lg">
             <video
               ref={localVideoRef}
@@ -761,15 +812,17 @@ export default function VideoCallSimple({ targetUser, onClose, initialCallId = n
               <PhoneXMarkIcon className="h-7 w-7 sm:h-8 sm:w-8" />
             </button>
 
-            <button
-              onClick={toggleVideo}
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${
-                isVideoOff ? 'bg-red-500' : 'bg-gray-600 active:bg-gray-700'
-              } text-white shadow-lg transition-colors`}
-              aria-label={isVideoOff ? 'Aktivizo kamerën' : 'Fik kamerën'}
-            >
-              <VideoCameraIcon className={`h-5 w-5 sm:h-6 sm:w-6 ${isVideoOff ? 'opacity-40' : ''}`} />
-            </button>
+            {!audioOnly ? (
+              <button
+                onClick={toggleVideo}
+                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${
+                  isVideoOff ? 'bg-red-500' : 'bg-gray-600 active:bg-gray-700'
+                } text-white shadow-lg transition-colors`}
+                aria-label={isVideoOff ? 'Aktivizo kamerën' : 'Fik kamerën'}
+              >
+                <VideoCameraIcon className={`h-5 w-5 sm:h-6 sm:w-6 ${isVideoOff ? 'opacity-40' : ''}`} />
+              </button>
+            ) : null}
           </>
         )}
       </div>

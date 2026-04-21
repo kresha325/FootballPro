@@ -381,3 +381,24 @@ exports.resetUserPassword = async (req, res) => {
   }
 };
 
+/** JonCoin: transaksione në pritje (blerje, tërheqje, shpenzime) për moderim admin. */
+exports.getPendingJonCoinTransactions = async (req, res) => {
+  try {
+    const { JonCoinTransaction, User: UserModel } = require('../models');
+    const transactions = await JonCoinTransaction.findAll({
+      where: { status: 'pending' },
+      order: [['createdAt', 'ASC']],
+      include: [
+        {
+          model: UserModel,
+          attributes: ['id', 'email', 'firstName', 'lastName', 'joncoinBalance'],
+        },
+      ],
+    });
+    res.json({ transactions });
+  } catch (error) {
+    console.error('getPendingJonCoinTransactions:', error);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+

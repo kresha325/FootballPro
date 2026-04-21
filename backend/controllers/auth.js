@@ -190,20 +190,31 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    // In production, send email with reset link
-    // For now, return the token in response (only for development)
-    const resetUrl = `https://192.168.100.57:5174/reset-password/${resetToken}`;
-    
-    console.log('Password reset URL:', resetUrl);
-    
-    // TODO: Send email with resetUrl
-    // await sendEmail({ to: email, subject: 'Password Reset', html: `Click here: ${resetUrl}` });
+    const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:5174').replace(/\/$/, '');
+    const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
 
-    res.json({ 
+    let emailSent = false;
+    try {
+      const emailResult = await sendEmail(user.email, 'passwordReset', user.firstName || 'User', resetUrl);
+      emailSent = !!(emailResult && emailResult.success);
+    } catch (emailErr) {
+      console.error('Password reset email error:', emailErr);
+    }
+
+    const payload = {
       msg: 'If that email exists, a reset link has been sent.',
-      // Remove this in production:
-      resetUrl // Only for development
-    });
+    };
+    const isNonProduction = process.env.NODE_ENV !== 'production';
+    if (isNonProduction) {
+      payload.resetUrl = resetUrl;
+      if (!emailSent) {
+        payload.emailHint = 'Email delivery failed or is not configured; use resetUrl in development only.';
+      }
+    } else if (!emailSent) {
+      console.warn('Password reset: email not sent for user id', user.id);
+    }
+
+    res.json(payload);
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ msg: 'Server error' });

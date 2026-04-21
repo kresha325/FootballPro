@@ -17,9 +17,15 @@ API.interceptors.request.use((config) => {
 export const getJonCoinBalance = async () => {
   try {
     const res = await API.get('/joncoin/balance');
-    return res.data.balance;
+    const d = res.data || {};
+    return {
+      balance: Number(d.balance) || 0,
+      withdrawCommissionPercent: Number.isFinite(Number(d.withdrawCommissionPercent))
+        ? Number(d.withdrawCommissionPercent)
+        : 5,
+    };
   } catch {
-    return 0;
+    return { balance: 0, withdrawCommissionPercent: 5 };
   }
 };
 
