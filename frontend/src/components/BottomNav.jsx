@@ -1,8 +1,18 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useCart } from "../contexts/CartContext";
+
+function formatCartBadge(value) {
+  const n = Number(value || 0);
+  if (!n || n <= 0) return null;
+  if (n > 99) return "99+";
+  return String(n);
+}
 
 function BottomNav() {
   const { user } = useAuth();
+  const { totalPieces } = useCart();
+  const cartBadge = formatCartBadge(totalPieces);
   const rawApiUrl = import.meta.env.VITE_API_URL || '';
   const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
   const getFullUrl = (url) => {
@@ -38,7 +48,14 @@ function BottomNav() {
           }
           aria-label="Marketplace"
         >
-          <span className="text-2xl">🛒</span>
+          <span className="relative inline-flex items-center justify-center">
+            <span className="text-2xl">🛒</span>
+            {cartBadge ? (
+              <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                {cartBadge}
+              </span>
+            ) : null}
+          </span>
           <span className="text-xs md:hidden">Shop</span>
         </NavLink>
 

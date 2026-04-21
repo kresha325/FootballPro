@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { extractErrorMessage, myProfileRequest } from '../api/client';
+import { extractErrorMessage, joncoinBalanceRequest, myProfileRequest } from '../api/client';
 
 export default function ProfileScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
+  const [joncoinBalance, setJoncoinBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -15,8 +16,21 @@ export default function ProfileScreen({ navigation }) {
     setError('');
 
     try {
-      const response = await myProfileRequest();
-      setProfile(response.data || null);
+      const [profileRes, balanceRes] = await Promise.all([
+        myProfileRequest(),
+        joncoinBalanceRequest().catch(() => ({ data: {} })),
+      ]);
+      const p = profileRes.data || null;
+      setProfile(p);
+      const fromProfile = p?.joncoinBalance;
+      const fromApi = balanceRes?.data?.balance;
+      const n =
+        fromProfile != null && fromProfile !== ''
+          ? Number(fromProfile)
+          : fromApi != null && fromApi !== ''
+            ? Number(fromApi)
+            : null;
+      setJoncoinBalance(Number.isFinite(n) ? n : 0);
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load profile'));
     } finally {
@@ -64,6 +78,12 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.name}>
           {(profile?.firstName || '').trim()} {(profile?.lastName || '').trim()}
         </Text>
+        {joncoinBalance != null ? (
+          <View style={styles.joncoinWrap}>
+            <Text style={styles.joncoinLabel}>JonCoin</Text>
+            <Text style={styles.joncoinValue}>{joncoinBalance}</Text>
+          </View>
+        ) : null}
         <Text style={styles.role}>Role: {profile?.role || 'N/A'}</Text>
         <Text style={styles.row}>Email: {profile?.email || 'N/A'}</Text>
         <Text style={styles.row}>City: {profile?.city || 'N/A'}</Text>
@@ -117,6 +137,18 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     padding: 16,
   },
+  joncoinWrap: {
+    marginTop: 10,
+    marginBottom: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  joncoinLabel: { color: '#92400e', fontWeight: '700', fontSize: 12 },
+  joncoinValue: { color: '#b45309', fontWeight: '800', fontSize: 22, marginTop: 2 },
   name: {
     fontSize: 22,
     fontWeight: '800',

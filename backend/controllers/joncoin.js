@@ -1,5 +1,6 @@
 const sequelize = require('../config/database');
 const { User, JonCoinTransaction, WithdrawalRequest } = require('../models');
+const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
 
 const round2 = (n) => Math.round(parseFloat(n || 0) * 100) / 100;
 
@@ -8,21 +9,6 @@ function getWithdrawCommissionPercent() {
   const raw = parseFloat(process.env.JONCOIN_WITHDRAW_COMMISSION_PERCENT ?? '5');
   if (!Number.isFinite(raw)) return 5;
   return Math.min(25, Math.max(0, raw));
-}
-
-/** Balancë nga transaksionet e përfunduara (si në GET /balance). */
-async function getCompletedLedgerBalance(userId, { transaction } = {}) {
-  const txs = await JonCoinTransaction.findAll({ where: { userId }, transaction });
-  let balance = 0;
-  for (const tx of txs) {
-    if (tx.status !== 'completed') continue;
-    if (['purchase', 'reward', 'refund'].includes(tx.type)) {
-      balance += parseFloat(tx.amount);
-    } else if (['spend', 'withdrawal', 'commission'].includes(tx.type)) {
-      balance -= parseFloat(tx.amount);
-    }
-  }
-  return round2(balance);
 }
 
 /** Shuma e tërheqjeve në pritje (rezervohet nga balanca e disponueshme për withdraw të ri). */

@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import PostsProvider from './contexts/PostsContext';
+import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/Navbar';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -66,6 +67,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <CartProvider>
       <PostsProvider>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           {user && <Navbar />}
@@ -141,6 +143,7 @@ function App() {
         </main>
         </div>
       </PostsProvider>
+      </CartProvider>
     </ErrorBoundary>
   );
 }

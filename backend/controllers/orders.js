@@ -1,5 +1,6 @@
 const sequelize = require('../config/database');
 const { User, Product, Order, Payment, JonCoinTransaction } = require('../models');
+const { notifySellersOfMarketplaceOrder } = require('../services/marketplaceOrderChat');
 
 /** Balancë llogaritëse vetëm nga transaksionet e përfunduara (përdoret për blerje marketplace). */
 async function getCompletedJonCoinBalance(userId, { transaction } = {}) {
@@ -44,7 +45,11 @@ exports.getOrder = async (req, res) => {
  */
 exports.createOrder = async (req, res) => {
   const { products } = req.body;
-  const buyerId = req.user.id;
+  const buyerId = req.user?.id;
+
+  if (buyerId == null) {
+    return res.status(401).json({ msg: 'Not authenticated' });
+  }
 
   if (!Array.isArray(products) || products.length === 0) {
     return res.status(400).json({ msg: 'Cart is empty' });
@@ -65,11 +70,16 @@ exports.createOrder = async (req, res) => {
     .sort((a, b) => a - b);
 
   try {
-    const result = await sequelize.transaction(async (t) => {
+    const { order: result, lockedProducts: lockedList } = await sequelize.transaction(async (t) => {
       const lockedProducts = [];
       let totalAmount = 0;
       const orderLines = [];
       const sellerCredit = {};
+
+      const buyerRow = await User.findByPk(buyerId, { transaction: t });
+      if (!buyerRow) {
+        throw Object.assign(new Error('Buyer not found'), { status: 400 });
+      }
 
       for (const productId of sortedProductIds) {
         const quantity = quantityByProductId[productId];
@@ -84,16 +94,23 @@ exports.createOrder = async (req, res) => {
         if (product.sellerId === buyerId) {
           throw Object.assign(new Error('You cannot buy your own listing'), { status: 400 });
         }
-        if (product.stock < quantity) {
+
+        const stockN = product.stock == null || product.stock === '' ? 0 : parseInt(String(product.stock), 10);
+        if (!Number.isFinite(stockN) || stockN < quantity) {
           throw Object.assign(new Error('Product not available or insufficient stock'), { status: 400 });
         }
 
-        const lineTotal = Math.round(parseFloat(product.price) * quantity * 100) / 100;
+        const unitPrice = Math.round(parseFloat(product.price) * 100) / 100;
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw Object.assign(new Error('Invalid product price'), { status: 400 });
+        }
+
+        const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
         totalAmount += lineTotal;
         orderLines.push({
           productId,
           quantity,
-          price: product.price,
+          price: unitPrice,
         });
         sellerCredit[product.sellerId] = (sellerCredit[product.sellerId] || 0) + lineTotal;
         lockedProducts.push({ product, quantity });
@@ -159,24 +176,31 @@ exports.createOrder = async (req, res) => {
           { transaction: t }
         );
 
-        const seller = await User.findByPk(sellerId, { transaction: t, lock: t.LOCK.UPDATE });
+        const seller = await User.findByPk(sellerId, { transaction: t });
         if (seller) {
           seller.joncoinBalance = Math.round((parseFloat(seller.joncoinBalance || 0) + gross) * 100) / 100;
           await seller.save({ transaction: t });
         }
       }
 
-      const buyer = await User.findByPk(buyerId, { transaction: t, lock: t.LOCK.UPDATE });
-      if (buyer) {
-        buyer.joncoinBalance = Math.round((parseFloat(buyer.joncoinBalance || 0) - totalAmount) * 100) / 100;
-        await buyer.save({ transaction: t });
-      }
+      buyerRow.joncoinBalance = Math.round((parseFloat(buyerRow.joncoinBalance || 0) - totalAmount) * 100) / 100;
+      await buyerRow.save({ transaction: t });
 
       for (const { product, quantity } of lockedProducts) {
-        await product.update({ stock: product.stock - quantity }, { transaction: t });
+        const stockN = product.stock == null || product.stock === '' ? 0 : parseInt(String(product.stock), 10);
+        const nextStock = Math.max(0, (Number.isFinite(stockN) ? stockN : 0) - quantity);
+        await product.update({ stock: nextStock }, { transaction: t });
       }
 
-      return order;
+      return { order, lockedProducts };
+    });
+
+    setImmediate(() => {
+      notifySellersOfMarketplaceOrder(sequelize, {
+        buyerId,
+        orderId: result.id,
+        lockedProducts: lockedList,
+      }).catch((e) => console.error('marketplaceOrderChat', e));
     });
 
     const orderJson = result.toJSON ? result.toJSON() : result;
@@ -187,7 +211,7 @@ exports.createOrder = async (req, res) => {
   } catch (err) {
     const status = err.status || 500;
     const msg = err.message || 'Server error';
-    if (status === 500) console.error('createOrder JonCoin:', err);
+    if (status === 500) console.error('createOrder JonCoin:', err && err.message, err);
     return res.status(status).json({ msg });
   }
 };

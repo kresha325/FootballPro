@@ -30,7 +30,7 @@ const Product = sequelize.define('Product', {
     type: DataTypes.ENUM('gear', 'tickets', 'merchandise'),
     allowNull: false,
   },
-  imageUrl: DataTypes.STRING,
+  imageUrl: DataTypes.TEXT,
   stock: {
     type: DataTypes.INTEGER,
     defaultValue: 0,

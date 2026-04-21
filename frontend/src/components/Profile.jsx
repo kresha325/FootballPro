@@ -534,6 +534,9 @@ const Profile = () => {
       try {
         const res = await profileAPI.getProfile(id);
         setProfile(res.data);
+        if (res.data?.joncoinBalance != null && user?.id != null && Number(user.id) === Number(id)) {
+          setJonCoinBalance(Number(res.data.joncoinBalance) || 0);
+        }
 
         // Fetch user posts using context
         await fetchUserPostsRef.current(id);
@@ -555,10 +558,6 @@ const Profile = () => {
         }));
 
         await fetchSponsors(id);
-
-        // Fetch JonCoin balance
-        const { balance } = await getJonCoinBalance();
-        setJonCoinBalance(Number(balance) || 0);
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
       } finally {
@@ -567,10 +566,26 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
-    if (!id || !user || user.id === parseInt(id)) return;
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { balance } = await getJonCoinBalance();
+        if (!cancelled) setJonCoinBalance(Number(balance) || 0);
+      } catch {
+        if (!cancelled) setJonCoinBalance(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!id || !user || Number(user.id) === Number(id)) return;
     const checkStatus = async () => {
       try {
         const followStatusRes = await profileAPI.checkFollowStatus(id);
@@ -668,7 +683,7 @@ const Profile = () => {
     </div>
   );
 
-  const isOwner = user?.id === profile.id;
+  const isOwner = user != null && profile != null && Number(user.id) === Number(profile.id);
   const tabs = [
     { key: 'overview', label: '🏠 Overview' },
     { key: 'posts', label: '📝 Posts' },
@@ -772,8 +787,8 @@ const Profile = () => {
                 {sponsorList.length > 0 && (
                   <span className="text-xs font-bold animate-pulse" style={{ color: '#22c55e', letterSpacing: '1px', textShadow: '0 0 8px #bbf7d0, 0 0 2px #fff' }}>Sponsored</span>
                 )}
-                {/* JonCoin Balance */}
-                {jonCoinBalance !== null && (
+                {/* JonCoin — vetëm në profilin tënd (wallet nga ledger) */}
+                {user && Number(user.id) === Number(id) && (
                   <span className="ml-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
                     <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="gold" strokeWidth="2" fill="yellow" /><text x="10" y="15" textAnchor="middle" fontSize="10" fill="#b45309" fontWeight="bold">JC</text></svg>
                     {jonCoinBalance} JonCoin

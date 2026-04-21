@@ -7,6 +7,7 @@ const { sendEmail } = require('../services/emailService');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
 const { Op, fn, col, where: sequelizeWhere } = require('sequelize');
+const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
 
 const resolveClubUser = async ({ clubId, clubName }) => {
   let clubUser;
@@ -219,7 +220,7 @@ exports.getProfile = async (req, res) => {
       where: { userId }, 
       include: [{
         model: User,
-        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender']
+        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance']
       }]
     });
 
@@ -243,6 +244,13 @@ exports.getProfile = async (req, res) => {
 
     // Merge user data into profile response
     // Add matches, achievements, media (dummy for now, replace with real fetch if needed)
+    let joncoinBalance = 0;
+    try {
+      joncoinBalance = await getCompletedLedgerBalance(userId);
+    } catch (_e) {
+      joncoinBalance = user ? Math.round(parseFloat(user.joncoinBalance || 0) * 100) / 100 : 0;
+    }
+
     const response = {
       ...plainProfile,
       id: plainProfile.userId,
@@ -260,6 +268,7 @@ exports.getProfile = async (req, res) => {
       achievements: plainProfile.achievements || [],
       media: plainProfile.media || [],
       performanceTrend: plainProfile.performanceTrend || [],
+      joncoinBalance,
     };
     // Standardize profilePhoto path for avatar
     if (response.profilePhoto) {

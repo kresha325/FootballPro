@@ -10,6 +10,9 @@ import FeedPostPagerScreen from '../screens/FeedPostPagerScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import MarketplaceScreen from '../screens/MarketplaceScreen';
+import CartScreen from '../screens/CartScreen';
+import CreateProductScreen from '../screens/CreateProductScreen';
+import EditProductScreen from '../screens/EditProductScreen';
 import WalletScreen from '../screens/WalletScreen';
 import VideosScreen from '../screens/VideosScreen';
 import InsightsScreen from '../screens/InsightsScreen';
@@ -36,6 +39,7 @@ import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import LiveViewerScreen from '../screens/LiveViewerScreen';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 import { APP_BRAND_NAME } from '../config/branding';
 
@@ -45,6 +49,7 @@ const FeedStack = createNativeStackNavigator();
 const MessagingStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const MoreStack = createNativeStackNavigator();
+const MarketplaceStack = createNativeStackNavigator();
 
 const formatBadge = (value) => {
   const n = Number(value || 0);
@@ -70,6 +75,25 @@ function FeedNavigator() {
       <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: APP_BRAND_NAME }} />
       <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: APP_BRAND_NAME }} />
     </FeedStack.Navigator>
+  );
+}
+
+function MarketplaceNavigator() {
+  return (
+    <MarketplaceStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+      <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
+      <MarketplaceStack.Screen
+        name="CreateProduct"
+        component={CreateProductScreen}
+        options={{ title: 'Shto produkt' }}
+      />
+      <MarketplaceStack.Screen
+        name="EditProduct"
+        component={EditProductScreen}
+        options={{ title: 'Ndrysho produktin' }}
+      />
+      <MarketplaceStack.Screen name="Cart" component={CartScreen} options={{ title: 'Shporta' }} />
+    </MarketplaceStack.Navigator>
   );
 }
 
@@ -130,6 +154,7 @@ function MoreNavigator() {
 
 function AppTabs() {
   const { getSocket } = useAuth();
+  const { totalPieces } = useCart();
   const [notificationsBadge, setNotificationsBadge] = React.useState(0);
   const [messagesBadge, setMessagesBadge] = React.useState(0);
 
@@ -204,7 +229,15 @@ function AppTabs() {
       })}
     >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Feed' }} />
-      <Tabs.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace', tabBarLabel: 'Market' }} />
+      <Tabs.Screen
+        name="Marketplace"
+        component={MarketplaceNavigator}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Market',
+          tabBarBadge: formatBadge(totalPieces),
+        }}
+      />
       <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <Tabs.Screen
         name="Messages"

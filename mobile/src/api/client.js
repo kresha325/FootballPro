@@ -155,6 +155,45 @@ export const markAllNotificationsReadRequest = () => api.put('/api/notifications
 
 export const productsRequest = () => api.get('/api/products');
 export const productByIdRequest = (id) => api.get(`/api/products/${id}`);
+export const createProductRequest = (payload = {}) => {
+  const form = new FormData();
+  form.append('name', String(payload.name ?? ''));
+  form.append('description', String(payload.description ?? ''));
+  form.append('price', String(payload.price ?? ''));
+  form.append('category', String(payload.category ?? 'gear'));
+  if (payload.stock != null && payload.stock !== '') {
+    form.append('stock', String(payload.stock));
+  }
+  if (payload.sellerId != null) {
+    form.append('sellerId', String(payload.sellerId));
+  }
+  if (payload.image?.uri && payload.image?.name && payload.image?.type) {
+    form.append('image', payload.image);
+  }
+  return api.post('/api/products', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const updateProductRequest = (productId, payload = {}) => {
+  const form = new FormData();
+  form.append('name', String(payload.name ?? ''));
+  form.append('description', String(payload.description ?? ''));
+  form.append('price', String(payload.price ?? ''));
+  form.append('category', String(payload.category ?? 'gear'));
+  if (payload.stock != null && payload.stock !== '') {
+    form.append('stock', String(payload.stock));
+  }
+  if (payload.image?.uri && payload.image?.name && payload.image?.type) {
+    form.append('image', payload.image);
+  }
+  return api.put(`/api/products/${productId}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const deleteProductRequest = (productId) => api.delete(`/api/products/${productId}`);
+
 export const createOrderRequest = (products) => api.post('/api/orders', { products });
 export const myOrdersRequest = () => api.get('/api/orders');
 
