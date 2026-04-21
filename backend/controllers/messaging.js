@@ -2,7 +2,6 @@ const Message = require('../models/Message');
 const { Conversation, ConversationMember } = require('../models/Conversation');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
-const { notifyMessage } = require('./notificationsController');
 const { sendEmail } = require('../services/emailService');
 const { Op, QueryTypes } = require('sequelize');
 const multer = require('multer');
@@ -419,14 +418,10 @@ exports.sendMessage = async (req, res) => {
       },
     });
 
-    const conversation = await Conversation.findByPk(conversationId);
     const sender = await User.findByPk(req.user.id);
     const senderName = `${sender.firstName} ${sender.lastName}`;
     
     for (const member of members) {
-      await notifyMessage(member.userId, req.user.id, payload);
-      
-      // Send email notification
       try {
         const recipient = await User.findByPk(member.userId);
         const safeContent = typeof content === 'string' ? content : '';
@@ -438,12 +433,17 @@ exports.sendMessage = async (req, res) => {
       }
     }
 
-    // Emit newMessage via Socket.IO as a server-side fallback so recipients get it
+    // Socket: biseda + dhoma e userId (klientët join me `emit('join', userId)`), që badge-i i Chats të rifreskohet edhe jashtë ekranit të bisedës.
     try {
       const socketHelper = require('../socket');
       const io = socketHelper.getIo();
       if (io) {
         io.to(`conversation-${conversationId}`).emit('newMessage', payload);
+        members.forEach((m) => {
+          if (m.userId != null) {
+            io.to(String(m.userId)).emit('newMessage', payload);
+          }
+        });
       }
     } catch (emitErr) {
       console.warn('Emit newMessage failed in messaging controller', emitErr && emitErr.message);

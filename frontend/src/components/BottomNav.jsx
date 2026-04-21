@@ -1,6 +1,8 @@
-import { NavLink } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { messagingAPI } from "../services/api";
 
 function formatCartBadge(value) {
   const n = Number(value || 0);
@@ -11,8 +13,44 @@ function formatCartBadge(value) {
 
 function BottomNav() {
   const { user } = useAuth();
+  const location = useLocation();
   const { totalPieces } = useCart();
   const cartBadge = formatCartBadge(totalPieces);
+  const [messagesUnread, setMessagesUnread] = useState(0);
+  const messagesBadge = formatCartBadge(messagesUnread);
+
+  const fetchMessagesUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await messagingAPI.getUnreadCount();
+      setMessagesUnread(
+        Number(res?.data?.count ?? res?.data?.unreadCount ?? res?.data?.unread ?? 0)
+      );
+    } catch (_e) {
+      // mbaj numrin e mëparshëm
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    fetchMessagesUnread();
+    const id = setInterval(fetchMessagesUnread, 30000);
+    return () => clearInterval(id);
+  }, [user, fetchMessagesUnread]);
+
+  useEffect(() => {
+    fetchMessagesUnread();
+  }, [location.pathname, fetchMessagesUnread]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    const onBump = () => {
+      void fetchMessagesUnread();
+    };
+    window.addEventListener('messaging-unread-changed', onBump);
+    return () => window.removeEventListener('messaging-unread-changed', onBump);
+  }, [user, fetchMessagesUnread]);
+
   const rawApiUrl = import.meta.env.VITE_API_URL || '';
   const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
   const getFullUrl = (url) => {
@@ -58,6 +96,26 @@ function BottomNav() {
           </span>
           <span className="text-xs md:hidden">Shop</span>
         </NavLink>
+
+        {user && (
+          <NavLink
+            to="/messaging"
+            className={({ isActive }) =>
+              `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
+            }
+            aria-label="Chats"
+          >
+            <span className="relative inline-flex items-center justify-center">
+              <span className="text-2xl">💬</span>
+              {messagesBadge ? (
+                <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {messagesBadge}
+                </span>
+              ) : null}
+            </span>
+            <span className="text-xs md:hidden">Chats</span>
+          </NavLink>
+        )}
 
         <NavLink
           to="/tournaments"

@@ -42,11 +42,23 @@ export const SocketProvider = ({ children }) => {
       withCredentials: true,
     });
 
+    const bumpMessagingUnread = () => {
+      try {
+        window.dispatchEvent(new CustomEvent('messaging-unread-changed'));
+      } catch (_e) {
+        /* ignore */
+      }
+    };
+
     newSocket.on('connect', () => {
       console.log('✅ Socket connected:', newSocket.id);
       setConnected(true);
       newSocket.emit('join', user.id);
     });
+
+    newSocket.on('newMessage', bumpMessagingUnread);
+    newSocket.on('messageUpdated', bumpMessagingUnread);
+    newSocket.on('messageDeleted', bumpMessagingUnread);
 
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
@@ -61,6 +73,9 @@ export const SocketProvider = ({ children }) => {
     setSocket(newSocket);
 
     return () => {
+      newSocket.off('newMessage', bumpMessagingUnread);
+      newSocket.off('messageUpdated', bumpMessagingUnread);
+      newSocket.off('messageDeleted', bumpMessagingUnread);
       newSocket.close();
     };
   }, [user]);

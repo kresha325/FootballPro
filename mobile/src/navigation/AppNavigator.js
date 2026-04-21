@@ -38,9 +38,10 @@ import ClubRosterScreen from '../screens/ClubRosterScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import LiveViewerScreen from '../screens/LiveViewerScreen';
+import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
+import { messagingUnreadCountRequest } from '../api/client';
 import { APP_BRAND_NAME } from '../config/branding';
 
 const Stack = createNativeStackNavigator();
@@ -60,7 +61,13 @@ const formatBadge = (value) => {
 
 function MessagingNavigator() {
   return (
-    <MessagingStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+    <MessagingStack.Navigator
+      screenOptions={{
+        headerTitle: APP_BRAND_NAME,
+        headerTitleAlign: 'center',
+        headerRight: () => <NotificationHeaderButton />,
+      }}
+    >
       <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
       <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: APP_BRAND_NAME }} />
     </MessagingStack.Navigator>
@@ -72,15 +79,29 @@ function FeedNavigator() {
     <FeedStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
       <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: APP_BRAND_NAME }} />
       <FeedStack.Screen name="FeedPostPager" component={FeedPostPagerScreen} options={{ headerShown: false }} />
-      <FeedStack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: APP_BRAND_NAME }} />
-      <FeedStack.Screen name="Gallery" component={GalleryScreen} options={{ title: APP_BRAND_NAME }} />
+      <FeedStack.Screen
+        name="CreatePost"
+        component={CreatePostScreen}
+        options={{ title: APP_BRAND_NAME, headerRight: () => <NotificationHeaderButton /> }}
+      />
+      <FeedStack.Screen
+        name="Gallery"
+        component={GalleryScreen}
+        options={{ title: APP_BRAND_NAME, headerRight: () => <NotificationHeaderButton /> }}
+      />
     </FeedStack.Navigator>
   );
 }
 
 function MarketplaceNavigator() {
   return (
-    <MarketplaceStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+    <MarketplaceStack.Navigator
+      screenOptions={({ route }) => ({
+        headerTitle: APP_BRAND_NAME,
+        headerTitleAlign: 'center',
+        ...(route.name !== 'MarketplaceHome' ? { headerRight: () => <NotificationHeaderButton /> } : {}),
+      })}
+    >
       <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
       <MarketplaceStack.Screen
         name="CreateProduct"
@@ -108,11 +129,14 @@ function ProfileNavigator() {
         options={{
           title: 'My Profile',
           headerRight: () => (
-            <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
-              <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Logout</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
+              <NotificationHeaderButton />
+              <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
+                <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Logout</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -130,11 +154,18 @@ function ProfileNavigator() {
 
 function MoreNavigator() {
   return (
-    <MoreStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+    <MoreStack.Navigator
+      screenOptions={{
+        headerTitle: APP_BRAND_NAME,
+        headerTitleAlign: 'center',
+        headerRight: () => <NotificationHeaderButton />,
+      }}
+    >
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
@@ -155,16 +186,11 @@ function MoreNavigator() {
 function AppTabs() {
   const { getSocket } = useAuth();
   const { totalPieces } = useCart();
-  const [notificationsBadge, setNotificationsBadge] = React.useState(0);
   const [messagesBadge, setMessagesBadge] = React.useState(0);
 
   const refreshBadges = React.useCallback(async () => {
     try {
-      const [notifRes, msgRes] = await Promise.all([
-        unreadNotificationsCountRequest(),
-        messagingUnreadCountRequest(),
-      ]);
-      setNotificationsBadge(Number(notifRes?.data?.count || notifRes?.data?.unread || 0));
+      const msgRes = await messagingUnreadCountRequest();
       setMessagesBadge(
         Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0)
       );
@@ -203,31 +229,30 @@ function AppTabs() {
 
   return (
     <Tabs.Navigator
-      screenListeners={{
-        state: () => {
-          refreshBadges();
-        },
-      }}
-      screenOptions={({ route }) => ({
-        headerTitle: APP_BRAND_NAME,
-        headerTitleAlign: 'center',
-        tabBarActiveTintColor: '#0f766e',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarHideOnKeyboard: true,
-        tabBarIcon: ({ color, size }) => {
-          const iconMap = {
-            Feed: 'home-outline',
-            Marketplace: 'cart-outline',
-            Videos: 'videocam-outline',
-            Messages: 'chatbubble-ellipses-outline',
-            More: 'grid-outline',
-            Profile: 'person-outline',
-          };
-          const iconName = iconMap[route.name] || 'ellipse-outline';
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
-    >
+        screenListeners={{
+          state: () => {
+            refreshBadges();
+          },
+        }}
+        screenOptions={({ route }) => ({
+          headerTitle: APP_BRAND_NAME,
+          headerTitleAlign: 'center',
+          tabBarActiveTintColor: '#0f766e',
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+          tabBarHideOnKeyboard: true,
+          tabBarIcon: ({ color, size }) => {
+            const iconMap = {
+              Feed: 'home-outline',
+              Marketplace: 'cart-outline',
+              Messages: 'chatbubble-ellipses-outline',
+              More: 'grid-outline',
+              Profile: 'person-outline',
+            };
+            const iconName = iconMap[route.name] || 'ellipse-outline';
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+        })}
+      >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Feed' }} />
       <Tabs.Screen
         name="Marketplace"
@@ -238,7 +263,6 @@ function AppTabs() {
           tabBarBadge: formatBadge(totalPieces),
         }}
       />
-      <Tabs.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <Tabs.Screen
         name="Messages"
         component={MessagingNavigator}
@@ -253,7 +277,6 @@ function AppTabs() {
         component={MoreNavigator}
         options={{
           headerShown: false,
-          tabBarBadge: formatBadge(notificationsBadge),
         }}
       />
       <Tabs.Screen

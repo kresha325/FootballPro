@@ -29,8 +29,8 @@ export default function MoreScreen({ navigation }) {
       <MenuButton title="Wallet" subtitle="JonCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
       {canUseInsights ? <MenuButton title="Insights" subtitle="Analytics and gamification" onPress={() => navigation.navigate('Insights')} /> : null}
       <MenuButton title="Tournaments" subtitle="Trending and join flow" onPress={() => navigation.navigate('Tournaments')} />
+      <MenuButton title="Videos" subtitle="Trending uploads and likes" onPress={() => navigation.navigate('Videos')} />
       {canUseScouting ? <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} /> : null}
-      <MenuButton title="Notifications" subtitle="Your latest updates" onPress={() => navigation.navigate('Notifications')} />
       <MenuButton title="Search" subtitle="Users, posts and discovery" onPress={() => navigation.navigate('Search')} />
       <MenuButton title="Matches" subtitle="View and schedule matches" onPress={() => navigation.navigate('Matches')} />
       <MenuButton title="Go Live" subtitle="Start a live session" onPress={() => navigation.navigate('GoLive')} />

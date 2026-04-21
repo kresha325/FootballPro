@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { extractErrorMessage, joncoinBalanceRequest, productsRequest } from '../api/client';
+import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
@@ -118,20 +119,23 @@ export default function MarketplaceScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Cart')}
-          style={{ paddingRight: 14, paddingVertical: 4 }}
-          accessibilityLabel="Shporta"
-        >
-          <View>
-            <Ionicons name="cart-outline" size={26} color="#0f766e" />
-            {totalPieces > 0 ? (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>{totalPieces > 99 ? '99+' : totalPieces}</Text>
-              </View>
-            ) : null}
-          </View>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 6 }}>
+          <NotificationHeaderButton />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Cart')}
+            style={{ paddingRight: 8, paddingVertical: 4 }}
+            accessibilityLabel="Shporta"
+          >
+            <View>
+              <Ionicons name="cart-outline" size={26} color="#0f766e" />
+              {totalPieces > 0 ? (
+                <View style={styles.headerBadge}>
+                  <Text style={styles.headerBadgeText}>{totalPieces > 99 ? '99+' : totalPieces}</Text>
+                </View>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation, totalPieces]);

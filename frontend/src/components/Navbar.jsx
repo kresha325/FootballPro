@@ -4,7 +4,7 @@ import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XM
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { Room, createLocalTracks } from 'livekit-client';
-import { liveStreamAPI, livekitAPI, notificationsAPI, streamsAPI } from '../services/api';
+import { liveStreamAPI, livekitAPI, messagingAPI, notificationsAPI, streamsAPI } from '../services/api';
 import { APP_BRAND_NAME } from '../config/branding';
 
 
@@ -26,7 +26,8 @@ function Navbar() {
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0); // notifications
+  const [unreadCount, setUnreadCount] = useState(0); // notifications (pa DM)
+  const [messagesUnread, setMessagesUnread] = useState(0);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveTitle, setLiveTitle] = useState('');
   const [liveDescription, setLiveDescription] = useState('');
@@ -48,21 +49,33 @@ function Navbar() {
 
   useEffect(() => {
     if (user) {
-      fetchUnreadCount();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(() => {
-        fetchUnreadCount();
-      }, 30000);
+      fetchHeaderBadges();
+      const interval = setInterval(fetchHeaderBadges, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
-  const fetchUnreadCount = async () => {
+  useEffect(() => {
+    if (!user) return undefined;
+    const onBump = () => {
+      void fetchHeaderBadges();
+    };
+    window.addEventListener('messaging-unread-changed', onBump);
+    return () => window.removeEventListener('messaging-unread-changed', onBump);
+  }, [user]);
+
+  const fetchHeaderBadges = async () => {
     try {
-      const response = await notificationsAPI.getUnreadCount();
-      setUnreadCount(response.data.count || 0);
+      const [notifRes, msgRes] = await Promise.all([
+        notificationsAPI.getUnreadCount(),
+        messagingAPI.getUnreadCount(),
+      ]);
+      setUnreadCount(notifRes.data.count || 0);
+      setMessagesUnread(
+        Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0)
+      );
     } catch (error) {
-      console.error('Error fetching unread count:', error);
+      console.error('Error fetching header badges:', error);
     }
   };
 
@@ -330,6 +343,11 @@ function Navbar() {
             >
               <span className="text-2xl">💬</span>
               <span className="font-medium">Messages</span>
+              {messagesUnread > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
+                  {messagesUnread > 99 ? '99+' : messagesUnread}
+                </span>
+              )}
             </Link>
 
             {/* Browse Profiles */}

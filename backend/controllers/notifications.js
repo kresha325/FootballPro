@@ -1,5 +1,6 @@
 const { Expo } = require('expo-server-sdk');
 const webPush = require('web-push');
+const { Op } = require('sequelize');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 
@@ -20,7 +21,8 @@ exports.getNotifications = async (req, res) => {
     const { page = 1, limit = 20, unreadOnly = false } = req.query;
     const offset = (page - 1) * limit;
 
-    const where = { userId: req.user.id };
+    // Chat/DM përdor badge në messaging; mos i përzier me njoftimet e ziles.
+    const where = { userId: req.user.id, type: { [Op.ne]: 'message' } };
     if (unreadOnly === 'true') {
       where.isRead = false;
     }
@@ -58,6 +60,7 @@ exports.getUnreadCount = async (req, res) => {
       where: {
         userId: req.user.id,
         isRead: false,
+        type: { [Op.ne]: 'message' },
       },
     });
     res.json({ count });

@@ -29,6 +29,7 @@ import {
   unlikePostRequest,
 } from '../api/client';
 import FeedAdSlot from '../components/FeedAdSlot';
+import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import PostSponsorStrip from '../components/PostSponsorStrip';
 import { useAuth } from '../context/AuthContext';
 
@@ -424,8 +425,8 @@ export default function FeedScreen({ navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerScopeWrap}>
+      headerLeft: () => (
+        <View style={[styles.headerScopeWrap, { marginLeft: 8 }]}>
           <TouchableOpacity
             onPress={() => setFeedScope('my')}
             style={[styles.headerScopeBtn, feedScope === 'my' && styles.headerScopeBtnActive]}
@@ -444,6 +445,7 @@ export default function FeedScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       ),
+      headerRight: () => <NotificationHeaderButton />,
     });
   }, [feedScope, navigation]);
 
