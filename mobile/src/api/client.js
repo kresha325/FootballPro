@@ -126,6 +126,9 @@ export const createStreamRequest = (payload) => api.post('/api/streams', payload
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
+export const getStreamRequest = (streamId) => api.get(`/api/streams/${streamId}`);
+export const joinStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/join`);
+export const leaveStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/leave`);
 export const startAudioCallRequest = (receiverId) => api.post('/api/video-calls/start', { receiverId });
 export const createVideoCallRequest = (participantId) => api.post('/api/video-calls/create', { participantId });
 

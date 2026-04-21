@@ -48,6 +48,11 @@ const Stream = sequelize.define('Stream', {
     allowNull: true,
     comment: 'RTMP ingest URL for YouTube/Twitch/other',
   },
+  youtubeChannelId: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    comment: 'YouTube UC... për playback me embed live_stream',
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

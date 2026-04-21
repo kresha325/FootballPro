@@ -13,6 +13,7 @@ const Settings = () => {
     name: '',
     email: '',
     bio: '',
+    youtubeChannelId: '',
   });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
@@ -29,6 +30,7 @@ const Settings = () => {
       name: displayName || user.firstName || '',
       email: user.email || '',
       bio: user.bio || '',
+      youtubeChannelId: user.youtubeChannelId || '',
     });
   }, [user]);
 
@@ -68,6 +70,7 @@ const Settings = () => {
       form.append('firstName', firstName);
       form.append('lastName', lastName);
       form.append('bio', profile.bio || '');
+      form.append('youtubeChannelId', (profile.youtubeChannelId || '').trim());
       await profileAPI.updateProfile(form);
       await refreshUser();
       setSaveMessage({ type: 'ok', text: 'Profili u përditësua.' });
@@ -184,6 +187,22 @@ const Settings = () => {
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              YouTube channel ID (live)
+            </label>
+            <input
+              type="text"
+              value={profile.youtubeChannelId}
+              onChange={(e) => setProfile({ ...profile, youtubeChannelId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+              placeholder="UC… (24 karaktere) ose link …/channel/UC…"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Lëre bosh për LiveKit. Nëse e plotëson, çdo stream i ri do të lidhet me live-in e këtij kanali në YouTube (OBS →
+              YouTube), dhe shikuesit hapin embed YouTube.
+            </p>
           </div>
           <button
             type="submit"

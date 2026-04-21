@@ -57,6 +57,7 @@ const resolveClubUser = async ({ clubId, clubName }) => {
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
 
 /** Map free-text / locale labels to User.gender ENUM (male | female | other). */
 function normalizeGenderInput(raw) {
@@ -364,6 +365,22 @@ exports.updateProfile = async (req, res) => {
     // Allow coverPhoto update from body (URL or string)
     if (req.body.coverPhoto) {
       updateData.coverPhoto = req.body.coverPhoto;
+    }
+
+    if (req.body.youtubeChannelId !== undefined) {
+      const v = String(req.body.youtubeChannelId ?? '').trim();
+      if (!v) {
+        updateData.youtubeChannelId = null;
+      } else {
+        const norm = normalizeYoutubeChannelId(v);
+        if (!norm) {
+          return res.status(400).json({
+            msg: 'Invalid YouTube channel ID. Use UC followed by 22 characters, or a youtube.com/channel/UC… link.',
+            field: 'youtubeChannelId',
+          });
+        }
+        updateData.youtubeChannelId = norm;
+      }
     }
 
     // Handle file uploads and add to gallery (Cloudinary)

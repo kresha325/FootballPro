@@ -55,6 +55,11 @@ const Profile = sequelize.define('Profile', {
     type: DataTypes.JSON, // [{ url, title, thumbnail, duration, date }]
     defaultValue: [],
   },
+  /** YouTube channel ID (UC...) — shikuesit e live përdorin embed kur streameri transmeton në këtë kanal */
+  youtubeChannelId: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+  },
 });
 
 Profile.belongsTo(User, { foreignKey: 'userId' });

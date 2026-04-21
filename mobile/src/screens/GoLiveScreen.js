@@ -200,6 +200,9 @@ export default function GoLiveScreen({ route, navigation }) {
     >
       <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Go Live</Text>
       <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>Create a stream and switch it live via backend streams API.</Text>
+      <Text style={[styles.hint, isDark && styles.textMutedDark]}>
+        Për shikim në YouTube Live: vendos ID-në e kanalit (UC…) te Settings → Profil në web; stream i ri e kopjon automatikisht.
+      </Text>
 
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
@@ -304,8 +307,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 6,
-    marginBottom: 14,
+    marginBottom: 6,
     color: '#475569',
+  },
+  hint: {
+    marginBottom: 14,
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 18,
   },
   input: {
     borderColor: '#cbd5e1',
@@ -314,6 +323,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 10,
+    borderWidth: 1,
+  },
   streamActions: {
     marginTop: 8,
     flexDirection: 'row',
@@ -329,7 +340,6 @@ const styles = StyleSheet.create({
   viewBtnText: {
     color: '#fff',
     fontWeight: '700',
-  },
   },
   inputDark: {
     backgroundColor: '#0b1220',

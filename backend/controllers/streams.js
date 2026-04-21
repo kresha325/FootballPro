@@ -236,6 +236,7 @@ exports.getMyStreamInfo = async (req, res) => {
 };
 const { Stream, User, Profile } = require('../models');
 const { Op } = require('sequelize');
+const { normalizeYoutubeChannelId, youtubeLiveEmbedUrl } = require('../utils/youtubeChannel');
 
 function isMediasoupInternalAuthorized(req) {
   const configuredToken = process.env.MEDIASOUP_ADMIN_TOKEN;
@@ -250,8 +251,24 @@ function isMediasoupInternalAuthorized(req) {
 
 exports.createStream = async (req, res) => {
   try {
-    const { title, description, isPremium } = req.body;
+    const { title, description, isPremium, youtubeChannelId: bodyChannel } = req.body;
     const streamerId = req.user.id;
+
+    const trimmedBody =
+      bodyChannel !== undefined && bodyChannel !== null ? String(bodyChannel).trim() : '';
+    let youtubeChannelId = null;
+    if (trimmedBody) {
+      youtubeChannelId = normalizeYoutubeChannelId(trimmedBody);
+      if (!youtubeChannelId) {
+        return res.status(400).json({ error: 'Invalid YouTube channel ID (expected UC… or /channel/UC… link).' });
+      }
+    } else {
+      const prof = await Profile.findOne({
+        where: { userId: streamerId },
+        attributes: ['youtubeChannelId'],
+      });
+      youtubeChannelId = normalizeYoutubeChannelId(prof?.youtubeChannelId);
+    }
 
     const streamKey = generateStreamKey();
 
@@ -261,6 +278,7 @@ exports.createStream = async (req, res) => {
       streamerId,
       isPremium: isPremium || false,
       streamKey,
+      youtubeChannelId,
     });
 
     try {
@@ -270,7 +288,11 @@ exports.createStream = async (req, res) => {
         io.to('streams').emit('stream:created', { id: stream.id });
       }
     } catch (e) {}
-    res.status(201).json(stream);
+    const json = stream.toJSON ? stream.toJSON() : stream;
+    if (json.youtubeChannelId) {
+      json.youtubeEmbedUrl = youtubeLiveEmbedUrl(json.youtubeChannelId);
+    }
+    res.status(201).json(json);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -289,14 +311,26 @@ exports.getStreams = async (req, res) => {
     const streams = await Stream.findAll({
       where: whereClause,
       attributes: [
-        'id', 'title', 'description', 'streamerId', 'isLive', 'viewers', 'isPremium', 'type', 'streamKey', 'videoUrl', 'createdAt', 'updatedAt'
+        'id',
+        'title',
+        'description',
+        'streamerId',
+        'isLive',
+        'viewers',
+        'isPremium',
+        'type',
+        'streamKey',
+        'videoUrl',
+        'youtubeChannelId',
+        'createdAt',
+        'updatedAt',
       ],
       include: [
         {
           model: User,
           as: 'streamer',
           attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club'] }],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
         },
       ],
       order: [
@@ -311,6 +345,9 @@ exports.getStreams = async (req, res) => {
       const s = stream.toJSON ? stream.toJSON() : stream;
       if (s.isLive && s.streamKey) {
         s.hlsUrl = `/live/${s.streamKey}/index.m3u8`;
+      }
+      if (s.youtubeChannelId) {
+        s.youtubeEmbedUrl = youtubeLiveEmbedUrl(s.youtubeChannelId);
       }
       // Siguro që gjithmonë të kthehet një objekt streamer me photoUrl
       if (!s.streamer) {
@@ -336,14 +373,26 @@ exports.getStream = async (req, res) => {
     const { id } = req.params;
     const stream = await Stream.findByPk(id, {
       attributes: [
-        'id', 'title', 'description', 'streamerId', 'isLive', 'viewers', 'isPremium', 'type', 'streamKey', 'videoUrl', 'createdAt', 'updatedAt'
+        'id',
+        'title',
+        'description',
+        'streamerId',
+        'isLive',
+        'viewers',
+        'isPremium',
+        'type',
+        'streamKey',
+        'videoUrl',
+        'youtubeChannelId',
+        'createdAt',
+        'updatedAt',
       ],
       include: [
         {
           model: User,
           as: 'streamer',
           attributes: ['id', 'firstName', 'lastName'],
-          include: [{ model: Profile, attributes: ['profilePicture', 'position', 'club'] }],
+          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
         },
       ],
     });
@@ -354,7 +403,11 @@ exports.getStream = async (req, res) => {
       return res.status(403).json({ error: 'Premium stream requires subscription' });
     }
 
-    res.json(stream);
+    const out = stream.toJSON ? stream.toJSON() : stream;
+    if (out.youtubeChannelId) {
+      out.youtubeEmbedUrl = youtubeLiveEmbedUrl(out.youtubeChannelId);
+    }
+    res.json(out);
   } catch (error) {
     console.error('Get stream error:', error);
     res.status(500).json({ error: error.message });

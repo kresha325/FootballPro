@@ -3,11 +3,22 @@ import { useParams } from 'react-router-dom';
 import { Room, RoomEvent } from 'livekit-client';
 import { livekitAPI, streamsAPI } from '../services/api';
 
+function youtubeLiveEmbedSrc(channelId) {
+  const q = new URLSearchParams({
+    channel: channelId,
+    autoplay: '1',
+    modestbranding: '1',
+  });
+  return `https://www.youtube.com/embed/live_stream?${q.toString()}`;
+}
+
 export default function LiveStreamViewer() {
   const { streamId } = useParams();
   const [stream, setStream] = useState(null);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(true);
+  const [playback, setPlayback] = useState('livekit'); // 'livekit' | 'youtube'
+  const [youtubeChannelId, setYoutubeChannelId] = useState(null);
   const roomRef = useRef(null);
 
   const remoteVideoRef = useRef(null);
@@ -29,10 +40,13 @@ export default function LiveStreamViewer() {
       if (!streamId) return;
       setConnecting(true);
       setError('');
+      setPlayback('livekit');
+      setYoutubeChannelId(null);
 
       try {
         const streamRes = await streamsAPI.getStream(streamId);
         const streamData = streamRes?.data;
+        if (!mounted) return;
         setStream(streamData);
 
         if (!streamData?.isLive) {
@@ -42,6 +56,13 @@ export default function LiveStreamViewer() {
         }
 
         await streamsAPI.joinStream(streamId);
+
+        if (streamData.youtubeChannelId) {
+          setPlayback('youtube');
+          setYoutubeChannelId(streamData.youtubeChannelId);
+          if (mounted) setConnecting(false);
+          return;
+        }
 
         const roomName = `stream-${streamId}`;
         const tokenRes = await livekitAPI.createToken({
@@ -114,18 +135,36 @@ export default function LiveStreamViewer() {
             By {stream.streamer.firstName || ''} {stream.streamer.lastName || ''} | Viewers: {stream.viewers || 0}
           </p>
         ) : null}
+        {playback === 'youtube' && youtubeChannelId ? (
+          <p className="text-xs text-teal-700 dark:text-teal-300 mt-2">
+            Playback: YouTube Live (kanali i streamerit). Sigurohu që transmetimi është nisur në YouTube Studio / OBS për të
+            njëjtin kanal.
+          </p>
+        ) : null}
 
         {error ? (
           <div className="mt-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">{error}</div>
         ) : null}
 
         {connecting ? (
-          <div className="mt-6 text-gray-600">Connecting to live stream...</div>
+          <div className="mt-6 text-gray-600 dark:text-gray-300">Connecting to live stream…</div>
         ) : null}
 
         <div className="mt-4 rounded-lg overflow-hidden bg-black min-h-[320px] flex items-center justify-center">
-          <video ref={remoteVideoRef} autoPlay playsInline controls className="w-full h-auto" />
-          <audio ref={remoteAudioRef} autoPlay playsInline />
+          {playback === 'youtube' && youtubeChannelId ? (
+            <iframe
+              title="YouTube Live"
+              className="w-full aspect-video"
+              src={youtubeLiveEmbedSrc(youtubeChannelId)}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+            />
+          ) : (
+            <>
+              <video ref={remoteVideoRef} autoPlay playsInline controls className="w-full h-auto" />
+              <audio ref={remoteAudioRef} autoPlay playsInline />
+            </>
+          )}
         </div>
       </div>
     </div>
