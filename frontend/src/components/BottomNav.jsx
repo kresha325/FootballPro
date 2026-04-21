@@ -47,122 +47,165 @@ function BottomNav() {
     const onBump = () => {
       void fetchMessagesUnread();
     };
-    window.addEventListener('messaging-unread-changed', onBump);
-    return () => window.removeEventListener('messaging-unread-changed', onBump);
+    window.addEventListener("messaging-unread-changed", onBump);
+    return () => window.removeEventListener("messaging-unread-changed", onBump);
   }, [user, fetchMessagesUnread]);
 
-  const rawApiUrl = import.meta.env.VITE_API_URL || '';
-  const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
+  const rawApiUrl = import.meta.env.VITE_API_URL || "";
+  const apiRoot = rawApiUrl ? rawApiUrl.replace("/api", "") : "";
   const getFullUrl = (url) => {
-    if (!url) return '';
-    const normalized = url.startsWith('https//')
-      ? url.replace('https//', 'https://')
-      : url.startsWith('http//')
-        ? url.replace('http//', 'http://')
+    if (!url) return "";
+    const normalized = url.startsWith("https//")
+      ? url.replace("https//", "https://")
+      : url.startsWith("http//")
+        ? url.replace("http//", "http://")
         : url;
     if (/^https?:\/\//.test(normalized)) return normalized;
-    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+    return apiRoot + (normalized.startsWith("/") ? normalized : "/" + normalized);
   };
+
+  const homeLink = (extra = "") => (
+    <NavLink
+      to="/feed"
+      className={({ isActive }) =>
+        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+      }
+      aria-label="Home"
+    >
+      <span className="text-2xl">🏠</span>
+      <span className="text-xs md:hidden">Home</span>
+    </NavLink>
+  );
+
+  const shopLink = (extra = "") => (
+    <NavLink
+      to="/marketplace"
+      className={({ isActive }) =>
+        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+      }
+      aria-label="Marketplace"
+    >
+      <span className="relative inline-flex items-center justify-center">
+        <span className="text-2xl">🛒</span>
+        {cartBadge ? (
+          <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+            {cartBadge}
+          </span>
+        ) : null}
+      </span>
+      <span className="text-xs md:hidden">Shop</span>
+    </NavLink>
+  );
+
+  const tournamentsLink = (extra = "") => (
+    <NavLink
+      to="/tournaments"
+      className={({ isActive }) =>
+        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+      }
+      aria-label="Tournaments"
+    >
+      <span className="text-2xl">🏆</span>
+      <span className="text-xs md:hidden">Cups</span>
+    </NavLink>
+  );
+
+  const chatsLink = (opts = {}) => {
+    const { elevated = false } = opts;
+    if (!user) return null;
+    return (
+      <NavLink
+        to="/messaging"
+        className={({ isActive }) =>
+          `flex flex-col items-center gap-0.5 px-2 py-1 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} md:flex-row md:gap-1 md:px-4 md:py-2 ${elevated ? "rounded-full bg-white dark:bg-gray-900 shadow-md ring-2 ring-blue-500/30 -mt-3 mb-0.5" : ""}`
+        }
+        aria-label="Chats"
+      >
+        <span className="relative inline-flex items-center justify-center">
+          <span className={`${elevated ? "text-3xl" : "text-2xl"}`}>💬</span>
+          {messagesBadge ? (
+            <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {messagesBadge}
+            </span>
+          ) : null}
+        </span>
+        <span className="text-[10px] md:text-xs leading-none md:hidden">Chats</span>
+      </NavLink>
+    );
+  };
+
+  const liveButton = (extra = "") =>
+    user ? (
+      <button
+        type="button"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("open-live-modal", { detail: { openCameraFirst: true } }))
+        }
+        className={`flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 text-red-600 ${extra}`}
+        aria-label="Go Live"
+      >
+        <span className="text-2xl">🔴</span>
+        <span className="text-xs md:hidden">Live</span>
+      </button>
+    ) : null;
+
+  const profileLink = (extra = "") => (
+    <NavLink
+      to={`/profile/${user?.id}`}
+      className={({ isActive }) =>
+        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+      }
+      aria-label="Profile"
+    >
+      {user?.profilePhoto && typeof user.profilePhoto === "string" && user.profilePhoto.trim() !== "" ? (
+        <img
+          src={getFullUrl(user.profilePhoto)}
+          alt="Profile"
+          className="w-8 h-8 rounded-full object-cover shadow-md border-2 border-blue-500"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.style.display = "none";
+          }}
+        />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
+          {user?.firstName?.[0]}
+        </div>
+      )}
+      <span className="text-xs md:hidden">Profile</span>
+    </NavLink>
+  );
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 md:fixed md:right-6 md:top-1/2 md:-translate-y-1/2 md:left-auto md:bottom-auto bg-white dark:bg-gray-800 border-t md:border md:border-gray-200 dark:border-gray-700 md:rounded-full shadow-lg z-50 md:py-4 md:px-2 md:w-auto">
-      <div className="flex md:flex-col gap-0 md:gap-6 items-center justify-around md:justify-center py-2 md:py-0 md:items-center">
-
-        <NavLink
-          to="/feed"
-          className={({ isActive }) =>
-            `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-          }
-          aria-label="Home"
-        >
-          <span className="text-2xl">🏠</span>
-          <span className="text-xs md:hidden">Home</span>
-        </NavLink>
-
-        <NavLink
-          to="/marketplace"
-          className={({ isActive }) =>
-            `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-          }
-          aria-label="Marketplace"
-        >
-          <span className="relative inline-flex items-center justify-center">
-            <span className="text-2xl">🛒</span>
-            {cartBadge ? (
-              <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-                {cartBadge}
-              </span>
-            ) : null}
-          </span>
-          <span className="text-xs md:hidden">Shop</span>
-        </NavLink>
-
-        {user && (
-          <NavLink
-            to="/messaging"
-            className={({ isActive }) =>
-              `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-            }
-            aria-label="Chats"
-          >
-            <span className="relative inline-flex items-center justify-center">
-              <span className="text-2xl">💬</span>
-              {messagesBadge ? (
-                <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-                  {messagesBadge}
-                </span>
-              ) : null}
-            </span>
-            <span className="text-xs md:hidden">Chats</span>
-          </NavLink>
-        )}
-
-        <NavLink
-          to="/tournaments"
-          className={({ isActive }) =>
-            `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-          }
-          aria-label="Tournaments"
-        >
-          <span className="text-2xl">🏆</span>
-          <span className="text-xs md:hidden">Cups</span>
-        </NavLink>
-
-        {user && (
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('open-live-modal', { detail: { openCameraFirst: true } }))}
-            className={`flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 text-red-600`}
-            aria-label="Go Live"
-          >
-            <span className="text-2xl">🔴</span>
-            <span className="text-xs md:hidden">Live</span>
-          </button>
-        )}
-
-
-
-        <NavLink
-          to={`/profile/${user?.id}`}
-          className={({ isActive }) =>
-            `flex flex-col md:flex-row items-center gap-1 px-4 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
-          }
-          aria-label="Profile"
-        >
-          {user?.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
-            <img
-              src={getFullUrl(user.profilePhoto)}
-              alt="Profile"
-              className="w-8 h-8 rounded-full object-cover shadow-md border-2 border-blue-500"
-              onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
-              {user?.firstName?.[0]}
+      {/* Mobile: Chats në qendër (3 + qendër + 2) */}
+      <div className="md:hidden">
+        {user ? (
+          <div className="relative flex w-full items-end justify-between min-h-[56px] px-1 pb-1 pt-0.5">
+            <div className="flex flex-1 justify-evenly items-end min-w-0 pr-11">{homeLink()} {shopLink()} {tournamentsLink()}</div>
+            <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex flex-col items-center pointer-events-auto">
+              {chatsLink({ elevated: true })}
             </div>
-          )}
-          <span className="text-xs md:hidden">Profile</span>
-        </NavLink>
+            <div className="flex flex-1 justify-evenly items-end min-w-0 pl-11">{liveButton()} {profileLink()}</div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-around py-2">
+            {homeLink()}
+            {shopLink()}
+            {tournamentsLink()}
+            {profileLink()}
+          </div>
+        )}
+      </div>
 
+      {/* Desktop: kolonë vertikale */}
+      <div className="hidden md:flex md:flex-col gap-0 md:gap-6 items-center justify-center py-2 md:py-0">
+        {homeLink()}
+        {shopLink()}
+        {chatsLink()}
+        {tournamentsLink()}
+        {liveButton()}
+        {profileLink()}
       </div>
     </nav>
   );

@@ -111,7 +111,7 @@ const defaultForm = () => ({
 });
 
 export default function EditProfileScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, refreshMe } = useAuth();
   const editRole = useMemo(() => normalizeEditRole(user?.role), [user?.role]);
 
   const [loading, setLoading] = useState(true);
@@ -411,6 +411,11 @@ export default function EditProfileScreen({ navigation }) {
         }
       }
       await postClubSideEffects();
+      try {
+        await refreshMe();
+      } catch (_e) {
+        /* tab avatar rifreskohet herën tjetër që /me kalon */
+      }
       Alert.alert('Success', 'Profile updated successfully.');
       navigation.goBack();
     } catch (err) {

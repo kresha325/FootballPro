@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -43,6 +43,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { messagingUnreadCountRequest } from '../api/client';
 import { APP_BRAND_NAME } from '../config/branding';
+import { absoluteBackendUrl } from '../config/constants';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -58,6 +59,80 @@ const formatBadge = (value) => {
   if (n > 99) return '99+';
   return n;
 };
+
+function tabProfilePhotoUri(user, imgErr) {
+  if (!user || imgErr) return null;
+  const raw =
+    user?.Profile?.profilePhoto ||
+    user?.profile?.profilePhoto ||
+    user?.profilePhoto;
+  if (raw == null || typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s) return null;
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  return absoluteBackendUrl(s);
+}
+
+function ProfileTabBarIcon({ user, focused, size = 26 }) {
+  const [imgErr, setImgErr] = React.useState(false);
+  const raw =
+    user?.Profile?.profilePhoto ||
+    user?.profile?.profilePhoto ||
+    user?.profilePhoto;
+  const rawKey = typeof raw === 'string' ? raw.trim() : '';
+  React.useEffect(() => {
+    setImgErr(false);
+  }, [rawKey]);
+
+  const uri = tabProfilePhotoUri(user, imgErr);
+  const initial = String(user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase();
+  const dim = Math.round(Math.max(24, Math.min(Number(size) + 6, 34)));
+  const borderColor = focused ? '#0f766e' : '#cbd5e1';
+
+  return (
+    <View style={[profileTabStyles.ring, { width: dim, height: dim, borderRadius: dim / 2, borderColor }]}>
+      {uri ? (
+        <Image
+          key={uri}
+          source={{ uri }}
+          style={{ width: dim, height: dim, borderRadius: dim / 2 }}
+          resizeMode="cover"
+          onError={() => setImgErr(true)}
+        />
+      ) : (
+        <View style={[profileTabStyles.fallback, { width: dim, height: dim, borderRadius: dim / 2 }]}>
+          <Text style={profileTabStyles.initial}>{initial}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** Tab bar merr `user` nga konteksti që të rifreskohet pas `refreshMe` / login. */
+function ProfileTabBarIconConnected({ focused, size }) {
+  const { user } = useAuth();
+  return <ProfileTabBarIcon user={user} focused={focused} size={size} />;
+}
+
+const profileTabStyles = StyleSheet.create({
+  ring: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+  },
+  fallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e2e8f0',
+  },
+  initial: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#475569',
+  },
+});
 
 function MessagingNavigator() {
   return (
@@ -246,7 +321,6 @@ function AppTabs() {
               Marketplace: 'cart-outline',
               Messages: 'chatbubble-ellipses-outline',
               More: 'grid-outline',
-              Profile: 'person-outline',
             };
             const iconName = iconMap[route.name] || 'ellipse-outline';
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -264,6 +338,22 @@ function AppTabs() {
         }}
       />
       <Tabs.Screen
+        name="Profile"
+        component={ProfileNavigator}
+        options={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarAccessibilityLabel: 'Me',
+          tabBarIcon: ({ focused, size }) => <ProfileTabBarIconConnected focused={focused} size={size} />,
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('Profile', { screen: 'MyProfile' });
+          },
+        })}
+      />
+      <Tabs.Screen
         name="Messages"
         component={MessagingNavigator}
         options={{
@@ -278,20 +368,6 @@ function AppTabs() {
         options={{
           headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="Profile"
-        component={ProfileNavigator}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Me',
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('Profile', { screen: 'MyProfile' });
-          },
-        })}
       />
     </Tabs.Navigator>
   );
