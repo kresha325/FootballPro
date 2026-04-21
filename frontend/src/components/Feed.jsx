@@ -9,6 +9,7 @@ import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookI
 import AdSlider from './AdSlider';
 import SponsorBanner from './SponsorBanner.jsx';
 import UserCardsSection from './UserCardsSection';
+import FeedLiveNow from './FeedLiveNow';
 import { API } from '../services/api';
 
 const Feed = () => {
@@ -340,6 +341,8 @@ const Feed = () => {
 
       {/* Player Cards Section */}
       <UserCardsSection />
+
+      <FeedLiveNow />
 
       {/* Create Post Form (flat background, no grid overlay) */}
       <div className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

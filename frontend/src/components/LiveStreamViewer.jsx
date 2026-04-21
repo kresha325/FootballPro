@@ -2,15 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Room, RoomEvent } from 'livekit-client';
 import { livekitAPI, streamsAPI } from '../services/api';
-
-function youtubeLiveEmbedSrc(channelId) {
-  const q = new URLSearchParams({
-    channel: channelId,
-    autoplay: '1',
-    modestbranding: '1',
-  });
-  return `https://www.youtube.com/embed/live_stream?${q.toString()}`;
-}
+import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 
 export default function LiveStreamViewer() {
   const { streamId } = useParams();
@@ -155,7 +147,7 @@ export default function LiveStreamViewer() {
             <iframe
               title="YouTube Live"
               className="w-full aspect-video"
-              src={youtubeLiveEmbedSrc(youtubeChannelId)}
+              src={buildYoutubeChannelLiveEmbedUrl(youtubeChannelId)}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
             />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// import userStreamsAPI from '../services/userStreamsAPI';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -10,9 +10,39 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+const siteRoot = String(import.meta.env.VITE_API_URL || '')
+  .replace(/\/api\/?$/i, '')
+  .replace(/\/$/, '');
+
+function resolvePhoto(url) {
+  if (!url || typeof url !== 'string') return null;
+  const u = url.trim();
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  if (!siteRoot) return u.startsWith('/') ? u : `/${u}`;
+  return siteRoot + (u.startsWith('/') ? u : `/${u}`);
+}
+
+function streamAvatar(stream) {
+  const s = stream?.streamer;
+  if (!s) return null;
+  if (s.photoUrl) return resolvePhoto(s.photoUrl);
+  return resolvePhoto(s.Profile?.profilePhoto);
+}
+
+function recordingSrc(videoUrl) {
+  if (!videoUrl || typeof videoUrl !== 'string') return '';
+  const v = videoUrl.trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  if (!siteRoot) return v.startsWith('/') ? v : `/${v}`;
+  return siteRoot + (v.startsWith('/') ? v : `/${v}`);
+}
+
 export default function StreamsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [streams, setStreams] = useState([]);
+  const [liveStreams, setLiveStreams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [videoFile, setVideoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -22,10 +52,14 @@ export default function StreamsPage() {
     const fetchStreams = async () => {
       if (!user) return;
       try {
-        // Stream/livestream fetch removed
-        setStreams([]);
+        const res = await API.get('/streams', { params: { limit: 50 } });
+        const all = Array.isArray(res.data) ? res.data : [];
+        setStreams(all);
+        setLiveStreams(all.filter((s) => s.isLive));
       } catch (err) {
+        console.error('Streams fetch error:', err);
         setStreams([]);
+        setLiveStreams([]);
       } finally {
         setLoading(false);
       }
@@ -44,7 +78,10 @@ export default function StreamsPage() {
       formData.append('description', 'Inqizim i ruajtur');
       await API.post('/streams/upload-recording', formData);
       setVideoFile(null);
-      window.location.reload();
+      const res = await API.get('/streams', { params: { limit: 50 } });
+      const all = Array.isArray(res.data) ? res.data : [];
+      setStreams(all);
+      setLiveStreams(all.filter((s) => s.isLive));
     } catch (err) {
       setError('Upload failed');
     } finally {
@@ -52,29 +89,85 @@ export default function StreamsPage() {
     }
   };
 
+  const recorded = streams.filter((s) => !s.isLive && s.videoUrl);
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">My Streams</h1>
+      <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Streams</h1>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        Live aktive hapen me të njëjtin player si në Feed (YouTube ose LiveKit). Ngarko regjistrime më poshtë.
+      </p>
+
+      {liveStreams.length > 0 ? (
+        <section className="mb-8 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3">
+          <h2 className="text-base font-extrabold text-red-800 dark:text-red-300 mb-3">Live Now</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {liveStreams.map((stream) => {
+              const streamer = stream?.streamer || {};
+              const name =
+                `${streamer.firstName || ''} ${streamer.lastName || ''}`.trim() || stream?.title || 'Live';
+              const photo = streamAvatar(stream);
+              return (
+                <button
+                  key={stream.id}
+                  type="button"
+                  onClick={() => navigate(`/live/${stream.id}`)}
+                  className="flex-shrink-0 flex flex-col items-center w-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg py-1"
+                >
+                  {photo ? (
+                    <img
+                      src={photo}
+                      alt=""
+                      className="w-14 h-14 rounded-full object-cover border-2 border-red-500 bg-gray-200 dark:bg-gray-700"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full border-2 border-red-500 bg-red-700 flex items-center justify-center text-white font-bold text-lg">
+                      {name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="mt-1.5 text-xs font-bold text-gray-900 dark:text-gray-100 text-center line-clamp-2 w-full">
+                    {name}
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1 text-[11px] font-extrabold text-red-600 dark:text-red-400">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    LIVE
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Ngarko regjistrim</h2>
       <div className="mb-8">
-        <input type="file" accept="video/*" onChange={e => setVideoFile(e.target.files[0])} />
-        <button onClick={handleUpload} disabled={uploading || !videoFile} className="ml-2 px-4 py-2 bg-blue-600 text-white rounded">
+        <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files[0])} />
+        <button
+          onClick={handleUpload}
+          disabled={uploading || !videoFile}
+          className="ml-2 px-4 py-2 bg-blue-600 text-white rounded"
+        >
           {uploading ? 'Uploading...' : 'Upload Recording'}
         </button>
         {error && <div className="text-red-600 mt-2">{error}</div>}
       </div>
+
       {loading ? (
-        <div>Loading streams...</div>
+        <div className="text-gray-600 dark:text-gray-400">Loading streams...</div>
       ) : !streams.length ? (
-        <div>No live or recorded streams found.</div>
+        <div className="text-gray-600 dark:text-gray-400">No streams found.</div>
       ) : (
         <ul className="space-y-4">
-          {streams.map(stream => (
-            <li key={stream.id} className="border rounded p-4">
-              <div className="font-bold">{stream.title}</div>
-              <div>{stream.description}</div>
-              <div>Status: {stream.isLive ? 'LIVE' : stream.videoUrl ? 'Recorded' : 'Offline'}</div>
+          {recorded.length === 0 && liveStreams.length === 0 ? (
+            <li className="text-gray-600 dark:text-gray-400">No recorded videos yet.</li>
+          ) : null}
+          {recorded.map((stream) => (
+            <li key={stream.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
+              <div className="font-bold text-gray-900 dark:text-white">{stream.title}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">{stream.description}</div>
+              <div className="text-xs text-gray-500 mt-1">Recorded</div>
               {stream.videoUrl && (
-                <video src={`${import.meta.env.VITE_API_URL.replace('/api','')}${stream.videoUrl}`} controls className="w-full mt-2" />
+                <video src={recordingSrc(stream.videoUrl)} controls className="w-full mt-2 rounded" />
               )}
             </li>
           ))}

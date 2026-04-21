@@ -213,7 +213,7 @@ export const notificationsAPI = {
    STREAMS
 ========================= */
 export const streamsAPI = {
-  getStreams: () => API.get('/streams'),
+  getStreams: (params) => API.get('/streams', { params: params || {} }),
   getStream: (streamId) => API.get(`/streams/${streamId}`),
   createStream: (data) => API.post('/streams', data),
   startStream: (streamId) => API.put(`/streams/${streamId}/start`),

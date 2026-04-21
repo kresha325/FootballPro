@@ -3,15 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { BACKEND_URL } from '../config/constants';
 import { extractErrorMessage, getStreamRequest, joinStreamRequest, leaveStreamRequest } from '../api/client';
-
-function youtubeLiveEmbedUri(channelId) {
-  const q = new URLSearchParams({
-    channel: channelId,
-    autoplay: '0',
-    modestbranding: '1',
-  });
-  return `https://www.youtube.com/embed/live_stream?${q.toString()}`;
-}
+import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 
 export default function LiveViewerScreen({ route }) {
   const streamId = route?.params?.streamId;
@@ -46,7 +38,7 @@ export default function LiveViewerScreen({ route }) {
           /* viewer count best-effort */
         }
         if (data.youtubeChannelId) {
-          setUri(youtubeLiveEmbedUri(data.youtubeChannelId));
+          setUri(buildYoutubeChannelLiveEmbedUrl(data.youtubeChannelId));
         } else {
           setUri(`${frontendBase}/live/${streamId}`);
         }

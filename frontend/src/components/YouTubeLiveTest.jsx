@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 
 /** Kanal testi YouTube — transmetimi duhet nisur nga OBS/Studio në këtë kanal; shikuesi merr live-in aktual përmes embed. */
 const DEFAULT_TEST_CHANNEL_ID = 'UCflsCrcGKQ85RYdNM5oW27w';
@@ -18,12 +19,7 @@ export default function YouTubeLiveTest() {
 
   const embedUrl = useMemo(() => {
     if (mode === 'channel') {
-      const q = new URLSearchParams({
-        channel: testChannelId,
-        autoplay: '0',
-        modestbranding: '1',
-      });
-      return `https://www.youtube.com/embed/live_stream?${q.toString()}`;
+      return buildYoutubeChannelLiveEmbedUrl(testChannelId);
     }
     if (videoId.trim()) {
       return `https://www.youtube.com/embed/${encodeURIComponent(videoId.trim())}?autoplay=1`;
