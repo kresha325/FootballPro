@@ -896,7 +896,8 @@ export default function MarketplaceSimple() {
                           String(
                             orderQty[selectedProduct.id] != null && orderQty[selectedProduct.id] !== ''
                               ? orderQty[selectedProduct.id]
-                              : 1,
+                              : 1
+                          ),
                           10
                         ) || 1) *
                         100
