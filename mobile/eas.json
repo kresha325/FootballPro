@@ -12,6 +12,7 @@
       },
       "env": {
         "BACKEND_URL": "https://footballpro.onrender.com",
+        "WEB_APP_URL": "https://footballpro.al",
         "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     },
@@ -22,6 +23,7 @@
       },
       "env": {
         "BACKEND_URL": "https://footballpro.onrender.com",
+        "WEB_APP_URL": "https://footballpro.al",
         "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     },
@@ -31,6 +33,7 @@
       },
       "env": {
         "BACKEND_URL": "https://footballpro.onrender.com",
+        "WEB_APP_URL": "https://footballpro.al",
         "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }
     }

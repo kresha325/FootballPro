@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import {
   dashboardAnalyticsRequest,
+  engagementRateAnalyticsRequest,
   extractErrorMessage,
+  followerGrowthAnalyticsRequest,
+  gamificationAchievementsRequest,
+  gamificationBadgesRequest,
   gamificationLeaderboardRequest,
   gamificationUserRequest,
 } from '../api/client';
@@ -22,22 +26,44 @@ export default function InsightsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [overview, setOverview] = useState(null);
+  const [followerGrowth, setFollowerGrowth] = useState(null);
+  const [engagement, setEngagement] = useState(null);
   const [gamification, setGamification] = useState(null);
+  const [achievements, setAchievements] = useState([]);
+  const [badges, setBadges] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const [dashboardRes, gamificationRes, leaderboardRes] = await Promise.all([
+      const [
+        dashboardRes,
+        growthRes,
+        engagementRes,
+        gamificationRes,
+        achievementsRes,
+        badgesRes,
+        leaderboardRes,
+      ] = await Promise.all([
         dashboardAnalyticsRequest(30),
+        followerGrowthAnalyticsRequest(30).catch(() => ({ data: null })),
+        engagementRateAnalyticsRequest(30).catch(() => ({ data: null })),
         gamificationUserRequest(),
+        gamificationAchievementsRequest().catch(() => ({ data: [] })),
+        gamificationBadgesRequest().catch(() => ({ data: [] })),
         gamificationLeaderboardRequest(),
       ]);
 
       setOverview(dashboardRes?.data?.overview || null);
+      setFollowerGrowth(growthRes?.data || null);
+      setEngagement(engagementRes?.data || null);
       setGamification(gamificationRes?.data || null);
-      setLeaderboard(Array.isArray(leaderboardRes?.data?.leaderboard) ? leaderboardRes.data.leaderboard.slice(0, 10) : []);
+      setAchievements(Array.isArray(achievementsRes?.data) ? achievementsRes.data : []);
+      setBadges(Array.isArray(badgesRes?.data) ? badgesRes.data : []);
+      setLeaderboard(
+        Array.isArray(leaderboardRes?.data?.leaderboard) ? leaderboardRes.data.leaderboard.slice(0, 10) : []
+      );
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load insights'));
     } finally {
@@ -49,6 +75,9 @@ export default function InsightsScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const unlockedAchievements = achievements.filter((a) => a.unlocked);
+  const earnedBadges = badges.filter((b) => b.earned);
 
   if (loading) {
     return <InsightsSkeleton />;
@@ -74,31 +103,77 @@ export default function InsightsScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Analytics Overview (30d)</Text>
+            <Text style={styles.cardTitle}>Analytics (30 days)</Text>
             <Text style={styles.row}>Posts: {overview?.totalPosts || 0}</Text>
             <Text style={styles.row}>Followers: {overview?.totalFollowers || 0}</Text>
             <Text style={styles.row}>Following: {overview?.totalFollowing || 0}</Text>
             <Text style={styles.row}>Likes: {overview?.totalLikes || 0}</Text>
             <Text style={styles.row}>Comments: {overview?.totalComments || 0}</Text>
-            <Text style={styles.row}>Profile Views: {overview?.profileViews || 0}</Text>
-            <Text style={styles.row}>Engagement Rate: {overview?.engagementRate || 0}</Text>
+            <Text style={styles.row}>Profile views: {overview?.profileViews || 0}</Text>
+            <Text style={styles.row}>Engagement rate: {overview?.engagementRate || 0}%</Text>
           </View>
+
+          {followerGrowth ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Follower growth</Text>
+              <Text style={styles.row}>New followers: {followerGrowth?.newFollowers ?? followerGrowth?.total ?? '—'}</Text>
+              <Text style={styles.row}>Growth rate: {followerGrowth?.growthRate ?? '—'}</Text>
+            </View>
+          ) : null}
+
+          {engagement ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Engagement</Text>
+              <Text style={styles.row}>Rate: {engagement?.engagementRate ?? engagement?.rate ?? '—'}</Text>
+              <Text style={styles.row}>Interactions: {engagement?.totalInteractions ?? '—'}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Gamification</Text>
             <Text style={styles.row}>Level: {gamification?.user?.level || 1}</Text>
             <Text style={styles.row}>Points: {gamification?.user?.points || 0}</Text>
-            <Text style={styles.row}>Achievements: {Array.isArray(gamification?.achievements) ? gamification.achievements.filter((a) => a.unlocked).length : 0}</Text>
-            <Text style={styles.row}>Badges: {Array.isArray(gamification?.badges) ? gamification.badges.filter((b) => b.earned).length : 0}</Text>
+            <Text style={styles.row}>
+              Achievements: {unlockedAchievements.length}/{achievements.length || unlockedAchievements.length}
+            </Text>
+            <Text style={styles.row}>
+              Badges: {earnedBadges.length}/{badges.length || earnedBadges.length}
+            </Text>
           </View>
 
-          <Text style={styles.sectionTitle}>Top Leaderboard</Text>
+          {unlockedAchievements.length > 0 ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Recent achievements</Text>
+              {unlockedAchievements.slice(0, 5).map((a) => (
+                <Text key={String(a.id || a.key)} style={styles.row}>
+                  ✓ {a.name || a.title || a.key}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {earnedBadges.length > 0 ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Badges earned</Text>
+              {earnedBadges.slice(0, 8).map((b) => (
+                <Text key={String(b.id || b.name)} style={styles.row}>
+                  🏅 {b.name || b.title}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          <Text style={styles.sectionTitle}>Leaderboard</Text>
         </View>
       }
       renderItem={({ item }) => (
         <View style={styles.rankCard}>
-          <Text style={styles.rankName}>#{item?.rank || '-'} {item?.firstName || ''} {item?.lastName || ''}</Text>
-          <Text style={styles.rankMeta}>Level {item?.level || 1} | {item?.points || 0} pts</Text>
+          <Text style={styles.rankName}>
+            #{item?.rank || '-'} {item?.firstName || ''} {item?.lastName || ''}
+          </Text>
+          <Text style={styles.rankMeta}>
+            Level {item?.level || 1} | {item?.points || 0} pts
+          </Text>
         </View>
       )}
       ListEmptyComponent={<Text style={styles.empty}>No leaderboard data.</Text>}
@@ -107,7 +182,6 @@ export default function InsightsScreen() {
 }
 
 const styles = StyleSheet.create({
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   content: { padding: 14, paddingBottom: 30, backgroundColor: '#f8fafc', minHeight: '100%' },
   card: {
     backgroundColor: '#fff',

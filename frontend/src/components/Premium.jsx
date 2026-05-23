@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { subscriptionsAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, SparklesIcon, StarIcon } from '@heroicons/react/24/solid';
 
 function Premium() {

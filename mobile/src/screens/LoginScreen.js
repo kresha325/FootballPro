@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
+  const navigation = useNavigation();
   const { login, register, forgotPassword, isSubmitting } = useAuth();
   const [mode, setMode] = useState('login');
   const [firstName, setFirstName] = useState('');
@@ -44,8 +46,19 @@ export default function LoginScreen() {
       setInlineError(result.message || 'Reset request failed');
       return;
     }
-    const extra = result.resetUrl ? `\n\nReset URL (dev):\n${result.resetUrl}` : '';
-    Alert.alert('Password reset', `${result.message}${extra}`);
+    if (result.resetUrl) {
+      const match = String(result.resetUrl).match(/reset-password\/([^/?#]+)/i);
+      const resetToken = match?.[1];
+      if (resetToken) {
+        Alert.alert('Password reset', result.message, [
+          { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { token: resetToken }) },
+        ]);
+        return;
+      }
+      Alert.alert('Password reset', `${result.message}\n\n${result.resetUrl}`);
+    } else {
+      Alert.alert('Password reset', result.message);
+    }
     setMode('login');
   };
 

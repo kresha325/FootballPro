@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
-import { profileAPI, galleryAPI, subscriptionsAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
+import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';

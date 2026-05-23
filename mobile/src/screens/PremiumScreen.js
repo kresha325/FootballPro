@@ -43,8 +43,8 @@ export default function PremiumScreen() {
           {plan.perks.map((perk) => (
             <Text key={`${plan.key}-${perk}`} style={styles.perk}>• {perk}</Text>
           ))}
-          <TouchableOpacity style={styles.button} disabled={user?.isPremium}>
-            <Text style={styles.buttonText}>{user?.isPremium ? 'Already Active' : 'Upgrade Soon'}</Text>
+          <TouchableOpacity style={styles.button} disabled={!!user?.premium}>
+            <Text style={styles.buttonText}>{user?.premium ? 'Already Active' : 'Upgrade Soon'}</Text>
           </TouchableOpacity>
         </View>
       ))}

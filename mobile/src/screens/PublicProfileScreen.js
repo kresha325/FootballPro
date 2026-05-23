@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   useColorScheme,
@@ -18,7 +19,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  addTransferHistoryRequest,
   clubStaffAssignmentsRequest,
+  deleteTransferHistoryRequest,
   extractErrorMessage,
   followStatusRequest,
   followUserRequest,
@@ -75,6 +78,16 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [busy, setBusy] = useState(false);
   /** Full-screen preview for cover or profile photo */
   const [headerImagePreview, setHeaderImagePreview] = useState(null);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferSaving, setTransferSaving] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    fromClub: '',
+    toClub: '',
+    position: '',
+    season: '',
+    transferDate: '',
+    notes: '',
+  });
 
   const userId = useMemo(() => {
     const p = route.params || {};
@@ -169,6 +182,61 @@ export default function PublicProfileScreen({ route, navigation }) {
     }
     loadProfile();
   }, [loadProfile, userId]);
+
+  const onAddTransfer = () => {
+    setTransferForm({
+      fromClub: '',
+      toClub: '',
+      position: profile?.position || '',
+      season: '',
+      transferDate: '',
+      notes: '',
+    });
+    setTransferModalOpen(true);
+  };
+
+  const onSaveTransfer = async () => {
+    if (!transferForm.toClub.trim()) {
+      Alert.alert('Validation', 'Destination club is required.');
+      return;
+    }
+    setTransferSaving(true);
+    try {
+      await addTransferHistoryRequest({
+        transferType: 'player_transfer',
+        fromClub: transferForm.fromClub.trim(),
+        toClub: transferForm.toClub.trim(),
+        position: transferForm.position.trim(),
+        season: transferForm.season.trim(),
+        transferDate: transferForm.transferDate.trim() || undefined,
+        notes: transferForm.notes.trim(),
+      });
+      setTransferModalOpen(false);
+      await loadProfile({ silent: true });
+    } catch (err) {
+      Alert.alert('Error', extractErrorMessage(err, 'Could not add transfer'));
+    } finally {
+      setTransferSaving(false);
+    }
+  };
+
+  const onDeleteTransfer = (transfer) => {
+    Alert.alert('Delete transfer', 'Remove this transfer record?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteTransferHistoryRequest(transfer.id);
+            await loadProfile({ silent: true });
+          } catch (err) {
+            Alert.alert('Error', extractErrorMessage(err, 'Could not delete transfer'));
+          }
+        },
+      },
+    ]);
+  };
 
   const onToggleFollow = async () => {
     if (busy || isSelf) return;
@@ -489,7 +557,14 @@ export default function PublicProfileScreen({ route, navigation }) {
               {profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
               {profileTab === 'videos' ? <PublicProfileVideosTab videos={videos} theme={theme} /> : null}
               {profileTab === 'about' ? (
-                <PublicProfileAboutTab profile={profile} transfers={transfers} theme={theme} />
+                <PublicProfileAboutTab
+                  profile={profile}
+                  transfers={transfers}
+                  theme={theme}
+                  isOwner={isSelf}
+                  onAddTransfer={onAddTransfer}
+                  onDeleteTransfer={onDeleteTransfer}
+                />
               ) : null}
               {profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
               {profileTab === 'sponsors' && isSelf ? (
@@ -500,6 +575,65 @@ export default function PublicProfileScreen({ route, navigation }) {
         </View>
       </View>
     </ScrollView>
+
+    <Modal visible={transferModalOpen} transparent animationType="slide" onRequestClose={() => setTransferModalOpen(false)}>
+      <View style={styles.transferModalBackdrop}>
+        <View style={[styles.transferModalCard, { backgroundColor: theme.card }]}>
+          <Text style={[styles.transferModalTitle, { color: theme.text }]}>Add transfer</Text>
+          <TextInput
+            style={styles.transferInput}
+            placeholder="From club"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.fromClub}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, fromClub: v }))}
+          />
+          <TextInput
+            style={styles.transferInput}
+            placeholder="To club *"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.toClub}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, toClub: v }))}
+          />
+          <TextInput
+            style={styles.transferInput}
+            placeholder="Position"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.position}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, position: v }))}
+          />
+          <TextInput
+            style={styles.transferInput}
+            placeholder="Season"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.season}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, season: v }))}
+          />
+          <TextInput
+            style={styles.transferInput}
+            placeholder="Date (YYYY-MM-DD)"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.transferDate}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, transferDate: v }))}
+          />
+          <TextInput
+            style={[styles.transferInput, { minHeight: 64 }]}
+            placeholder="Notes"
+            placeholderTextColor="#94a3b8"
+            value={transferForm.notes}
+            onChangeText={(v) => setTransferForm((f) => ({ ...f, notes: v }))}
+            multiline
+          />
+          <View style={styles.transferModalActions}>
+            <TouchableOpacity style={styles.transferCancelBtn} onPress={() => setTransferModalOpen(false)}>
+              <Text style={styles.transferCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.transferSaveBtn} onPress={onSaveTransfer} disabled={transferSaving}>
+              <Text style={styles.transferSaveText}>{transferSaving ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
 
     <Modal visible={!!headerImagePreview} transparent animationType="fade" onRequestClose={closeHeaderPreview}>
       <View style={styles.previewModalRoot}>
@@ -705,4 +839,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '80%',
   },
+  transferModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  transferModalCard: { borderRadius: 12, padding: 16 },
+  transferModalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12 },
+  transferInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
+    color: '#0f172a',
+  },
+  transferModalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  transferCancelBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1' },
+  transferCancelText: { color: '#475569', fontWeight: '700' },
+  transferSaveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#0f766e' },
+  transferSaveText: { color: '#fff', fontWeight: '700' },
 });

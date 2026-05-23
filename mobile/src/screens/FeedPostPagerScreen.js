@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Image,
@@ -19,6 +20,8 @@ import { ResizeMode, Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import {
   createCommentRequest,
+  deleteCommentRequest,
+  deletePostRequest,
   extractErrorMessage,
   likePostRequest,
   postCommentsRequest,
@@ -67,6 +70,11 @@ function FeedPagerPage({
   onToggleComments,
   onAddComment,
   onOpenAuthorProfile,
+  currentUserId,
+  onDeletePost,
+  onDeleteComment,
+  deletingPostId,
+  deletingCommentId,
 }) {
   const [chromeHidden, setChromeHidden] = useState(false);
   const bottomChromeAnim = useRef(new Animated.Value(0)).current;
@@ -80,6 +88,8 @@ function FeedPagerPage({
   const hasVideo = !!item?.videoUrl;
   const sponsors = Array.isArray(item?.sponsors) ? item.sponsors : Array.isArray(item?.Sponsors) ? item.Sponsors : [];
   const hasSponsors = sponsors.length > 0;
+  const isOwnPost =
+    currentUserId != null && authorId != null && String(currentUserId) === String(authorId);
 
   useEffect(() => {
     setChromeHidden(false);
@@ -162,6 +172,17 @@ function FeedPagerPage({
         >
           <Ionicons name="chevron-down" size={28} color="#fff" />
         </TouchableOpacity>
+        {isOwnPost && onDeletePost ? (
+          <TouchableOpacity
+            onPress={() => onDeletePost(item)}
+            style={styles.deleteBtn}
+            disabled={deletingPostId === item.id}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="Delete post"
+          >
+            <Ionicons name="trash-outline" size={24} color="#fca5a5" />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <Animated.View
@@ -246,9 +267,25 @@ function FeedPagerPage({
             {(commentsData || []).slice(0, 8).map((comment) => {
               const commentUser = comment?.User;
               const name = commentUser ? `${commentUser.firstName || ''} ${commentUser.lastName || ''}`.trim() : 'User';
+              const commentUserId = comment?.userId ?? commentUser?.id;
+              const isOwnComment =
+                currentUserId != null &&
+                commentUserId != null &&
+                String(currentUserId) === String(commentUserId);
               return (
                 <View key={String(comment.id)} style={styles.commentRow}>
-                  <Text style={styles.commentAuthor}>{name}</Text>
+                  <View style={styles.commentRowHeader}>
+                    <Text style={styles.commentAuthor}>{name}</Text>
+                    {isOwnComment && onDeleteComment ? (
+                      <TouchableOpacity
+                        onPress={() => onDeleteComment(comment, item.id)}
+                        disabled={deletingCommentId === comment.id}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#fca5a5" />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                   <Text style={styles.commentBody}>{comment.content}</Text>
                 </View>
               );
@@ -303,6 +340,8 @@ export default function FeedPostPagerScreen() {
   const [commentDraftByPostId, setCommentDraftByPostId] = useState({});
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
   const [bannerError, setBannerError] = useState('');
+  const [deletingPostId, setDeletingPostId] = useState(null);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   const notifyParent = useCallback(
     (postId, updates) => {
@@ -434,6 +473,74 @@ export default function FeedPostPagerScreen() {
     [navigation, user?.id]
   );
 
+  const onDeletePost = useCallback(
+    (post) => {
+      if (!post?.id || deletingPostId) return;
+      Alert.alert('Delete post', 'Are you sure you want to delete this post?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingPostId(post.id);
+            try {
+              await deletePostRequest(post.id);
+              notifyParent(post.id, { deleted: true });
+              setPosts((prev) => {
+                const next = prev.filter((p) => p.id !== post.id);
+                if (next.length === 0) {
+                  navigation.goBack();
+                }
+                return next;
+              });
+            } catch (err) {
+              setBannerError(extractErrorMessage(err, 'Could not delete post'));
+            } finally {
+              setDeletingPostId(null);
+            }
+          },
+        },
+      ]);
+    },
+    [deletingPostId, navigation, notifyParent]
+  );
+
+  const onDeleteComment = useCallback(
+    (comment, postId) => {
+      if (!comment?.id || deletingCommentId) return;
+      Alert.alert('Delete comment', 'Remove this comment?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingCommentId(comment.id);
+            try {
+              await deleteCommentRequest(comment.id);
+              setCommentsByPostId((prev) => ({
+                ...prev,
+                [postId]: (prev[postId] || []).filter((c) => c.id !== comment.id),
+              }));
+              setPosts((prev) => {
+                const next = prev.map((p) =>
+                  p.id === postId ? { ...p, comments: Math.max(0, (p.comments || 0) - 1) } : p
+                );
+                const row = next.find((p) => p.id === postId);
+                if (row) notifyParent(postId, { comments: row.comments });
+                return next;
+              });
+            } catch (err) {
+              setBannerError(extractErrorMessage(err, 'Could not delete comment'));
+            } finally {
+              setDeletingCommentId(null);
+            }
+          },
+        },
+      ]);
+    },
+    [deletingCommentId, notifyParent]
+  );
+
   const onAddComment = useCallback(
     async (postId) => {
       const content = (commentDraftByPostId[postId] || '').trim();
@@ -488,6 +595,11 @@ export default function FeedPostPagerScreen() {
         onToggleComments={onToggleComments}
         onAddComment={onAddComment}
         onOpenAuthorProfile={openAuthorProfile}
+        currentUserId={user?.id}
+        onDeletePost={onDeletePost}
+        onDeleteComment={onDeleteComment}
+        deletingPostId={deletingPostId}
+        deletingCommentId={deletingCommentId}
       />
     ),
     [
@@ -495,8 +607,13 @@ export default function FeedPostPagerScreen() {
       commentDraftByPostId,
       commentsByPostId,
       commentsLoadingPostId,
+      deletingCommentId,
+      deletingPostId,
       insets,
       isDark,
+      onDeleteComment,
+      onDeletePost,
+      user?.id,
       navigation,
       onAddComment,
       onToggleComments,
@@ -570,9 +687,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+    right: 0,
     paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     zIndex: 50,
     elevation: 50,
+  },
+  deleteBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noMedia: {
     ...StyleSheet.absoluteFillObject,
@@ -693,6 +822,11 @@ const styles = StyleSheet.create({
   commentsBox: {
     maxHeight: 220,
     marginTop: 4,
+  },
+  commentRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   commentRow: {
     marginBottom: 8,

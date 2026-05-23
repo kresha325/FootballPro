@@ -2,6 +2,7 @@
   "expo": {
     "name": "FootballPro Mobile",
     "slug": "footballpro-mobile",
+    "scheme": "footballpro",
     "version": "1.0.0",
     "sdkVersion": "49.0.0",
     "icon": "./assets/icon.png",
@@ -33,7 +34,7 @@
     },
     "extra": {
       "BACKEND_URL": "https://footballpro.onrender.com",
-      "WEB_APP_URL": ""
+      "WEB_APP_URL": "https://footballpro.al"
     }
   }
 }

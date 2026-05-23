@@ -5,10 +5,12 @@ import {
   clubRosterByClubRequest,
   clubRosterPendingRequest,
   clubRosterRequestsRequest,
+  clubStaffByClubRequest,
   extractErrorMessage,
   rejectClubRosterRequest,
   removeClubRosterRequest,
   submitClubRosterRequest,
+  updateClubStaffRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,6 +24,9 @@ export default function ClubRosterScreen() {
   const [activeTab, setActiveTab] = useState('pending');
   const [athleteForm, setAthleteForm] = useState({ clubId: '', position: '', jerseyNumber: '', message: '' });
   const [publicRoster, setPublicRoster] = useState([]);
+  const [staffActive, setStaffActive] = useState([]);
+  const [staffPending, setStaffPending] = useState([]);
+  const [staffSubTab, setStaffSubTab] = useState('pending');
 
   const isClub = user?.role === 'club';
   const isAthlete = user?.role === 'athlete';
@@ -38,13 +43,22 @@ export default function ClubRosterScreen() {
         const rosterRes = await clubRosterByClubRequest(Number(athleteForm.clubId));
         setPublicRoster(Array.isArray(rosterRes?.data) ? rosterRes.data : []);
       }
+
+      if (isClub && user?.id && activeTab === 'staff') {
+        const [activeRes, pendingRes] = await Promise.all([
+          clubStaffByClubRequest(user.id, { status: 'active' }),
+          clubStaffByClubRequest(user.id, { status: 'pending' }),
+        ]);
+        setStaffActive(Array.isArray(activeRes?.data) ? activeRes.data : []);
+        setStaffPending(Array.isArray(pendingRes?.data) ? pendingRes.data : []);
+      }
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load club roster'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [athleteForm.clubId]);
+  }, [activeTab, athleteForm.clubId, isClub, user?.id]);
 
   useEffect(() => {
     loadData();
@@ -59,6 +73,15 @@ export default function ClubRosterScreen() {
       loadData({ silent: true });
     } catch (err) {
       setError(extractErrorMessage(err, 'Action failed'));
+    }
+  };
+
+  const handleStaffAction = async (staffId, status) => {
+    try {
+      await updateClubStaffRequest(staffId, { status });
+      loadData({ silent: true });
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Staff action failed'));
     }
   };
 
@@ -93,9 +116,13 @@ export default function ClubRosterScreen() {
     <FlatList
       data={
         isClub
-          ? activeTab === 'pending'
-            ? pending
-            : approved
+          ? activeTab === 'staff'
+            ? staffSubTab === 'pending'
+              ? staffPending
+              : staffActive
+            : activeTab === 'pending'
+              ? pending
+              : approved
           : activeTab === 'myRequests'
             ? myRequests
             : publicRoster
@@ -121,19 +148,43 @@ export default function ClubRosterScreen() {
           </View>
 
           {isClub ? (
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tabBtn, activeTab === 'pending' ? styles.tabActive : null]}
-                onPress={() => setActiveTab('pending')}
-              >
-                <Text style={[styles.tabText, activeTab === 'pending' ? styles.tabTextActive : null]}>Pending</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabBtn, activeTab === 'approved' ? styles.tabActive : null]}
-                onPress={() => setActiveTab('approved')}
-              >
-                <Text style={[styles.tabText, activeTab === 'approved' ? styles.tabTextActive : null]}>Approved</Text>
-              </TouchableOpacity>
+            <View>
+              <View style={styles.tabRow}>
+                <TouchableOpacity
+                  style={[styles.tabBtn, activeTab === 'pending' ? styles.tabActive : null]}
+                  onPress={() => setActiveTab('pending')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'pending' ? styles.tabTextActive : null]}>Pending</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tabBtn, activeTab === 'approved' ? styles.tabActive : null]}
+                  onPress={() => setActiveTab('approved')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'approved' ? styles.tabTextActive : null]}>Approved</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tabBtn, activeTab === 'staff' ? styles.tabActive : null]}
+                  onPress={() => setActiveTab('staff')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'staff' ? styles.tabTextActive : null]}>Staff</Text>
+                </TouchableOpacity>
+              </View>
+              {activeTab === 'staff' ? (
+                <View style={styles.tabRow}>
+                  <TouchableOpacity
+                    style={[styles.tabBtn, staffSubTab === 'pending' ? styles.tabActive : null]}
+                    onPress={() => setStaffSubTab('pending')}
+                  >
+                    <Text style={[styles.tabText, staffSubTab === 'pending' ? styles.tabTextActive : null]}>Pending staff</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tabBtn, staffSubTab === 'active' ? styles.tabActive : null]}
+                    onPress={() => setStaffSubTab('active')}
+                  >
+                    <Text style={[styles.tabText, staffSubTab === 'active' ? styles.tabTextActive : null]}>Active staff</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
           ) : (
             <View>
@@ -191,10 +242,53 @@ export default function ClubRosterScreen() {
             </View>
           )}
 
-          <Text style={styles.section}>{isClub ? (activeTab === 'pending' ? 'Pending Requests' : 'Approved Squad') : activeTab === 'myRequests' ? 'My Requests' : 'Club Roster'}</Text>
+          <Text style={styles.section}>
+            {isClub
+              ? activeTab === 'staff'
+                ? staffSubTab === 'pending'
+                  ? 'Pending staff'
+                  : 'Active staff'
+                : activeTab === 'pending'
+                  ? 'Pending Requests'
+                  : 'Approved Squad'
+              : activeTab === 'myRequests'
+                ? 'My Requests'
+                : 'Club Roster'}
+          </Text>
         </View>
       }
       renderItem={({ item }) => {
+        if (isClub && activeTab === 'staff') {
+          const staffUser = item?.staff || item?.User || {};
+          const isPendingStaff = item?.status === 'pending';
+          return (
+            <View style={styles.card}>
+              <Text style={styles.name}>
+                {`${staffUser?.firstName || ''} ${staffUser?.lastName || ''}`.trim() || 'Staff member'}
+              </Text>
+              <Text style={styles.meta}>
+                Role: {item?.staffRole || '—'} · Team: {item?.teamType || '—'} · {item?.status}
+              </Text>
+              {isPendingStaff ? (
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.action, styles.ok]}
+                    onPress={() => handleStaffAction(item.id, 'active')}
+                  >
+                    <Text style={styles.actionText}>Approve</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.action, styles.warn]}
+                    onPress={() => handleStaffAction(item.id, 'inactive')}
+                  >
+                    <Text style={styles.actionText}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
+          );
+        }
+
         const athlete = item?.athlete || item?.User || item?.user || {};
         const isPending = item?.status === 'pending';
 
@@ -203,7 +297,7 @@ export default function ClubRosterScreen() {
             <Text style={styles.name}>{`${athlete?.firstName || ''} ${athlete?.lastName || ''}`.trim() || 'Unknown Athlete'}</Text>
             <Text style={styles.meta}>Status: {item?.status || 'pending'}</Text>
 
-            {isClub && isPending ? (
+            {isClub && isPending && activeTab !== 'staff' ? (
               <View style={styles.actionsRow}>
                 <TouchableOpacity style={[styles.action, styles.ok]} onPress={() => performAction(approveClubRosterRequest, item.id)}>
                   <Text style={styles.actionText}>Approve</Text>
@@ -224,7 +318,11 @@ export default function ClubRosterScreen() {
         !loading ? (
           <Text style={styles.empty}>
             {isClub
-              ? activeTab === 'pending'
+              ? activeTab === 'staff'
+                ? staffSubTab === 'pending'
+                  ? 'No pending staff.'
+                  : 'No active staff.'
+                : activeTab === 'pending'
                 ? 'No pending requests.'
                 : 'No approved players.'
               : activeTab === 'myRequests'

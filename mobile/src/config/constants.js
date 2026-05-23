@@ -42,4 +42,6 @@ export function absoluteBackendUrl(maybePath) {
 /** URL e frontend-it (Vite) për WebView thirrjeje — /embed-call. Zbrazët nëse nuk është konfiguruar. */
 const webFromExpo = Constants.expoConfig?.extra?.WEB_APP_URL;
 const webFromManifest = Constants.manifest?.extra?.WEB_APP_URL;
-export const WEB_APP_URL = String(webFromExpo || webFromManifest || '').replace(/\/$/, '');
+const rawWebAppUrl = String(webFromExpo || webFromManifest || 'https://footballpro.al').replace(/\/$/, '');
+/** Frontend Vite (embed-call, live player). Override via app.json extra or WEB_APP_URL env. */
+export const WEB_APP_URL = rawWebAppUrl;

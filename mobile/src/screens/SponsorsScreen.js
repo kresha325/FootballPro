@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -9,18 +10,35 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { createSponsorRequest, extractErrorMessage, sponsorsRequest } from '../api/client';
+import {
+  createSponsorRequest,
+  deleteSponsorRequest,
+  extractErrorMessage,
+  sponsorsRequest,
+  updateSponsorRequest,
+} from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-function SponsorRow({ item }) {
+function SponsorRow({ item, onEdit, onDelete, deleting }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.rowTitle}>{item?.name || 'Sponsor'}</Text>
-      <Text style={styles.rowSub}>{item?.link || 'No link'}</Text>
-      <Text style={styles.rowMeta}>
-        {item?.startDate ? String(item.startDate).slice(0, 10) : '-'} -> {item?.endDate ? String(item.endDate).slice(0, 10) : '-'}
-      </Text>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle}>{item?.name || 'Sponsor'}</Text>
+        <Text style={styles.rowSub}>{item?.link || 'No link'}</Text>
+        <Text style={styles.rowMeta}>
+          {item?.startDate ? String(item.startDate).slice(0, 10) : '-'} → {item?.endDate ? String(item.endDate).slice(0, 10) : '-'}
+        </Text>
+      </View>
+      <View style={styles.rowActions}>
+        <TouchableOpacity onPress={() => onEdit(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="create-outline" size={20} color="#0f766e" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => onDelete(item)} disabled={deleting} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="trash-outline" size={20} color="#dc2626" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -36,6 +54,8 @@ export default function SponsorsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
 
   const loadSponsors = useCallback(async ({ silent } = { silent: false }) => {
@@ -77,7 +97,47 @@ export default function SponsorsScreen() {
     });
   };
 
-  const onCreate = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName('');
+    setLink('');
+    setStartDate('');
+    setEndDate('');
+    setImage(null);
+  };
+
+  const onEdit = (item) => {
+    setEditingId(item.id);
+    setName(item.name || '');
+    setLink(item.link || '');
+    setStartDate(item.startDate ? String(item.startDate).slice(0, 10) : '');
+    setEndDate(item.endDate ? String(item.endDate).slice(0, 10) : '');
+    setImage(null);
+  };
+
+  const onDelete = (item) => {
+    Alert.alert('Delete sponsor', `Remove "${item.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setDeletingId(item.id);
+          try {
+            await deleteSponsorRequest(item.id);
+            if (editingId === item.id) resetForm();
+            await loadSponsors({ silent: true });
+          } catch (err) {
+            setError(extractErrorMessage(err, 'Failed to delete sponsor'));
+          } finally {
+            setDeletingId(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const onSave = async () => {
     if (saving) return;
     if (!user?.id) {
       setError('User not loaded yet.');
@@ -91,23 +151,25 @@ export default function SponsorsScreen() {
     setSaving(true);
     setError('');
     try {
-      await createSponsorRequest({
-        userId: user.id,
+      const payload = {
         name: name.trim(),
         link: link.trim(),
-        startDate: startDate.trim(),
-        endDate: endDate.trim(),
-        image,
-      });
-
-      setName('');
-      setLink('');
-      setStartDate('');
-      setEndDate('');
-      setImage(null);
+        startDate: startDate.trim() || undefined,
+        endDate: endDate.trim() || undefined,
+      };
+      if (editingId) {
+        await updateSponsorRequest(editingId, payload);
+      } else {
+        await createSponsorRequest({
+          userId: user.id,
+          ...payload,
+          image,
+        });
+      }
+      resetForm();
       await loadSponsors({ silent: true });
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to create sponsor'));
+      setError(extractErrorMessage(err, editingId ? 'Failed to update sponsor' : 'Failed to create sponsor'));
     } finally {
       setSaving(false);
     }
@@ -128,7 +190,7 @@ export default function SponsorsScreen() {
       contentContainerStyle={styles.list}
       ListHeaderComponent={
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Create Sponsor</Text>
+          <Text style={styles.sectionTitle}>{editingId ? 'Edit Sponsor' : 'Create Sponsor'}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" />
           <TextInput style={styles.input} value={link} onChangeText={setLink} placeholder="Website link" autoCapitalize="none" />
@@ -137,8 +199,13 @@ export default function SponsorsScreen() {
           <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
             <Text style={styles.secondaryText}>{image ? 'Image selected' : 'Pick image (optional)'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.primaryBtn, saving && styles.btnDisabled]} onPress={onCreate} disabled={saving}>
-            <Text style={styles.primaryText}>{saving ? 'Saving...' : 'Create Sponsor'}</Text>
+          {editingId ? (
+            <TouchableOpacity style={styles.secondaryBtn} onPress={resetForm}>
+              <Text style={styles.secondaryText}>Cancel edit</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity style={[styles.primaryBtn, saving && styles.btnDisabled]} onPress={onSave} disabled={saving}>
+            <Text style={styles.primaryText}>{saving ? 'Saving...' : editingId ? 'Save changes' : 'Create Sponsor'}</Text>
           </TouchableOpacity>
         </View>
       }
@@ -152,7 +219,9 @@ export default function SponsorsScreen() {
           colors={['#0f766e']}
         />
       }
-      renderItem={({ item }) => <SponsorRow item={item} />}
+      renderItem={({ item }) => (
+        <SponsorRow item={item} onEdit={onEdit} onDelete={onDelete} deleting={deletingId === item.id} />
+      )}
       ListEmptyComponent={<Text style={styles.empty}>No sponsors yet.</Text>}
     />
   );
@@ -204,7 +273,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
+  rowBody: { flex: 1 },
+  rowActions: { flexDirection: 'row', gap: 12, paddingLeft: 8 },
   rowTitle: { color: '#0f172a', fontWeight: '800' },
   rowSub: { color: '#334155', marginTop: 4 },
   rowMeta: { color: '#64748b', marginTop: 6, fontSize: 12 },

@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import LoginScreen from '../screens/LoginScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import FeedScreen from '../screens/FeedScreen';
 import FeedPostPagerScreen from '../screens/FeedPostPagerScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
@@ -17,6 +18,7 @@ import WalletScreen from '../screens/WalletScreen';
 import VideosScreen from '../screens/VideosScreen';
 import InsightsScreen from '../screens/InsightsScreen';
 import TournamentsScreen from '../screens/TournamentsScreen';
+import TournamentDetailScreen from '../screens/TournamentDetailScreen';
 import ScoutingScreen from '../screens/ScoutingScreen';
 import MoreScreen from '../screens/MoreScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -52,6 +54,16 @@ const MessagingStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const MoreStack = createNativeStackNavigator();
 const MarketplaceStack = createNativeStackNavigator();
+
+const linking = {
+  prefixes: ['footballpro://', 'https://footballpro.al', 'https://www.footballpro.al'],
+  config: {
+    screens: {
+      ResetPassword: 'reset-password/:token',
+      Login: 'login',
+    },
+  },
+};
 
 const formatBadge = (value) => {
   const n = Number(value || 0);
@@ -240,6 +252,11 @@ function MoreNavigator() {
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen
+        name="TournamentDetail"
+        component={TournamentDetailScreen}
+        options={{ title: 'Tournament', headerBackTitleVisible: true }}
+      />
       <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
@@ -385,10 +402,13 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!token ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: true, title: 'Reset password' }} />
+          </>
         ) : (
           <Stack.Screen name="Main" component={AppTabs} />
         )}

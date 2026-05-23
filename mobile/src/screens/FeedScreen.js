@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   FlatList,
   Image,
@@ -21,6 +22,8 @@ import { ResizeMode, Video } from 'expo-av';
 import {
   adsRequest,
   createCommentRequest,
+  deleteCommentRequest,
+  deletePostRequest,
   extractErrorMessage,
   likePostRequest,
   postCommentsRequest,
@@ -90,10 +93,17 @@ function PostCard({
   isDark,
   onOpenPost,
   onOpenAuthorProfile,
+  currentUserId,
+  onDeletePost,
+  onDeleteComment,
+  deletingPostId,
+  deletingCommentId,
 }) {
   const author = item?.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
   const avatarUrl = item?.author?.profilePhoto || null;
   const authorId = postAuthorId(item);
+  const isOwnPost =
+    currentUserId != null && authorId != null && String(currentUserId) === String(authorId);
   const isLiked = !!item?.isLiked;
   const sponsors = postSponsorsList(item);
   const hasSponsors = sponsors.length > 0;
@@ -165,6 +175,17 @@ function PostCard({
             <View style={styles.headerSponsorWrap}>
               <PostSponsorStrip sponsors={sponsors} isDark={isDark} variant="overlay" />
             </View>
+          ) : null}
+          {isOwnPost && onDeletePost ? (
+            <TouchableOpacity
+              style={styles.deletePostBtn}
+              onPress={() => onDeletePost(item)}
+              disabled={deletingPostId === item.id}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Delete post"
+            >
+              <Ionicons name="trash-outline" size={20} color="#dc2626" />
+            </TouchableOpacity>
           ) : null}
         </View>
       </TouchableOpacity>
@@ -257,9 +278,26 @@ function PostCard({
           {(commentsData || []).map((comment) => {
             const commentUser = comment?.User;
             const name = commentUser ? `${commentUser.firstName || ''} ${commentUser.lastName || ''}`.trim() : 'User';
+            const commentUserId = comment?.userId ?? commentUser?.id;
+            const isOwnComment =
+              currentUserId != null &&
+              commentUserId != null &&
+              String(currentUserId) === String(commentUserId);
             return (
               <View key={String(comment.id)} style={[styles.commentItem, isDark && styles.commentItemDark]}>
-                <Text style={[styles.commentAuthor, isDark && styles.textPrimaryDark]}>{name}</Text>
+                <View style={styles.commentHeaderRow}>
+                  <Text style={[styles.commentAuthor, isDark && styles.textPrimaryDark]}>{name}</Text>
+                  {isOwnComment && onDeleteComment ? (
+                    <TouchableOpacity
+                      onPress={() => onDeleteComment(comment, item.id)}
+                      disabled={deletingCommentId === comment.id}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityLabel="Delete comment"
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#dc2626" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
                 <Text style={[styles.commentText, isDark && styles.textSecondaryDark]}>{comment.content}</Text>
               </View>
             );
@@ -326,6 +364,8 @@ export default function FeedScreen({ navigation }) {
   const [commentsLoadingPostId, setCommentsLoadingPostId] = useState(null);
   const [commentDraftByPostId, setCommentDraftByPostId] = useState({});
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
+  const [deletingPostId, setDeletingPostId] = useState(null);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
   const [liveStreams, setLiveStreams] = useState([]);
   const [feedAds, setFeedAds] = useState([]);
   const [feedScope, setFeedScope] = useState('all');
@@ -339,6 +379,10 @@ export default function FeedScreen({ navigation }) {
         posts,
         initialIndex: Math.max(0, index),
         onPostUpdated: (postId, updates) => {
+          if (updates?.deleted) {
+            setPosts((prev) => prev.filter((p) => p.id !== postId));
+            return;
+          }
           setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...updates } : p)));
         },
       });
@@ -565,6 +609,59 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
+  const onDeletePost = (post) => {
+    if (!post?.id || deletingPostId) return;
+    Alert.alert('Delete post', 'Are you sure you want to delete this post?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setDeletingPostId(post.id);
+          try {
+            await deletePostRequest(post.id);
+            setPosts((prev) => prev.filter((p) => p.id !== post.id));
+            if (openCommentsPostId === post.id) setOpenCommentsPostId(null);
+          } catch (err) {
+            setError(extractErrorMessage(err, 'Could not delete post'));
+          } finally {
+            setDeletingPostId(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const onDeleteComment = (comment, postId) => {
+    if (!comment?.id || deletingCommentId) return;
+    Alert.alert('Delete comment', 'Remove this comment?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setDeletingCommentId(comment.id);
+          try {
+            await deleteCommentRequest(comment.id);
+            setCommentsByPostId((prev) => ({
+              ...prev,
+              [postId]: (prev[postId] || []).filter((c) => c.id !== comment.id),
+            }));
+            setPosts((prev) =>
+              prev.map((p) =>
+                p.id === postId ? { ...p, comments: Math.max(0, (p.comments || 0) - 1) } : p
+              )
+            );
+          } catch (err) {
+            setError(extractErrorMessage(err, 'Could not delete comment'));
+          } finally {
+            setDeletingCommentId(null);
+          }
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return <FeedSkeleton isDark={isDark} />;
   }
@@ -659,6 +756,11 @@ export default function FeedScreen({ navigation }) {
             isDark={isDark}
             onOpenPost={openPostFullscreen}
             onOpenAuthorProfile={openAuthorProfile}
+            currentUserId={user?.id}
+            onDeletePost={onDeletePost}
+            onDeleteComment={onDeleteComment}
+            deletingPostId={deletingPostId}
+            deletingCommentId={deletingCommentId}
           />
         )
       }
@@ -749,6 +851,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     minWidth: 0,
+  },
+  deletePostBtn: {
+    marginLeft: 8,
+    padding: 4,
   },
   headerSponsorWrap: {
     marginLeft: 8,
@@ -929,6 +1035,11 @@ const styles = StyleSheet.create({
   },
   commentItemDark: {
     backgroundColor: '#111827',
+  },
+  commentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   commentAuthor: {
     fontWeight: '700',

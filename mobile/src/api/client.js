@@ -59,6 +59,7 @@ export const extractErrorMessage = (error, fallback = 'Something went wrong') =>
 export const loginRequest = (email, password) => api.post('/api/auth/login', { email, password });
 export const registerRequest = (payload) => api.post('/api/auth/register', payload);
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
+export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
 export const meRequest = () => api.get('/api/auth/me');
 export const postsRequest = (params = {}) => api.get('/api/posts', { params });
 export const userPostsRequest = (userId) => api.get(`/api/posts/user/${userId}`);
@@ -106,6 +107,8 @@ export const likePostRequest = (postId) => api.post(`/api/likes/${postId}`);
 export const unlikePostRequest = (postId) => api.delete(`/api/likes/${postId}`);
 export const postCommentsRequest = (postId) => api.get(`/api/comments/${postId}`);
 export const createCommentRequest = (postId, content) => api.post(`/api/comments/${postId}`, { content });
+export const deletePostRequest = (postId) => api.delete(`/api/posts/${postId}`);
+export const deleteCommentRequest = (commentId) => api.delete(`/api/comments/${commentId}`);
 export const followUserRequest = (userId) => api.post(`/api/profiles/${userId}/follow`);
 export const unfollowUserRequest = (userId) => api.delete(`/api/profiles/${userId}/unfollow`);
 export const followStatusRequest = (userId) => api.get(`/api/profiles/${userId}/follow-status`);
@@ -155,6 +158,7 @@ export const notificationsRequest = (params = {}) => api.get('/api/notifications
 export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');
 export const markNotificationReadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/read`);
 export const markAllNotificationsReadRequest = () => api.put('/api/notifications/mark-all-read');
+export const deleteNotificationRequest = (notificationId) => api.delete(`/api/notifications/${notificationId}`);
 
 export const productsRequest = () => api.get('/api/products');
 export const productByIdRequest = (id) => api.get(`/api/products/${id}`);
@@ -233,12 +237,27 @@ export const engagementRateAnalyticsRequest = (period = 30) =>
 export const gamificationUserRequest = () => api.get('/api/gamification/user');
 export const gamificationAchievementsRequest = () => api.get('/api/gamification/achievements');
 export const transferHistoryByUserRequest = (userId) => api.get(`/api/transfer-history/user/${userId}`);
+export const addTransferHistoryRequest = (payload) => api.post('/api/transfer-history', payload);
+export const updateTransferHistoryRequest = (transferId, payload) =>
+  api.put(`/api/transfer-history/${transferId}`, payload);
+export const deleteTransferHistoryRequest = (transferId) => api.delete(`/api/transfer-history/${transferId}`);
+export const clubStaffByClubRequest = (clubId, params = {}) =>
+  api.get(`/api/club-staff/club/${clubId}`, { params });
+export const updateClubStaffRequest = (staffMemberId, payload) =>
+  api.patch(`/api/club-staff/${staffMemberId}`, payload);
+export const removeClubStaffRequest = (staffMemberId) => api.delete(`/api/club-staff/${staffMemberId}`);
 export const clubStaffAssignmentsRequest = (staffId) => api.get(`/api/club-staff/staff/${staffId}`);
 export const gamificationBadgesRequest = () => api.get('/api/gamification/badges');
 export const gamificationLeaderboardRequest = () => api.get('/api/gamification/leaderboard');
 
 export const tournamentsRequest = () => api.get('/api/tournaments');
 export const tournamentByIdRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}`);
+export const createTournamentRequest = (payload) => api.post('/api/tournaments', payload);
+export const tournamentStandingsRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/standings`);
+export const tournamentMatchesRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/matches`);
+export const tournamentStatsRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/stats`);
+export const tournamentMatchDetailRequest = (tournamentId, matchId) =>
+  api.get(`/api/tournaments/${tournamentId}/matches/${matchId}`);
 export const trendingTournamentsRequest = () => api.get('/api/tournaments/trending');
 export const joinTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/join`);
 export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournaments/${tournamentId}/leave`);
@@ -285,6 +304,10 @@ export const parentVerificationRequest = (parentEmail) =>
 
 export const sponsorsRequest = () => api.get('/api/sponsors/all');
 export const sponsorsByUserRequest = (userId) => api.get(`/api/sponsors/user/${userId}`);
+export const updateSponsorRequest = (sponsorId, payload = {}) =>
+  api.put(`/api/sponsors/${sponsorId}`, payload);
+export const deleteSponsorRequest = (sponsorId) => api.delete(`/api/sponsors/${sponsorId}`);
+
 export const createSponsorRequest = (payload = {}) => {
   const form = new FormData();
   Object.entries(payload).forEach(([key, value]) => {

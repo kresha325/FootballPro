@@ -255,18 +255,7 @@ export const ordersAPI = {
    SCOUTING
 ========================= */
 export const scoutingAPI = {
-  getScouts: () => API.get('/scouting'),
-  createReport: (data) => API.post('/scouting', data),
-};
-
-/* =========================
-   SUBSCRIPTIONS / FOLLOW
-========================= */
-export const subscriptionsAPI = {
-  follow: (userId) => API.post(`/subscriptions/${userId}`),
-  unfollow: (userId) => API.delete(`/subscriptions/${userId}`),
-  getFollowing: () => API.get('/subscriptions'),
-  getFollowers: (userId) => API.get(`/subscriptions/followers/${userId}`),
+  getRecommendations: (params) => API.get('/scouting/recommendations', { params }),
 };
 
 /* =========================

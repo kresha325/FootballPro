@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 function transferIcon(type) {
   const icons = {
@@ -11,7 +12,14 @@ function transferIcon(type) {
   return icons[type] || '📍';
 }
 
-export default function PublicProfileAboutTab({ profile, transfers = [], theme }) {
+export default function PublicProfileAboutTab({
+  profile,
+  transfers = [],
+  theme,
+  isOwner = false,
+  onAddTransfer,
+  onDeleteTransfer,
+}) {
   const stats = profile?.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const role = String(profile?.role || '').toLowerCase();
   const showTransfers = role === 'athlete' || role === 'coach' || role === 'trajner';
@@ -25,7 +33,14 @@ export default function PublicProfileAboutTab({ profile, transfers = [], theme }
             { backgroundColor: theme.card, borderColor: theme.border },
           ]}
         >
-          <Text style={[styles.blockTitle, { color: theme.text }]}>🔄 Transfer history</Text>
+          <View style={styles.transferHeader}>
+            <Text style={[styles.blockTitle, { color: theme.text, marginBottom: 0 }]}>🔄 Transfer history</Text>
+            {isOwner && onAddTransfer ? (
+              <TouchableOpacity style={styles.addBtn} onPress={onAddTransfer}>
+                <Text style={styles.addBtnText}>+ Add</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
           {transfers.length === 0 ? (
             <Text style={[styles.mutedCenter, { color: theme.muted }]}>No transfer history</Text>
           ) : (
@@ -46,6 +61,11 @@ export default function PublicProfileAboutTab({ profile, transfers = [], theme }
                     <Text style={[styles.notes, { color: theme.muted }]}>{t.notes}</Text>
                   ) : null}
                 </View>
+                {isOwner && onDeleteTransfer ? (
+                  <TouchableOpacity onPress={() => onDeleteTransfer(t)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ))
           )}
@@ -98,6 +118,9 @@ const styles = StyleSheet.create({
   wrap: { paddingBottom: 8 },
   block: { borderRadius: 12, borderWidth: 1, padding: 14 },
   blockTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10 },
+  transferHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  addBtn: { backgroundColor: '#0f766e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   mutedCenter: { textAlign: 'center', paddingVertical: 20, fontSize: 15 },
   transferRow: {
     flexDirection: 'row',
