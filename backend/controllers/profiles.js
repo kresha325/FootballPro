@@ -333,6 +333,8 @@ exports.updateProfile = async (req, res) => {
       'contact',
       'coachAffiliation',
       'coachCategory',
+      'matches',
+      'achievements',
     ];
     let updateData = {};
     for (const key in req.body) {
@@ -345,7 +347,15 @@ exports.updateProfile = async (req, res) => {
           continue;
         }
         // Parse JSON fields if needed
-        if ((key === 'stats' || key === 'careerHistory' || key === 'contact') && typeof req.body[key] === 'string' && req.body[key].trim() !== '') {
+        if (
+          (key === 'stats' ||
+            key === 'careerHistory' ||
+            key === 'contact' ||
+            key === 'matches' ||
+            key === 'achievements') &&
+          typeof req.body[key] === 'string' &&
+          req.body[key].trim() !== ''
+        ) {
           try {
             updateData[key] = JSON.parse(req.body[key]);
           } catch {

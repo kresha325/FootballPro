@@ -24,6 +24,9 @@ import {
   updateMyProfileRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import EditAthleteMatchAchievements, {
+  loadAthleteExtrasFromProfile,
+} from '../components/editProfile/EditAthleteMatchAchievements';
 import {
   ATHLETE_POSITIONS,
   COACH_AFFILIATIONS,
@@ -120,6 +123,8 @@ export default function EditProfileScreen({ navigation }) {
   const [profilePhotoFile, setProfilePhotoFile] = useState(null);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState('');
   const [clubSuggestions, setClubSuggestions] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [achievements, setAchievements] = useState([]);
 
   const [picker, setPicker] = useState({ open: false, field: null, title: '', options: [] });
 
@@ -177,6 +182,11 @@ export default function EditProfileScreen({ navigation }) {
           facebook: p.contact?.facebook != null ? String(p.contact.facebook) : '',
           selectedClubId: p.clubId != null ? Number(p.clubId) : null,
         });
+        if (normalizeEditRole(p.role || user?.role) === 'athlete') {
+          const extras = loadAthleteExtrasFromProfile(p);
+          setMatches(extras.matches);
+          setAchievements(extras.achievements);
+        }
       } catch (_err) {
         // first-time profile
       } finally {
@@ -256,6 +266,8 @@ export default function EditProfileScreen({ navigation }) {
           preferredFoot: form.preferredFoot || 'right',
           jerseyNumber: trim(form.jerseyNumber),
         };
+        payload.matches = matches;
+        payload.achievements = achievements;
         break;
       case 'coach':
         add('firstName', trim(form.firstName));
@@ -356,7 +368,7 @@ export default function EditProfileScreen({ navigation }) {
         break;
     }
     return payload;
-  }, [editRole, form, profilePhotoFile]);
+  }, [editRole, form, profilePhotoFile, matches, achievements]);
 
   const postClubSideEffects = async () => {
     const trimmedClub = form.club?.trim();
@@ -531,6 +543,12 @@ export default function EditProfileScreen({ navigation }) {
           {input('height', { keyboardType: 'number-pad', placeholder: '175' })}
           {labelFor('Weight (kg)')}
           {input('weight', { keyboardType: 'number-pad', placeholder: '70' })}
+          <EditAthleteMatchAchievements
+            matches={matches}
+            achievements={achievements}
+            onChangeMatches={setMatches}
+            onChangeAchievements={setAchievements}
+          />
         </>
       )}
 

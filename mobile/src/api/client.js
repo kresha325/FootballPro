@@ -85,6 +85,8 @@ export const myProfileRequest = () => api.get('/api/profiles/me');
 export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
 export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });
 export const clubMembersRequestMembership = (payload) => api.post('/api/club-members/request', payload);
+export const clubMembersByClubRequest = (clubId, status = 'approved') =>
+  api.get(`/api/club-members/club/${clubId}`, { params: status ? { status } : {} });
 export const createMyProfileRequest = (payload = {}) => api.post('/api/profiles/me', payload);
 export const updateMyProfileRequest = (payload = {}) => {
   const form = new FormData();

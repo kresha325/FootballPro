@@ -16,14 +16,20 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   addTransferHistoryRequest,
+  clubMembersByClubRequest,
+  clubRosterByClubRequest,
   clubStaffAssignmentsRequest,
+  clubStaffByClubRequest,
   deleteTransferHistoryRequest,
   extractErrorMessage,
   followStatusRequest,
+  gamificationAchievementsRequest,
+  joncoinBalanceRequest,
   followUserRequest,
   getOrCreateConversationRequest,
   profileByIdRequest,
@@ -34,7 +40,9 @@ import {
   userPostsRequest,
   userVideosRequest,
 } from '../api/client';
+import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
+import PublicProfileMatchHistoryTab from '../components/publicProfile/PublicProfileMatchHistoryTab';
 import PublicProfileContactTab from '../components/publicProfile/PublicProfileContactTab';
 import PublicProfileGalleryTab from '../components/publicProfile/PublicProfileGalleryTab';
 import PublicProfileOverviewTab from '../components/publicProfile/PublicProfileOverviewTab';
@@ -68,9 +76,13 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [videos, setVideos] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [staffAssignments, setStaffAssignments] = useState([]);
+  const [clubMembers, setClubMembers] = useState([]);
+  const [clubStaff, setClubStaff] = useState([]);
   const [sponsors, setSponsors] = useState([]);
+  const [joncoinBalance, setJoncoinBalance] = useState(null);
+  const [platformAchievements, setPlatformAchievements] = useState([]);
   /** Profile tab key (avoid name `activeTab` — clashes with some tooling / stale bundles). */
-  const [profileTab, setProfileTab] = useState('posts');
+  const [profileTab, setProfileTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -97,16 +109,28 @@ export default function PublicProfileScreen({ route, navigation }) {
   }, [route.params, me?.id]);
 
   const isSelf = me?.id != null && userId != null && String(me.id) === String(userId);
+  const ownProfileRoot = route.params?.ownProfile === true;
 
   useEffect(() => {
-    setProfileTab('posts');
-  }, [userId]);
+    setProfileTab(isSelf ? 'overview' : 'posts');
+  }, [userId, isSelf]);
+
+  const isAthlete = useMemo(() => {
+    const r = String(profile?.role || '').toLowerCase();
+    return r === 'athlete';
+  }, [profile?.role]);
 
   useEffect(() => {
     if (!isSelf && profileTab === 'sponsors') {
       setProfileTab('posts');
     }
   }, [isSelf, profileTab]);
+
+  useEffect(() => {
+    if (!isAthlete && (profileTab === 'matches' || profileTab === 'achievements')) {
+      setProfileTab('overview');
+    }
+  }, [isAthlete, profileTab]);
 
   const displayName = useMemo(() => {
     if (!profile) return APP_BRAND_NAME;
@@ -116,10 +140,10 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: displayName,
-      headerTitle: displayName,
+      title: ownProfileRoot && !profile ? 'My Profile' : displayName,
+      headerTitle: ownProfileRoot && !profile ? 'My Profile' : displayName,
     });
-  }, [navigation, displayName]);
+  }, [navigation, displayName, ownProfileRoot, profile]);
 
   const loadProfile = useCallback(
     async ({ silent } = { silent: false }) => {
@@ -131,6 +155,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         setProfile(p);
         const role = String(p?.role || '').toLowerCase();
 
+        const clubId = p?.id ?? p?.userId ?? userId;
         const [
           followRes,
           postsRes,
@@ -139,6 +164,11 @@ export default function PublicProfileScreen({ route, navigation }) {
           transferRes,
           staffRes,
           sponsorsRes,
+          membersRes,
+          clubStaffRes,
+          rosterRes,
+          balanceRes,
+          gamificationRes,
         ] = await Promise.all([
           isSelf ? Promise.resolve({ data: {} }) : followStatusRequest(userId),
           userPostsRequest(userId).catch(() => ({ data: [] })),
@@ -151,6 +181,19 @@ export default function PublicProfileScreen({ route, navigation }) {
             ? clubStaffAssignmentsRequest(userId).catch(() => ({ data: [] }))
             : Promise.resolve({ data: [] }),
           isSelf ? sponsorsByUserRequest(userId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          role === 'club'
+            ? clubMembersByClubRequest(clubId, 'approved').catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          role === 'club'
+            ? clubStaffByClubRequest(clubId, { status: 'active' }).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          role === 'club'
+            ? clubRosterByClubRequest(clubId).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          isSelf ? joncoinBalanceRequest().catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
+          isSelf && role === 'athlete'
+            ? gamificationAchievementsRequest().catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
         ]);
 
         if (!isSelf) {
@@ -164,6 +207,39 @@ export default function PublicProfileScreen({ route, navigation }) {
         setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
         setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
         setSponsors(Array.isArray(sponsorsRes?.data) ? sponsorsRes.data : []);
+
+        if (isSelf) {
+          const fromProfile = p?.joncoinBalance;
+          const fromApi = balanceRes?.data?.balance;
+          const n =
+            fromProfile != null && fromProfile !== ''
+              ? Number(fromProfile)
+              : fromApi != null && fromApi !== ''
+                ? Number(fromApi)
+                : null;
+          setJoncoinBalance(Number.isFinite(n) ? n : 0);
+        } else {
+          setJoncoinBalance(null);
+        }
+
+        if (isSelf && role === 'athlete') {
+          setPlatformAchievements(Array.isArray(gamificationRes?.data) ? gamificationRes.data : []);
+        } else {
+          setPlatformAchievements([]);
+        }
+
+        if (role === 'club') {
+          let members = Array.isArray(membersRes?.data) ? membersRes.data : [];
+          if (members.length === 0) {
+            const roster = Array.isArray(rosterRes?.data) ? rosterRes.data : [];
+            members = roster.filter((r) => !r.status || r.status === 'approved');
+          }
+          setClubMembers(members);
+          setClubStaff(Array.isArray(clubStaffRes?.data) ? clubStaffRes.data : []);
+        } else {
+          setClubMembers([]);
+          setClubStaff([]);
+        }
       } catch (err) {
         setError(extractErrorMessage(err, 'Failed to load profile'));
       } finally {
@@ -174,14 +250,16 @@ export default function PublicProfileScreen({ route, navigation }) {
     [userId, isSelf]
   );
 
-  useEffect(() => {
-    if (userId == null || userId === '') {
-      setError('Missing user');
-      setLoading(false);
-      return;
-    }
-    loadProfile();
-  }, [loadProfile, userId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (userId == null || userId === '') {
+        setError('Missing user');
+        setLoading(false);
+        return;
+      }
+      loadProfile();
+    }, [loadProfile, userId])
+  );
 
   const onAddTransfer = () => {
     setTransferForm({
@@ -302,14 +380,27 @@ export default function PublicProfileScreen({ route, navigation }) {
     const base = [
       { key: 'overview', label: '🏠 Overview' },
       { key: 'posts', label: '📝 Posts' },
+    ];
+    if (isAthlete) {
+      base.push({ key: 'matches', label: '⚽ Matches' });
+      base.push({ key: 'achievements', label: '🏆 Achievements' });
+    }
+    base.push(
       { key: 'gallery', label: '🖼️ Gallery' },
       { key: 'videos', label: '🎥 Videos' },
       { key: 'about', label: 'ℹ️ About' },
-      { key: 'contact', label: '✉️ Contact' },
-    ];
+      { key: 'contact', label: '✉️ Contact' }
+    );
     if (isSelf) base.push({ key: 'sponsors', label: '🤝 Sponsors' });
     return base;
-  }, [isSelf]);
+  }, [isSelf, isAthlete]);
+
+  const onOpenInsights = useCallback(() => {
+    const parent = navigation.getParent?.();
+    if (parent?.navigate) {
+      parent.navigate('More', { screen: 'Insights' });
+    }
+  }, [navigation]);
 
   if (loading) {
     return (
@@ -541,7 +632,30 @@ export default function PublicProfileScreen({ route, navigation }) {
                 </TouchableOpacity>
               </View>
             ) : (
-              <Text style={[styles.selfHint, { color: theme.muted }]}>This is your profile — use Me tab to edit.</Text>
+              <View style={styles.selfActionsWrap}>
+                {joncoinBalance != null ? (
+                  <View style={[styles.joncoinBanner, { borderColor: theme.border, backgroundColor: theme.chipBg }]}>
+                    <Text style={styles.joncoinLabel}>JonCoin</Text>
+                    <Text style={styles.joncoinValue}>{joncoinBalance}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.selfActionsRow}>
+                  <TouchableOpacity
+                    style={styles.selfPrimaryBtn}
+                    onPress={() => navigation.navigate('EditProfile')}
+                  >
+                    <Ionicons name="create-outline" size={18} color="#fff" />
+                    <Text style={styles.selfPrimaryBtnText}>Edit profile</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.selfSecondaryBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
+                    onPress={() => navigation.navigate('BrowseProfiles')}
+                  >
+                    <Ionicons name="people-outline" size={18} color="#0f766e" />
+                    <Text style={styles.selfSecondaryBtnText}>Browse</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
 
             <PublicProfileTabBar tabs={tabs} activeKey={profileTab} onChange={setProfileTab} theme={theme} />
@@ -551,9 +665,24 @@ export default function PublicProfileScreen({ route, navigation }) {
                   profile={profile}
                   theme={theme}
                   staffAssignments={staffAssignments}
+                  clubMembers={clubMembers}
+                  clubStaff={clubStaff}
+                  onPressUser={(uid) => navigation.push('PublicProfile', { userId: uid })}
                 />
               ) : null}
               {profileTab === 'posts' ? <PublicProfilePostsTab posts={posts} theme={theme} /> : null}
+              {profileTab === 'matches' && isAthlete ? (
+                <PublicProfileMatchHistoryTab profile={profile} theme={theme} />
+              ) : null}
+              {profileTab === 'achievements' && isAthlete ? (
+                <PublicProfileAchievementsTab
+                  profile={profile}
+                  theme={theme}
+                  platformAchievements={platformAchievements}
+                  isSelf={isSelf}
+                  onOpenInsights={isSelf ? onOpenInsights : undefined}
+                />
+              ) : null}
               {profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
               {profileTab === 'videos' ? <PublicProfileVideosTab videos={videos} theme={theme} /> : null}
               {profileTab === 'about' ? (
@@ -800,7 +929,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selfHint: { textAlign: 'center', marginTop: 16, fontSize: 14 },
+  selfActionsWrap: { marginTop: 16, width: '100%' },
+  joncoinBanner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  joncoinLabel: { color: '#92400e', fontWeight: '700', fontSize: 12 },
+  joncoinValue: { color: '#b45309', fontWeight: '800', fontSize: 22, marginTop: 2 },
+  selfActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  selfPrimaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0f766e',
+    paddingVertical: 12,
+    borderRadius: 10,
+    maxWidth: 200,
+  },
+  selfPrimaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  selfSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 2,
+    borderColor: '#0f766e',
+    paddingVertical: 10,
+    borderRadius: 10,
+    maxWidth: 140,
+  },
+  selfSecondaryBtnText: { color: '#0f766e', fontWeight: '800', fontSize: 15 },
   tabPanel: {
     marginTop: 8,
     paddingTop: 4,

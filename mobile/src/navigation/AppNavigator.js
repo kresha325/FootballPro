@@ -21,7 +21,6 @@ import TournamentsScreen from '../screens/TournamentsScreen';
 import TournamentDetailScreen from '../screens/TournamentDetailScreen';
 import ScoutingScreen from '../screens/ScoutingScreen';
 import MoreScreen from '../screens/MoreScreen';
-import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
@@ -212,7 +211,8 @@ function ProfileNavigator() {
     <ProfileStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
       <ProfileStack.Screen
         name="MyProfile"
-        component={ProfileScreen}
+        component={PublicProfileScreen}
+        initialParams={{ ownProfile: true }}
         options={{
           title: 'My Profile',
           headerRight: () => (

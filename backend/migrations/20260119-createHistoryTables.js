@@ -114,11 +114,3 @@ module.exports = {
     await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_TransferHistories_transferType"');
   }
 };
-module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    // ...existing code from createHistoryTables.js...
-  },
-  down: async (queryInterface, Sequelize) => {
-    // ...existing code from createHistoryTables.js...
-  }
-};
