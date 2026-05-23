@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import {
   deleteNotificationRequest,
   extractErrorMessage,
@@ -8,24 +9,30 @@ import {
   markNotificationReadRequest,
   notificationsRequest,
 } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useUnreadBadges } from '../hooks/useUnreadBadges';
+import { getNotificationIcon, navigateFromNotification } from '../utils/navigateFromNotification';
 
-function NotificationRow({ item, onMarkRead, onDelete, deleting }) {
+function NotificationRow({ item, onPress, onDelete, deleting }) {
+  const icon = getNotificationIcon(item);
   return (
     <TouchableOpacity
-      style={[styles.row, item.isRead && styles.rowRead]}
-      onPress={onMarkRead}
-      onLongPress={onDelete}
+      style={[styles.row, !item.isRead && styles.rowUnread]}
+      onPress={() => onPress(item)}
+      onLongPress={() => onDelete(item.id)}
       delayLongPress={400}
       disabled={deleting}
+      activeOpacity={0.85}
     >
+      <Text style={styles.icon}>{icon}</Text>
       <View style={styles.rowMain}>
-        <Text style={styles.title}>{item.title || 'Notification'}</Text>
+        <Text style={[styles.title, !item.isRead && styles.titleUnread]}>{item.title || 'Notification'}</Text>
         <Text style={styles.message}>{item.message || ''}</Text>
         <Text style={styles.meta}>{new Date(item.createdAt).toLocaleString()}</Text>
       </View>
       <TouchableOpacity
         style={styles.deleteIconBtn}
-        onPress={onDelete}
+        onPress={() => onDelete(item.id)}
         disabled={deleting}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityLabel="Delete notification"
@@ -37,6 +44,9 @@ function NotificationRow({ item, onMarkRead, onDelete, deleting }) {
 }
 
 export default function NotificationsScreen() {
+  const navigation = useNavigation();
+  const { getSocket } = useAuth();
+  const { notificationsCount, refresh: refreshBadges } = useUnreadBadges(getSocket);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,24 +61,33 @@ export default function NotificationsScreen() {
       const response = await notificationsRequest({ page: 1, limit: 30 });
       const list = Array.isArray(response?.data?.notifications) ? response.data.notifications : [];
       setItems(list);
+      await refreshBadges();
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load notifications'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshBadges]);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
 
-  const onMarkRead = async (id) => {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-    try {
-      await markNotificationReadRequest(id);
-    } catch (_err) {
-      // Keep optimistic UI even if endpoint fails silently.
+  const onPressNotification = async (item) => {
+    if (!item?.isRead) {
+      setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)));
+      try {
+        await markNotificationReadRequest(item.id);
+        await refreshBadges();
+      } catch (_err) {
+        /* optimistic UI */
+      }
+    }
+
+    const navigated = await navigateFromNotification(item, navigation);
+    if (!navigated) {
+      Alert.alert('Notification', item.message || item.title || 'No destination for this notification.');
     }
   };
 
@@ -85,6 +104,7 @@ export default function NotificationsScreen() {
           setItems((curr) => curr.filter((n) => n.id !== id));
           try {
             await deleteNotificationRequest(id);
+            await refreshBadges();
           } catch (err) {
             setItems(prev);
             setError(extractErrorMessage(err, 'Failed to delete notification'));
@@ -103,6 +123,7 @@ export default function NotificationsScreen() {
     setItems((curr) => curr.map((n) => ({ ...n, isRead: true })));
     try {
       await markAllNotificationsReadRequest();
+      await refreshBadges();
     } catch (err) {
       setItems(prev);
       setError(extractErrorMessage(err, 'Failed to mark all as read'));
@@ -122,7 +143,12 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <View>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          {notificationsCount > 0 ? (
+            <Text style={styles.unreadHint}>{notificationsCount} unread</Text>
+          ) : null}
+        </View>
         <TouchableOpacity onPress={onMarkAll} disabled={markingAll}>
           <Text style={styles.headerAction}>{markingAll ? '...' : 'Mark all'}</Text>
         </TouchableOpacity>
@@ -145,8 +171,8 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => (
           <NotificationRow
             item={item}
-            onMarkRead={() => onMarkRead(item.id)}
-            onDelete={() => onDelete(item.id)}
+            onPress={onPressNotification}
+            onDelete={onDelete}
             deleting={deletingId === item.id}
           />
         )}
@@ -168,6 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
+  unreadHint: { color: '#dc2626', fontWeight: '700', fontSize: 13, marginTop: 2 },
   headerAction: { color: '#0f766e', fontWeight: '700' },
   list: { padding: 12 },
   row: {
@@ -180,10 +207,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  rowRead: { opacity: 0.75 },
+  rowUnread: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
+  },
+  icon: { fontSize: 26, marginRight: 10, marginTop: 2 },
   rowMain: { flex: 1, paddingRight: 8 },
   deleteIconBtn: { padding: 4 },
-  title: { fontWeight: '700', color: '#111827' },
+  title: { fontWeight: '600', color: '#111827' },
+  titleUnread: { fontWeight: '800' },
   message: { color: '#475569', marginTop: 4 },
   meta: { color: '#94a3b8', marginTop: 6, fontSize: 12 },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 24 },

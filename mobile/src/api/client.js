@@ -62,6 +62,7 @@ export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-passw
 export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
 export const meRequest = () => api.get('/api/auth/me');
 export const postsRequest = (params = {}) => api.get('/api/posts', { params });
+export const getPostRequest = (postId) => api.get(`/api/posts/${postId}`);
 export const userPostsRequest = (userId) => api.get(`/api/posts/user/${userId}`);
 export const createPostRequest = (payload = {}) => {
   const form = new FormData();

@@ -43,9 +43,9 @@ import LiveViewerScreen from '../screens/LiveViewerScreen';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { messagingUnreadCountRequest } from '../api/client';
 import { APP_BRAND_NAME } from '../config/branding';
 import { absoluteBackendUrl } from '../config/constants';
+import { useUnreadBadges } from '../hooks/useUnreadBadges';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -278,46 +278,13 @@ function MoreNavigator() {
 function AppTabs() {
   const { getSocket } = useAuth();
   const { totalPieces } = useCart();
-  const [messagesBadge, setMessagesBadge] = React.useState(0);
-
-  const refreshBadges = React.useCallback(async () => {
-    try {
-      const msgRes = await messagingUnreadCountRequest();
-      setMessagesBadge(
-        Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0)
-      );
-    } catch (_err) {
-      // Keep previous badge values on failure.
-    }
-  }, []);
-
-  React.useEffect(() => {
-    refreshBadges();
-    const id = setInterval(refreshBadges, 30000);
-    return () => clearInterval(id);
-  }, [refreshBadges]);
+  const { notificationsCount, messagesCount, refresh: refreshBadges } = useUnreadBadges(getSocket);
 
   useFocusEffect(
     React.useCallback(() => {
       refreshBadges();
     }, [refreshBadges])
   );
-
-  React.useEffect(() => {
-    const socket = getSocket?.();
-    if (!socket) return undefined;
-    const bumpMessages = () => {
-      refreshBadges();
-    };
-    socket.on('newMessage', bumpMessages);
-    socket.on('messageUpdated', bumpMessages);
-    socket.on('messageDeleted', bumpMessages);
-    return () => {
-      socket.off('newMessage', bumpMessages);
-      socket.off('messageUpdated', bumpMessages);
-      socket.off('messageDeleted', bumpMessages);
-    };
-  }, [getSocket, refreshBadges]);
 
   return (
     <Tabs.Navigator
@@ -376,14 +343,15 @@ function AppTabs() {
         options={{
           headerShown: false,
           tabBarLabel: 'Chats',
-          tabBarBadge: formatBadge(messagesBadge),
+          tabBarBadge: formatBadge(messagesCount),
         }}
       />
       <Tabs.Screen
         name="More"
-        component={MoreNavigatorScreen}
+        component={MoreNavigator}
         options={{
           headerShown: false,
+          tabBarBadge: formatBadge(notificationsCount),
         }}
       />
     </Tabs.Navigator>
