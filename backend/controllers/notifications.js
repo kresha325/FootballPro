@@ -209,15 +209,29 @@ exports.notifyFollow = async (followedId, followerId) => {
 
 exports.notifyMessage = async (recipientId, senderId, message) => {
   const sender = await User.findByPk(senderId);
+  if (!sender) return null;
+  const text = typeof message === 'string' ? message : '';
   return exports.createNotification({
     userId: recipientId,
     actorId: senderId,
     type: 'message',
     title: 'New Message',
-    message: `${sender.firstName} ${sender.lastName}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`,
-    link: `/messages/${senderId}`,
+    message: `${sender.firstName} ${sender.lastName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
+    link: `/messaging`,
     entityType: 'message',
     entityId: senderId,
+  });
+};
+
+exports.notifyTournament = async (userId, tournamentId, title, message) => {
+  return exports.createNotification({
+    userId,
+    type: 'tournament',
+    title: title || 'Tournament update',
+    message: message || '',
+    link: `/tournaments/${tournamentId}`,
+    entityType: 'tournament',
+    entityId: tournamentId,
   });
 };
 

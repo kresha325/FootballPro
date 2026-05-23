@@ -4,12 +4,10 @@ const auth = require('../middleware/auth');
 const { getPayments, createPayment } = require('../controllers/payments');
 const { 
   createCheckoutSession, 
-  stripeWebhook, 
   verifySession 
 } = require('../controllers/stripePayments');
 
-// Stripe webhook (NO auth middleware - Stripe needs raw body)
-router.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+// Stripe webhook is mounted in server.js before express.json()
 
 // Protected routes
 router.get('/', auth, getPayments);

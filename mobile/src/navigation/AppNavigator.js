@@ -364,7 +364,7 @@ function AppTabs() {
       />
       <Tabs.Screen
         name="More"
-        component={MoreNavigator}
+        component={MoreNavigatorScreen}
         options={{
           headerShown: false,
         }}

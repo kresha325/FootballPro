@@ -149,6 +149,11 @@ try {
 } catch (e) {
   console.warn('Could not set io in utils/socket:', e && e.message);
 }
+
+// Stripe webhook must receive raw body (before express.json)
+const { stripeWebhook } = require('./controllers/stripePayments');
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
@@ -236,7 +241,6 @@ app.use('/api/live-stream-notification', require('./routes/liveStreamNotificatio
 app.use('/api/live-donation', require('./routes/liveDonation'));
 app.use('/api/scheduled-live-stream', require('./routes/scheduledLiveStream'));
 app.use('/api/live-stream-replay', require('./routes/liveStreamReplay'));
-app.use('/api/live-chat', require('./routes/liveChat'));
 app.use('/api/club-members', require('./routes/clubMembers'));
 app.use('/api/club-roster', require('./routes/clubRoster'));
 app.use('/api/verification', require('./routes/verification'));

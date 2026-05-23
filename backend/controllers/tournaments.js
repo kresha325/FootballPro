@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
-const { notifyMessage } = require('./notifications');
+const { notifyMessage, notifyTournament } = require('./notifications');
 
 exports.createTournament = async (req, res) => {
   try {
@@ -636,20 +636,13 @@ exports.scheduleMatch = async (req, res) => {
 
     await match.update({ matchDate });
 
-    // Notify participants
+  // Notify participants
+    const scheduleText = `Your match has been scheduled for ${new Date(matchDate).toLocaleString()}`;
     if (match.homeUserId) {
-      await notifyMessage(
-        match.homeUserId,
-        req.user.id,
-        `Your match has been scheduled for ${new Date(matchDate).toLocaleString()}`
-      );
+      await notifyTournament(match.homeUserId, match.tournamentId, 'Match Scheduled', scheduleText);
     }
     if (match.awayUserId) {
-      await notifyMessage(
-        match.awayUserId,
-        req.user.id,
-        `Your match has been scheduled for ${new Date(matchDate).toLocaleString()}`
-      );
+      await notifyTournament(match.awayUserId, match.tournamentId, 'Match Scheduled', scheduleText);
     }
 
     res.json(match);
@@ -853,11 +846,11 @@ exports.startTournamentAndGenerateMatches = async (req, res) => {
 
     // Notify all participants
     for (const participant of participants) {
-      await notifyMessage(
+      await notifyTournament(
         participant.userId,
+        tournamentId,
         'Tournament Started!',
-        `${tournament.name} has started! Check your match schedule.`,
-        `/tournaments/${tournamentId}`
+        `${tournament.name} has started! Check your match schedule.`
       );
     }
 
@@ -976,11 +969,12 @@ exports.updateMatchResultForTournament = async (req, res) => {
           match.Tournament.status = 'finished';
           await match.Tournament.save();
           
-          await notifyMessage(
-            winnerId,
+          const winnerUserId = winners[0];
+          await notifyTournament(
+            winnerUserId,
+            match.tournamentId,
             'Tournament Winner! 🏆',
-            `Congratulations! You won ${match.Tournament.name}!`,
-            `/tournaments/${match.tournamentId}`
+            `Congratulations! You won ${match.Tournament.name}!`
           );
         }
       }

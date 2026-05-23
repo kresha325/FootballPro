@@ -78,7 +78,7 @@ function Premium() {
       </div>
 
       {/* Current Status */}
-      {user?.isPremium ? (
+      {user?.premium ? (
         <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg p-6 mb-8">
           <div className="flex items-center gap-3">
             <CheckIcon className="h-8 w-8 text-green-600" />
@@ -206,10 +206,10 @@ function Premium() {
           </ul>
           <button
             onClick={() => setShowPaymentModal(true)}
-            disabled={user?.isPremium}
+            disabled={user?.premium}
             className="w-full py-3 rounded-lg font-medium bg-white text-purple-600 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
-            {user?.isPremium ? 'Already Premium' : 'Upgrade Now'}
+            {user?.premium ? 'Already Premium' : 'Upgrade Now'}
           </button>
         </div>
       </div>

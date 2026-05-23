@@ -1,6 +1,8 @@
 // Universal search: returns users, tournaments, posts, etc.
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const { User, Profile, Tournament, Post } = require('../models');
+const Follow = require('../models/Follow');
 exports.searchEverything = async (req, res) => {
   const { q } = req.query;
   try {
@@ -106,7 +108,7 @@ exports.searchUsers = async (req, res) => {
         order = [['createdAt', 'DESC']];
         break;
       case 'followers':
-        order = [[sequelize.literal('(SELECT COUNT(*) FROM "Subscriptions" WHERE "followedId" = "User"."id")'), 'DESC']];
+        order = [[sequelize.literal('(SELECT COUNT(*) FROM "Follows" WHERE "followingId" = "User"."id")'), 'DESC']];
         break;
       case 'posts':
         order = [[sequelize.literal('(SELECT COUNT(*) FROM "Posts" WHERE "userId" = "User"."id")'), 'DESC']];
@@ -292,24 +294,23 @@ exports.getTrendingUsers = async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const Subscription = require('../models/Subscription');
-    
-    const trendingUserIds = await Subscription.findAll({
+    const trendingRows = await Follow.findAll({
       where: {
         createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
+        status: 'accepted',
       },
       attributes: [
-        'followedId',
-        [sequelize.fn('COUNT', sequelize.col('followedId')), 'followCount'],
+        'followingId',
+        [sequelize.fn('COUNT', sequelize.col('followingId')), 'followCount'],
       ],
-      group: ['followedId'],
+      group: ['followingId'],
       order: [[sequelize.literal('followCount'), 'DESC']],
       limit: 10,
     });
 
-    const userIds = trendingUserIds.map(u => u.followedId);
+    const userIds = trendingRows.map((u) => u.followingId).filter(Boolean);
 
     const users = await User.findAll({
       where: {
@@ -337,7 +338,6 @@ exports.getTrendingUsers = async (req, res) => {
 exports.getRecommendedUsers = async (req, res) => {
   try {
     const userId = req.user.id;
-    const Subscription = require('../models/Subscription');
 
     // Get user's profile
     const userProfile = await Profile.findOne({ where: { userId } });
@@ -361,11 +361,11 @@ exports.getRecommendedUsers = async (req, res) => {
     }
 
     // Get users current user is NOT following
-    const followedUsers = await Subscription.findAll({
-      where: { followerId: userId },
-      attributes: ['followedId'],
+    const followedUsers = await Follow.findAll({
+      where: { followerId: userId, status: 'accepted' },
+      attributes: ['followingId'],
     });
-    const followedIds = followedUsers.map(f => f.followedId);
+    const followedIds = followedUsers.map((f) => f.followingId);
 
     if (followedIds.length > 0) {
       where.userId[Op.notIn] = followedIds;

@@ -27,10 +27,10 @@ export default function PremiumScreen() {
         <Text style={styles.heroSub}>Boost your football journey with premium tools.</Text>
       </View>
 
-      <View style={[styles.statusCard, user?.isPremium ? styles.active : styles.inactive]}>
-        <Text style={styles.statusTitle}>{user?.isPremium ? 'Premium Active' : 'Free Plan'}</Text>
+      <View style={[styles.statusCard, user?.premium ? styles.active : styles.inactive]}>
+        <Text style={styles.statusTitle}>{user?.premium ? 'Premium Active' : 'Free Plan'}</Text>
         <Text style={styles.statusText}>
-          {user?.isPremium
+          {user?.premium
             ? `Your membership is active${user?.premiumExpiresAt ? ` until ${new Date(user.premiumExpiresAt).toLocaleDateString()}` : ''}.`
             : 'Upgrade to unlock all premium features.'}
         </Text>

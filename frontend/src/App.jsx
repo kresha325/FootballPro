@@ -44,6 +44,7 @@ import VideoCallRoom from './components/VideoCallRoom';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import Splash from './components/Splash';
+import AuthCallback from './components/AuthCallback';
 
 // Hiq importin e applyBackgroundStyle
 function App() {
@@ -84,6 +85,7 @@ function App() {
             <Route path="/register" element={user ? <Navigate to="/feed" /> : <Register />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/feed" /> : <ForgotPassword />} />
             <Route path="/reset-password/:token" element={user ? <Navigate to="/feed" /> : <ResetPassword />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* FEED */}
             <Route path="/feed" element={user ? <Feed /> : <Navigate to="/login" />} />

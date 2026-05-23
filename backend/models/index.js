@@ -71,6 +71,7 @@ User.hasMany(Sponsor, { foreignKey: 'userId' });
 Sponsor.belongsTo(User, { foreignKey: 'userId' });
 // Follow associations
 Follow.belongsTo(User, { as: 'follower', foreignKey: 'followerId' });
+Follow.belongsTo(User, { as: 'following', foreignKey: 'followingId' });
 // User/Profile
 User.hasOne(Profile, { foreignKey: 'userId' });
 Profile.belongsTo(User, { foreignKey: 'userId' });
