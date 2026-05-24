@@ -16,6 +16,7 @@ import {
   joinTournamentRequest,
   leaveTournamentRequest,
   startTournamentRequest,
+  tournamentBracketRequest,
   tournamentByIdRequest,
   tournamentMatchDetailRequest,
   tournamentMatchesRequest,
@@ -23,13 +24,9 @@ import {
   tournamentStatsRequest,
   updateTournamentMatchScoreRequest,
 } from '../api/client';
+import TournamentBracketView from '../components/TournamentBracketView';
 import { useAuth } from '../context/AuthContext';
-
-const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'table', label: 'Standings' },
-  { key: 'matches', label: 'Matches' },
-];
+import { groupMatchesByRound, knockoutRoundLabel, roundsFromBracketApi } from '../utils/tournamentBracket';
 
 function participantLabel(p, participantType) {
   const club = p?.Profile?.club;
@@ -152,6 +149,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [tournament, setTournament] = useState(null);
   const [standings, setStandings] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [bracketData, setBracketData] = useState(null);
   const [stats, setStats] = useState(null);
   const [matchModal, setMatchModal] = useState({ open: false, loading: false, data: null, error: '' });
   const [scoreHomeInput, setScoreHomeInput] = useState('');
@@ -164,16 +162,18 @@ export default function TournamentDetailScreen({ route, navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [tRes, stRes, mRes, statRes] = await Promise.all([
+      const [tRes, stRes, mRes, statRes, bracketRes] = await Promise.all([
         tournamentByIdRequest(tournamentId),
         tournamentStandingsRequest(tournamentId).catch(() => ({ data: null })),
         tournamentMatchesRequest(tournamentId).catch(() => ({ data: [] })),
         tournamentStatsRequest(tournamentId).catch(() => ({ data: null })),
+        tournamentBracketRequest(tournamentId).catch(() => ({ data: null })),
       ]);
       setTournament(tRes.data);
       setStandings(stRes.data);
       setMatches(Array.isArray(mRes.data) ? mRes.data : []);
       setStats(statRes.data);
+      setBracketData(bracketRes.data);
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load tournament'));
     } finally {
@@ -260,7 +260,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               const count = res.data?.matchesCreated ?? res.data?.matches?.length ?? 0;
               Alert.alert('Sukses', `Turneu nisi. U krijuan ${count} ndeshje.`);
               loadDetail();
-              setTab('matches');
+              setTab(isKnockoutType ? 'bracket' : 'matches');
             } catch (err) {
               Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u nis dot turneu'));
             } finally {
@@ -287,7 +287,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               const count = Array.isArray(res.data?.matches) ? res.data.matches.length : 0;
               Alert.alert('Sukses', `Bracket u gjenerua (${count} ndeshje).`);
               loadDetail();
-              setTab('matches');
+              setTab('bracket');
             } catch (err) {
               Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u gjenerua dot bracket'));
             } finally {
@@ -360,6 +360,19 @@ export default function TournamentDetailScreen({ route, navigation }) {
         : [];
   const standingsCaption = standings?.caption;
 
+  const detailTabs = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'table', label: 'Standings' },
+    ...(isKnockoutType ? [{ key: 'bracket', label: 'Bracket' }] : []),
+    { key: 'matches', label: 'Matches' },
+  ];
+
+  const matchesGrouped = groupMatchesByRound(matches);
+  const bracketRounds =
+    matchesGrouped.length > 0 ? matchesGrouped : roundsFromBracketApi(bracketData) || [];
+  const matchesByRound = isKnockoutType ? matchesGrouped : [];
+  const matchRoundNumbers = matchesByRound.map((r) => r.round);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -416,17 +429,19 @@ export default function TournamentDetailScreen({ route, navigation }) {
         <Text style={styles.hint}>Duhen të paktën 2 pjesëmarrës për të nisur turneun.</Text>
       ) : null}
 
-      <View style={styles.tabRow}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
-            onPress={() => setTab(t.key)}
-          >
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll}>
+        <View style={styles.tabRow}>
+          {detailTabs.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
+              onPress={() => setTab(t.key)}
+            >
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
 
       {tab === 'overview' ? (
         <View style={styles.card}>
@@ -469,10 +484,46 @@ export default function TournamentDetailScreen({ route, navigation }) {
         </View>
       ) : null}
 
+      {tab === 'bracket' && isKnockoutType ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Knockout bracket</Text>
+          <Text style={styles.muted}>
+            Swipe sideways for rounds. Tap a match to enter scores.
+          </Text>
+          <TournamentBracketView
+            rounds={bracketRounds}
+            participantType={pt}
+            onMatchPress={(m) => openMatch(m.id)}
+          />
+        </View>
+      ) : null}
+
       {tab === 'matches' ? (
         <View style={styles.card}>
           {matches.length === 0 ? (
             <Text style={styles.muted}>No matches scheduled.</Text>
+          ) : isKnockoutType && matchesByRound.length > 0 ? (
+            matchesByRound.map(({ round, matches: roundMatches }) => (
+              <View key={String(round)} style={styles.roundSection}>
+                <Text style={styles.roundHeader}>
+                  {knockoutRoundLabel(round, matchRoundNumbers)}
+                </Text>
+                {roundMatches.map((m) => (
+                  <TouchableOpacity
+                    key={String(m.id)}
+                    style={styles.matchRow}
+                    onPress={() => openMatch(m.id)}
+                  >
+                    <Text style={styles.matchTitle}>
+                      {participantLabel(m.homeUser, pt)} vs {participantLabel(m.awayUser, pt)}
+                    </Text>
+                    <Text style={styles.muted}>
+                      {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'TBD'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))
           ) : (
             matches.map((m) => (
               <TouchableOpacity key={String(m.id)} style={styles.matchRow} onPress={() => openMatch(m.id)}>
@@ -481,6 +532,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                 </Text>
                 <Text style={styles.muted}>
                   {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'TBD'}
+                  {m.round ? ` · R${m.round}` : ''}
                 </Text>
               </TouchableOpacity>
             ))
@@ -617,8 +669,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   scoreDash: { fontSize: 22, fontWeight: '800', color: '#64748b' },
-  tabRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#e2e8f0', alignItems: 'center' },
+  tabScroll: { marginBottom: 10, maxHeight: 44 },
+  tabRow: { flexDirection: 'row', gap: 6, paddingRight: 8 },
+  tabBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#e2e8f0', alignItems: 'center' },
   tabBtnActive: { backgroundColor: '#0f766e' },
   tabText: { color: '#334155', fontWeight: '700', fontSize: 12 },
   tabTextActive: { color: '#fff' },
@@ -641,6 +694,8 @@ const styles = StyleSheet.create({
   },
   standName: { color: '#0f172a', fontWeight: '600', flex: 1 },
   standPts: { color: '#0f766e', fontWeight: '700' },
+  roundSection: { marginBottom: 12 },
+  roundHeader: { fontWeight: '800', color: '#0f766e', marginBottom: 6, fontSize: 14 },
   matchRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   matchTitle: { color: '#0f172a', fontWeight: '700' },
   error: { color: '#b91c1c', marginBottom: 8 },

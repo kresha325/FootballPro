@@ -274,6 +274,7 @@ export const tournamentByIdRequest = (tournamentId) => api.get(`/api/tournaments
 export const createTournamentRequest = (payload) => api.post('/api/tournaments', payload);
 export const tournamentStandingsRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/standings`);
 export const tournamentMatchesRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/matches`);
+export const tournamentBracketRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/bracket`);
 export const tournamentStatsRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/stats`);
 export const tournamentMatchDetailRequest = (tournamentId, matchId) =>
   api.get(`/api/tournaments/${tournamentId}/matches/${matchId}`);
