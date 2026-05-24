@@ -41,14 +41,12 @@ export function absoluteBackendUrl(maybePath) {
 
 /** Frontend Vite (embed-call, embed-go-live, /live). */
 function resolveWebAppUrl() {
-  const configured = String(appExtra.WEB_APP_URL || 'https://footballpro.al').replace(/\/$/, '');
-  // footballpro.al shpesh nuk është deploy-uar / DNS — në dev përdor Vite lokal (port 5174)
-  if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    const devOverride = process.env.EXPO_PUBLIC_WEB_APP_URL || process.env.WEB_APP_URL;
-    if (devOverride) return String(devOverride).replace(/\/$/, '');
-    if (/footballpro\.al$/i.test(configured.replace(/^https?:\/\//, ''))) {
-      return 'http://localhost:5174';
-    }
+  const configured = String(
+    appExtra.WEB_APP_URL || 'https://footballpro-1.onrender.com'
+  ).replace(/\/$/, '');
+  const devOverride = process.env.EXPO_PUBLIC_WEB_APP_URL || process.env.WEB_APP_URL;
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && devOverride) {
+    return String(devOverride).replace(/\/$/, '');
   }
   return configured;
 }

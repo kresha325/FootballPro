@@ -153,7 +153,7 @@ export default function LiveViewerScreen({ route, navigation }) {
           onError={() =>
             Alert.alert(
               'Gabim',
-              'Nuk u ngarkua player-i. Kontrollo internetin dhe që footballpro.al është online.'
+              'Nuk u ngarkua player-i. Kontrollo internetin dhe frontend-in (footballpro-1.onrender.com).'
             )
           }
           renderLoading={() => (

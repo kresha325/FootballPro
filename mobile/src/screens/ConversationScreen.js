@@ -276,7 +276,7 @@ export default function ConversationScreen({ route, navigation }) {
       if (!WEB_APP_URL) {
         Alert.alert(
           'Thirrje',
-          'Konfiguro WEB_APP_URL në app.json (p.sh. https://footballpro.al) për thirrje.'
+          'Konfiguro WEB_APP_URL në app.json (https://footballpro-1.onrender.com) për thirrje.'
         );
         return;
       }

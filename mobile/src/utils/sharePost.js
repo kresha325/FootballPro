@@ -2,7 +2,7 @@ import { Alert, Linking, Share } from 'react-native';
 import { WEB_APP_URL } from '../config/constants';
 
 export function getPostShareUrl(postId) {
-  const base = (WEB_APP_URL || 'https://footballpro.al').replace(/\/$/, '');
+  const base = (WEB_APP_URL || 'https://footballpro-1.onrender.com').replace(/\/$/, '');
   return `${base}/post/${postId}`;
 }
 

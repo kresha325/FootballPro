@@ -60,7 +60,7 @@ const MoreStack = createNativeStackNavigator();
 const MarketplaceStack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ['footballpro://', 'https://footballpro.al', 'https://www.footballpro.al'],
+  prefixes: ['footballpro://', 'https://footballpro-1.onrender.com', 'https://footballpro.al', 'https://www.footballpro.al'],
   config: {
     screens: {
       ResetPassword: 'reset-password/:token',

@@ -34,7 +34,7 @@
     },
     "extra": {
       "BACKEND_URL": "https://footballpro.onrender.com",
-      "WEB_APP_URL": "https://footballpro.al"
+      "WEB_APP_URL": "https://footballpro-1.onrender.com"
     }
   }
 }

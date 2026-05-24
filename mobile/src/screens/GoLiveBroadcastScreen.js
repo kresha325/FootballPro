@@ -37,7 +37,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       const status = event?.nativeEvent?.statusCode;
       Alert.alert(
         'Gabim HTTP',
-        `Status ${status || '?'}\n${uri}\n\nfootballpro.al nuk ekziston në DNS — përdor frontend të deploy-uar ose Vite lokal.`
+        `Status ${status || '?'}\n${uri}\n\nKontrollo që frontend-i (footballpro-1.onrender.com) është online.`
       );
     },
     [uri]
@@ -70,7 +70,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       <View style={styles.centered}>
         <Text style={styles.title}>Go Live</Text>
         <Text style={styles.body}>
-          Vendos WEB_APP_URL në app.config.js (URL e frontend-it web, p.sh. https://footballpro.al).
+          Vendos WEB_APP_URL në app.json (frontend, p.sh. https://footballpro-1.onrender.com).
         </Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
           <Text style={styles.btnText}>Kthehu</Text>
