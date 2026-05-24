@@ -21,6 +21,28 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
     return `${base}/embed-go-live?${q}`;
   }, [streamId, title, description, confirmed]);
 
+  const onWebError = useCallback(
+    (event) => {
+      const desc = event?.nativeEvent?.description || 'load failed';
+      Alert.alert(
+        'Gabim',
+        `Nuk u ngarkua transmetimi.\n\nURL: ${uri}\n\n${desc}\n\nDev: nis \`cd frontend && npm run dev\` (port 5174). Prod: deploy frontend dhe vendos WEB_APP_URL.`
+      );
+    },
+    [uri]
+  );
+
+  const onHttpError = useCallback(
+    (event) => {
+      const status = event?.nativeEvent?.statusCode;
+      Alert.alert(
+        'Gabim HTTP',
+        `Status ${status || '?'}\n${uri}\n\nfootballpro.al nuk ekziston në DNS — përdor frontend të deploy-uar ose Vite lokal.`
+      );
+    },
+    [uri]
+  );
+
   const injectedBefore = useMemo(() => {
     const t = token ? JSON.stringify(token) : '""';
     return `(function(){try{localStorage.setItem('token',${t});}catch(e){}})();true;`;
@@ -81,7 +103,8 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       allowsFullscreenVideo
       mixedContentMode="always"
       onMessage={onWebMessage}
-      onError={() => Alert.alert('Gabim', 'Nuk u ngarkua transmetimi. Kontrollo WEB_APP_URL.')}
+      onError={onWebError}
+      onHttpError={onHttpError}
     />
   );
 }

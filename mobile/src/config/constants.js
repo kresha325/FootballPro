@@ -39,7 +39,18 @@ export function absoluteBackendUrl(maybePath) {
   return `${publicAssetBaseUrl()}${path}`;
 }
 
-/** URL e frontend-it (Vite) për WebView thirrjeje — /embed-call. Zbrazët nëse nuk është konfiguruar. */
-const rawWebAppUrl = String(appExtra.WEB_APP_URL || 'https://footballpro.al').replace(/\/$/, '');
-/** Frontend Vite (embed-call, live player). Override via app.json extra or WEB_APP_URL env. */
-export const WEB_APP_URL = rawWebAppUrl;
+/** Frontend Vite (embed-call, embed-go-live, /live). */
+function resolveWebAppUrl() {
+  const configured = String(appExtra.WEB_APP_URL || 'https://footballpro.al').replace(/\/$/, '');
+  // footballpro.al shpesh nuk është deploy-uar / DNS — në dev përdor Vite lokal (port 5174)
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const devOverride = process.env.EXPO_PUBLIC_WEB_APP_URL || process.env.WEB_APP_URL;
+    if (devOverride) return String(devOverride).replace(/\/$/, '');
+    if (/footballpro\.al$/i.test(configured.replace(/^https?:\/\//, ''))) {
+      return 'http://localhost:5174';
+    }
+  }
+  return configured;
+}
+
+export const WEB_APP_URL = resolveWebAppUrl();
