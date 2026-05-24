@@ -9,6 +9,7 @@ import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import ParentVerification from './components/ParentVerification';
+import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -83,14 +84,16 @@ function App() {
             <Routes>
 
             {/* AUTH */}
-            <Route path="/login" element={user ? <Navigate to="/feed" /> : <Login />} />
-            <Route path="/register" element={user ? <Navigate to="/feed" /> : <Register />} />
+            <Route path="/login" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Navigate to="/feed" />) : <Login />} />
+            <Route path="/register" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Navigate to="/feed" />) : <Register />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/feed" /> : <ForgotPassword />} />
             <Route path="/reset-password/:token" element={user ? <Navigate to="/feed" /> : <ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/onboarding" element={user ? <RegisterOnboarding /> : <Navigate to="/login" />} />
+            <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
 
             {/* FEED */}
-            <Route path="/feed" element={user ? <Feed /> : <Navigate to="/login" />} />
+            <Route path="/feed" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Feed />) : <Navigate to="/login" />} />
 
             {/* PROFILI IM (pa ID) */}
             <Route
@@ -123,7 +126,6 @@ function App() {
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
-                  <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
             <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />

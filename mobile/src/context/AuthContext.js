@@ -13,12 +13,15 @@ import {
 import { showXpNotification } from '../utils/xpNotifications';
 
 const AuthContext = createContext(null);
+const ONBOARDING_PENDING_KEY = 'onboarding_pending';
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingOnboarding, setPendingOnboarding] = useState(false);
+  const [requiresParentVerification, setRequiresParentVerification] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const socketRef = useRef(null);
 
@@ -80,9 +83,12 @@ export const AuthProvider = ({ children }) => {
     try {
       await SecureStore.deleteItemAsync('token');
       await SecureStore.deleteItemAsync('user');
+      await SecureStore.deleteItemAsync(ONBOARDING_PENDING_KEY);
     } catch (error) {
       console.warn('Secure store cleanup failed:', error.message);
     }
+    setPendingOnboarding(false);
+    setRequiresParentVerification(false);
   };
 
   const login = async ({ email, password }) => {
@@ -133,19 +139,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async ({ firstName, lastName, email, password, role }) => {
+  const register = async ({ firstName, lastName, email, password, role, dateOfBirth, city, country }) => {
     setIsSubmitting(true);
     try {
-      const response = await registerRequest({
+      const payload = {
         firstName,
         lastName,
         email,
         password,
         role: role || 'athlete',
-      });
+      };
+      if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
+      if (city) payload.city = city;
+      if (country) payload.country = country;
+
+      const response = await registerRequest(payload);
 
       const nextToken = response?.data?.token || null;
       const fallbackUser = response?.data?.user || null;
+      const needsParent = !!response?.data?.requiresParentVerification;
 
       if (!nextToken) {
         return { ok: false, message: 'Registration succeeded but no token returned' };
@@ -165,17 +177,25 @@ export const AuthProvider = ({ children }) => {
 
       await SecureStore.setItemAsync('token', nextToken);
       await SecureStore.setItemAsync('user', JSON.stringify(me));
+      await SecureStore.setItemAsync(ONBOARDING_PENDING_KEY, '1');
 
       setToken(nextToken);
       setUser(me);
+      setPendingOnboarding(true);
+      setRequiresParentVerification(needsParent);
       connectSocket(nextToken, me);
 
-      return { ok: true };
+      return { ok: true, requiresParentVerification: needsParent };
     } catch (error) {
       return { ok: false, message: extractErrorMessage(error, 'Registration failed') };
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const completeOnboarding = async () => {
+    await SecureStore.deleteItemAsync(ONBOARDING_PENDING_KEY);
+    setPendingOnboarding(false);
   };
 
   const forgotPassword = async (email) => {
@@ -205,6 +225,8 @@ export const AuthProvider = ({ children }) => {
         }
 
         setAuthToken(storedToken);
+        const onboardingFlag = await SecureStore.getItemAsync(ONBOARDING_PENDING_KEY);
+        setPendingOnboarding(onboardingFlag === '1');
 
         try {
           const meResponse = await meRequest();
@@ -249,6 +271,9 @@ export const AuthProvider = ({ children }) => {
       register,
       forgotPassword,
       logout,
+      pendingOnboarding,
+      requiresParentVerification,
+      completeOnboarding,
       refreshMe: async () => {
         if (!token) {
           return null;
@@ -264,7 +289,7 @@ export const AuthProvider = ({ children }) => {
         return me;
       },
     }),
-    [token, user, getSocket, socketConnected, isBootstrapping, isSubmitting]
+    [token, user, getSocket, socketConnected, isBootstrapping, isSubmitting, pendingOnboarding, requiresParentVerification]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

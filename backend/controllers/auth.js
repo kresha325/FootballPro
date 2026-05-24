@@ -4,6 +4,11 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { sendEmail } = require('../services/emailService');
+const {
+  ALLOWED_REGISTER_ROLES,
+  parseDateOnly,
+  ageFromDateOnly,
+} = require('../utils/registerValidation');
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase();
@@ -12,7 +17,7 @@ function normalizeEmail(raw) {
 exports.register = async (req, res) => {
   console.log('BACKEND: REGISTER BODY:', req.body);
 
-  const { email: rawEmail, password, role, firstName, lastName, dateOfBirth } = req.body;
+  const { email: rawEmail, password, role, firstName, lastName, dateOfBirth, city, country } = req.body;
   const email = normalizeEmail(rawEmail);
 
   try {
@@ -20,6 +25,31 @@ exports.register = async (req, res) => {
     if (!email || !password || !firstName || !lastName) {
       console.log('BACKEND: Missing required fields');
       return res.status(400).json({ msg: 'All fields are required' });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ msg: 'Invalid email address' });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({ msg: 'Password must be at least 6 characters' });
+    }
+
+    const normalizedRole = String(role || 'athlete').trim().toLowerCase();
+    if (!ALLOWED_REGISTER_ROLES.includes(normalizedRole)) {
+      return res.status(400).json({ msg: 'Invalid account type' });
+    }
+
+    let parsedDob = null;
+    if (dateOfBirth) {
+      const dob = parseDateOnly(dateOfBirth);
+      if (!dob.valid) {
+        return res.status(400).json({ msg: 'Invalid date of birth (use YYYY-MM-DD)' });
+      }
+      parsedDob = dob.value;
+      if (normalizedRole === 'athlete' && ageFromDateOnly(parsedDob) < 6) {
+        return res.status(400).json({ msg: 'Athletes must be at least 6 years old' });
+      }
     }
 
     // 2. Kontrollo nëse ekziston user
@@ -45,12 +75,12 @@ exports.register = async (req, res) => {
     const userPayload = {
       email,
       password: hashedPassword,
-      role: role || 'athlete',
-      firstName,
-      lastName,
+      role: normalizedRole,
+      firstName: String(firstName).trim(),
+      lastName: String(lastName).trim(),
     };
-    if (dateOfBirth) {
-      userPayload.dateOfBirth = dateOfBirth;
+    if (parsedDob) {
+      userPayload.dateOfBirth = parsedDob;
     }
     const user = await User.create(userPayload);
 
@@ -59,11 +89,9 @@ exports.register = async (req, res) => {
     try {
       await Profile.create({
         userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        dateOfBirth: user.dateOfBirth || null,
-      }, { fields: ['userId', 'firstName', 'lastName', 'email', 'dateOfBirth'] });
+        city: city ? String(city).trim() : null,
+        country: country ? String(country).trim() : null,
+      });
     } catch (profileErr) {
       console.warn('BACKEND: Profile creation failed (non-fatal):', profileErr && profileErr.message);
     }
@@ -87,17 +115,8 @@ exports.register = async (req, res) => {
     });
 
     // Determine if parent verification is required (under 18)
-    let requiresParentVerification = false;
-    if (user.dateOfBirth) {
-      const today = new Date();
-      const birth = new Date(user.dateOfBirth);
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
-      if (age < 18) requiresParentVerification = true;
-    }
+    const requiresParentVerification =
+      !!user.dateOfBirth && ageFromDateOnly(user.dateOfBirth) < 18;
 
     console.log('BACKEND: Sending success response');
     // 6. Response

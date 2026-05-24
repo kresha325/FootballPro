@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -9,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -28,7 +28,7 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.modalTitle}>Account type</Text>
+          <Text style={styles.modalTitle}>Lloji i llogarisë</Text>
           <FlatList
             data={REGISTER_ROLE_OPTIONS}
             keyExtractor={(item) => item.value}
@@ -41,7 +41,10 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
                   onClose();
                 }}
               >
-                <Text style={styles.modalRowText}>{item.label}</Text>
+                <View style={styles.modalRowBody}>
+                  <Text style={styles.modalRowText}>{item.label}</Text>
+                  {item.hint ? <Text style={styles.modalRowHint}>{item.hint}</Text> : null}
+                </View>
                 {item.value === selectedValue ? (
                   <Ionicons name="checkmark" size={20} color="#0f766e" />
                 ) : null}
@@ -54,6 +57,15 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
   );
 }
 
+function buildIsoDate(y, m, d) {
+  if (!y || !m || !d) return '';
+  const yy = String(y).padStart(4, '0');
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  if (yy.length !== 4 || mm.length !== 2 || dd.length !== 2) return '';
+  return `${yy}-${mm}-${dd}`;
+}
+
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { login, register, forgotPassword, isSubmitting } = useAuth();
@@ -62,8 +74,13 @@ export default function LoginScreen() {
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('athlete');
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [inlineError, setInlineError] = useState('');
 
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
@@ -72,7 +89,7 @@ export default function LoginScreen() {
     setInlineError('');
     const result = await login({ email: email.trim().toLowerCase(), password });
     if (!result.ok) {
-      setInlineError(result.message || 'Login failed');
+      setInlineError(result.message || 'Hyrja dështoi');
     }
   };
 
@@ -80,18 +97,31 @@ export default function LoginScreen() {
     setInlineError('');
     const normalizedRole = (role || 'athlete').trim().toLowerCase();
     if (!REGISTER_ROLE_VALUES.includes(normalizedRole)) {
-      setInlineError('Please select a valid account type.');
+      setInlineError('Zgjidh llojin e llogarisë.');
       return;
     }
+
+    const dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
+    if (!dateOfBirth) {
+      setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setInlineError('Duhet të pranosh kushtet e përdorimit.');
+      return;
+    }
+
     const result = await register({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim().toLowerCase(),
       password,
       role: normalizedRole,
+      dateOfBirth,
     });
     if (!result.ok) {
-      setInlineError(result.message || 'Register failed');
+      setInlineError(result.message || 'Regjistrimi dështoi');
     }
   };
 
@@ -99,118 +129,124 @@ export default function LoginScreen() {
     setInlineError('');
     const result = await forgotPassword(email.trim().toLowerCase());
     if (!result.ok) {
-      setInlineError(result.message || 'Reset request failed');
+      setInlineError(result.message || 'Kërkesa dështoi');
       return;
     }
     if (result.resetUrl) {
       const match = String(result.resetUrl).match(/reset-password\/([^/?#]+)/i);
       const resetToken = match?.[1];
       if (resetToken) {
-        Alert.alert('Password reset', result.message, [
-          { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { token: resetToken }) },
-        ]);
+        navigation.navigate('ResetPassword', { token: resetToken });
         return;
       }
-      Alert.alert('Password reset', `${result.message}\n\n${result.resetUrl}`);
-    } else {
-      Alert.alert('Password reset', result.message);
     }
     setMode('login');
+    setInlineError(result.message || 'Kontrollo email-in.');
   };
 
   const onSubmit = async () => {
     setInlineError('');
     if (!email.trim()) {
-      setInlineError('Please enter email.');
+      setInlineError('Vendos email-in.');
       return;
     }
-
     if (!isValidEmail(email.trim())) {
-      setInlineError('Please enter a valid email address.');
+      setInlineError('Email jo valid.');
       return;
     }
-
     if (mode !== 'forgot' && !password) {
-      setInlineError('Please enter password.');
+      setInlineError('Vendos fjalëkalimin.');
       return;
     }
-
     if (mode !== 'forgot' && password.length < 6) {
-      setInlineError('Password must be at least 6 characters.');
+      setInlineError('Fjalëkalimi: të paktën 6 karaktere.');
       return;
     }
-
+    if (mode === 'register' && password !== confirmPassword) {
+      setInlineError('Fjalëkalimet nuk përputhen.');
+      return;
+    }
     if (mode === 'register' && (!firstName.trim() || !lastName.trim())) {
-      setInlineError('Please enter first and last name.');
+      setInlineError('Vendos emrin dhe mbiemrin.');
       return;
     }
-
-    if (mode === 'login') {
-      await onLogin();
-      return;
-    }
-
-    if (mode === 'register') {
-      await onRegister();
-      return;
-    }
-
-    await onForgotPassword();
+    if (mode === 'login') await onLogin();
+    else if (mode === 'register') await onRegister();
+    else await onForgotPassword();
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <Text style={styles.title}>FootballPro Mobile</Text>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
+        <Text style={styles.title}>FootballPro</Text>
         <Text style={styles.subtitle}>
-          {mode === 'login' ? 'Sign in to continue' : mode === 'register' ? 'Create your account' : 'Recover your password'}
+          {mode === 'login'
+            ? 'Hyr për të vazhduar'
+            : mode === 'register'
+              ? 'Krijo llogarinë — karriera jote fillon këtu'
+              : 'Rikupero fjalëkalimin'}
         </Text>
 
         {inlineError ? <Text style={styles.inlineError}>{inlineError}</Text> : null}
 
         <View style={styles.segmentWrap}>
-          <TouchableOpacity style={[styles.segmentBtn, mode === 'login' && styles.segmentBtnActive]} onPress={() => setMode('login')}>
-            <Text style={[styles.segmentText, mode === 'login' && styles.segmentTextActive]}>Login</Text>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'login' && styles.segmentBtnActive]}
+            onPress={() => setMode('login')}
+          >
+            <Text style={[styles.segmentText, mode === 'login' && styles.segmentTextActive]}>Hyr</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.segmentBtn, mode === 'register' && styles.segmentBtnActive]} onPress={() => setMode('register')}>
-            <Text style={[styles.segmentText, mode === 'register' && styles.segmentTextActive]}>Register</Text>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'register' && styles.segmentBtnActive]}
+            onPress={() => setMode('register')}
+          >
+            <Text style={[styles.segmentText, mode === 'register' && styles.segmentTextActive]}>Regjistrohu</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.segmentBtn, mode === 'forgot' && styles.segmentBtnActive]} onPress={() => setMode('forgot')}>
-            <Text style={[styles.segmentText, mode === 'forgot' && styles.segmentTextActive]}>Forgot</Text>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'forgot' && styles.segmentBtnActive]}
+            onPress={() => setMode('forgot')}
+          >
+            <Text style={[styles.segmentText, mode === 'forgot' && styles.segmentTextActive]}>Harruar?</Text>
           </TouchableOpacity>
         </View>
 
         {mode === 'register' ? (
           <>
-            <TextInput
-              style={styles.input}
-              placeholder="First name"
-              value={firstName}
-              onChangeText={setFirstName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Last name"
-              value={lastName}
-              onChangeText={setLastName}
-            />
-            <Text style={styles.fieldLabel}>Account type</Text>
-            <TouchableOpacity
-              style={styles.pickerBtn}
-              onPress={() => setRolePickerOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Select account type"
-            >
+            <TextInput style={styles.input} placeholder="Emri" value={firstName} onChangeText={setFirstName} />
+            <TextInput style={styles.input} placeholder="Mbiemri" value={lastName} onChangeText={setLastName} />
+            <Text style={styles.fieldLabel}>Lloji i llogarisë</Text>
+            <TouchableOpacity style={styles.pickerBtn} onPress={() => setRolePickerOpen(true)}>
               <Text style={styles.pickerBtnText}>{registerRoleLabel(role)}</Text>
               <Ionicons name="chevron-down" size={20} color="#64748b" />
             </TouchableOpacity>
+            <Text style={styles.fieldLabel}>Datëlindja</Text>
+            <View style={styles.dobRow}>
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="DD"
+                value={dobDay}
+                onChangeText={(v) => setDobDay(v.replace(/\D/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="MM"
+                value={dobMonth}
+                onChangeText={(v) => setDobMonth(v.replace(/\D/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <TextInput
+                style={[styles.input, styles.dobInputWide]}
+                placeholder="VVVV"
+                value={dobYear}
+                onChangeText={(v) => setDobYear(v.replace(/\D/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+            <Text style={styles.hint}>Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.</Text>
           </>
         ) : null}
 
@@ -223,13 +259,31 @@ export default function LoginScreen() {
           keyboardType="email-address"
         />
         {mode !== 'forgot' ? (
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Fjalëkalimi"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            {mode === 'register' ? (
+              <TextInput
+                style={styles.input}
+                placeholder="Përsërit fjalëkalimin"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            ) : null}
+          </>
+        ) : null}
+
+        {mode === 'register' ? (
+          <View style={styles.termsRow}>
+            <Switch value={acceptedTerms} onValueChange={setAcceptedTerms} trackColor={{ true: '#0f766e' }} />
+            <Text style={styles.termsText}>Pranoj kushtet e përdorimit dhe privatësinë</Text>
+          </View>
         ) : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={isSubmitting}>
@@ -237,7 +291,7 @@ export default function LoginScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>
-              {mode === 'login' ? 'Login' : mode === 'register' ? 'Create Account' : 'Send Reset Link'}
+              {mode === 'login' ? 'Hyr' : mode === 'register' ? 'Krijo llogarinë' : 'Dërgo linkun'}
             </Text>
           )}
         </TouchableOpacity>
@@ -254,23 +308,10 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f7faf9' },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0f766e',
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 16,
-    color: '#4b5563',
-  },
+  flex: { flex: 1, backgroundColor: '#f0fdfa' },
+  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 },
+  title: { fontSize: 30, fontWeight: '800', color: '#0f766e' },
+  subtitle: { marginTop: 6, marginBottom: 16, color: '#475569', lineHeight: 22 },
   segmentWrap: {
     flexDirection: 'row',
     marginBottom: 14,
@@ -278,28 +319,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 4,
   },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  segmentBtnActive: {
-    backgroundColor: '#0f766e',
-  },
-  segmentText: {
-    color: '#334155',
-    fontWeight: '600',
-  },
-  segmentTextActive: {
-    color: '#fff',
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 6,
-  },
+  segmentBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  segmentBtnActive: { backgroundColor: '#0f766e' },
+  segmentText: { color: '#334155', fontWeight: '600', fontSize: 13 },
+  segmentTextActive: { color: '#fff' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 6 },
+  hint: { fontSize: 12, color: '#64748b', marginBottom: 12, lineHeight: 16 },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',
@@ -309,6 +334,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#fff',
   },
+  dobRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  dobInput: { flex: 1, marginBottom: 0 },
+  dobInputWide: { flex: 1.4, marginBottom: 0 },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,32 +349,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#fff',
   },
-  pickerBtnText: {
-    fontSize: 16,
-    color: '#0f172a',
-    fontWeight: '600',
-  },
-  inlineError: {
-    marginBottom: 12,
-    color: '#b91c1c',
-    fontWeight: '600',
-  },
+  pickerBtnText: { fontSize: 16, color: '#0f172a', fontWeight: '600' },
+  termsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  termsText: { flex: 1, fontSize: 13, color: '#475569' },
+  inlineError: { marginBottom: 12, color: '#b91c1c', fontWeight: '600' },
   button: {
     marginTop: 8,
     backgroundColor: '#0f766e',
     borderRadius: 10,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'flex-end',
-  },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
@@ -355,31 +370,19 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  modalList: {
-    maxHeight: 360,
-  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', paddingHorizontal: 20, marginBottom: 8 },
+  modalList: { maxHeight: 400 },
   modalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e2e8f0',
   },
-  modalRowActive: {
-    backgroundColor: '#f0fdfa',
-  },
-  modalRowText: {
-    fontSize: 16,
-    color: '#0f172a',
-    fontWeight: '600',
-  },
+  modalRowActive: { backgroundColor: '#f0fdfa' },
+  modalRowBody: { flex: 1, paddingRight: 8 },
+  modalRowText: { fontSize: 16, color: '#0f172a', fontWeight: '700' },
+  modalRowHint: { fontSize: 12, color: '#64748b', marginTop: 2 },
 });

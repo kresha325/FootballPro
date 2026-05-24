@@ -39,6 +39,7 @@ import SearchScreen from '../screens/SearchScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import RegisterOnboardingScreen from '../screens/RegisterOnboardingScreen';
 import ClubRosterScreen from '../screens/ClubRosterScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
@@ -387,7 +388,7 @@ function AppTabs() {
 }
 
 export default function AppNavigator() {
-  const { token, isBootstrapping } = useAuth();
+  const { token, isBootstrapping, pendingOnboarding } = useAuth();
 
   if (isBootstrapping) {
     return (
@@ -410,6 +411,12 @@ export default function AppNavigator() {
                 options={{ headerShown: true, title: 'Reset password' }}
               />
             </>
+          ) : pendingOnboarding ? (
+            <Stack.Screen
+              name="RegisterOnboarding"
+              component={RegisterOnboardingScreen}
+              options={{ headerShown: true, title: 'Plotëso profilin' }}
+            />
           ) : (
             <>
               <Stack.Screen name="Main" component={AppTabs} />

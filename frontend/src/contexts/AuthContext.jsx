@@ -124,6 +124,12 @@ export const AuthProvider = ({ children }) => {
       console.log('FRONTEND: Registration response:', response.data);
       const { token, user: newUser, requiresParentVerification } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('fp_pending_onboarding', '1');
+      if (requiresParentVerification) {
+        localStorage.setItem('fp_requires_parent', '1');
+      } else {
+        localStorage.removeItem('fp_requires_parent');
+      }
       setUser({ ...newUser, token });
       return { success: true, requiresParentVerification };
     } catch (error) {

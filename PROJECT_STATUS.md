@@ -76,6 +76,12 @@ See `mobile/RELEASE_QA.md` and `mobile/scripts/smoke-checklist.js`.
 - Mobile standings fix, SafeArea white screen fix
 - API smoke script + npm scripts
 
+## Registration & onboarding (May 2026)
+
+- **Backend:** validim email/roli/DOB; profil krijohet me `city`/`country`; nën 18 → `requiresParentVerification`
+- **Mobile:** regjistrim me datëlindje, konfirmim fjalëkalimi, kushte; **onboarding 2 hapa** pas regjistrimit
+- **Web:** `/onboarding` pas `/register`; datëlindja e detyrueshme
+
 ## Next polish (optional, post-launch)
 
 - EAS production build with push notifications

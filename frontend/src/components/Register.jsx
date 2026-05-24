@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { setOnboardingPending } from './RegisterOnboarding';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -102,6 +103,11 @@ const Register = () => {
       setLoading(false);
       return;
     }
+    if (!formData.dateOfBirth) {
+      setError('Date of birth is required');
+      setLoading(false);
+      return;
+    }
 
     console.log('FRONTEND: Submitting registration...');
     const result = await register({
@@ -115,11 +121,8 @@ const Register = () => {
     setLoading(false);
     if (result.success) {
       console.log('FRONTEND: Registration successful');
-      if (result.requiresParentVerification) {
-        navigate('/parent-verification');
-      } else {
-        navigate('/feed');
-      }
+      setOnboardingPending();
+      navigate('/onboarding');
     } else {
       console.error('FRONTEND: Registration failed:', result.error);
       setError(result.error || 'Registration failed. Please try again.');
@@ -131,10 +134,10 @@ const Register = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your JONSPORT account
+            Krijo llogarinë FootballPro
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Shfaq talentin, behu i dukshem dhe bashkohu me boten e Futbollit
+            Profil, video, turne dhe lidhje me skautë — fillo me regjistrim të plotë
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
