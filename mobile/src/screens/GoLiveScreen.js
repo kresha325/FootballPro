@@ -8,6 +8,7 @@ import {
   extractErrorMessage,
   startStreamRequest,
   streamsRequest,
+  uploadStreamRecordingRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,6 +28,8 @@ export default function GoLiveScreen({ route, navigation }) {
   const [myStreams, setMyStreams] = useState([]);
   const [loadError, setLoadError] = useState('');
   const [cameraChecked, setCameraChecked] = useState(false);
+  const [uploadingRecording, setUploadingRecording] = useState(false);
+  const [recordingTitle, setRecordingTitle] = useState('Recorded Stream');
   const focusStreamId = route?.params?.streamId;
 
   const openViewer = (streamId) => {
@@ -173,14 +176,56 @@ export default function GoLiveScreen({ route, navigation }) {
     };
   }, [user?.id]);
 
+  const onUploadRecording = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Leje', 'Duhet akses në galeri për të ngarkuar video.');
+        return;
+      }
+      const pick = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        quality: 0.8,
+      });
+      if (pick.canceled || !pick.assets?.[0]) return;
+
+      const asset = pick.assets[0];
+      const video = {
+        uri: asset.uri,
+        name: asset.fileName || `recording-${Date.now()}.mp4`,
+        type: asset.mimeType || 'video/mp4',
+      };
+
+      setUploadingRecording(true);
+      await uploadStreamRecordingRequest({
+        video,
+        title: recordingTitle.trim() || 'Recorded Stream',
+        description: 'Ngarkuar nga mobile',
+      });
+      Alert.alert('Sukses', 'Regjistrimi u ngarkua.');
+      await loadStreams();
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Ngarkimi dështoi'));
+    } finally {
+      setUploadingRecording(false);
+    }
+  };
+
   const renderStreamItem = ({ item, own }) => (
     <View style={styles.streamCard}>
       <Text style={[styles.streamTitle, isDark && styles.textPrimaryDark]}>{item.title || 'Untitled stream'}</Text>
-      <Text style={[styles.streamMeta, isDark && styles.textMutedDark]}>ID: {item.id} | Live: {String(item.isLive)} | Viewers: {item.viewers || 0}</Text>
+      <Text style={[styles.streamMeta, isDark && styles.textMutedDark]}>
+        ID: {item.id} | {item.isLive ? 'Live' : item.videoUrl ? 'Recording' : 'Offline'} | Viewers: {item.viewers || 0}
+      </Text>
       <View style={styles.streamActions}>
         {item.isLive ? (
           <TouchableOpacity style={styles.viewBtn} onPress={() => openViewer(item.id)}>
             <Text style={styles.viewBtnText}>View Live</Text>
+          </TouchableOpacity>
+        ) : null}
+        {!item.isLive && item.videoUrl ? (
+          <TouchableOpacity style={styles.viewBtn} onPress={() => openViewer(item.id)}>
+            <Text style={styles.viewBtnText}>Play</Text>
           </TouchableOpacity>
         ) : null}
         {own && item.isLive ? (
@@ -198,8 +243,10 @@ export default function GoLiveScreen({ route, navigation }) {
       contentContainerStyle={[styles.content, isDark && styles.screenDark]}
       refreshControl={<RefreshControl refreshing={loadingLists} onRefresh={loadStreams} colors={['#0f766e']} />}
     >
-      <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Go Live</Text>
-      <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>Create a stream and switch it live via backend streams API.</Text>
+      <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Streams & Go Live</Text>
+      <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>
+        Nis live, shiko stream-et aktive, ose ngarko një regjistrim (si faqja Streams në web).
+      </Text>
       <Text style={[styles.hint, isDark && styles.textMutedDark]}>
         Për shikim në YouTube Live: vendos ID-në e kanalit (UC…) te Settings → Profil në web; stream i ri e kopjon automatikisht.
       </Text>
@@ -236,6 +283,24 @@ export default function GoLiveScreen({ route, navigation }) {
       <TouchableOpacity style={styles.button} onPress={onGoLive} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start Live</Text>}
       </TouchableOpacity>
+
+      <View style={[styles.uploadSection, isDark && styles.cardDark]}>
+        <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>Ngarko regjistrim</Text>
+        <TextInput
+          style={[styles.input, isDark && styles.inputDark]}
+          value={recordingTitle}
+          onChangeText={setRecordingTitle}
+          placeholder="Titulli i regjistrimit"
+          placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
+        />
+        <TouchableOpacity style={styles.uploadBtn} onPress={onUploadRecording} disabled={uploadingRecording}>
+          {uploadingRecording ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.uploadBtnText}>Zgjidh video nga galeria</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {lastStream ? (
         <View style={[styles.result, isDark && styles.cardDark]}>
@@ -385,6 +450,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderColor: '#1e293b',
   },
+  uploadSection: {
+    marginTop: 20,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
+  },
+  uploadBtn: {
+    marginTop: 8,
+    backgroundColor: '#6366f1',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  uploadBtnText: { color: '#fff', fontWeight: '700' },
   resultTitle: {
     fontWeight: '700',
     marginBottom: 4,

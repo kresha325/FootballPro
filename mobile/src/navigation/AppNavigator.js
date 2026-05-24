@@ -25,6 +25,9 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import OutgoingCallScreen from '../screens/OutgoingCallScreen';
+import IncomingCallScreen from '../screens/IncomingCallScreen';
+import IncomingCallListener from '../components/IncomingCallListener';
+import { navigationRef } from './navigationRef';
 import GoLiveScreen from '../screens/GoLiveScreen';
 import MessagingScreen from '../screens/MessagingScreen';
 import ConversationScreen from '../screens/ConversationScreen';
@@ -156,6 +159,11 @@ function MessagingNavigator() {
     >
       <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
       <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: APP_BRAND_NAME }} />
+      <MessagingStack.Screen
+        name="OutgoingCall"
+        component={OutgoingCallScreen}
+        options={{ title: 'Thirrje', headerShown: false }}
+      />
     </MessagingStack.Navigator>
   );
 }
@@ -235,6 +243,11 @@ function ProfileNavigator() {
         component={OutgoingCallScreen}
         options={{ title: 'Thirrje', headerBackTitleVisible: true }}
       />
+      <ProfileStack.Screen
+        name="GoLive"
+        component={GoLiveScreen}
+        options={{ title: 'Go Live', headerShown: true, headerBackTitleVisible: true }}
+      />
     </ProfileStack.Navigator>
   );
 }
@@ -276,9 +289,12 @@ function MoreNavigator() {
 }
 
 function AppTabs() {
-  const { getSocket } = useAuth();
+  const { getSocket, socketConnected } = useAuth();
   const { totalPieces } = useCart();
-  const { notificationsCount, messagesCount, refresh: refreshBadges } = useUnreadBadges(getSocket);
+  const { notificationsCount, messagesCount, refresh: refreshBadges } = useUnreadBadges(
+    getSocket,
+    socketConnected
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -370,17 +386,31 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer linking={linking}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!token ? (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: true, title: 'Reset password' }} />
-          </>
-        ) : (
-          <Stack.Screen name="Main" component={AppTabs} />
-        )}
-      </Stack.Navigator>
+    <NavigationContainer ref={navigationRef} linking={linking}>
+      <>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!token ? (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen
+                name="ResetPassword"
+                component={ResetPasswordScreen}
+                options={{ headerShown: true, title: 'Reset password' }}
+              />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={AppTabs} />
+              <Stack.Screen
+                name="IncomingCall"
+                component={IncomingCallScreen}
+                options={{ presentation: 'fullScreenModal', headerShown: false }}
+              />
+            </>
+          )}
+        </Stack.Navigator>
+        {token ? <IncomingCallListener /> : null}
+      </>
     </NavigationContainer>
   );
 }

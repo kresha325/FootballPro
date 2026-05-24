@@ -215,6 +215,7 @@ app.use('/api/messaging', require('./routes/messaging'));
 app.use('/api/messaging', require('./routes/messagingUnread'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/premium', require('./routes/premium'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/gamification', require('./routes/gamification'));

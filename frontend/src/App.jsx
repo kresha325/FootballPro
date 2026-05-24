@@ -37,6 +37,7 @@ const YouTubeLiveTest = lazy(() => import('./components/YouTubeLiveTest'));
 const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
 const StreamsPage = lazy(() => import('./components/StreamsPage'));
 const EmbedOutboundCall = lazy(() => import('./components/EmbedOutboundCall'));
+const EmbedIncomingCall = lazy(() => import('./components/EmbedIncomingCall'));
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
@@ -115,6 +116,7 @@ function App() {
             <Route path="/search" element={user ? <Search /> : <Navigate to="/login" />} />
             <Route path="/messaging" element={user ? <Messaging /> : <Navigate to="/login" />} />
             <Route path="/embed-call" element={user ? <EmbedOutboundCall /> : <Navigate to="/login" />} />
+            <Route path="/embed-incoming-call" element={user ? <EmbedIncomingCall /> : <Navigate to="/login" />} />
             <Route path="/marketplace" element={user ? <Marketplace /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />

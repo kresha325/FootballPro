@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ResizeMode, Video } from 'expo-av';
 import { WebView } from 'react-native-webview';
-import { BACKEND_URL } from '../config/constants';
+import { absoluteBackendUrl, BACKEND_URL } from '../config/constants';
 import { extractErrorMessage, getStreamRequest, joinStreamRequest, leaveStreamRequest } from '../api/client';
 import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 
@@ -9,6 +10,7 @@ export default function LiveViewerScreen({ route }) {
   const streamId = route?.params?.streamId;
   const frontendBase = BACKEND_URL.replace(/\/api\/?$/, '');
   const [uri, setUri] = useState(null);
+  const [recordingUri, setRecordingUri] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,6 +30,12 @@ export default function LiveViewerScreen({ route }) {
         const data = res?.data;
         if (cancelled) return;
         if (!data?.isLive) {
+          const rec = absoluteBackendUrl(data?.videoUrl) || data?.videoUrl;
+          if (rec) {
+            setRecordingUri(rec);
+            setLoading(false);
+            return;
+          }
           setError('This stream is not live right now.');
           setLoading(false);
           return;
@@ -74,10 +82,32 @@ export default function LiveViewerScreen({ route }) {
     );
   }
 
-  if (error || !uri) {
+  if (error && !recordingUri) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Could not open player.'}</Text>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (recordingUri) {
+    return (
+      <View style={styles.container}>
+        <Video
+          source={{ uri: recordingUri }}
+          style={StyleSheet.absoluteFillObject}
+          useNativeControls
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+        />
+      </View>
+    );
+  }
+
+  if (!uri) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Could not open player.</Text>
       </View>
     );
   }

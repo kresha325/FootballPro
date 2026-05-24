@@ -34,6 +34,7 @@ import {
 import FeedAdSlot from '../components/FeedAdSlot';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import PostSponsorStrip from '../components/PostSponsorStrip';
+import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 
 function postAuthorId(item) {
@@ -98,6 +99,8 @@ function PostCard({
   onDeleteComment,
   deletingPostId,
   deletingCommentId,
+  shareOpen,
+  onToggleShare,
 }) {
   const author = item?.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
   const avatarUrl = item?.author?.profilePhoto || null;
@@ -270,7 +273,16 @@ function PostCard({
             {item?.comments || 0}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.pillBtn, styles.pillBtnShare, shareOpen && styles.pillBtnShareOpen]}
+          onPress={() => onToggleShare?.(item.id)}
+          accessibilityLabel="Ndaj postin"
+        >
+          <Ionicons name="share-social-outline" size={18} color="#fff" />
+        </TouchableOpacity>
       </View>
+
+      {shareOpen ? <SharePostPanel post={item} isDark={isDark} onClose={() => onToggleShare?.(item.id)} /> : null}
 
       {commentsOpen ? (
         <View style={[styles.commentsWrap, isDark && styles.commentsWrapDark]}>
@@ -369,6 +381,11 @@ export default function FeedScreen({ navigation }) {
   const [liveStreams, setLiveStreams] = useState([]);
   const [feedAds, setFeedAds] = useState([]);
   const [feedScope, setFeedScope] = useState('all');
+  const [sharingPostId, setSharingPostId] = useState(null);
+
+  const onToggleShare = useCallback((postId) => {
+    setSharingPostId((prev) => (prev === postId ? null : postId));
+  }, []);
 
   const feedListData = useMemo(() => mergePostsWithAdSlots(posts), [posts]);
 
@@ -761,6 +778,8 @@ export default function FeedScreen({ navigation }) {
             onDeleteComment={onDeleteComment}
             deletingPostId={deletingPostId}
             deletingCommentId={deletingCommentId}
+            shareOpen={sharingPostId === item.post.id}
+            onToggleShare={onToggleShare}
           />
         )
       }
@@ -997,6 +1016,15 @@ const styles = StyleSheet.create({
   pillBtnCommentOpen: {
     borderWidth: 1,
     borderColor: '#0f766e',
+  },
+  pillBtnShare: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    minWidth: 44,
+    justifyContent: 'center',
+  },
+  pillBtnShareOpen: {
+    backgroundColor: '#b91c1c',
   },
   pillEmoji: {
     fontSize: 16,

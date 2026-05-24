@@ -6,18 +6,22 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import {
   extractErrorMessage,
+  generateTournamentBracketRequest,
   joinTournamentRequest,
   leaveTournamentRequest,
+  startTournamentRequest,
   tournamentByIdRequest,
   tournamentMatchDetailRequest,
   tournamentMatchesRequest,
   tournamentStandingsRequest,
   tournamentStatsRequest,
+  updateTournamentMatchScoreRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -35,6 +39,108 @@ function participantLabel(p, participantType) {
   return name || `User #${p?.id}`;
 }
 
+function TournamentStatsBlock({ stats, onOpenMatch }) {
+  if (!stats || typeof stats !== 'object') return null;
+
+  const recent = Array.isArray(stats.recentResults) ? stats.recentResults : [];
+
+  return (
+    <View style={statsStyles.wrap}>
+      <Text style={statsStyles.sectionTitle}>Stats</Text>
+      <View style={statsStyles.grid}>
+        <View style={statsStyles.statBox}>
+          <Text style={statsStyles.statLabel}>Matches</Text>
+          <Text style={statsStyles.statValue}>
+            {stats.finishedMatches ?? 0}/{stats.totalMatches ?? 0}
+          </Text>
+          <Text style={statsStyles.statHint}>finished</Text>
+        </View>
+        <View style={statsStyles.statBox}>
+          <Text style={statsStyles.statLabel}>Goals</Text>
+          <Text style={[statsStyles.statValue, statsStyles.statValueAccent]}>{stats.totalGoals ?? 0}</Text>
+          <Text style={statsStyles.statHint}>in tournament</Text>
+        </View>
+        <View style={statsStyles.statBox}>
+          <Text style={statsStyles.statLabel}>Top scorer</Text>
+          <Text style={statsStyles.statValueSmall} numberOfLines={1}>
+            {stats.topScorerName || '—'}
+          </Text>
+          <Text style={statsStyles.statHint}>{stats.topScorerGoals ?? 0} goals</Text>
+        </View>
+        <View style={statsStyles.statBox}>
+          <Text style={statsStyles.statLabel}>Points leader</Text>
+          <Text style={statsStyles.statValueSmall} numberOfLines={1}>
+            {stats.topTeamName || '—'}
+          </Text>
+          <Text style={statsStyles.statHint}>{stats.topTeamPoints ?? 0} pts</Text>
+        </View>
+      </View>
+      <Text style={statsStyles.summary}>
+        Participants: {stats.totalParticipants ?? 0} · Scheduled: {stats.scheduledMatches ?? 0} · Avg goals
+        / finished match: {stats.avgGoalsPerMatch ?? 0}
+      </Text>
+      {recent.length > 0 ? (
+        <View style={statsStyles.recentWrap}>
+          <Text style={statsStyles.recentTitle}>Recent results</Text>
+          {recent.map((r) => (
+            <TouchableOpacity
+              key={String(r.id)}
+              style={statsStyles.recentRow}
+              onPress={() => onOpenMatch?.(r.id)}
+            >
+              <Text style={statsStyles.recentScore}>
+                {r.scoreHome ?? '—'} – {r.scoreAway ?? '—'}
+              </Text>
+              <Text style={statsStyles.recentNames} numberOfLines={1}>
+                {r.homeName || 'Home'} vs {r.awayName || 'Away'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const statsStyles = StyleSheet.create({
+  wrap: { marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e2e8f0' },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statBox: {
+    width: '48%',
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 10,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  statValue: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
+  statValueAccent: { color: '#0f766e' },
+  statValueSmall: { fontSize: 13, fontWeight: '700', color: '#0f172a', textAlign: 'center' },
+  statHint: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
+  summary: { fontSize: 13, color: '#475569', lineHeight: 19, marginTop: 10 },
+  recentWrap: { marginTop: 12 },
+  recentTitle: { fontSize: 12, fontWeight: '700', color: '#64748b', marginBottom: 8, textTransform: 'uppercase' },
+  recentRow: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  recentScore: { fontSize: 15, fontWeight: '800', color: '#0f172a', fontVariant: ['tabular-nums'] },
+  recentNames: { fontSize: 12, color: '#64748b', marginTop: 2 },
+});
+
 export default function TournamentDetailScreen({ route, navigation }) {
   const { user } = useAuth();
   const tournamentId = route?.params?.tournamentId;
@@ -48,6 +154,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState(null);
   const [matchModal, setMatchModal] = useState({ open: false, loading: false, data: null, error: '' });
+  const [scoreHomeInput, setScoreHomeInput] = useState('');
+  const [scoreAwayInput, setScoreAwayInput] = useState('');
+  const [savingScore, setSavingScore] = useState(false);
+  const [startingTournament, setStartingTournament] = useState(false);
 
   const loadDetail = useCallback(async () => {
     if (!tournamentId) return;
@@ -110,9 +220,14 @@ export default function TournamentDetailScreen({ route, navigation }) {
   };
 
   const openMatch = async (matchId) => {
+    setScoreHomeInput('');
+    setScoreAwayInput('');
     setMatchModal({ open: true, loading: true, data: null, error: '' });
     try {
       const res = await tournamentMatchDetailRequest(tournamentId, matchId);
+      const m = res.data?.match;
+      setScoreHomeInput(m?.scoreHome != null ? String(m.scoreHome) : '');
+      setScoreAwayInput(m?.scoreAway != null ? String(m.scoreAway) : '');
       setMatchModal({ open: true, loading: false, data: res.data, error: '' });
     } catch (err) {
       setMatchModal({
@@ -121,6 +236,102 @@ export default function TournamentDetailScreen({ route, navigation }) {
         data: null,
         error: extractErrorMessage(err, 'Could not load match'),
       });
+    }
+  };
+
+  const isKnockoutType = tournament?.type === 'knockout' || tournament?.type === 'cup';
+  const canStartTournament =
+    isCreator && tournament?.status === 'open' && participantCount >= 2 && matches.length === 0;
+
+  const onStartTournament = () => {
+    Alert.alert(
+      'Nis turneun',
+      isKnockoutType
+        ? 'Do të krijohen ndeshjet e raundit 1 (çiftëzim i pjesëmarrësve). Vazhdo?'
+        : 'Do të krijohen të gjitha ndeshjet e ligës (çdo kundër çdo). Vazhdo?',
+      [
+        { text: 'Anulo', style: 'cancel' },
+        {
+          text: 'Nis',
+          onPress: async () => {
+            setStartingTournament(true);
+            try {
+              const res = await startTournamentRequest(tournamentId);
+              const count = res.data?.matchesCreated ?? res.data?.matches?.length ?? 0;
+              Alert.alert('Sukses', `Turneu nisi. U krijuan ${count} ndeshje.`);
+              loadDetail();
+              setTab('matches');
+            } catch (err) {
+              Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u nis dot turneu'));
+            } finally {
+              setStartingTournament(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const onGenerateBracket = () => {
+    Alert.alert(
+      'Gjenero bracket',
+      'Krijo ndeshjet e raundit 1 me bracket (knockout). Vazhdo?',
+      [
+        { text: 'Anulo', style: 'cancel' },
+        {
+          text: 'Gjenero',
+          onPress: async () => {
+            setStartingTournament(true);
+            try {
+              const res = await generateTournamentBracketRequest(tournamentId);
+              const count = Array.isArray(res.data?.matches) ? res.data.matches.length : 0;
+              Alert.alert('Sukses', `Bracket u gjenerua (${count} ndeshje).`);
+              loadDetail();
+              setTab('matches');
+            } catch (err) {
+              Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u gjenerua dot bracket'));
+            } finally {
+              setStartingTournament(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const canEditMatchScore = (match) => {
+    if (!match || match.status === 'finished') return false;
+    const uid = String(user?.id);
+    return (
+      isCreator ||
+      String(match.homeUserId) === uid ||
+      String(match.awayUserId) === uid
+    );
+  };
+
+  const onSaveMatchScore = async () => {
+    const match = matchModal.data?.match;
+    if (!match?.id) return;
+    const scoreHome = Number(scoreHomeInput);
+    const scoreAway = Number(scoreAwayInput);
+    if (!Number.isFinite(scoreHome) || !Number.isFinite(scoreAway) || scoreHome < 0 || scoreAway < 0) {
+      Alert.alert('Rezultati', 'Vendos gola të vlefshme (numra ≥ 0).');
+      return;
+    }
+    setSavingScore(true);
+    try {
+      await updateTournamentMatchScoreRequest(match.id, {
+        scoreHome,
+        scoreAway,
+        status: 'finished',
+      });
+      Alert.alert('Ruajtur', 'Rezultati u përditësua.');
+      setMatchModal({ open: false, loading: false, data: null, error: '' });
+      loadDetail();
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u ruajt dot rezultati'));
+    } finally {
+      setSavingScore(false);
     }
   };
 
@@ -175,7 +386,32 @@ export default function TournamentDetailScreen({ route, navigation }) {
           </TouchableOpacity>
         ) : null}
         {isJoined ? <Text style={styles.joinedLabel}>✓ In tournament</Text> : null}
+        {canStartTournament ? (
+          <TouchableOpacity
+            style={[styles.startBtn, startingTournament && styles.btnDisabled]}
+            onPress={onStartTournament}
+            disabled={startingTournament}
+          >
+            {startingTournament ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.startBtnText}>Nis turneun</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
+        {isCreator && isKnockoutType && tournament?.status === 'open' && participantCount >= 2 && matches.length === 0 ? (
+          <TouchableOpacity
+            style={[styles.bracketBtn, startingTournament && styles.btnDisabled]}
+            onPress={onGenerateBracket}
+            disabled={startingTournament}
+          >
+            <Text style={styles.bracketBtnText}>Gjenero bracket</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
+      {isCreator && tournament?.status === 'open' && participantCount < 2 ? (
+        <Text style={styles.hint}>Duhen të paktën 2 pjesëmarrës për të nisur turneun.</Text>
+      ) : null}
 
       <View style={styles.tabRow}>
         {TABS.map((t) => (
@@ -201,12 +437,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               </Text>
             ))
           )}
-          {stats ? (
-            <View style={{ marginTop: 12 }}>
-              <Text style={styles.cardTitle}>Stats</Text>
-              <Text style={styles.muted}>{JSON.stringify(stats, null, 0).slice(0, 400)}</Text>
-            </View>
-          ) : null}
+          <TournamentStatsBlock stats={stats} onOpenMatch={openMatch} />
         </View>
       ) : null}
 
@@ -257,11 +488,54 @@ export default function TournamentDetailScreen({ route, navigation }) {
             {matchModal.error ? <Text style={styles.error}>{matchModal.error}</Text> : null}
             {matchModal.data?.match ? (
               <ScrollView>
-                <Text style={styles.modalTitle}>Match detail</Text>
+                <Text style={styles.modalTitle}>Ndeshja</Text>
                 <Text style={styles.row}>
-                  Score: {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
+                  {participantLabel(matchModal.data.match.homeUser, pt)} vs{' '}
+                  {participantLabel(matchModal.data.match.awayUser, pt)}
                 </Text>
-                <Text style={styles.muted}>Status: {matchModal.data.match.status}</Text>
+                <Text style={styles.muted}>
+                  Status: {matchModal.data.match.status}
+                  {matchModal.data.match.round ? ` · Raundi ${matchModal.data.match.round}` : ''}
+                </Text>
+                {canEditMatchScore(matchModal.data.match) ? (
+                  <View style={styles.scoreForm}>
+                    <Text style={styles.scoreFormTitle}>Fut rezultatin</Text>
+                    <View style={styles.scoreRow}>
+                      <TextInput
+                        style={styles.scoreInput}
+                        keyboardType="number-pad"
+                        value={scoreHomeInput}
+                        onChangeText={setScoreHomeInput}
+                        placeholder="Shtëpi"
+                        maxLength={3}
+                      />
+                      <Text style={styles.scoreDash}>:</Text>
+                      <TextInput
+                        style={styles.scoreInput}
+                        keyboardType="number-pad"
+                        value={scoreAwayInput}
+                        onChangeText={setScoreAwayInput}
+                        placeholder="Mysafir"
+                        maxLength={3}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, savingScore && styles.btnDisabled]}
+                      onPress={onSaveMatchScore}
+                      disabled={savingScore}
+                    >
+                      {savingScore ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={styles.primaryBtnText}>Ruaj rezultatin</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.row}>
+                    Rezultati: {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
+                  </Text>
+                )}
               </ScrollView>
             ) : null}
           </View>
@@ -299,6 +573,40 @@ const styles = StyleSheet.create({
   secondaryBtn: { borderWidth: 1, borderColor: '#dc2626', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   secondaryBtnText: { color: '#dc2626', fontWeight: '700' },
   joinedLabel: { color: '#16a34a', fontWeight: '700' },
+  startBtn: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  startBtnText: { color: '#fff', fontWeight: '700' },
+  bracketBtn: {
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  bracketBtnText: { color: '#7c3aed', fontWeight: '700' },
+  btnDisabled: { opacity: 0.6 },
+  hint: { color: '#64748b', fontSize: 13, marginBottom: 10, marginTop: -4 },
+  scoreForm: { marginTop: 14 },
+  scoreFormTitle: { fontWeight: '700', color: '#0f172a', marginBottom: 8 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 },
+  scoreInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    width: 72,
+    paddingVertical: 10,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  scoreDash: { fontSize: 22, fontWeight: '800', color: '#64748b' },
   tabRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
   tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#e2e8f0', alignItems: 'center' },
   tabBtnActive: { backgroundColor: '#0f766e' },

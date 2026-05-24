@@ -5,7 +5,7 @@ import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '..
  * Unread counts: notifications (bell / More tab) vs messages (Chats tab).
  * Matches web Navbar burger (notifications on icon) + separate Messages link.
  */
-export function useUnreadBadges(getSocket) {
+export function useUnreadBadges(getSocket, socketConnected = false) {
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [messagesCount, setMessagesCount] = useState(0);
 
@@ -42,7 +42,7 @@ export function useUnreadBadges(getSocket) {
       socket.off('messageUpdated', bump);
       socket.off('messageDeleted', bump);
     };
-  }, [getSocket, refresh]);
+  }, [getSocket, socketConnected, refresh]);
 
   return { notificationsCount, messagesCount, refresh };
 }

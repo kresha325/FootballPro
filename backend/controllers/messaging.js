@@ -19,7 +19,7 @@ const SENDER_WITH_PROFILE = {
 const REPLY_TO_WITH_SENDER = {
   model: Message,
   as: 'replyTo',
-  attributes: ['id', 'content', 'senderId'],
+  attributes: ['id', 'content', 'senderId', 'type', 'fileUrl', 'fileName', 'deleted'],
   include: [
     {
       model: User,
@@ -57,6 +57,7 @@ function shapeMessage(message, req) {
   if (plain.replyTo) {
     const r = { ...plain.replyTo };
     if (r.sender) r.sender = shapeSender(r.sender, req);
+    if (r.fileUrl) r.fileUrl = toAbsoluteUploadsUrl(req, r.fileUrl);
     plain.replyTo = r;
   }
   if (plain.fileUrl) plain.fileUrl = toAbsoluteUploadsUrl(req, plain.fileUrl);
@@ -336,11 +337,23 @@ exports.getMessages = async (req, res) => {
 
     const shaped = messages.rows.map((m) => shapeMessage(m, req)).reverse();
 
+    const othersRead = await ConversationMember.findAll({
+      where: {
+        conversationId,
+        userId: { [Op.ne]: req.user.id },
+      },
+      attributes: ['userId', 'lastReadAt'],
+    });
+
     res.json({
       messages: shaped,
       total: messages.count,
       page: parseInt(page),
       pages: Math.ceil(messages.count / limit),
+      othersRead: othersRead.map((row) => ({
+        userId: row.userId,
+        lastReadAt: row.lastReadAt ? row.lastReadAt.toISOString() : null,
+      })),
     });
   } catch (err) {
     console.error('Get messages error:', err);
@@ -439,6 +452,9 @@ exports.sendMessage = async (req, res) => {
       const io = socketHelper.getIo();
       if (io) {
         io.to(`conversation-${conversationId}`).emit('newMessage', payload);
+        if (req.user?.id != null) {
+          io.to(String(req.user.id)).emit('newMessage', payload);
+        }
         members.forEach((m) => {
           if (m.userId != null) {
             io.to(String(m.userId)).emit('newMessage', payload);
@@ -463,8 +479,9 @@ exports.markAsRead = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
+    const readAt = new Date();
     await ConversationMember.update(
-      { lastReadAt: new Date() },
+      { lastReadAt: readAt },
       {
         where: {
           conversationId,
@@ -473,7 +490,23 @@ exports.markAsRead = async (req, res) => {
       }
     );
 
-    res.json({ msg: 'Marked as read' });
+    try {
+      const socketHelper = require('../socket');
+      const io = socketHelper.getIo();
+      if (io) {
+        const payload = {
+          conversationId: Number(conversationId) || conversationId,
+          userId: req.user.id,
+          readAt: readAt.toISOString(),
+        };
+        io.to(`conversation-${conversationId}`).emit('conversationRead', payload);
+        io.to(String(req.user.id)).emit('conversationRead', payload);
+      }
+    } catch (emitErr) {
+      console.warn('Emit conversationRead failed', emitErr && emitErr.message);
+    }
+
+    res.json({ msg: 'Marked as read', readAt: readAt.toISOString() });
   } catch (err) {
     console.error('Mark as read error:', err);
     res.status(500).json({ msg: 'Server error' });

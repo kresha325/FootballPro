@@ -7,8 +7,8 @@ import { useUnreadBadges } from '../hooks/useUnreadBadges';
 
 export default function NotificationHeaderButton() {
   const navigation = useNavigation();
-  const { getSocket } = useAuth();
-  const { notificationsCount: count, refresh } = useUnreadBadges(getSocket);
+  const { getSocket, socketConnected } = useAuth();
+  const { notificationsCount: count, refresh } = useUnreadBadges(getSocket, socketConnected);
 
   useFocusEffect(
     useCallback(() => {

@@ -16,7 +16,7 @@ exports.uploadRecording = async (req, res) => {
     // Gjej stream-in ekzistues të tipit 'webrtc' për këtë user
     let stream = await Stream.findOne({ where: { streamerId, type: 'webrtc' } });
     if (stream) {
-      stream.videoUrl = `/uploads/streams/${req.file.filename}`;
+      stream.videoUrl = `/uploads/${req.file.filename}`;
       stream.isLive = false;
       stream.type = 'recording';
       stream.title = title || stream.title;
@@ -42,7 +42,7 @@ exports.uploadRecording = async (req, res) => {
         isLive: false,
         type: 'recording',
         streamKey: null,
-        videoUrl: `/uploads/streams/${req.file.filename}`,
+        videoUrl: `/uploads/${req.file.filename}`,
       });
       console.log('[uploadRecording] Stream created:', stream.id, stream.videoUrl);
       try {

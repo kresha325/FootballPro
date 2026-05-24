@@ -1,14 +1,33 @@
 const { User, Profile, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Match } = require('../models');
 const sequelize = require('sequelize');
 
-// Award points and level up
+// Award points and level up; emits xp:earned to user's socket room when available.
 async function awardPoints(userId, points, reason = '') {
   const user = await User.findByPk(userId);
-  if (!user) return;
-  user.points += points;
+  if (!user) return null;
+
+  const oldLevel = Number(user.level) || 1;
+  user.points = (Number(user.points) || 0) + (Number(points) || 0);
   const newLevel = Math.floor(user.points / 1000) + 1;
-  if (newLevel > user.level) user.level = newLevel;
+  let levelUp = null;
+  if (newLevel > oldLevel) {
+    user.level = newLevel;
+    levelUp = { oldLevel, newLevel };
+  }
   await user.save();
+
+  const payload = { xp: Number(points) || 0, reason: reason || '', levelUp };
+  try {
+    const socketUtil = require('../utils/socket');
+    const io = socketUtil.getIo();
+    if (io) {
+      io.to(String(userId)).emit('xp:earned', payload);
+    }
+  } catch (emitErr) {
+    console.warn('xp:earned emit failed:', emitErr?.message);
+  }
+
+  return payload;
 }
 
 // Get user gamification status and auto-award achievements/badges

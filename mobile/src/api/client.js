@@ -132,6 +132,16 @@ export const createStreamRequest = (payload) => api.post('/api/streams', payload
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
+export const uploadStreamRecordingRequest = ({ video, title, description }) => {
+  const form = new FormData();
+  form.append('video', video);
+  if (title) form.append('title', String(title));
+  if (description) form.append('description', String(description));
+  return api.post('/api/streams/upload-recording', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  });
+};
 export const getStreamRequest = (streamId) => api.get(`/api/streams/${streamId}`);
 export const joinStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/join`);
 export const leaveStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/leave`);
@@ -139,16 +149,22 @@ export const startAudioCallRequest = (receiverId) => api.post('/api/video-calls/
 export const createVideoCallRequest = (participantId) => api.post('/api/video-calls/create', { participantId });
 
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
+export const conversationDetailRequest = (conversationId) =>
+  api.get(`/api/messaging/conversations/detail/${conversationId}`);
 export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');
 export const getOrCreateConversationRequest = (userId) => api.get(`/api/messaging/conversations/user/${userId}`);
 export const conversationMessagesRequest = (conversationId, params = {}) =>
   api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
-export const sendConversationMessageRequest = (conversationId, content, replyToId) => {
+export const sendConversationMessageRequest = (conversationId, options = {}) => {
+  const opts = typeof options === 'string' ? { content: options } : options || {};
   const fd = new FormData();
-  fd.append('content', content || '');
-  if (replyToId != null) fd.append('replyToId', String(replyToId));
+  if (opts.content) fd.append('content', String(opts.content));
+  if (opts.replyToId != null) fd.append('replyToId', String(opts.replyToId));
+  if (opts.file) fd.append('file', opts.file);
+  const hasFile = !!opts.file;
   return api.post(`/api/messaging/conversations/${conversationId}/messages`, fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: hasFile ? 120000 : 30000,
   });
 };
 export const markConversationReadRequest = (conversationId) =>
@@ -264,6 +280,14 @@ export const tournamentMatchDetailRequest = (tournamentId, matchId) =>
 export const trendingTournamentsRequest = () => api.get('/api/tournaments/trending');
 export const joinTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/join`);
 export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournaments/${tournamentId}/leave`);
+export const startTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/start`);
+export const generateTournamentBracketRequest = (tournamentId) =>
+  api.post(`/api/tournaments/${tournamentId}/bracket/generate`);
+export const updateTournamentMatchScoreRequest = (matchId, payload) =>
+  api.put(`/api/tournaments/matches/${matchId}/score`, payload);
+
+export const premiumCheckoutRequest = (plan) => api.post('/api/premium/checkout', { plan });
+export const premiumVerifySessionRequest = (sessionId) => api.get(`/api/premium/verify-session/${sessionId}`);
 
 export const scoutingRecommendationsRequest = (params = {}) =>
   api.get('/api/scouting/recommendations', { params });

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import io from 'socket.io-client';
 import { BACKEND_URL } from '../config/constants';
@@ -10,6 +10,7 @@ import {
   registerRequest,
   setAuthToken,
 } from '../api/client';
+import { showXpNotification } from '../utils/xpNotifications';
 
 const AuthContext = createContext(null);
 
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
   const socketRef = useRef(null);
 
   const disconnectSocket = () => {
@@ -25,6 +27,7 @@ export const AuthProvider = ({ children }) => {
       socketRef.current.disconnect();
       socketRef.current = null;
     }
+    setSocketConnected(false);
   };
 
   const connectSocket = (authToken, userData) => {
@@ -45,18 +48,28 @@ export const AuthProvider = ({ children }) => {
     });
 
     socket.on('connect', () => {
+      setSocketConnected(true);
       const room = userData?.id ? String(userData.id) : `mobile-${socket.id}`;
       socket.emit('join', room);
+    });
+
+    socket.on('disconnect', () => {
+      setSocketConnected(false);
     });
 
     socket.on('connect_error', (err) => {
       console.warn('Socket connection error:', err.message);
     });
 
+    socket.on('xp:earned', (data) => {
+      if (!data || typeof data !== 'object') return;
+      showXpNotification(data.xp ?? 0, data.reason ?? '', data.levelUp ?? null);
+    });
+
     socketRef.current = socket;
   };
 
-  const getSocket = () => socketRef.current;
+  const getSocket = useCallback(() => socketRef.current, []);
 
   const logout = async () => {
     setToken(null);
@@ -75,16 +88,27 @@ export const AuthProvider = ({ children }) => {
   const login = async ({ email, password }) => {
     setIsSubmitting(true);
     try {
-      const response = await loginRequest(email, password);
+      const normalizedEmail = String(email || '').trim().toLowerCase();
+      const response = await loginRequest(normalizedEmail, password);
       const nextToken = response?.data?.token || response?.data?.accessToken;
+      const loginUser = response?.data?.user || null;
 
       if (!nextToken) {
         throw new Error('No token returned by server');
       }
 
       setAuthToken(nextToken);
-      const meResponse = await meRequest();
-      const me = meResponse.data;
+
+      let me = loginUser;
+      try {
+        const meResponse = await meRequest();
+        me = meResponse.data;
+      } catch (meErr) {
+        console.warn('Login: /me failed, using login payload user:', meErr?.message);
+        if (!me) {
+          throw meErr;
+        }
+      }
 
       await SecureStore.setItemAsync('token', nextToken);
       await SecureStore.setItemAsync('user', JSON.stringify(me));
@@ -94,7 +118,16 @@ export const AuthProvider = ({ children }) => {
       connectSocket(nextToken, me);
       return { ok: true };
     } catch (error) {
-      return { ok: false, message: extractErrorMessage(error, 'Login failed') };
+      const status = error?.response?.status;
+      const msg = extractErrorMessage(error, 'Login failed');
+      if (status === 400 && msg === 'Invalid credentials') {
+        return {
+          ok: false,
+          message:
+            'Email or password is wrong. If you sign in with Google on web, use Forgot password here first to set a password.',
+        };
+      }
+      return { ok: false, message: msg };
     } finally {
       setIsSubmitting(false);
     }
@@ -209,6 +242,7 @@ export const AuthProvider = ({ children }) => {
       token,
       user,
       getSocket,
+      socketConnected,
       isBootstrapping,
       isSubmitting,
       login,
@@ -219,14 +253,18 @@ export const AuthProvider = ({ children }) => {
         if (!token) {
           return null;
         }
+        const prevLevel = user?.level;
         const response = await meRequest();
         const me = response.data;
+        if (prevLevel != null && me?.level != null && Number(me.level) > Number(prevLevel)) {
+          showXpNotification(0, '', { oldLevel: Number(prevLevel), newLevel: Number(me.level) });
+        }
         setUser(me);
         await SecureStore.setItemAsync('user', JSON.stringify(me));
         return me;
       },
     }),
-    [token, user, isBootstrapping, isSubmitting]
+    [token, user, getSocket, socketConnected, isBootstrapping, isSubmitting]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

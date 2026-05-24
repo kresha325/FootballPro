@@ -28,6 +28,8 @@ import {
   unlikePostRequest,
 } from '../api/client';
 import PostSponsorStrip, { SponsoredLabel } from '../components/PostSponsorStrip';
+import SharePostPanel from '../components/SharePostPanel';
+import { absoluteBackendUrl } from '../config/constants';
 import { useAuth } from '../context/AuthContext';
 
 function normalizePostSponsors(p) {
@@ -75,6 +77,8 @@ function FeedPagerPage({
   onDeleteComment,
   deletingPostId,
   deletingCommentId,
+  shareOpen,
+  onToggleShare,
 }) {
   const [chromeHidden, setChromeHidden] = useState(false);
   const bottomChromeAnim = useRef(new Animated.Value(0)).current;
@@ -84,8 +88,10 @@ function FeedPagerPage({
   const authorId = postAuthorId(item);
   const avatarUrl = item?.author?.profilePhoto || null;
   const isLiked = !!item?.isLiked;
-  const hasImage = !!item?.imageUrl;
-  const hasVideo = !!item?.videoUrl;
+  const imageUri = absoluteBackendUrl(item?.imageUrl) || item?.imageUrl || null;
+  const videoUri = absoluteBackendUrl(item?.videoUrl) || item?.videoUrl || null;
+  const hasImage = !!imageUri;
+  const hasVideo = !!videoUri;
   const sponsors = Array.isArray(item?.sponsors) ? item.sponsors : Array.isArray(item?.Sponsors) ? item.Sponsors : [];
   const hasSponsors = sponsors.length > 0;
   const isOwnPost =
@@ -142,11 +148,11 @@ function FeedPagerPage({
       <View style={styles.mediaTapLayer} pointerEvents="box-none">
         <Pressable style={StyleSheet.absoluteFillObject} onPress={toggleChrome}>
           {hasVideo ? (
-            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+            <View pointerEvents="none" style={styles.mediaFrame}>
               <Video
-                source={{ uri: item.videoUrl }}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode={ResizeMode.COVER}
+                source={{ uri: videoUri }}
+                style={styles.mediaFill}
+                resizeMode={ResizeMode.CONTAIN}
                 isLooping
                 shouldPlay={isActive}
                 isMuted={!isActive}
@@ -154,7 +160,9 @@ function FeedPagerPage({
               />
             </View>
           ) : hasImage ? (
-            <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            <View pointerEvents="none" style={styles.mediaFrame}>
+              <Image source={{ uri: imageUri }} style={styles.mediaFill} resizeMode="contain" />
+            </View>
           ) : (
             <View style={[styles.noMedia, { backgroundColor: isDark ? '#0f172a' : '#1e293b' }]}>
               <Ionicons name="document-text-outline" size={48} color="#94a3b8" />
@@ -259,7 +267,14 @@ function FeedPagerPage({
           <TouchableOpacity style={[styles.actionPill, styles.actionPillSecond]} onPress={() => onToggleComments(item.id)}>
             <Text style={styles.actionText}>{commentsOpen ? 'Mbyll komentet' : 'Komentet'}</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionPill, styles.actionPillShare]} onPress={() => onToggleShare?.(item.id)}>
+            <Ionicons name="share-social-outline" size={16} color="#fff" />
+          </TouchableOpacity>
         </View>
+
+        {shareOpen ? (
+          <SharePostPanel post={item} isDark onClose={() => onToggleShare?.(item.id)} />
+        ) : null}
 
         {commentsOpen ? (
           <View style={styles.commentsBox}>
@@ -342,6 +357,11 @@ export default function FeedPostPagerScreen() {
   const [bannerError, setBannerError] = useState('');
   const [deletingPostId, setDeletingPostId] = useState(null);
   const [deletingCommentId, setDeletingCommentId] = useState(null);
+  const [sharingPostId, setSharingPostId] = useState(null);
+
+  const onToggleShare = useCallback((postId) => {
+    setSharingPostId((prev) => (prev === postId ? null : postId));
+  }, []);
 
   const notifyParent = useCallback(
     (postId, updates) => {
@@ -600,6 +620,8 @@ export default function FeedPostPagerScreen() {
         onDeleteComment={onDeleteComment}
         deletingPostId={deletingPostId}
         deletingCommentId={deletingCommentId}
+        shareOpen={sharingPostId === item.id}
+        onToggleShare={onToggleShare}
       />
     ),
     [
@@ -620,6 +642,8 @@ export default function FeedPostPagerScreen() {
       onToggleLike,
       openAuthorProfile,
       openCommentsPostId,
+      onToggleShare,
+      sharingPostId,
       viewport.h,
       viewport.w,
       posts.length,
@@ -682,6 +706,16 @@ const styles = StyleSheet.create({
   mediaTapLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+  },
+  mediaFrame: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  mediaFill: {
+    width: '100%',
+    height: '100%',
   },
   closeBar: {
     position: 'absolute',
@@ -806,6 +840,14 @@ const styles = StyleSheet.create({
   },
   actionPillSecond: {
     marginLeft: 10,
+  },
+  actionPillShare: {
+    marginLeft: 10,
+    backgroundColor: 'rgba(220,38,38,0.9)',
+    paddingHorizontal: 14,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionPillActive: {
     borderColor: '#5eead4',

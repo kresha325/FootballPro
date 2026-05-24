@@ -18,6 +18,7 @@ router.post('/:id/leave', auth, streamsCtrl.leaveStream);
 router.post('/upload-temp', auth, uploadLocal.single('video'), streamsCtrl.uploadTemp);
 router.delete('/temp/:filename', auth, streamsCtrl.deleteTemp);
 router.post('/finalize', auth, streamsCtrl.finalizeTemp);
+router.post('/upload-recording', auth, uploadLocal.single('video'), streamsCtrl.uploadRecording);
 
 module.exports = router;
 // Stream/livestream routes removed

@@ -1,7 +1,7 @@
 const Like = require('../models/Like');
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { sendNotification, notifyLike } = require('./notifications');
+const { notifyLike } = require('./notifications');
 const { sendEmail } = require('../services/emailService');
 
 exports.getLikes = async (req, res) => {
@@ -14,70 +14,99 @@ exports.getLikes = async (req, res) => {
 };
 
 exports.likePost = async (req, res) => {
+  const postId = parseInt(req.params.postId, 10);
+  if (!Number.isFinite(postId) || postId < 1) {
+    return res.status(400).json({ msg: 'Invalid post id' });
+  }
+
   try {
-    const existingLike = await Like.findOne({ where: { userId: req.user.id, postId: req.params.postId } });
-    if (existingLike) return res.status(400).json({ msg: 'Already liked' });
-    const like = await Like.create({
-      userId: req.user.id,
-      postId: req.params.postId,
-    });
+    const existingLike = await Like.findOne({ where: { userId: req.user.id, postId } });
+    if (existingLike) {
+      return res.status(400).json({ msg: 'Already liked' });
+    }
 
-    // Track analytics
-    const PostAnalytics = require('../models/PostAnalytics');
-    await PostAnalytics.create({
-      postId: parseInt(req.params.postId),
-      userId: req.user.id,
-      type: 'like',
-    });
+    // Only core columns — prod DB may not have migrated `emoji` yet.
+    const like = await Like.create(
+      { userId: req.user.id, postId },
+      { fields: ['userId', 'postId'] }
+    );
 
-    // Update engagement metrics
-    const EngagementMetrics = require('../models/EngagementMetrics');
-    const post = await Post.findByPk(req.params.postId);
-    if (post) {
-      const today = new Date().toISOString().split('T')[0];
-      let metrics = await EngagementMetrics.findOne({
-        where: { userId: post.userId, date: today }
+    try {
+      const PostAnalytics = require('../models/PostAnalytics');
+      await PostAnalytics.create({
+        postId,
+        userId: req.user.id,
+        type: 'like',
       });
-      if (!metrics) {
-        metrics = await EngagementMetrics.create({
-          userId: post.userId,
-          date: today,
-        });
-      }
-      metrics.likesReceived += 1;
-      await metrics.save();
+    } catch (analyticsErr) {
+      console.warn('likePost: PostAnalytics skipped:', analyticsErr?.message || analyticsErr);
     }
 
-    // Send notification to post owner
-    if (post && post.userId !== req.user.id) {
-      await notifyLike(post.userId, req.user.id, req.params.postId);
-      
-      // Send email notification
-      try {
-        const liker = await User.findByPk(req.user.id);
-        const postOwner = await User.findByPk(post.userId);
-        const likerName = `${liker.firstName} ${liker.lastName}`;
-        await sendEmail(postOwner.email, 'newLike', likerName, req.params.postId);
-      } catch (emailError) {
-        console.error('Email notification failed:', emailError);
+    let post = null;
+    try {
+      const EngagementMetrics = require('../models/EngagementMetrics');
+      post = await Post.findByPk(postId);
+      if (post) {
+        const today = new Date().toISOString().split('T')[0];
+        let metrics = await EngagementMetrics.findOne({
+          where: { userId: post.userId, date: today },
+        });
+        if (!metrics) {
+          metrics = await EngagementMetrics.create({
+            userId: post.userId,
+            date: today,
+          });
+        }
+        metrics.likesReceived = (metrics.likesReceived || 0) + 1;
+        await metrics.save();
       }
-      
-      // Award points to post owner for receiving a like
-      // Gamification u largua
+    } catch (metricsErr) {
+      console.warn('likePost: EngagementMetrics skipped:', metricsErr?.message || metricsErr);
     }
-    res.json(like);
+
+    try {
+      if (!post) {
+        post = await Post.findByPk(postId);
+      }
+      if (post && post.userId !== req.user.id) {
+        await notifyLike(post.userId, req.user.id, postId);
+        try {
+          const liker = await User.findByPk(req.user.id);
+          const postOwner = await User.findByPk(post.userId);
+          if (liker && postOwner?.email) {
+            const likerName = `${liker.firstName || ''} ${liker.lastName || ''}`.trim() || 'Someone';
+            await sendEmail(postOwner.email, 'newLike', likerName, String(postId));
+          }
+        } catch (emailError) {
+          console.warn('likePost: email skipped:', emailError?.message || emailError);
+        }
+      }
+    } catch (notifyErr) {
+      console.warn('likePost: notification skipped:', notifyErr?.message || notifyErr);
+    }
+
+    return res.json(like);
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('likePost error:', err);
+    return res.status(500).json({ msg: 'Server error' });
   }
 };
 
 exports.unlikePost = async (req, res) => {
+  const postId = parseInt(req.params.postId, 10);
+  if (!Number.isFinite(postId) || postId < 1) {
+    return res.status(400).json({ msg: 'Invalid post id' });
+  }
+
   try {
-    const like = await Like.findOne({ where: { userId: req.user.id, postId: req.params.postId } });
-    if (!like) return res.status(404).json({ msg: 'Like not found' });
+    const like = await Like.findOne({ where: { userId: req.user.id, postId } });
+    if (!like) {
+      return res.status(404).json({ msg: 'Like not found' });
+    }
     await like.destroy();
-    res.json({ msg: 'Unliked' });
+    return res.json({ msg: 'Unliked' });
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('unlikePost error:', err);
+    return res.status(500).json({ msg: 'Server error' });
   }
 };

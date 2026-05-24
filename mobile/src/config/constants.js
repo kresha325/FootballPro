@@ -1,9 +1,9 @@
 import Constants from 'expo-constants';
 
-const fromExpoConfig = Constants.expoConfig?.extra?.BACKEND_URL;
-const fromManifest = Constants.manifest?.extra?.BACKEND_URL;
+/** app.json `extra` — mos përdor Constants.manifest (deprecated në SDK 49+). */
+const appExtra = Constants.expoConfig?.extra ?? {};
 
-const rawBackendUrl = (fromExpoConfig || fromManifest || 'https://footballpro.onrender.com').replace(/\/$/, '');
+const rawBackendUrl = (appExtra.BACKEND_URL || 'https://footballpro.onrender.com').replace(/\/$/, '');
 
 /**
  * Baza e axios; nëse mbaron me `/api`, thirrjet janë `baseURL` + `/api/...` (e pranuar).
@@ -15,7 +15,7 @@ export const BACKEND_URL = rawBackendUrl;
  * Origjina pa `/api` në fund — i njëjti server shërben `/uploads/...` në rrënjë, jo nën `/api/uploads`.
  */
 export function publicAssetBaseUrl() {
-  let base = (fromExpoConfig || fromManifest || 'https://footballpro.onrender.com').replace(/\/$/, '');
+  let base = (appExtra.BACKEND_URL || 'https://footballpro.onrender.com').replace(/\/$/, '');
   if (base.toLowerCase().endsWith('/api')) {
     base = base.slice(0, -4);
   }
@@ -40,8 +40,6 @@ export function absoluteBackendUrl(maybePath) {
 }
 
 /** URL e frontend-it (Vite) për WebView thirrjeje — /embed-call. Zbrazët nëse nuk është konfiguruar. */
-const webFromExpo = Constants.expoConfig?.extra?.WEB_APP_URL;
-const webFromManifest = Constants.manifest?.extra?.WEB_APP_URL;
-const rawWebAppUrl = String(webFromExpo || webFromManifest || 'https://footballpro.al').replace(/\/$/, '');
+const rawWebAppUrl = String(appExtra.WEB_APP_URL || 'https://footballpro.al').replace(/\/$/, '');
 /** Frontend Vite (embed-call, live player). Override via app.json extra or WEB_APP_URL env. */
 export const WEB_APP_URL = rawWebAppUrl;

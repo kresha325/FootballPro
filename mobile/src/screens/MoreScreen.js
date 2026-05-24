@@ -24,8 +24,8 @@ function MenuButton({ title, subtitle, onPress, badge }) {
 }
 
 export default function MoreScreen({ navigation }) {
-  const { user, getSocket } = useAuth();
-  const { notificationsCount, messagesCount, refresh } = useUnreadBadges(getSocket);
+  const { user, getSocket, socketConnected } = useAuth();
+  const { notificationsCount, messagesCount, refresh } = useUnreadBadges(getSocket, socketConnected);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,7 +108,11 @@ export default function MoreScreen({ navigation }) {
       ) : null}
       <MenuButton title="Search" subtitle="Users, posts and discovery" onPress={() => navigation.navigate('Search')} />
       <MenuButton title="Matches" subtitle="View and schedule matches" onPress={() => navigation.navigate('Matches')} />
-      <MenuButton title="Go Live" subtitle="Start a live session" onPress={() => navigation.navigate('GoLive')} />
+      <MenuButton
+        title="Streams & Go Live"
+        subtitle="Live, regjistrime, ngarkim video"
+        onPress={() => navigation.navigate('GoLive')}
+      />
       <MenuButton title="Premium" subtitle="Membership plans and perks" onPress={() => navigation.navigate('Premium')} />
       <MenuButton title="Sponsors" subtitle="Create and view sponsor deals" onPress={() => navigation.navigate('Sponsors')} />
       <MenuButton title="Ads" subtitle="Create and view active ads" onPress={() => navigation.navigate('Ads')} />

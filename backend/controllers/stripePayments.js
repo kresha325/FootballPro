@@ -4,6 +4,7 @@ const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const { activatePremiumFromStripeSession } = require('./premium');
 
 // Marketplace përdor JonCoin (shiko orders.createOrder). Endpoint mbetet për klientë të vjetër.
 exports.createCheckoutSession = async (req, res) => {
@@ -32,7 +33,11 @@ exports.stripeWebhook = async (req, res) => {
   switch (event.type) {
     case 'checkout.session.completed':
       const session = event.data.object;
-      await handleSuccessfulPayment(session);
+      if (session.metadata?.type === 'premium') {
+        await activatePremiumFromStripeSession(session);
+      } else {
+        await handleSuccessfulPayment(session);
+      }
       break;
     case 'payment_intent.succeeded':
       const paymentIntent = event.data.object;
@@ -116,6 +121,14 @@ exports.verifySession = async (req, res) => {
     const { sessionId } = req.params;
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
+    if (session.metadata?.type === 'premium') {
+      if (session.payment_status === 'paid') {
+        const result = await activatePremiumFromStripeSession(session);
+        return res.json({ success: true, premium: true, ...result, session });
+      }
+      return res.json({ success: false, session });
+    }
+
     if (session.payment_status === 'paid') {
       res.json({ success: true, session });
     } else {

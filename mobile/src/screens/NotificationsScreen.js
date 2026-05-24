@@ -45,8 +45,8 @@ function NotificationRow({ item, onPress, onDelete, deleting }) {
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
-  const { getSocket } = useAuth();
-  const { notificationsCount, refresh: refreshBadges } = useUnreadBadges(getSocket);
+  const { getSocket, socketConnected } = useAuth();
+  const { notificationsCount, refresh: refreshBadges } = useUnreadBadges(getSocket, socketConnected);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

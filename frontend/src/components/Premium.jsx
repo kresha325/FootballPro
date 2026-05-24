@@ -1,12 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckIcon, XMarkIcon, SparklesIcon, StarIcon } from '@heroicons/react/24/solid';
+import api from '../services/api';
 
 function Premium() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState('monthly');
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    const success = searchParams.get('success');
+    if (!sessionId || success !== '1') return;
+
+    (async () => {
+      try {
+        const { data } = await api.get(`/premium/verify-session/${sessionId}`);
+        if (data.success) {
+          await refreshUser?.();
+          alert('Premium u aktivizua me sukses!');
+        }
+      } catch (e) {
+        console.error('Premium verify:', e);
+      } finally {
+        setSearchParams({}, { replace: true });
+      }
+    })();
+  }, [searchParams, setSearchParams, refreshUser]);
 
   const plans = {
     monthly: {
@@ -43,16 +67,26 @@ function Premium() {
 
   const handleSubscribe = async () => {
     setLoading(true);
+    setCheckoutError('');
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In real implementation, integrate with Stripe or payment provider
-      alert(`Subscribed to ${plans[selectedPlan].name} plan for $${plans[selectedPlan].price}`);
-      setShowPaymentModal(false);
+      const { data } = await api.post('/premium/checkout', { plan: selectedPlan });
+
+      if (data.mode === 'demo' && data.success) {
+        await refreshUser?.();
+        alert(data.message || 'Premium activated (demo mode).');
+        setShowPaymentModal(false);
+        return;
+      }
+
+      if (data.mode === 'stripe' && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      setCheckoutError('Could not start checkout.');
     } catch (error) {
       console.error('Subscription error:', error);
-      alert('Payment failed. Please try again.');
+      setCheckoutError(error.response?.data?.msg || 'Payment failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -347,6 +381,10 @@ function Premium() {
                 />
               </div>
             </div>
+
+            {checkoutError ? (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{checkoutError}</p>
+            ) : null}
 
             <button
               onClick={handleSubscribe}

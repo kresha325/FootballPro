@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { BACKEND_URL } from '../config/api';
+import { showXPNotification } from '../components/XPNotificationManager';
 
 const SocketContext = createContext();
 
@@ -60,6 +61,12 @@ export const SocketProvider = ({ children }) => {
     newSocket.on('messageUpdated', bumpMessagingUnread);
     newSocket.on('messageDeleted', bumpMessagingUnread);
 
+    const onXpEarned = (data) => {
+      if (!data || typeof data !== 'object') return;
+      showXPNotification(data.xp ?? 0, data.reason ?? '', data.levelUp ?? null);
+    };
+    newSocket.on('xp:earned', onXpEarned);
+
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
       setConnected(false);
@@ -76,6 +83,7 @@ export const SocketProvider = ({ children }) => {
       newSocket.off('newMessage', bumpMessagingUnread);
       newSocket.off('messageUpdated', bumpMessagingUnread);
       newSocket.off('messageDeleted', bumpMessagingUnread);
+      newSocket.off('xp:earned', onXpEarned);
       newSocket.close();
     };
   }, [user]);

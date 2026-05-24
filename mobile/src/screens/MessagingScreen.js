@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { conversationsRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BACKEND_URL } from '../config/constants';
+import {
+  lastMessagePreview,
+  messageBelongsToConversation,
+  normalizeMessagePayload,
+} from '../utils/messagingRealtime';
 
 function mediaBaseUrl() {
   return String(BACKEND_URL || '').replace(/\/$/, '');
@@ -111,7 +116,7 @@ function ConversationRow({ item, onPress, currentUserId }) {
 }
 
 export default function MessagingScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, getSocket, socketConnected } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -141,6 +146,40 @@ export default function MessagingScreen({ navigation }) {
       loadConversations({ silent });
     }, [loadConversations])
   );
+
+  useEffect(() => {
+    const socket = getSocket?.();
+    if (!socket) return undefined;
+
+    const onNewMessage = (raw) => {
+      const message = normalizeMessagePayload(raw);
+      if (!message?.conversationId) return;
+
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => messageBelongsToConversation(message, c.id));
+        if (idx === -1) {
+          loadConversations({ silent: true });
+          return prev;
+        }
+        const conv = prev[idx];
+        const isFromOther =
+          message.senderId != null && Number(message.senderId) !== Number(user?.id);
+        const updated = {
+          ...conv,
+          lastMessage: lastMessagePreview(message),
+          lastMessageAt: message.createdAt || new Date().toISOString(),
+          unreadCount: isFromOther ? (conv.unreadCount || 0) + 1 : conv.unreadCount || 0,
+        };
+        const rest = prev.filter((_, i) => i !== idx);
+        return [updated, ...rest];
+      });
+    };
+
+    socket.on('newMessage', onNewMessage);
+    return () => {
+      socket.off('newMessage', onNewMessage);
+    };
+  }, [getSocket, socketConnected, loadConversations, user?.id]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,12 +242,23 @@ export default function MessagingScreen({ navigation }) {
         <ConversationRow
           item={item}
           currentUserId={user?.id}
-          onPress={() =>
+          onPress={() => {
+            const members = Array.isArray(item.members) ? item.members : [];
+            const other =
+              !item.isGroup && user?.id != null
+                ? members.find((m) => Number(m.id) !== Number(user.id))
+                : null;
             navigation.navigate('Conversation', {
               conversationId: item.id,
-              title: item.isGroup ? item.name || 'Grup' : undefined,
-            })
-          }
+              title: item.isGroup
+                ? item.name || 'Grup'
+                : other
+                  ? `${other.firstName || ''} ${other.lastName || ''}`.trim() || undefined
+                  : undefined,
+              isGroup: !!item.isGroup,
+              otherUserId: other?.id ?? null,
+            });
+          }}
         />
       )}
     />

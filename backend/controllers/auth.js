@@ -5,10 +5,15 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { sendEmail } = require('../services/emailService');
 
+function normalizeEmail(raw) {
+  return String(raw || '').trim().toLowerCase();
+}
+
 exports.register = async (req, res) => {
   console.log('BACKEND: REGISTER BODY:', req.body);
 
-  const { email, password, role, firstName, lastName, dateOfBirth } = req.body;
+  const { email: rawEmail, password, role, firstName, lastName, dateOfBirth } = req.body;
+  const email = normalizeEmail(rawEmail);
 
   try {
     // 1. Validim bazë
@@ -19,7 +24,12 @@ exports.register = async (req, res) => {
 
     // 2. Kontrollo nëse ekziston user
     console.log('BACKEND: Checking if user exists with email:', email);
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({
+      where: User.sequelize.where(
+        User.sequelize.fn('LOWER', User.sequelize.col('email')),
+        email
+      ),
+    });
     if (existingUser) {
       console.log('BACKEND: User already exists');
       return res.status(400).json({ msg: 'User already exists' });
@@ -116,12 +126,36 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   console.log('BACKEND: LOGIN REQUEST:', req.body);
-  const { email, password } = req.body;
+  const { email: rawEmail, password } = req.body;
+  const email = normalizeEmail(rawEmail);
 
   try {
-    const user = await User.findOne({ where: { email } });
+    if (!email || !password) {
+      return res.status(400).json({ msg: 'Email and password are required' });
+    }
+
+    const user = await User.findOne({
+      where: User.sequelize.where(
+        User.sequelize.fn('LOWER', User.sequelize.col('email')),
+        email
+      ),
+    });
     console.log('BACKEND: User found:', user ? user.id : 'not found');
     if (!user) {
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
+
+    if (!user.password || !String(user.password).startsWith('$2')) {
+      if (user.googleId) {
+        return res.status(400).json({
+          msg: 'This account uses Google sign-in on web. Use Forgot password in the app to set a password.',
+        });
+      }
+      if (user.facebookId) {
+        return res.status(400).json({
+          msg: 'This account uses Facebook sign-in on web. Use Forgot password in the app to set a password.',
+        });
+      }
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
@@ -171,10 +205,15 @@ exports.login = async (req, res) => {
 
 // Forgot Password - Request reset token
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
+  const email = normalizeEmail(req.body?.email);
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: User.sequelize.where(
+        User.sequelize.fn('LOWER', User.sequelize.col('email')),
+        email
+      ),
+    });
     
     if (!user) {
       // Don't reveal if email exists or not for security

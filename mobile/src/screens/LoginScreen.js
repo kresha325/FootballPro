@@ -70,7 +70,7 @@ export default function LoginScreen() {
 
   const onLogin = async () => {
     setInlineError('');
-    const result = await login({ email: email.trim(), password });
+    const result = await login({ email: email.trim().toLowerCase(), password });
     if (!result.ok) {
       setInlineError(result.message || 'Login failed');
     }
@@ -86,7 +86,7 @@ export default function LoginScreen() {
     const result = await register({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password,
       role: normalizedRole,
     });
@@ -97,7 +97,7 @@ export default function LoginScreen() {
 
   const onForgotPassword = async () => {
     setInlineError('');
-    const result = await forgotPassword(email.trim());
+    const result = await forgotPassword(email.trim().toLowerCase());
     if (!result.ok) {
       setInlineError(result.message || 'Reset request failed');
       return;

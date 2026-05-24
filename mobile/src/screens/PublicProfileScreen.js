@@ -341,10 +341,15 @@ export default function PublicProfileScreen({ route, navigation }) {
       const conversationId = res?.data?.id;
       if (!conversationId) throw new Error('Conversation could not be created');
       const parent = navigation.getParent?.();
+      const convParams = {
+        conversationId,
+        otherUserId: userId,
+        isGroup: false,
+      };
       if (parent?.navigate) {
-        parent.navigate('Messages', { screen: 'Conversation', params: { conversationId } });
+        parent.navigate('Messages', { screen: 'Conversation', params: convParams });
       } else {
-        navigation.navigate('Messages', { screen: 'Conversation', params: { conversationId } });
+        navigation.navigate('Messages', { screen: 'Conversation', params: convParams });
       }
     } catch (err) {
       Alert.alert('Message', extractErrorMessage(err, 'Could not open conversation'));
@@ -399,6 +404,17 @@ export default function PublicProfileScreen({ route, navigation }) {
     const parent = navigation.getParent?.();
     if (parent?.navigate) {
       parent.navigate('More', { screen: 'Insights' });
+    }
+  }, [navigation]);
+
+  const onGoLive = useCallback(() => {
+    if (navigation.navigate) {
+      navigation.navigate('GoLive');
+      return;
+    }
+    const parent = navigation.getParent?.();
+    if (parent?.navigate) {
+      parent.navigate('More', { screen: 'GoLive' });
     }
   }, [navigation]);
 
@@ -639,6 +655,10 @@ export default function PublicProfileScreen({ route, navigation }) {
                     <Text style={styles.joncoinValue}>{joncoinBalance}</Text>
                   </View>
                 ) : null}
+                <TouchableOpacity style={styles.goLiveBtn} onPress={onGoLive} activeOpacity={0.88}>
+                  <Ionicons name="videocam" size={20} color="#fff" />
+                  <Text style={styles.goLiveBtnText}>Go Live</Text>
+                </TouchableOpacity>
                 <View style={styles.selfActionsRow}>
                   <TouchableOpacity
                     style={styles.selfPrimaryBtn}
@@ -930,6 +950,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selfActionsWrap: { marginTop: 16, width: '100%' },
+  goLiveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#dc2626',
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
+  },
+  goLiveBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   joncoinBanner: {
     borderRadius: 10,
     borderWidth: 1,
