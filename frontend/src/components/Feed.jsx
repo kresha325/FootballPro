@@ -10,6 +10,7 @@ import AdSlider from './AdSlider';
 import SponsorBanner from './SponsorBanner.jsx';
 import UserCardsSection from './UserCardsSection';
 import FeedLiveNow from './FeedLiveNow';
+import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import { API } from '../services/api';
 
 const Feed = () => {
@@ -395,7 +396,16 @@ const Feed = () => {
           
           {/* Action Buttons */}
           <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AiSuggestCaptionButton
+                hints={{
+                  topic: newPost.trim().slice(0, 80) || 'futboll',
+                  hasMedia: Boolean(selectedFile),
+                  location: location.trim() || undefined,
+                  role: user?.role,
+                }}
+                onCaption={(caption) => setNewPost((prev) => (prev.trim() ? `${prev.trim()} ${caption}` : caption))}
+              />
               {/* Photo/Video Upload */}
               <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition">
                 <span className="text-xl">⚽</span>

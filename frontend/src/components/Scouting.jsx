@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { scoutingAPI } from '../services/api';
+import { Link } from 'react-router-dom';
+import { aiAPI, scoutingAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const Scouting = () => {
@@ -7,7 +8,13 @@ const Scouting = () => {
   const [filteredRecommendations, setFilteredRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ position: '', minScore: 0 });
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoadingId, setAiLoadingId] = useState(null);
+  const [aiError, setAiError] = useState('');
   const { user } = useAuth();
+
+  const scoutRoles = ['scout', 'coach', 'club', 'manager', 'trajner'];
+  const canUseAi = scoutRoles.includes(String(user?.role || '').toLowerCase());
 
   useEffect(() => {
     if (user && user.role === 'scout' && user.premium) {
@@ -46,6 +53,19 @@ const Scouting = () => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
+  const fetchAiSummary = async (playerId) => {
+    setAiLoadingId(playerId);
+    setAiError('');
+    try {
+      const res = await aiAPI.scoutSummary(playerId);
+      setAiSummary({ playerId, text: res.data.summary, name: res.data.playerName });
+    } catch (err) {
+      setAiError(err?.response?.data?.error || 'Përmbledhja AI dështoi');
+    } finally {
+      setAiLoadingId(null);
+    }
+  };
+
   if (!user || user.role !== 'scout' || !user.premium) {
     return <div className="p-4">Access denied. This is a premium feature for scouts.</div>;
   }
@@ -75,12 +95,36 @@ const Scouting = () => {
       </div>
 
       <div className="space-y-4">
+        {aiError ? <p className="text-red-600 text-sm mb-2">{aiError}</p> : null}
+        {aiSummary ? (
+          <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded">
+            <p className="font-semibold text-teal-900 mb-1">Përmbledhje AI — {aiSummary.name}</p>
+            <p className="text-sm whitespace-pre-wrap">{aiSummary.text}</p>
+            <button type="button" className="text-xs mt-2 text-teal-700 underline" onClick={() => setAiSummary(null)}>
+              Mbyll
+            </button>
+          </div>
+        ) : null}
         {filteredRecommendations.map(rec => (
           <div key={rec.playerId} className="border p-4 rounded shadow">
-            <h3 className="text-lg font-semibold">{rec.playerName}</h3>
+            <h3 className="text-lg font-semibold">
+              <Link to={`/profile/${rec.playerId}`} className="text-teal-700 hover:underline">
+                {rec.playerName}
+              </Link>
+            </h3>
             <p>Position: {rec.position}</p>
             <p>Score: {rec.score.toFixed(2)}</p>
             <p>Reasons: {rec.reasons.join(', ')}</p>
+            {canUseAi ? (
+              <button
+                type="button"
+                disabled={aiLoadingId === rec.playerId}
+                onClick={() => fetchAiSummary(rec.playerId)}
+                className="mt-2 text-sm px-3 py-1 border border-teal-600 text-teal-700 rounded hover:bg-teal-50 disabled:opacity-50"
+              >
+                {aiLoadingId === rec.playerId ? 'Duke gjeneruar…' : 'Përmbledhje AI'}
+              </button>
+            ) : null}
           </div>
         ))}
       </div>

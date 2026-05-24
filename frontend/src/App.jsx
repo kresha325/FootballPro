@@ -9,6 +9,7 @@ import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import ParentVerification from './components/ParentVerification';
+import ParentVerified from './components/ParentVerified';
 import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
@@ -91,6 +92,7 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding" element={user ? <RegisterOnboarding /> : <Navigate to="/login" />} />
             <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
+            <Route path="/parent-verified" element={<ParentVerified />} />
 
             {/* FEED */}
             <Route path="/feed" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Feed />) : <Navigate to="/login" />} />

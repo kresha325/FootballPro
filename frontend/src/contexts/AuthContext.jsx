@@ -139,13 +139,28 @@ export const AuthProvider = ({ children }) => {
       console.error('FRONTEND: Network error?', error.code === 'ERR_NETWORK');
       
       let errorMsg = 'Regjistrimi dështoi';
+      const serverMsg = error.response?.data?.msg || error.response?.data?.error || '';
       if (error.code === 'ERR_NETWORK') {
         errorMsg = 'Nuk mund të lidhet me serverin. Kontrollo lidhjen.';
-      } else if (error.response?.data?.msg) {
-        errorMsg = error.response.data.msg;
+      } else if (/already exists/i.test(serverMsg)) {
+        errorMsg = 'Ky email është tashmë i regjistruar. Hyr në llogari ose përdor një email tjetër.';
+      } else if (/invalid date of birth/i.test(serverMsg)) {
+        errorMsg = 'Datëlindja jo valid. Përdor formatin VVVV-MM-DD.';
+      } else if (/invalid email/i.test(serverMsg)) {
+        errorMsg = 'Email jo valid.';
+      } else if (/password must be at least/i.test(serverMsg)) {
+        errorMsg = 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.';
+      } else if (/invalid account type/i.test(serverMsg)) {
+        errorMsg = 'Lloji i llogarisë nuk është valid.';
+      } else if (serverMsg) {
+        errorMsg = serverMsg;
       }
-      
-      return { success: false, error: errorMsg };
+
+      return {
+        success: false,
+        error: errorMsg,
+        emailAlreadyExists: /already exists/i.test(serverMsg),
+      };
     }
   };
 

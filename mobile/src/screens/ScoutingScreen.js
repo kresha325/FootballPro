@@ -1,17 +1,32 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { extractErrorMessage, scoutingRecommendationsRequest } from '../api/client';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { aiScoutSummaryRequest, extractErrorMessage, scoutingRecommendationsRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const PAGE_SIZE = 10;
+const SCOUT_AI_ROLES = new Set(['scout', 'club', 'coach', 'manager', 'trajner']);
 
-function RecommendationCard({ item }) {
+function RecommendationCard({ item, onAiSummary, aiLoadingId }) {
+  const playerId = item?.playerId;
   return (
     <View style={styles.card}>
       <Text style={styles.name}>{item?.playerName || 'Player'}</Text>
       <Text style={styles.meta}>Position: {item?.position || 'N/A'} | Club: {item?.club || 'N/A'}</Text>
       <Text style={styles.meta}>Score: {item?.score || 0} ({item?.percentage || 0}%)</Text>
       <Text style={styles.reasons}>Reasons: {Array.isArray(item?.reasons) ? item.reasons.slice(0, 3).join(' | ') : 'N/A'}</Text>
+      {onAiSummary && playerId ? (
+        <TouchableOpacity
+          style={styles.aiBtn}
+          disabled={aiLoadingId === playerId}
+          onPress={() => onAiSummary(playerId, item?.playerName)}
+        >
+          {aiLoadingId === playerId ? (
+            <ActivityIndicator size="small" color="#0f766e" />
+          ) : (
+            <Text style={styles.aiBtnText}>Përmbledhje AI</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -25,6 +40,21 @@ export default function ScoutingScreen() {
   const [position, setPosition] = useState('');
   const [recommendations, setRecommendations] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [aiLoadingId, setAiLoadingId] = useState(null);
+  const canUseAi = SCOUT_AI_ROLES.has(String(user?.role || '').toLowerCase());
+
+  const fetchAiSummary = async (playerId, playerName) => {
+    setAiLoadingId(playerId);
+    try {
+      const res = await aiScoutSummaryRequest(playerId);
+      const summary = res.data?.summary || '';
+      Alert.alert(`AI — ${playerName || 'Lojtari'}`, summary || 'Nuk u gjenerua përmbledhje.');
+    } catch (err) {
+      Alert.alert('AI', extractErrorMessage(err, 'Përmbledhja dështoi'));
+    } finally {
+      setAiLoadingId(null);
+    }
+  };
 
   const loadData = useCallback(async ({ silent, customPosition } = { silent: false, customPosition: '' }) => {
     if (!silent) setLoading(true);
@@ -99,7 +129,13 @@ export default function ScoutingScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
       }
-      renderItem={({ item }) => <RecommendationCard item={item} />}
+      renderItem={({ item }) => (
+        <RecommendationCard
+          item={item}
+          onAiSummary={canUseAi ? fetchAiSummary : null}
+          aiLoadingId={aiLoadingId}
+        />
+      )}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (visibleCount < recommendations.length) {
@@ -148,6 +184,18 @@ const styles = StyleSheet.create({
   name: { color: '#0f172a', fontWeight: '800' },
   meta: { color: '#475569', marginTop: 4 },
   reasons: { color: '#64748b', marginTop: 6 },
+  aiBtn: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  aiBtnText: { color: '#0f766e', fontWeight: '700', fontSize: 13 },
   error: { marginTop: 8, color: '#b91c1c' },
   footerText: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
   accessTitle: { color: '#0f172a', fontWeight: '800', fontSize: 18, textAlign: 'center' },

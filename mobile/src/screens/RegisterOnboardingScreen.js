@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { updateMyProfileRequest } from '../api/client';
+import AiBioButton from '../components/AiBioButton';
 import { useAuth } from '../context/AuthContext';
 import { registerRoleLabel } from '../constants/registerRoles';
 
@@ -158,12 +159,17 @@ export default function RegisterOnboardingScreen({ navigation }) {
                 ? 'Pozita, klubi, objektivi — mund ta ndryshosh më vonë.'
                 : 'Një fjali për ty — klubet dhe lojtarët të njohin.'}
             </Text>
+            <AiBioButton
+              hints={{ city, country, extra: 'Regjistrim i ri në FootballPro' }}
+              onBio={setBio}
+            />
             <TextInput
               style={[styles.input, styles.bio]}
               placeholder="Bio (opsionale)"
               value={bio}
               onChangeText={setBio}
               multiline
+              maxLength={500}
             />
             <View style={styles.tips}>
               <Ionicons name="videocam" size={20} color="#0f766e" />

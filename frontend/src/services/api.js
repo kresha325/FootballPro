@@ -327,5 +327,15 @@ export const nationalTeamsAPI = {
   removePlayer: (memberId) => API.delete(`/national-teams/${memberId}`),
 };
 
+/* =========================
+   AI
+========================= */
+export const aiAPI = {
+  status: () => API.get('/ai/status'),
+  generateBio: (data) => API.post('/ai/generate-bio', data),
+  scoutSummary: (userId) => API.post(`/ai/scout-summary/${userId}`),
+  suggestPost: (data) => API.post('/ai/suggest-post', data),
+};
+
 export default API;
 export { API };

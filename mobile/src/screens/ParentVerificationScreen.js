@@ -1,57 +1,122 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Share } from 'react-native';
 import { extractErrorMessage, parentVerificationRequest } from '../api/client';
 
 export default function ParentVerificationScreen({ navigation }) {
   const [parentEmail, setParentEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confirmUrl, setConfirmUrl] = useState('');
+  const [warning, setWarning] = useState('');
+  const [emailSent, setEmailSent] = useState(null);
 
   const handleSend = async () => {
-    if (!parentEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
-      Alert.alert('Invalid email', 'Please enter a valid parent email.');
+    const email = parentEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert('Email jo valid', 'Vendos email-in e prindit.');
       return;
     }
 
     setLoading(true);
+    setConfirmUrl('');
+    setWarning('');
     try {
-      const res = await parentVerificationRequest(parentEmail);
-      if (res?.data?.success) {
-        Alert.alert('Sent', 'Verification email sent successfully.');
-        navigation.goBack();
-      } else {
-        Alert.alert('Failed', 'Could not send verification email.');
+      const res = await parentVerificationRequest(email);
+      const data = res?.data || {};
+
+      if (!data.success) {
+        Alert.alert('Gabim', data.error || 'Nuk u krijua verifikimi');
+        return;
       }
+
+      setEmailSent(!!data.emailSent);
+
+      if (data.emailSent) {
+        Alert.alert(
+          'U dërgua',
+          `Email u dërgua te ${email}. Kontrollo edhe Spam te prindi.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+
+      setWarning(
+        data.warning ||
+          'Email nuk u dërgua nga serveri. Kopjo linkun dhe ia dërgo prindit (WhatsApp).'
+      );
+      if (data.confirmUrl) setConfirmUrl(data.confirmUrl);
     } catch (err) {
-      Alert.alert('Error', extractErrorMessage(err, 'Server error'));
+      Alert.alert('Gabim', extractErrorMessage(err, 'Server error'));
     } finally {
       setLoading(false);
     }
   };
 
+  const shareLink = async () => {
+    if (!confirmUrl) return;
+    try {
+      await Share.share({
+        message: `Konfirmo llogarinë FootballPro të fëmijës:\n${confirmUrl}`,
+      });
+    } catch (_e) {
+      Alert.alert('Linku', confirmUrl);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={styles.title}>Parent Verification</Text>
-        <Text style={styles.sub}>Enter your parent email to send a confirmation link.</Text>
+        <Text style={styles.title}>Verifikimi i prindit</Text>
+        <Text style={styles.sub}>
+          Për nën 18 vjeç. Vendos email-in e prindit — ose kopjo linkun nëse email nuk funksionon në server.
+        </Text>
+
+        {emailSent === true ? (
+          <View style={styles.okBox}>
+            <Text style={styles.okText}>Email u dërgua. Kontrollo Spam te prindi.</Text>
+          </View>
+        ) : null}
+
+        {confirmUrl ? (
+          <View style={styles.warnBox}>
+            <Text style={styles.warnText}>{warning}</Text>
+            <Text style={styles.link} selectable>
+              {confirmUrl}
+            </Text>
+            <TouchableOpacity style={styles.copyBtn} onPress={shareLink}>
+              <Text style={styles.copyBtnText}>Ndaj linkun me prindin</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <TextInput
           value={parentEmail}
           onChangeText={setParentEmail}
-          placeholder="Parent email"
+          placeholder="Email i prindit"
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
           keyboardType="email-address"
           style={styles.input}
         />
         <TouchableOpacity style={styles.button} onPress={handleSend} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Sending...' : 'Send Verification Email'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Duke dërguar…' : 'Dërgo / krijo link'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', padding: 14 },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  content: { padding: 14, paddingBottom: 30 },
   card: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -59,22 +124,49 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
   },
-  title: { color: '#0f172a', fontWeight: '800', fontSize: 20 },
-  sub: { color: '#475569', marginTop: 4, marginBottom: 10 },
+  title: { color: '#0f172a', fontWeight: '800', fontSize: 18, marginBottom: 8 },
+  sub: { color: '#64748b', fontSize: 14, lineHeight: 20, marginBottom: 12 },
+  okBox: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  okText: { color: '#065f46', fontSize: 13 },
+  warnBox: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  warnText: { color: '#92400e', fontSize: 13, marginBottom: 8 },
+  link: { fontSize: 11, color: '#0f766e', marginBottom: 10 },
+  copyBtn: {
+    backgroundColor: '#0f766e',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  copyBtnText: { color: '#fff', fontWeight: '700' },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    backgroundColor: '#fff',
     color: '#0f172a',
-    marginBottom: 10,
   },
   button: {
     backgroundColor: '#0f766e',
     borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    paddingVertical: 10,
   },
   buttonText: { color: '#fff', fontWeight: '700' },
 });

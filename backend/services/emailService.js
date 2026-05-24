@@ -1,13 +1,36 @@
 const nodemailer = require('nodemailer');
+const { isEmailConfigured, buildParentConfirmUrl } = require('../config/email');
 
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASSWORD || 'your-app-password'
+let transporter = null;
+
+function getTransporter() {
+  if (!isEmailConfigured()) {
+    return null;
   }
-});
+  if (!transporter) {
+    const port = Number(process.env.SMTP_PORT || 0);
+    if (process.env.SMTP_HOST) {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: port || 587,
+        secure: port === 465,
+        auth: {
+          user: process.env.SMTP_USER || process.env.EMAIL_USER,
+          pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
+        },
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        service: process.env.EMAIL_SERVICE || 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+    }
+  }
+  return transporter;
+}
 
 // Email templates
 const emailTemplates = {
@@ -174,22 +197,29 @@ const emailTemplates = {
       </div>
     `
   }),
-  parentVerification: (athleteName, token) => ({
-    subject: `Parental confirmation required for ${athleteName}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Parental Consent Required</h2>
-        <p>Hi,</p>
-        <p>${athleteName} has registered on FootballPro and requires parental confirmation to continue.</p>
-        <p>Please confirm by clicking the button below:</p>
-        <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/parent-verify?token=${token}" 
-           style="background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
-          Confirm Parental Consent
+  parentVerification: (athleteName, token) => {
+    const confirmUrl = buildParentConfirmUrl(token);
+    return {
+      subject: `FootballPro — konfirmim prindi për ${athleteName}`,
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
+        <h2 style="color: #0f766e;">Konfirmim prindi / kujdestari</h2>
+        <p>Përshëndetje,</p>
+        <p><strong>${athleteName}</strong> është regjistruar në <strong>FootballPro</strong> (platformë për futboll: profil, video, turne).</p>
+        <p>Për llogari të të miturve nën 18 vjeç, nevojitet miratimi juaj si prind ose kujdestar ligjor.</p>
+        <p>Kliko butonin më poshtë për të konfirmuar (linku vlen <strong>7 ditë</strong>):</p>
+        <a href="${confirmUrl}"
+           style="background: #0f766e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 20px 0; font-weight: bold;">
+          Konfirmo si prind
         </a>
-        <p style="margin-top:12px; color:#6b7280; font-size:12px;">If you did not expect this email, ignore it.</p>
+        <p style="color:#6b7280; font-size:13px;">Nëse butoni nuk funksionon, kopjo këtë link në shfletues:</p>
+        <p style="word-break: break-all; font-size:12px; color:#475569;">${confirmUrl}</p>
+        <p style="margin-top:20px; color:#9ca3af; font-size:12px;">Nëse nuk e prisje këtë email, injoroje — asgjë nuk ndryshohet.</p>
+        <p style="color:#9ca3af; font-size:12px;">— Ekipi FootballPro</p>
       </div>
-    `
-  }),
+    `,
+    };
+  },
 
   rosterRejected: (data) => ({
     subject: `Roster Request Update from ${data.clubName}`,
@@ -211,21 +241,31 @@ const emailTemplates = {
 
 // Send email function
 const sendEmail = async (to, templateName, ...params) => {
+  if (!isEmailConfigured()) {
+    console.warn('📧 Email skipped — EMAIL_USER / EMAIL_PASSWORD not set on server');
+    return { success: false, error: 'EMAIL_NOT_CONFIGURED', skipped: true };
+  }
+
+  const transport = getTransporter();
+  if (!transport) {
+    return { success: false, error: 'EMAIL_TRANSPORT_UNAVAILABLE' };
+  }
+
   try {
     const template = emailTemplates[templateName](...params);
-    
+
     const mailOptions = {
-      from: `"FootballPro" <${process.env.EMAIL_USER || 'noreply@footballpro.com'}>`,
+      from: `"FootballPro" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to,
       subject: template.subject,
-      html: template.html
+      html: template.html,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent:', info.messageId);
+    const info = await transport.sendMail(mailOptions);
+    console.log('✅ Email sent:', templateName, '→', to, info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Email error:', error);
+    console.error('❌ Email error:', templateName, '→', to, error.message);
     return { success: false, error: error.message };
   }
 };

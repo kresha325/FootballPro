@@ -4,6 +4,7 @@ import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { createPostRequest, extractErrorMessage, setPostSponsorsRequest, sponsorsByUserRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import AiCaptionButton from '../components/AiCaptionButton';
 
 export default function CreatePostScreen({ navigation }) {
   const { user } = useAuth();
@@ -91,6 +92,14 @@ export default function CreatePostScreen({ navigation }) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.label}>Post content</Text>
+      <AiCaptionButton
+        hints={{
+          topic: content.trim().slice(0, 80) || 'futboll',
+          hasMedia: Boolean(media),
+          role: user?.role,
+        }}
+        onCaption={(caption) => setContent((prev) => (prev.trim() ? `${prev.trim()} ${caption}` : caption))}
+      />
       <TextInput
         style={[styles.input, styles.multiline]}
         value={content}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { profileAPI } from '../services/api';
+import AiGenerateBioButton from './ai/AiGenerateBioButton';
 
 const ONBOARDING_KEY = 'fp_pending_onboarding';
 
@@ -106,11 +107,18 @@ export default function RegisterOnboarding() {
           <>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Prezantimi yt</h1>
             <p className="text-sm text-gray-600 mb-4">Mund ta ndryshosh më vonë te profili.</p>
+            <div className="flex justify-end mb-2">
+              <AiGenerateBioButton
+                hints={{ city, country, extra: 'Regjistrim i ri në FootballPro' }}
+                onBio={setBio}
+              />
+            </div>
             <textarea
               rows={4}
               placeholder="Bio (opsionale)"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
+              maxLength={500}
               className="w-full mb-4 px-3 py-2 border rounded-md"
             />
             {error ? <p className="text-red-600 text-sm mb-3">{error}</p> : null}

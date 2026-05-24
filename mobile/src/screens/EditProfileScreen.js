@@ -23,6 +23,7 @@ import {
   submitClubRosterRequest,
   updateMyProfileRequest,
 } from '../api/client';
+import AiBioButton from '../components/AiBioButton';
 import { useAuth } from '../context/AuthContext';
 import EditAthleteMatchAchievements, {
   loadAthleteExtrasFromProfile,
@@ -506,6 +507,15 @@ export default function EditProfileScreen({ navigation }) {
           {labelFor('Gender')}
           {pickerButton('gender', 'Gender', GENDER_OPTIONS, genderDisplay)}
           {labelFor('Bio')}
+          <AiBioButton
+            hints={{
+              position: form.position,
+              club: form.club,
+              city: form.city,
+              country: form.country,
+            }}
+            onBio={(text) => setForm((p) => ({ ...p, bio: text }))}
+          />
           {input('bio', { multiline: true, style: [styles.input, styles.multiline], maxLength: 500 })}
           {labelFor('Position')}
           {pickerButton('position', 'Position', ATHLETE_POSITIONS, positionDisplay)}
@@ -559,6 +569,10 @@ export default function EditProfileScreen({ navigation }) {
           {labelFor('Last Name *')}
           {input('lastName', { autoCapitalize: 'words' })}
           {labelFor('Bio')}
+          <AiBioButton
+            hints={{ club: form.club, city: form.city, country: form.country }}
+            onBio={(text) => setForm((p) => ({ ...p, bio: text }))}
+          />
           {input('bio', { multiline: true, style: [styles.input, styles.multiline], maxLength: 500 })}
           {labelFor('Club')}
           {input('club', { placeholder: 'Shkruaj emrin e klubit', onChangeText: (v) => setForm((p) => ({ ...p, club: v, selectedClubId: null })) })}

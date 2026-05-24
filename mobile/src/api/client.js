@@ -363,6 +363,11 @@ export const createSponsorRequest = (payload = {}) => {
   });
 };
 
+export const aiGenerateBioRequest = (payload = {}) => api.post('/api/ai/generate-bio', payload);
+export const aiScoutSummaryRequest = (userId) => api.post(`/api/ai/scout-summary/${userId}`);
+export const aiSuggestPostRequest = (payload = {}) => api.post('/api/ai/suggest-post', payload);
+export const aiStatusRequest = () => api.get('/api/ai/status');
+
 export const adsRequest = () => api.get('/api/ads');
 export const createAdRequest = (payload = {}) => {
   const form = new FormData();

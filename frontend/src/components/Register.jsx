@@ -56,6 +56,7 @@ const Register = () => {
   };
 
   const [error, setError] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -71,6 +72,7 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setEmailExists(false);
 
     // Validation
     if (!formData.firstName.trim()) {
@@ -125,7 +127,8 @@ const Register = () => {
       navigate('/onboarding');
     } else {
       console.error('FRONTEND: Registration failed:', result.error);
-      setError(result.error || 'Registration failed. Please try again.');
+      setError(result.error || 'Regjistrimi dështoi. Provo përsëri.');
+      setEmailExists(!!result.emailAlreadyExists);
     }
   };
 
@@ -143,8 +146,14 @@ const Register = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div id="error-message" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert" aria-live="assertive">
-              <strong className="font-bold">Error: </strong>
               <span className="block sm:inline">{error}</span>
+              {emailExists ? (
+                <p className="mt-2 text-sm">
+                  <Link to="/login" className="font-semibold underline text-red-800">
+                    Shko te hyrja
+                  </Link>
+                </p>
+              ) : null}
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
@@ -159,6 +168,7 @@ const Register = () => {
                   pattern="[0-9]*"
                   maxLength={2}
                   placeholder="DD"
+                  autoComplete="bday-day"
                   value={dobDay}
                   onChange={(e) => handleDobDayChange(e.target.value)}
                   className="w-16 px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -167,6 +177,7 @@ const Register = () => {
                 <select
                   id="dob-month"
                   name="dobMonth"
+                  autoComplete="bday-month"
                   value={dobMonth}
                   onChange={(e) => handleDobMonthChange(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -193,6 +204,7 @@ const Register = () => {
                   pattern="[0-9]*"
                   maxLength={4}
                   placeholder="YYYY"
+                  autoComplete="bday-year"
                   value={dobYear}
                   onChange={(e) => handleDobYearChange(e.target.value)}
                   className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -210,6 +222,7 @@ const Register = () => {
                 <div className="mt-2">
                   <input
                     type="date"
+                    autoComplete="bday"
                     value={formData.dateOfBirth || ''}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -233,6 +246,7 @@ const Register = () => {
                 name="firstName"
                 type="text"
                 required
+                autoComplete="given-name"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="First Name"
                 value={formData.firstName}
@@ -247,6 +261,7 @@ const Register = () => {
                 name="lastName"
                 type="text"
                 required
+                autoComplete="family-name"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Last Name"
                 value={formData.lastName}
@@ -261,6 +276,7 @@ const Register = () => {
                 name="email"
                 type="email"
                 required
+                autoComplete="email"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={formData.email}
@@ -274,6 +290,7 @@ const Register = () => {
                 id="role"
                 name="role"
                 required
+                autoComplete="organization-title"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 value={formData.role}
                 onChange={handleChange}
@@ -297,6 +314,7 @@ const Register = () => {
                 name="password"
                 type="password"
                 required
+                autoComplete="new-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={formData.password}
@@ -311,6 +329,7 @@ const Register = () => {
                 name="confirmPassword"
                 type="password"
                 required
+                autoComplete="new-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}

@@ -246,6 +246,7 @@ app.use('/api/live-stream-replay', require('./routes/liveStreamReplay'));
 app.use('/api/club-members', require('./routes/clubMembers'));
 app.use('/api/club-roster', require('./routes/clubRoster'));
 app.use('/api/verification', require('./routes/verification'));
+app.use('/api/ai', require('./routes/ai'));
 app.use('/api/transfer-history', require('./routes/transferHistory'));
 app.use('/api/sponsors', require('./routes/sponsor'));
 app.use('/api/livekit', require('./routes/livekit'));

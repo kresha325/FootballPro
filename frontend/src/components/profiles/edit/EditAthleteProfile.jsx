@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { clubMembersAPI, profileAPI } from '../../../services/api';
+import AiGenerateBioButton from '../../ai/AiGenerateBioButton';
 
 const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
@@ -146,7 +147,18 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
         </div>
       </div>
       <div>
-        <label htmlFor="athlete-bio" className="block text-sm font-medium mb-1">Bio</label>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <label htmlFor="athlete-bio" className="block text-sm font-medium">Bio</label>
+          <AiGenerateBioButton
+            hints={{
+              position: form.position,
+              club: form.club,
+              city: form.city,
+              country: form.country,
+            }}
+            onBio={(bio) => setForm((prev) => ({ ...prev, bio }))}
+          />
+        </div>
         <textarea id="athlete-bio" name="bio" value={form.bio} onChange={handleChange} rows={4} maxLength={500} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
