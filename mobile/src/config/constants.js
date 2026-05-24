@@ -41,12 +41,16 @@ export function absoluteBackendUrl(maybePath) {
 
 /** Frontend Vite (embed-call, embed-go-live, /live). */
 function resolveWebAppUrl() {
-  const configured = String(
+  let configured = String(
     appExtra.WEB_APP_URL || 'https://footballpro-1.onrender.com'
   ).replace(/\/$/, '');
   const devOverride = process.env.EXPO_PUBLIC_WEB_APP_URL || process.env.WEB_APP_URL;
   if (typeof __DEV__ !== 'undefined' && __DEV__ && devOverride) {
-    return String(devOverride).replace(/\/$/, '');
+    configured = String(devOverride).replace(/\/$/, '');
+  }
+  // footballpro.al nuk ka DNS — frontend prod është footballpro-1.onrender.com
+  if (/^(www\.)?footballpro\.al$/i.test(configured.replace(/^https?:\/\//, ''))) {
+    return 'https://footballpro-1.onrender.com';
   }
   return configured;
 }
