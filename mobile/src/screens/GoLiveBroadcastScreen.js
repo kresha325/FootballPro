@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';
+import { buildQueryString } from '../utils/queryString';
 
 export default function GoLiveBroadcastScreen({ route, navigation }) {
   const { streamId, title = '', description = '', confirmed = false } = route.params || {};
@@ -11,13 +12,13 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
   const uri = useMemo(() => {
     if (!WEB_APP_URL || !streamId) return '';
     const base = WEB_APP_URL.replace(/\/$/, '');
-    const q = new URLSearchParams({
+    const q = buildQueryString({
       streamId: String(streamId),
       title: title || 'Live',
       description: description || '',
+      ...(confirmed ? { confirmed: '1' } : {}),
     });
-    if (confirmed) q.set('confirmed', '1');
-    return `${base}/embed-go-live?${q.toString()}`;
+    return `${base}/embed-go-live?${q}`;
   }, [streamId, title, description, confirmed]);
 
   const injectedBefore = useMemo(() => {
