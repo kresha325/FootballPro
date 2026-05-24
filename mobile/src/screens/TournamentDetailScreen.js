@@ -27,8 +27,11 @@ import {
   updateTournamentMatchScoreRequest,
 } from '../api/client';
 import TournamentBracketView from '../components/TournamentBracketView';
+import UserAvatar, { resolveUserPhotoUri } from '../components/UserAvatar';
 import { useAuth } from '../context/AuthContext';
+import { openUserProfile } from '../utils/openUserProfile';
 import { groupMatchesByRound, knockoutRoundLabel, roundsFromBracketApi } from '../utils/tournamentBracket';
+import { formatTournamentTitle } from '../utils/footballSeason';
 
 function participantLabel(p, participantType) {
   const club = p?.Profile?.club;
@@ -411,9 +414,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.hero}>
-        <Text style={styles.title}>{tournament?.name || 'Tournament'}</Text>
+        <Text style={styles.title}>{formatTournamentTitle(tournament)}</Text>
         <Text style={styles.sub}>
           {tournament?.type || '—'} · {participantCount}/{tournament?.maxParticipants || '—'} · {tournament?.status}
+          {tournament?.season ? ` · ${tournament.season}` : ''}
         </Text>
         {tournament?.description ? <Text style={styles.desc}>{tournament.description}</Text> : null}
         {isCreator ? (
@@ -520,17 +524,33 @@ export default function TournamentDetailScreen({ route, navigation }) {
                 : 'No standings yet.'}
             </Text>
           ) : (
-            standingRows.map((row, idx) => (
-              <View key={String(row.userId || row.id || idx)} style={styles.standRow}>
-                <Text style={styles.standName}>
-                  #{row.rank ?? row.position ?? idx + 1}{' '}
-                  {participantLabel(row.User || row.user || row, pt)}
-                </Text>
-                <Text style={styles.standPts}>
-                  {row.points ?? 0} pts · {row.played ?? 0} pl · GD {row.goalDifference ?? 0}
-                </Text>
-              </View>
-            ))
+            standingRows.map((row, idx) => {
+              const rowUser = row.User || row.user || row;
+              const uid = row.userId || rowUser?.id;
+              return (
+              <TouchableOpacity
+                key={String(row.userId || row.id || idx)}
+                style={styles.standRow}
+                activeOpacity={0.85}
+                onPress={() => uid && openUserProfile(navigation, uid)}
+              >
+                <UserAvatar
+                  user={rowUser}
+                  uri={resolveUserPhotoUri(rowUser?.Profile ? { Profile: rowUser.Profile, ...rowUser } : rowUser)}
+                  size={36}
+                  style={styles.standAvatar}
+                />
+                <View style={styles.standBody}>
+                  <Text style={styles.standName}>
+                    #{row.rank ?? row.position ?? idx + 1}{' '}
+                    {participantLabel(rowUser, pt)}
+                  </Text>
+                  <Text style={styles.standPts}>
+                    {row.points ?? 0} pts · {row.played ?? 0} pl · {row.goalsFor ?? 0} GF · GD {row.goalDifference ?? 0}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );})
           )}
         </View>
       ) : null}
@@ -753,13 +773,16 @@ const styles = StyleSheet.create({
   muted: { color: '#64748b', marginBottom: 6 },
   standRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
+    gap: 10,
   },
-  standName: { color: '#0f172a', fontWeight: '600', flex: 1 },
-  standPts: { color: '#0f766e', fontWeight: '700' },
+  standAvatar: { marginRight: 2 },
+  standBody: { flex: 1, minWidth: 0 },
+  standName: { color: '#0f172a', fontWeight: '600' },
+  standPts: { color: '#0f766e', fontWeight: '700', marginTop: 2, fontSize: 12 },
   roundSection: { marginBottom: 12 },
   roundHeader: { fontWeight: '800', color: '#0f766e', marginBottom: 6, fontSize: 14 },
   matchRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },

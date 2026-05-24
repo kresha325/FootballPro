@@ -11,9 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import UserAvatar from '../components/UserAvatar';
 import { conversationsRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BACKEND_URL } from '../config/constants';
+import { openUserProfile } from '../utils/openUserProfile';
 import {
   lastMessagePreview,
   messageBelongsToConversation,
@@ -51,7 +53,7 @@ function formatConvTime(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function ConversationRow({ item, onPress, currentUserId }) {
+function ConversationRow({ item, onPress, currentUserId, onOpenProfile }) {
   const members = Array.isArray(item.members) ? item.members : [];
   let title = 'Bisedë';
   let other = null;
@@ -89,13 +91,13 @@ function ConversationRow({ item, onPress, currentUserId }) {
   return (
     <TouchableOpacity style={styles.row} onPress={onPress}>
       <View style={styles.rowInner}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarFallbackText}>{initials}</Text>
-          </View>
-        )}
+        <UserAvatar
+          uri={photoUri}
+          user={other}
+          size={48}
+          style={styles.avatarSpacing}
+          onPress={!item.isGroup && other?.id ? () => onOpenProfile?.(other.id) : undefined}
+        />
         <View style={styles.rowBody}>
           <View style={styles.rowTop}>
             <Text style={styles.title} numberOfLines={1}>
@@ -242,6 +244,7 @@ export default function MessagingScreen({ navigation }) {
         <ConversationRow
           item={item}
           currentUserId={user?.id}
+          onOpenProfile={(uid) => openUserProfile(navigation, uid)}
           onPress={() => {
             const members = Array.isArray(item.members) ? item.members : [];
             const other =
@@ -288,23 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rowInner: { flexDirection: 'row', alignItems: 'center' },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e2e8f0',
-    marginRight: 12,
-  },
-  avatarFallback: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#0f766e',
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallbackText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  avatarSpacing: { marginRight: 12 },
   rowBody: { flex: 1, minWidth: 0 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowTopRight: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },

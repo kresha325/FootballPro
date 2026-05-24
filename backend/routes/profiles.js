@@ -13,6 +13,7 @@ const {
   getFollowing,
   checkFollowStatus,
   registerPushToken,
+  getUserTournamentSummary,
 } = require('../controllers/profiles');
 const uploadCloud = require('../middleware/uploadCloudinary');
 
@@ -30,6 +31,8 @@ router.get('/me', auth, (req, res, next) => {
   req.params.id = req.user.id;
   return getProfile(req, res, next);
 });
+
+router.get('/:userId/tournament-summary', auth, getUserTournamentSummary);
 
 router.get('/:id', auth, getProfile);
 

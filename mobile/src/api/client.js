@@ -83,6 +83,8 @@ export const setPostSponsorsRequest = (postId, sponsorIds = []) =>
   api.post(`/api/posts/${postId}/sponsors`, { sponsorIds });
 export const myProfileRequest = () => api.get('/api/profiles/me');
 export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
+export const profileTournamentSummaryRequest = (userId) =>
+  api.get(`/api/profiles/${userId}/tournament-summary`);
 export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });
 export const clubMembersRequestMembership = (payload) => api.post('/api/club-members/request', payload);
 export const clubMembersByClubRequest = (clubId, status = 'approved') =>

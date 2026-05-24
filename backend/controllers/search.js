@@ -30,7 +30,7 @@ exports.searchEverything = async (req, res) => {
       where: q ? {
         name: { [Op.iLike]: `%${q}%` }
       } : {},
-      attributes: ['id', 'name', 'description', 'type', 'startDate', 'endDate', 'status'],
+      attributes: ['id', 'name', 'description', 'type', 'season', 'startDate', 'endDate', 'status'],
       limit: 20
     });
 

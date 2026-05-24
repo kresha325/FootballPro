@@ -6,17 +6,27 @@ const Profile = require('../models/Profile');
 const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
 const { notifyMessage, notifyTournament } = require('./notifications');
+const { resolveTournamentSeason } = require('../utils/footballSeason');
 
 exports.createTournament = async (req, res) => {
   try {
-    const { name, description, type, startDate, endDate, maxParticipants, participantType } = req.body;
+    const { name, description, type, startDate, endDate, maxParticipants, participantType, season } = req.body;
     let pt = 'individual';
     if (participantType === 'club') pt = 'club';
     else if (participantType === 'mixed') pt = 'mixed';
+
+    let resolvedSeason;
+    try {
+      resolvedSeason = resolveTournamentSeason({ type, startDate, season });
+    } catch (seasonErr) {
+      return res.status(400).json({ msg: seasonErr.message });
+    }
+
     const tournament = await Tournament.create({
       name,
       description,
       type,
+      season: resolvedSeason,
       startDate,
       endDate,
       maxParticipants,
@@ -25,6 +35,7 @@ exports.createTournament = async (req, res) => {
     });
     res.status(201).json(tournament);
   } catch (err) {
+    console.error('createTournament:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };

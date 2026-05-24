@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import ProfileTournaments from './ProfileTournaments';
+import UserAvatarLink from './UserAvatarLink';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
@@ -300,6 +302,7 @@ const Profile = () => {
     followers: 0,
     following: 0,
   });
+  const [tournamentSummary, setTournamentSummary] = useState({ tournaments: [], totals: null });
   // Shtojme state per modalin e fotos full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const livePreviewRef = useRef(null);
@@ -577,6 +580,20 @@ const Profile = () => {
         }));
 
         await fetchSponsors(id);
+
+        if (String(res.data?.role || '').toLowerCase() === 'athlete') {
+          try {
+            const tRes = await profileAPI.getProfileTournamentSummary(id);
+            setTournamentSummary({
+              tournaments: Array.isArray(tRes.data?.tournaments) ? tRes.data.tournaments : [],
+              totals: tRes.data?.totals || null,
+            });
+          } catch (_err) {
+            setTournamentSummary({ tournaments: [], totals: null });
+          }
+        } else {
+          setTournamentSummary({ tournaments: [], totals: null });
+        }
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
       } finally {
@@ -703,14 +720,20 @@ const Profile = () => {
   );
 
   const isOwner = user != null && profile != null && Number(user.id) === Number(profile.id);
+  const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
   const tabs = [
     { key: 'overview', label: '🏠 Overview' },
     { key: 'posts', label: '📝 Posts' },
+  ];
+  if (isAthlete) {
+    tabs.push({ key: 'tournaments', label: '🏆 Tournaments' });
+  }
+  tabs.push(
     { key: 'gallery', label: '🖼️ Gallery' },
     { key: 'videos', label: '🎥 Videos' },
     { key: 'about', label: 'ℹ️ About' },
     { key: 'contact', label: '✉️ Contact' },
-  ];
+  );
   if (isOwner) {
     tabs.push({ key: 'sponsors', label: '🤝 Sponsors' });
   }
@@ -1145,6 +1168,13 @@ const Profile = () => {
                   <p className="text-center text-gray-500 py-8">No posts yet</p>
                 )}
               </div>
+            )}
+
+            {activeTab === 'tournaments' && isAthlete && (
+              <ProfileTournaments
+                tournaments={tournamentSummary.tournaments}
+                totals={tournamentSummary.totals}
+              />
             )}
 
             {activeTab === 'gallery' && (

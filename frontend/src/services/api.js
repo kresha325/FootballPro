@@ -154,6 +154,7 @@ export const profileAPI = {
   getAllProfiles: (params) => API.get('/profiles', { params }),
   getMyProfile: () => API.get('/profiles/me'),
   getProfile: (id) => API.get(`/profiles/${id}`),
+  getProfileTournamentSummary: (userId) => API.get(`/profiles/${userId}/tournament-summary`),
   createProfile: (data) => API.post(`/profiles/me`, data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

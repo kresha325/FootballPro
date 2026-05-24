@@ -8,6 +8,10 @@ const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
 const { Op, fn, col, where: sequelizeWhere } = require('sequelize');
 const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
+const { Tournament, TournamentParticipant } = require('../models/Tournament');
+const Match = require('../models/Match');
+const MatchScorer = require('../models/MatchScorer');
+const sequelize = require('../config/database');
 
 const resolveClubUser = async ({ clubId, clubName }) => {
   let clubUser;
@@ -712,6 +716,10 @@ exports.getAllProfiles = async (req, res) => {
       profilesWithUserData = profilesWithUserData.filter(p => p.id !== excludeUserId);
     }
 
+    profilesWithUserData = profilesWithUserData.filter(
+      (p) => !String(p.email || '').includes('@footballpro-smoke.invalid')
+    );
+
     // Apply search filter if provided
     if (search) {
       const searchLower = String(search).toLowerCase();
@@ -898,6 +906,140 @@ exports.getFollowing = async (req, res) => {
   } catch (err) {
     console.error('Get following error:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+function sortTournamentStandingRows(rows) {
+  return [...rows].sort((a, b) => {
+    const pa = a.points ?? 0;
+    const pb = b.points ?? 0;
+    if (pb !== pa) return pb - pa;
+    const gda = (a.goalsFor ?? 0) - (a.goalsAgainst ?? 0);
+    const gdb = (b.goalsFor ?? 0) - (b.goalsAgainst ?? 0);
+    if (gdb !== gda) return gdb - gda;
+    const gfa = a.goalsFor ?? 0;
+    const gfb = b.goalsFor ?? 0;
+    if (gfb !== gfa) return gfb - gfa;
+    return (b.wins ?? 0) - (a.wins ?? 0);
+  });
+}
+
+exports.getUserTournamentSummary = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(userId)) {
+      return res.status(400).json({ msg: 'Invalid user id' });
+    }
+
+    const participations = await TournamentParticipant.findAll({
+      where: {
+        userId,
+        status: { [Op.in]: ['accepted', 'pending'] },
+      },
+      order: [['updatedAt', 'DESC']],
+    });
+
+    if (!participations.length) {
+      return res.json({
+        userId,
+        tournaments: [],
+        totals: { points: 0, goalsFor: 0, scorerGoals: 0, tournamentsPlayed: 0 },
+      });
+    }
+
+    const tournamentIds = [...new Set(participations.map((p) => p.tournamentId).filter(Boolean))];
+    const tournamentRows = await Tournament.findAll({ where: { id: tournamentIds } });
+    const tournamentById = Object.fromEntries(tournamentRows.map((t) => [t.id, t]));
+
+    const scorerRows = await MatchScorer.findAll({
+      attributes: [
+        [col('Match.tournamentId'), 'tournamentId'],
+        [fn('SUM', col('MatchScorer.goals')), 'scorerGoals'],
+      ],
+      include: [{ model: Match, attributes: [], required: true, where: { tournamentId: tournamentIds } }],
+      where: { userId },
+      group: [col('Match.tournamentId')],
+      raw: true,
+    });
+    const scorerGoalsByTournament = {};
+    for (const row of scorerRows) {
+      scorerGoalsByTournament[row.tournamentId] = Number(row.scorerGoals) || 0;
+    }
+
+    const allParticipants = await TournamentParticipant.findAll({
+      where: { tournamentId: tournamentIds, status: 'accepted' },
+    });
+    const participantsByTournament = {};
+    for (const p of allParticipants) {
+      if (!participantsByTournament[p.tournamentId]) participantsByTournament[p.tournamentId] = [];
+      participantsByTournament[p.tournamentId].push(p);
+    }
+
+    const tournaments = [];
+    for (const p of participations) {
+      const t = tournamentById[p.tournamentId];
+      if (!t) continue;
+
+      const tableRows = sortTournamentStandingRows(
+        (participantsByTournament[p.tournamentId] || []).map((ap) => {
+          const gf = Number(ap.goalsFor) || 0;
+          const ga = Number(ap.goalsAgainst) || 0;
+          return {
+            userId: ap.userId,
+            points: Number(ap.points) || 0,
+            wins: Number(ap.wins) || 0,
+            draws: Number(ap.draws) || 0,
+            losses: Number(ap.losses) || 0,
+            goalsFor: gf,
+            goalsAgainst: ga,
+            goalDifference: gf - ga,
+          };
+        })
+      );
+      const rankIdx = tableRows.findIndex((r) => Number(r.userId) === userId);
+      const myRow = tableRows[rankIdx] || {
+        points: Number(p.points) || 0,
+        wins: Number(p.wins) || 0,
+        draws: Number(p.draws) || 0,
+        losses: Number(p.losses) || 0,
+        goalsFor: Number(p.goalsFor) || 0,
+        goalsAgainst: Number(p.goalsAgainst) || 0,
+        goalDifference: (Number(p.goalsFor) || 0) - (Number(p.goalsAgainst) || 0),
+      };
+
+      tournaments.push({
+        tournamentId: t.id,
+        tournamentName: t.name,
+        tournamentSeason: t.season || null,
+        tournamentType: t.type,
+        tournamentStatus: t.status,
+        participantStatus: p.status,
+        rank: rankIdx >= 0 ? rankIdx + 1 : null,
+        points: myRow.points,
+        wins: myRow.wins,
+        draws: myRow.draws,
+        losses: myRow.losses,
+        goalsFor: myRow.goalsFor,
+        goalsAgainst: myRow.goalsAgainst,
+        goalDifference: myRow.goalDifference,
+        scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
+        played: (myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0),
+      });
+    }
+
+    res.json({
+      userId,
+      tournaments,
+      totals: {
+        points: tournaments.reduce((sum, row) => sum + (row.points || 0), 0),
+        goalsFor: tournaments.reduce((sum, row) => sum + (row.goalsFor || 0), 0),
+        scorerGoals: tournaments.reduce((sum, row) => sum + (row.scorerGoals || 0), 0),
+        tournamentsPlayed: tournaments.filter((row) => row.participantStatus === 'accepted').length,
+      },
+    });
+  } catch (err) {
+    console.error('getUserTournamentSummary:', err);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 

@@ -196,7 +196,7 @@ export default function Tournaments() {
             {scorers.map((s, idx) => (
               <li key={idx} className="flex gap-2 items-center mb-1">
                 <a
-                  href={`/profiles/${s.userId}`}
+                  href={`/profile/${s.userId}`}
                   className="text-blue-600 hover:underline font-medium"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -907,7 +907,7 @@ export default function Tournaments() {
                   {match.MatchScorers.map((sc, idx) => (
                     <span key={sc.id} className="inline-block mr-2">
                       <a
-                        href={`/profiles/${sc.userId}`}
+                        href={`/profile/${sc.userId}`}
                         className="text-blue-600 hover:underline"
                         target="_blank"
                         rel="noopener noreferrer"

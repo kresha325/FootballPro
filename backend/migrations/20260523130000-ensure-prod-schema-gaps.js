@@ -246,6 +246,10 @@ module.exports = {
         allowNull: false,
         defaultValue: 'individual',
       });
+      await addColumnIfMissing(queryInterface, Sequelize, 'Tournaments', 'season', {
+        type: Sequelize.STRING(16),
+        allowNull: true,
+      });
     }
 
     // --- Streams (YouTube channel on live sessions) ---

@@ -17,6 +17,11 @@ const Tournament = sequelize.define('Tournament', {
     type: DataTypes.ENUM('league', 'cup', 'knockout'),
     allowNull: false,
   },
+  /** Liga: sezon FIFA YYYY/(Y+1); kupë/knockout: viti i edicionit */
+  season: {
+    type: DataTypes.STRING(16),
+    allowNull: true,
+  },
   startDate: DataTypes.DATE,
   endDate: DataTypes.DATE,
   maxParticipants: DataTypes.INTEGER,
@@ -105,5 +110,7 @@ const TournamentParticipant = sequelize.define('TournamentParticipant', {
 Tournament.belongsToMany(User, { through: TournamentParticipant, foreignKey: 'tournamentId', as: 'participants' });
 User.belongsToMany(Tournament, { through: TournamentParticipant, foreignKey: 'userId', as: 'tournaments' });
 TournamentParticipant.belongsTo(User, { foreignKey: 'userId' });
+TournamentParticipant.belongsTo(Tournament, { foreignKey: 'tournamentId' });
+Tournament.hasMany(TournamentParticipant, { foreignKey: 'tournamentId' });
 
 module.exports = { Tournament, TournamentParticipant };

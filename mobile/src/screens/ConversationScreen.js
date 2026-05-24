@@ -20,6 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import UserAvatar from '../components/UserAvatar';
+import { openUserProfile } from '../utils/openUserProfile';
 import {
   conversationDetailRequest,
   conversationMessagesRequest,
@@ -114,12 +116,10 @@ function MessageStatusTicks({ status, mine }) {
   return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" style={styles.statusIcon} />;
 }
 
-function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus }) {
+function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus, onOpenSenderProfile }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
-  const initials =
-    `${(sender?.firstName || 'U').charAt(0)}${(sender?.lastName || '').charAt(0)}`.toUpperCase() || '?';
   const avatarUri = !mine ? senderAvatarUrl(message) : null;
   const timeLabel = formatMessageTime(message?.createdAt);
   const fileUri = messageFileUrl(message);
@@ -132,13 +132,17 @@ function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus
   return (
     <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowOther]}>
       {!mine ? (
-        avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.msgAvatar} />
-        ) : (
-          <View style={styles.msgAvatarFallback}>
-            <Text style={styles.msgAvatarFallbackText}>{initials}</Text>
-          </View>
-        )
+        <UserAvatar
+          uri={avatarUri}
+          user={sender}
+          size={32}
+          style={styles.msgAvatarSpacing}
+          onPress={
+            sender?.id && onOpenSenderProfile
+              ? () => onOpenSenderProfile(sender.id)
+              : undefined
+          }
+        />
       ) : null}
       <TouchableOpacity
         activeOpacity={0.85}
@@ -859,6 +863,7 @@ export default function ConversationScreen({ route, navigation }) {
             outboundStatus={outboundMessageStatus(item, othersRead, user?.id)}
             onLongPress={() => showMessageActions(item)}
             onOpenImage={setPreviewImageUri}
+            onOpenSenderProfile={(uid) => openUserProfile(navigation, uid)}
           />
         )}
         ListEmptyComponent={<Text style={styles.empty}>Ende nuk ka mesazhe.</Text>}
@@ -990,23 +995,7 @@ const styles = StyleSheet.create({
   },
   bubbleRowMine: { alignSelf: 'flex-end' },
   bubbleRowOther: { alignSelf: 'flex-start' },
-  msgAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#e2e8f0',
-    marginRight: 8,
-  },
-  msgAvatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  msgAvatarFallbackText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  msgAvatarSpacing: { marginRight: 8 },
   bubbleWrap: { maxWidth: '100%', flexShrink: 1 },
   bubbleWrapMine: {},
   bubbleWrapOther: {},

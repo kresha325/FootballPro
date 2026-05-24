@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import UserAvatarLink from './UserAvatarLink';
 import { APP_BRAND_NAME } from '../config/branding';
+import {
+  formatTournamentTitle,
+  previewTournamentSeason,
+  seasonLabel,
+  todayDateInputValue,
+} from '../utils/footballSeason';
 import axios from 'axios';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -218,6 +226,7 @@ function MatchBroadcastModal({ open, loading, error, data, participantType, onCl
 
 export default function TournamentSimple() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -240,10 +249,12 @@ export default function TournamentSimple() {
     name: '',
     description: '',
     type: 'knockout',
-    startDate: '',
+    startDate: todayDateInputValue(),
     maxParticipants: 8,
     participantType: 'individual',
   });
+
+  const createSeasonPreview = previewTournamentSeason(newTournament.type, newTournament.startDate);
 
   useEffect(() => {
     fetchTournaments();
@@ -252,7 +263,23 @@ export default function TournamentSimple() {
   const fetchTournaments = async () => {
     try {
       const response = await API.get('/tournaments');
-      setTournaments(response.data || []);
+      const list = response.data || [];
+      setTournaments(list);
+      const deepLinkId = searchParams.get('tournamentId');
+      if (deepLinkId) {
+        const found = list.find((t) => String(t.id) === String(deepLinkId));
+        if (found) {
+          setSelectedTournament(found);
+          setDetailTab('table');
+        } else {
+          try {
+            const tRes = await API.get(`/tournaments/${deepLinkId}`);
+            if (tRes.data) setSelectedTournament(tRes.data);
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching tournaments:', error);
     } finally {
@@ -319,7 +346,7 @@ export default function TournamentSimple() {
         name: '',
         description: '',
         type: 'knockout',
-        startDate: '',
+        startDate: todayDateInputValue(),
         maxParticipants: 8,
         participantType: 'individual',
       });
@@ -414,7 +441,7 @@ export default function TournamentSimple() {
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">{getTypeIcon(tournament.type)}</span>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{tournament.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{formatTournamentTitle(tournament)}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       by {tournament.creator?.firstName} {tournament.creator?.lastName}
                     </p>
@@ -451,6 +478,12 @@ export default function TournamentSimple() {
                     {participantCount}/{tournament.maxParticipants}
                   </span>
                 </div>
+                {tournament.season && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">{tournament.type === 'league' ? 'Sezoni' : 'Edicioni'}</span>
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{tournament.season}</span>
+                  </div>
+                )}
                 {tournament.startDate && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Fillimi</span>
@@ -615,6 +648,12 @@ export default function TournamentSimple() {
                   onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  {seasonLabel(newTournament.type)}: {createSeasonPreview || '—'}
+                  {newTournament.type === 'league'
+                    ? ' · sezon european (gusht–korrik, si FIFA)'
+                    : ' · viti i edicionit'}
+                </p>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -639,10 +678,11 @@ export default function TournamentSimple() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{selectedTournament.name}</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{formatTournamentTitle(selectedTournament)}</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedTournament.creator?.firstName} {selectedTournament.creator?.lastName} ·{' '}
-                  <span className="capitalize">{selectedTournament.type}</span> ·{' '}
+                  <span className="capitalize">{selectedTournament.type}</span>
+                  {selectedTournament.season ? ` · ${selectedTournament.season}` : ''} ·{' '}
                   {(selectedTournament.participantType || 'individual') === 'club'
                     ? 'Pjesëmarrje: vetëm klube'
                     : (selectedTournament.participantType || 'individual') === 'mixed'
@@ -803,7 +843,18 @@ export default function TournamentSimple() {
                           return (
                             <tr key={row.userId} className="border-t border-gray-100 dark:border-gray-600">
                               <td className="px-3 py-2">{row.rank}</td>
-                              <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{label}</td>
+                              <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                <div className="flex items-center gap-2">
+                                  <UserAvatarLink user={u} userId={row.userId} size={32} />
+                                  {row.userId ? (
+                                    <Link to={`/profile/${row.userId}`} className="hover:text-emerald-700 hover:underline">
+                                      {label}
+                                    </Link>
+                                  ) : (
+                                    label
+                                  )}
+                                </div>
+                              </td>
                               <td className="px-3 py-2 text-center">{row.played ?? '—'}</td>
                               <td className="px-3 py-2 text-center">{row.wins}</td>
                               <td className="px-3 py-2 text-center">{row.draws}</td>

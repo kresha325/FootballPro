@@ -33,6 +33,7 @@ import {
   followUserRequest,
   getOrCreateConversationRequest,
   profileByIdRequest,
+  profileTournamentSummaryRequest,
   sponsorsByUserRequest,
   transferHistoryByUserRequest,
   unfollowUserRequest,
@@ -40,6 +41,7 @@ import {
   userPostsRequest,
   userVideosRequest,
 } from '../api/client';
+import PublicProfileTournamentsTab from '../components/publicProfile/PublicProfileTournamentsTab';
 import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
 import PublicProfileMatchHistoryTab from '../components/publicProfile/PublicProfileMatchHistoryTab';
@@ -51,6 +53,7 @@ import PublicProfileSponsorsTab from '../components/publicProfile/PublicProfileS
 import PublicProfileTabBar from '../components/publicProfile/PublicProfileTabBar';
 import PublicProfileVideosTab from '../components/publicProfile/PublicProfileVideosTab';
 import { useAuth } from '../context/AuthContext';
+import { openTournamentDetail, openUserProfile } from '../utils/openUserProfile';
 import { APP_BRAND_NAME } from '../config/branding';
 
 const COVER_HEIGHT = 168;
@@ -81,6 +84,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [sponsors, setSponsors] = useState([]);
   const [joncoinBalance, setJoncoinBalance] = useState(null);
   const [platformAchievements, setPlatformAchievements] = useState([]);
+  const [tournamentSummary, setTournamentSummary] = useState({ tournaments: [], totals: null });
   /** Profile tab key (avoid name `activeTab` — clashes with some tooling / stale bundles). */
   const [profileTab, setProfileTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -169,6 +173,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           rosterRes,
           balanceRes,
           gamificationRes,
+          tournamentSummaryRes,
         ] = await Promise.all([
           isSelf ? Promise.resolve({ data: {} }) : followStatusRequest(userId),
           userPostsRequest(userId).catch(() => ({ data: [] })),
@@ -194,6 +199,9 @@ export default function PublicProfileScreen({ route, navigation }) {
           isSelf && role === 'athlete'
             ? gamificationAchievementsRequest().catch(() => ({ data: [] }))
             : Promise.resolve({ data: [] }),
+          role === 'athlete'
+            ? profileTournamentSummaryRequest(userId).catch(() => ({ data: { tournaments: [], totals: null } }))
+            : Promise.resolve({ data: { tournaments: [], totals: null } }),
         ]);
 
         if (!isSelf) {
@@ -226,6 +234,16 @@ export default function PublicProfileScreen({ route, navigation }) {
           setPlatformAchievements(Array.isArray(gamificationRes?.data) ? gamificationRes.data : []);
         } else {
           setPlatformAchievements([]);
+        }
+
+        if (role === 'athlete') {
+          const tData = tournamentSummaryRes?.data || {};
+          setTournamentSummary({
+            tournaments: Array.isArray(tData.tournaments) ? tData.tournaments : [],
+            totals: tData.totals || null,
+          });
+        } else {
+          setTournamentSummary({ tournaments: [], totals: null });
         }
 
         if (role === 'club') {
@@ -388,7 +406,8 @@ export default function PublicProfileScreen({ route, navigation }) {
     ];
     if (isAthlete) {
       base.push({ key: 'matches', label: '⚽ Matches' });
-      base.push({ key: 'achievements', label: '🏆 Achievements' });
+      base.push({ key: 'tournaments', label: '🏆 Tournaments' });
+      base.push({ key: 'achievements', label: '🎖️ Achievements' });
     }
     base.push(
       { key: 'gallery', label: '🖼️ Gallery' },
@@ -693,6 +712,14 @@ export default function PublicProfileScreen({ route, navigation }) {
               {profileTab === 'posts' ? <PublicProfilePostsTab posts={posts} theme={theme} /> : null}
               {profileTab === 'matches' && isAthlete ? (
                 <PublicProfileMatchHistoryTab profile={profile} theme={theme} />
+              ) : null}
+              {profileTab === 'tournaments' && isAthlete ? (
+                <PublicProfileTournamentsTab
+                  tournaments={tournamentSummary.tournaments}
+                  totals={tournamentSummary.totals}
+                  theme={theme}
+                  onPressTournament={(tournamentId) => openTournamentDetail(navigation, tournamentId)}
+                />
               ) : null}
               {profileTab === 'achievements' && isAthlete ? (
                 <PublicProfileAchievementsTab

@@ -20,6 +20,12 @@ import {
   trendingTournamentsRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import {
+  formatTournamentTitle,
+  previewTournamentSeason,
+  seasonLabel,
+  todayDateInputValue,
+} from '../utils/footballSeason';
 
 const PAGE_SIZE = 8;
 
@@ -29,10 +35,11 @@ function TournamentCard({ item, user, onJoin, onOpen }) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.name}>{item?.name || 'Tournament'}</Text>
+      <Text style={styles.name}>{formatTournamentTitle(item)}</Text>
       <Text style={styles.description}>{item?.description || 'No description'}</Text>
       <Text style={styles.meta}>
         Type: {item?.type || 'N/A'} | Status: {item?.status || 'open'}
+        {item?.season ? ` | Season: ${item.season}` : ''}
       </Text>
       <Text style={styles.meta}>Participants: {participants}/{item?.maxParticipants || '-'}</Text>
       <View style={styles.cardActions}>
@@ -65,10 +72,12 @@ export default function TournamentsScreen({ navigation }) {
     name: '',
     description: '',
     type: 'knockout',
-    startDate: '',
+    startDate: todayDateInputValue(),
     maxParticipants: 8,
     participantType: 'individual',
   });
+
+  const seasonPreview = previewTournamentSeason(form.type, form.startDate);
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -127,7 +136,7 @@ export default function TournamentsScreen({ navigation }) {
         name: '',
         description: '',
         type: 'knockout',
-        startDate: '',
+        startDate: todayDateInputValue(),
         maxParticipants: 8,
         participantType: 'individual',
       });
@@ -218,6 +227,12 @@ export default function TournamentsScreen({ navigation }) {
                 value={form.startDate}
                 onChangeText={(v) => setForm((f) => ({ ...f, startDate: v }))}
               />
+              <Text style={styles.seasonPreview}>
+                {seasonLabel(form.type)}: {seasonPreview || '—'}
+                {form.type === 'league'
+                  ? ' (gusht–korrik, si FIFA)'
+                  : ' (viti i edicionit)'}
+              </Text>
               <Text style={styles.label}>Type: {form.type}</Text>
               <View style={styles.chipRow}>
                 {['knockout', 'league', 'cup'].map((t) => (
@@ -321,6 +336,7 @@ const styles = StyleSheet.create({
   },
   textArea: { minHeight: 72, textAlignVertical: 'top' },
   label: { color: '#475569', fontWeight: '600', marginBottom: 6 },
+  seasonPreview: { color: '#0f766e', fontWeight: '700', marginBottom: 10, fontSize: 13 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f1f5f9' },
   chipActive: { backgroundColor: '#0f766e' },
