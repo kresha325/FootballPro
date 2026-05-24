@@ -317,6 +317,7 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   hint: { color: '#94a3b8', fontSize: 12, marginTop: 6, lineHeight: 16 },
   okHint: { color: '#0f766e', fontSize: 12, marginTop: 6, fontWeight: '600' },
+  pendingHint: { color: '#b45309', fontSize: 12, marginTop: 6, fontWeight: '600' },
   errHint: { color: '#dc2626', fontSize: 12, marginTop: 6, fontWeight: '600' },
   obsNote: { color: '#64748b', fontSize: 11, marginTop: 8, fontStyle: 'italic', lineHeight: 15 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
