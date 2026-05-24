@@ -11,9 +11,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { extractErrorMessage, updateMyProfileRequest } from '../api/client';
+import {
+  extractErrorMessage,
+  updateMyProfileRequest,
+  youtubeResolveChannelRequest,
+} from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
+import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 
 const YOUTUBE_STUDIO_HELP = 'https://www.youtube.com/account_advanced';
 
@@ -33,6 +37,7 @@ export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvingYoutube, setResolvingYoutube] = useState(false);
   const [profile, setProfile] = useState(() => profileFromUser(user));
 
   useEffect(() => {
@@ -44,12 +49,44 @@ export default function SettingsScreen() {
     [profile.youtubeChannelId]
   );
 
+  const handleResolveYoutube = async () => {
+    const raw = String(profile.youtubeChannelId || '').trim();
+    if (!raw) {
+      Alert.alert('YouTube', 'Ngjit linkun e kanalit (@emri ose Share link).');
+      return;
+    }
+    const existing = normalizeYoutubeChannelId(raw);
+    if (existing) {
+      setProfile((p) => ({ ...p, youtubeChannelId: existing }));
+      Alert.alert('OK', `ID tashmë valid:\n${existing}`);
+      return;
+    }
+    setResolvingYoutube(true);
+    try {
+      const res = await youtubeResolveChannelRequest(raw);
+      const id = res.data?.channelId;
+      if (!id) {
+        Alert.alert('Nuk u gjet', 'Kontrollo që ke kanal publik dhe linkun e saktë nga Share.');
+        return;
+      }
+      setProfile((p) => ({ ...p, youtubeChannelId: id }));
+      Alert.alert('U gjet ID', id);
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u gjet Channel ID'));
+    } finally {
+      setResolvingYoutube(false);
+    }
+  };
+
   const handleSave = async () => {
     const yt = String(profile.youtubeChannelId || '').trim();
-    if (yt && !normalizeYoutubeChannelId(yt)) {
+    const ytNorm = normalizeYoutubeChannelId(yt);
+    if (yt && !ytNorm) {
       Alert.alert(
         'YouTube ID jo valid',
-        'Vendos vetëm Channel ID (UC + 22 shkronja) ose linkun e plotë youtube.com/channel/UC…'
+        needsYoutubeResolve(yt)
+          ? 'Shtyp më poshtë «Gjej ID nga linku» — funksionon me @emër kanali.'
+          : 'Vendos UC… ose link youtube.com/channel/UC…'
       );
       return;
     }
@@ -57,7 +94,7 @@ export default function SettingsScreen() {
     try {
       await updateMyProfileRequest({
         ...profile,
-        youtubeChannelId: yt,
+        youtubeChannelId: ytNorm || '',
       });
       await refreshMe();
       Alert.alert('U ruajt', 'Cilësimet u përditësuan.');
@@ -103,8 +140,8 @@ export default function SettingsScreen() {
 
         <Text style={styles.fieldLabel}>Çfarë të vendosësh këtu</Text>
         <Text style={styles.bullet}>• Vetëm <Text style={styles.mono}>Channel ID</Text> — fillon me UC (24 karaktere gjithsej)</Text>
-        <Text style={styles.bullet}>• Ose linku: youtube.com/channel/UC…</Text>
-        <Text style={styles.bullet}>• <Text style={styles.bold}>Jo</Text> emri i kanalit, jo video ID, jo stream key nga OBS</Text>
+        <Text style={styles.bullet}>• Ose linku @emri / Share nga YouTube (Samsung)</Text>
+        <Text style={styles.bullet}>• <Text style={styles.bold}>Jo</Text> video ID, jo stream key OBS</Text>
 
         <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>Ku e gjen në YouTube</Text>
         <Text style={styles.step}>1. Hap YouTube → avatar → Settings → Advanced settings</Text>
@@ -115,11 +152,21 @@ export default function SettingsScreen() {
           <Text style={styles.linkBtnText}>Hap Advanced settings në YouTube</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          onPress={handleResolveYoutube}
+          disabled={resolvingYoutube}
+          style={[styles.resolveBtn, resolvingYoutube && styles.resolveBtnDisabled]}
+        >
+          <Text style={styles.resolveBtnText}>
+            {resolvingYoutube ? 'Duke kërkuar ID…' : 'Gjej ID nga linku (@ ose Share)'}
+          </Text>
+        </TouchableOpacity>
+
         <TextInput
           style={[styles.input, styles.monoInput]}
           value={profile.youtubeChannelId}
           onChangeText={(v) => setProfile((p) => ({ ...p, youtubeChannelId: v }))}
-          placeholder="UCxxxxxxxxxxxxxxxxxxxxxxxx"
+          placeholder="Ngjit link @emri ose UC…"
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
           autoCorrect={false}
@@ -227,6 +274,15 @@ const styles = StyleSheet.create({
   monoInput: { fontFamily: 'Menlo', fontSize: 13 },
   linkBtn: { marginVertical: 8 },
   linkBtnText: { color: '#0f766e', fontWeight: '600', fontSize: 13 },
+  resolveBtn: {
+    marginBottom: 10,
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 11,
+  },
+  resolveBtnDisabled: { opacity: 0.6 },
+  resolveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   saveButton: {
     marginTop: 6,
     backgroundColor: '#0f766e',

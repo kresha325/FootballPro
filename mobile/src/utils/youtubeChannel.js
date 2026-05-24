@@ -11,3 +11,11 @@ export function normalizeYoutubeChannelId(raw) {
   if (!/^UC[a-zA-Z0-9_-]{22}$/.test(id)) return null;
   return id;
 }
+
+/** A ka nevojë për API resolve (@handle, link pa /channel/UC) */
+export function needsYoutubeResolve(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return false;
+  if (normalizeYoutubeChannelId(s)) return false;
+  return true;
+}

@@ -363,6 +363,9 @@ export const createSponsorRequest = (payload = {}) => {
   });
 };
 
+export const youtubeResolveChannelRequest = (url) =>
+  api.get('/api/youtube/resolve', { params: { url } });
+
 export const aiGenerateBioRequest = (payload = {}) => api.post('/api/ai/generate-bio', payload);
 export const aiScoutSummaryRequest = (userId) => api.post(`/api/ai/scout-summary/${userId}`);
 export const aiSuggestPostRequest = (payload = {}) => api.post('/api/ai/suggest-post', payload);
