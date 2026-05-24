@@ -395,7 +395,7 @@ exports.updateProfile = async (req, res) => {
         const norm = normalizeYoutubeChannelId(v);
         if (!norm) {
           return res.status(400).json({
-            msg: 'Invalid YouTube channel ID. Use UC followed by 22 characters, or a youtube.com/channel/UC… link.',
+            msg: 'YouTube Channel ID i pavlefshëm. Duhet të fillojë me UC (~24 karaktere gjithsej) ose link youtube.com/channel/UC… ose përdor «Gjej ID nga linku».',
             field: 'youtubeChannelId',
           });
         }

@@ -79,17 +79,34 @@ export default function SettingsScreen() {
   };
 
   const handleSave = async () => {
-    const yt = String(profile.youtubeChannelId || '').trim();
-    const ytNorm = normalizeYoutubeChannelId(yt);
+    let yt = String(profile.youtubeChannelId || '').trim();
+    let ytNorm = normalizeYoutubeChannelId(yt);
+
+    if (yt && !ytNorm && needsYoutubeResolve(yt)) {
+      setSaving(true);
+      try {
+        const res = await youtubeResolveChannelRequest(yt);
+        ytNorm = res.data?.channelId || null;
+        if (ytNorm) {
+          yt = ytNorm;
+          setProfile((p) => ({ ...p, youtubeChannelId: ytNorm }));
+        }
+      } catch (_err) {
+        /* provo mesazh më poshtë */
+      }
+    }
+
     if (yt && !ytNorm) {
+      setSaving(false);
       Alert.alert(
         'YouTube ID jo valid',
         needsYoutubeResolve(yt)
-          ? 'Shtyp më poshtë «Gjej ID nga linku» — funksionon me @emër kanali.'
-          : 'Vendos UC… ose link youtube.com/channel/UC…'
+          ? 'Ngjit linkun nga Share (@emri) dhe shtyp «Gjej ID nga linku», pastaj Ruaj.'
+          : 'Duhet ID që fillon me UC (~24 karaktere). Shembull: UCflsCrcGKQ85RYdNM5oW27w'
       );
       return;
     }
+
     setSaving(true);
     try {
       await updateMyProfileRequest({
@@ -139,8 +156,11 @@ export default function SettingsScreen() {
         </Text>
 
         <Text style={styles.fieldLabel}>Çfarë të vendosësh këtu</Text>
-        <Text style={styles.bullet}>• Vetëm <Text style={styles.mono}>Channel ID</Text> — fillon me UC (24 karaktere gjithsej)</Text>
-        <Text style={styles.bullet}>• Ose linku @emri / Share nga YouTube (Samsung)</Text>
+        <Text style={styles.bullet}>
+          • <Text style={styles.mono}>Channel ID</Text> — fillon me <Text style={styles.mono}>UC</Text> (~24 shkronja
+          gjithsej, jo 22)
+        </Text>
+        <Text style={styles.bullet}>• Ose linku @emri / Share → shtyp «Gjej ID nga linku»</Text>
         <Text style={styles.bullet}>• <Text style={styles.bold}>Jo</Text> video ID, jo stream key OBS</Text>
 
         <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>Ku e gjen në YouTube</Text>
@@ -166,7 +186,7 @@ export default function SettingsScreen() {
           style={[styles.input, styles.monoInput]}
           value={profile.youtubeChannelId}
           onChangeText={(v) => setProfile((p) => ({ ...p, youtubeChannelId: v }))}
-          placeholder="Ngjit link @emri ose UC…"
+          placeholder="UCflsCrcGKQ85RYdNM5oW27w ose link @emri"
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
           autoCorrect={false}
@@ -176,7 +196,9 @@ export default function SettingsScreen() {
           normalizedYoutube ? (
             <Text style={styles.okHint}>✓ ID valid: {normalizedYoutube}</Text>
           ) : (
-            <Text style={styles.errHint}>Format i gabuar — duhet UC + 22 karaktere</Text>
+            <Text style={styles.errHint}>
+              Jo valid — përdor «Gjej ID nga linku» ose UC… (~24 karaktere gjithsej)
+            </Text>
           )
         ) : (
           <Text style={styles.hint}>Lëre bosh nëse përdor vetëm LiveKit (kamera në app).</Text>
