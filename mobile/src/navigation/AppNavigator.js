@@ -255,6 +255,11 @@ function ProfileNavigator() {
         component={GoLiveBroadcastScreen}
         options={{ title: 'Transmetim LIVE', headerShown: true, headerBackTitleVisible: true }}
       />
+      <ProfileStack.Screen
+        name="LiveViewer"
+        component={LiveViewerScreen}
+        options={{ title: 'Live', headerBackTitleVisible: true }}
+      />
       <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
     </ProfileStack.Navigator>
   );

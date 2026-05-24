@@ -23,7 +23,7 @@ export default function LiveAvatars({ onOpenViewer }) {
     // Connect socket for realtime updates
     try {
       const server = (import.meta.env.VITE_API_URL || '').replace('/api','') || window.location.origin;
-      socketRef.current = io(server, { transports: ['websocket'], reconnectionAttempts: 5 });
+      socketRef.current = io(server, { transports: ['polling', 'websocket'], reconnectionAttempts: 10 });
       socketRef.current.on('connect', () => {
         // subscribe to stream events
         socketRef.current.emit('subscribe:streams');

@@ -142,14 +142,23 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
-// Socket.io CORS — socket.io accepts an array or '*' for origin.
+// Socket.io CORS — lejo mobile (pa Origin) dhe frontend-in e konfiguruar.
 const socketCorsOrigin = (allowedOrigins.length === 1 && allowedOrigins[0] === '*') ? '*' : allowedOrigins;
 io = socketIo(server, {
   cors: {
-    origin: socketCorsOrigin,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (socketCorsOrigin === '*') return callback(null, true);
+      if (Array.isArray(socketCorsOrigin) && socketCorsOrigin.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true
-  }
+    credentials: true,
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 // Make io available to other modules
 try {
@@ -287,7 +296,7 @@ app.get('/api/users/:userId/online', (req, res) => {
   try {
     const { userId } = req.params;
     // userSockets është në scope global të server.js
-    const isOnline = userSockets.has(String(userId));
+    const isOnline = isUserRealtimeOnline(userId);
     res.json({ userId, online: isOnline });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -301,6 +310,12 @@ app.get('/', (req, res) => {
 // Socket.IO for real-time messaging and video calls
 // Store user socket mappings
 const userSockets = new Map(); // userId -> socketId
+
+function isUserRealtimeOnline(userId) {
+  if (!io || userId == null) return false;
+  const room = io.sockets.adapter.rooms.get(String(userId));
+  return !!(room && room.size > 0);
+}
 
 const VideoCall = require('./models/VideoCall');
 
@@ -429,7 +444,7 @@ io.on('connection', (socket) => {
   // WebRTC signaling for video calls
   socket.on('call:offer', (data) => {
     const { to, offer, from, callerName, callId } = data;
-    const targetSocketId = userSockets.get(String(to));
+    const receiverOnline = isUserRealtimeOnline(to);
     (async () => {
       let usedCallId = callId;
       try {
@@ -491,8 +506,8 @@ io.on('connection', (socket) => {
           }
         }
 
-        if (targetSocketId) {
-          logSocketEvent(socket, 'call:offer', { from, to, callId: usedCallId, targetSocketId });
+        if (receiverOnline) {
+          logSocketEvent(socket, 'call:offer', { from, to, callId: usedCallId, receiverOnline: true });
           io.to(String(to)).emit('call:incoming', {
             from,
             callerName,
@@ -605,11 +620,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ...existing code...
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
 });
 
 // Sync database

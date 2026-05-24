@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import io from 'socket.io-client';
 import { BACKEND_URL } from '../config/constants';
@@ -258,6 +259,25 @@ export const AuthProvider = ({ children }) => {
       disconnectSocket();
     };
   }, []);
+
+  // Rilidh socket kur app kthehet në foreground (iOS/Android e mbyllin WebSocket në background).
+  useEffect(() => {
+    if (!token || !user?.id) return undefined;
+
+    const onAppState = (nextState) => {
+      if (nextState !== 'active') return;
+      const socket = socketRef.current;
+      if (!socket) return;
+      if (!socket.connected) {
+        socket.connect();
+      } else {
+        socket.emit('join', String(user.id));
+      }
+    };
+
+    const sub = AppState.addEventListener('change', onAppState);
+    return () => sub.remove();
+  }, [token, user?.id]);
 
   const value = useMemo(
     () => ({

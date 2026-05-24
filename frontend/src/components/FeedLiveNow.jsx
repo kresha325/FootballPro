@@ -48,7 +48,10 @@ export default function FeedLiveNow() {
 
     const apiRoot = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/i, '') || window.location.origin;
     try {
-      socketRef.current = io(apiRoot, { transports: ['websocket'], reconnectionAttempts: 5 });
+      socketRef.current = io(apiRoot, {
+        transports: ['polling', 'websocket'],
+        reconnectionAttempts: 10,
+      });
       socketRef.current.on('connect', () => {
         try {
           socketRef.current.emit('subscribe:streams');

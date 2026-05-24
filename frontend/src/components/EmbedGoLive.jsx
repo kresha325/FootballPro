@@ -5,6 +5,10 @@ import { livekitAPI, profileAPI, streamsAPI } from '../services/api';
 import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { preferLiveKitBroadcast } from '../utils/device';
+import {
+  getLiveVideoCaptureOptions,
+  switchLocalVideoCamera,
+} from '../utils/cameraSwitch';
 
 function postToNative(payload) {
   try {
@@ -34,10 +38,13 @@ export default function EmbedGoLive() {
   const [ending, setEnding] = useState(false);
   const [uploadingReplay, setUploadingReplay] = useState(false);
   const [replaySaved, setReplaySaved] = useState(false);
+  const [switchingCamera, setSwitchingCamera] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState('environment');
 
   const videoRef = useRef(null);
   const roomRef = useRef(null);
   const tracksRef = useRef([]);
+  const facingRef = useRef('environment');
 
   const title = params.get('title')?.trim() || 'Live Stream';
   const description = params.get('description')?.trim() || '';
@@ -99,10 +106,23 @@ export default function EmbedGoLive() {
       });
 
       await room.connect(wsUrl, token, { autoSubscribe: true });
-      const localTracks = await createLocalTracks({ audio: true, video: true });
+      const localTracks = await createLocalTracks({
+        audio: true,
+        video: getLiveVideoCaptureOptions(),
+      });
       tracksRef.current = localTracks;
 
       const videoTrack = localTracks.find((t) => t.kind === 'video');
+      if (videoTrack?.mediaStreamTrack?.getSettings) {
+        const settings = videoTrack.mediaStreamTrack.getSettings();
+        if (settings.facingMode === 'user') {
+          facingRef.current = 'user';
+          setCameraFacing('user');
+        } else {
+          facingRef.current = 'environment';
+          setCameraFacing('environment');
+        }
+      }
       if (videoTrack && videoRef.current) {
         videoTrack.attach(videoRef.current);
       }
@@ -116,6 +136,33 @@ export default function EmbedGoLive() {
     },
     [stopTracks]
   );
+
+  const handleSwitchCamera = useCallback(async () => {
+    const videoTrack = tracksRef.current.find((t) => t.kind === 'video');
+    if (!videoTrack || switchingCamera) return;
+    setSwitchingCamera(true);
+    try {
+      const next = await switchLocalVideoCamera(videoTrack, facingRef);
+      setCameraFacing(next);
+      if (videoRef.current) {
+        videoTrack.attach(videoRef.current);
+      }
+    } catch (err) {
+      console.warn('switchCamera:', err);
+      setError('Nuk u ndërrua kamera. Provo përsëri ose jep leje për kamerën.');
+    } finally {
+      setSwitchingCamera(false);
+    }
+  }, [switchingCamera]);
+
+  const handleOpenLiveViewer = useCallback(() => {
+    if (!streamId) return;
+    if (window.ReactNativeWebView) {
+      postToNative({ type: 'openLiveViewer', streamId });
+      return;
+    }
+    window.open(`/live/${streamId}`, '_blank', 'noopener,noreferrer');
+  }, [streamId]);
 
   useEffect(() => {
     if (broadcastStarted) return undefined;
@@ -341,21 +388,42 @@ export default function EmbedGoLive() {
 
   return (
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800">
-        <div className="min-w-0">
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800 gap-2 flex-wrap">
+        <div className="min-w-0 flex-1">
           <p className="font-bold truncate">{stream?.title || title}</p>
           <p className="text-xs text-gray-400">
             {phase === 'livekit' ? 'LiveKit · Duke transmetuar' : 'YouTube / udhëzime'}
           </p>
         </div>
-        <button
-          type="button"
-          disabled={ending}
-          onClick={endBroadcast}
-          className="shrink-0 ml-2 px-3 py-1.5 rounded-lg bg-red-600 text-sm font-bold disabled:opacity-50"
-        >
-          {ending ? '…' : 'Mbyll LIVE'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {phase === 'livekit' ? (
+            <>
+              <button
+                type="button"
+                disabled={switchingCamera}
+                onClick={handleSwitchCamera}
+                className="px-2.5 py-1.5 rounded-lg bg-gray-700 text-xs font-bold disabled:opacity-50"
+              >
+                {switchingCamera ? '…' : cameraFacing === 'environment' ? '📷 Pas' : '🤳 Para'}
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenLiveViewer}
+                className="px-2.5 py-1.5 rounded-lg bg-teal-700 text-xs font-bold"
+              >
+                Shiko LIVE
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            disabled={ending}
+            onClick={endBroadcast}
+            className="px-3 py-1.5 rounded-lg bg-red-600 text-sm font-bold disabled:opacity-50"
+          >
+            {ending ? '…' : 'Mbyll'}
+          </button>
+        </div>
       </div>
 
       {phase === 'livekit' ? (
@@ -365,7 +433,9 @@ export default function EmbedGoLive() {
             autoPlay
             playsInline
             muted
-            className="w-full h-full max-h-[calc(100dvh-3.5rem)] object-cover sm:object-contain"
+            className={`w-full h-full max-h-[calc(100dvh-3.5rem)] object-cover sm:object-contain ${
+              cameraFacing === 'user' ? '[transform:scaleX(-1)]' : ''
+            }`}
           />
           <p className="absolute bottom-4 left-4 text-xs bg-black/60 px-2 py-1 rounded">
             Shikuesit: {stream?.viewers ?? 0}

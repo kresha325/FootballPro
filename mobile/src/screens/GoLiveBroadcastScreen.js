@@ -58,6 +58,12 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
         if (data.type === 'goLiveError') {
           Alert.alert('Go Live', data.message || 'Transmetimi dështoi');
         }
+        if (data.type === 'openLiveViewer' && data.streamId) {
+          navigation.navigate('LiveViewer', {
+            streamId: data.streamId,
+            fromBroadcast: true,
+          });
+        }
       } catch (_e) {
         /* ignore */
       }

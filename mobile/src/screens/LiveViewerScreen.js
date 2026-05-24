@@ -9,6 +9,7 @@ import { buildYoutubeChannelLiveWatchUrl } from '../utils/youtubeLiveEmbed';
 
 export default function LiveViewerScreen({ route, navigation }) {
   const streamId = route?.params?.streamId;
+  const fromBroadcast = !!route?.params?.fromBroadcast;
   const { token } = useAuth();
   const [mode, setMode] = useState('loading'); // loading | web | recording | error
   const [webUri, setWebUri] = useState('');
@@ -132,6 +133,13 @@ export default function LiveViewerScreen({ route, navigation }) {
   if (mode === 'web' && webUri) {
     return (
       <View style={styles.container}>
+        {fromBroadcast ? (
+          <View style={styles.broadcastBanner}>
+            <Text style={styles.broadcastBannerText}>
+              Shikim si shikues — transmetimi vazhdon. Kthehu mbrapa për të vazhduar kamerën.
+            </Text>
+          </View>
+        ) : null}
         {youtubeChannelId ? (
           <View style={styles.banner}>
             <Text style={styles.bannerText} numberOfLines={3}>
@@ -200,6 +208,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#fcd34d',
   },
   bannerText: { color: '#92400e', fontSize: 12, lineHeight: 17 },
+  broadcastBanner: {
+    backgroundColor: '#0f766e',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#115e59',
+  },
+  broadcastBannerText: { color: '#ecfdf5', fontSize: 12, lineHeight: 17, fontWeight: '600' },
   ytLink: {
     padding: 10,
     alignItems: 'center',
