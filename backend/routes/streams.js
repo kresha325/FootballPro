@@ -9,6 +9,7 @@ router.get('/my/stream-info', auth, streamsCtrl.getMyStreamInfo);
 router.get('/:id', streamsCtrl.getStream);
 router.post('/', auth, streamsCtrl.createStream);
 router.put('/:id/start', auth, streamsCtrl.startStream);
+router.put('/:id/heartbeat', auth, streamsCtrl.heartbeatStream);
 router.put('/:id/end', auth, streamsCtrl.endStream);
 router.post('/:id/save-replay', auth, streamsCtrl.saveLiveReplay);
 router.put('/:id/viewers', streamsCtrl.updateViewersInternal);

@@ -410,7 +410,8 @@ exports.getStreams = async (req, res) => {
         s.streamer.photoUrl = '/default-avatar.png';
       }
       return s;
-    });
+    })
+      .filter((s) => (isLive === 'true' ? s.isLive : true));
     res.json(streamsWithHls);
   } catch (error) {
     console.error('Get streams error:', error);
@@ -500,6 +501,26 @@ exports.startStream = async (req, res) => {
   }
 };
 
+/** Broadcaster heartbeat — mbaj stream-in live derisa dërgohet çdo ~30s. */
+exports.heartbeatStream = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const stream = await Stream.findByPk(id);
+    if (!stream || stream.streamerId !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (!stream.isLive) {
+      return res.status(400).json({ error: 'Stream is not live' });
+    }
+
+    await stream.save();
+
+    res.json({ ok: true, id: stream.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.saveLiveReplay = async (req, res) => {
   try {
     const { id } = req.params;
@@ -581,7 +602,10 @@ exports.updateViewersInternal = async (req, res) => {
     if (!stream) return res.status(404).json({ error: 'Stream not found' });
 
     stream.viewers = viewers;
-    await stream.save();
+    await Stream.update(
+      { viewers },
+      { where: { id: stream.id }, silent: true }
+    );
 
     try {
       const io = socketUtil.getIo();

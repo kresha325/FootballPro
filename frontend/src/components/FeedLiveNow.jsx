@@ -27,6 +27,11 @@ function streamPhoto(stream) {
   return resolvePhotoUrl(p);
 }
 
+function streamerName(stream) {
+  const streamer = stream?.streamer || {};
+  return `${streamer.firstName || ''} ${streamer.lastName || ''}`.trim() || stream?.title || 'Live';
+}
+
 export default function FeedLiveNow() {
   const navigate = useNavigate();
   const [liveStreams, setLiveStreams] = useState([]);
@@ -81,56 +86,67 @@ export default function FeedLiveNow() {
 
   return (
     <section
-      className="mb-6 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3"
+      className="mb-6 overflow-hidden rounded-2xl border border-red-500/25 bg-gradient-to-br from-red-950/40 via-slate-900/90 to-slate-950 px-4 py-4 shadow-lg shadow-red-900/20"
       aria-label="Live Now"
     >
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-extrabold text-red-800 dark:text-red-300 tracking-tight">Live Now</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+          </span>
+          <h2 className="text-base font-black uppercase tracking-wide text-red-100">Live Now</h2>
+        </div>
         <button
           type="button"
           onClick={() => navigate('/streams')}
-          className="text-sm font-bold text-teal-700 dark:text-teal-400 hover:underline"
+          className="rounded-lg bg-white/10 px-3 py-1 text-xs font-bold text-emerald-300 ring-1 ring-white/10 transition hover:bg-white/15"
         >
           See all
         </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1 hide-scrollbar-mobile" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div
+        className="flex gap-4 overflow-x-auto pb-1 hide-scrollbar-mobile snap-x snap-mandatory"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {liveStreams.map((stream) => {
-          const streamer = stream?.streamer || {};
-          const name =
-            `${streamer.firstName || ''} ${streamer.lastName || ''}`.trim() || stream?.title || 'Live';
+          const name = streamerName(stream);
           const photo = streamPhoto(stream);
+          const initial = name.charAt(0).toUpperCase();
           return (
             <button
               key={stream.id}
               type="button"
               onClick={() => navigate(`/live/${stream.id}`)}
-              className="flex-shrink-0 flex flex-col items-center w-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg py-1"
+              className="group flex w-[88px] shrink-0 snap-start flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded-xl py-1"
             >
               <div className="relative">
+                <div className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-red-500 via-rose-400 to-orange-400 opacity-80 blur-[1px] group-hover:opacity-100" />
                 {photo ? (
                   <img
                     src={photo}
                     alt=""
-                    className="w-14 h-14 rounded-full object-cover border-2 border-red-500 bg-gray-200 dark:bg-gray-700"
+                    className="relative h-16 w-16 rounded-full border-2 border-slate-900 object-cover bg-slate-800"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.style.display = 'none';
                     }}
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full border-2 border-red-500 bg-red-700 flex items-center justify-center text-white font-bold text-lg">
-                    {name.charAt(0).toUpperCase()}
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-slate-900 bg-gradient-to-br from-red-600 to-rose-700 text-xl font-black text-white">
+                    {initial}
                   </div>
                 )}
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow">
+                  Live
+                </span>
               </div>
-              <span className="mt-1.5 text-xs font-bold text-gray-900 dark:text-gray-100 text-center line-clamp-2 w-full">
+              <span className="mt-2.5 line-clamp-2 w-full text-center text-xs font-bold leading-tight text-white">
                 {name}
               </span>
-              <span className="mt-0.5 flex items-center gap-1 text-[11px] font-extrabold text-red-600 dark:text-red-400">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
-                LIVE
-              </span>
+              {(stream.viewers ?? 0) > 0 ? (
+                <span className="mt-0.5 text-[10px] font-semibold text-slate-400">{stream.viewers} watching</span>
+              ) : null}
             </button>
           );
         })}

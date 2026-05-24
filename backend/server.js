@@ -55,7 +55,7 @@ expireStaleLiveStreams()
   .catch((err) => console.warn('expireStaleLiveStreams startup:', err?.message || err));
 setInterval(() => {
   expireStaleLiveStreams().catch((err) => console.warn('expireStaleLiveStreams:', err?.message || err));
-}, 15 * 60 * 1000);
+}, 5 * 60 * 1000);
 // Import models
 const User = require('./models/User');
 const Achievement = require('./models/Achievement');

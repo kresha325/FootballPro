@@ -1,9 +1,18 @@
 /** Një avatar live për streamer — mbaj stream-in më të ri. */
+const STALE_MS = 15 * 60 * 1000;
+
+export function isLikelyStaleStream(stream) {
+  if (!stream?.isLive) return true;
+  const updated = stream.updatedAt || stream.createdAt;
+  if (!updated) return false;
+  return Date.now() - new Date(updated).getTime() > STALE_MS;
+}
+
 export function dedupeLiveByStreamer(streams) {
   const byStreamer = new Map();
 
   for (const s of streams || []) {
-    if (!s?.isLive) continue;
+    if (!s?.isLive || isLikelyStaleStream(s)) continue;
     const streamerId = s.streamerId ?? s.streamer?.id;
     if (!streamerId) continue;
 

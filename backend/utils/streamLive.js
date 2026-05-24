@@ -2,13 +2,26 @@ const { Op } = require('sequelize');
 const Stream = require('../models/Stream');
 const socketUtil = require('./socket');
 
-/** Kohë maksimale që një stream mund të qëndrojë "live" pa aktivitet (default 6 orë). */
-const DEFAULT_MAX_LIVE_MS = 6 * 60 * 60 * 1000;
+/** Pa heartbeat nga broadcaster (default 15 min). */
+const DEFAULT_HEARTBEAT_MS = 15 * 60 * 1000;
+/** Kohë maksimale absolute për një sesion live (default 2 orë). */
+const DEFAULT_MAX_SESSION_MS = 2 * 60 * 60 * 1000;
 
-function getMaxLiveMs() {
+function getHeartbeatMs() {
+  const raw = process.env.STREAM_HEARTBEAT_MS;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_HEARTBEAT_MS;
+}
+
+function getMaxSessionMs() {
   const raw = process.env.STREAM_MAX_LIVE_MS;
   const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_LIVE_MS;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_SESSION_MS;
+}
+
+/** @deprecated — përdor getHeartbeatMs / getMaxSessionMs */
+function getMaxLiveMs() {
+  return getMaxSessionMs();
 }
 
 function emitStreamEnded(streamId) {
@@ -24,38 +37,41 @@ function emitStreamEnded(streamId) {
   }
 }
 
-/**
- * Mbyll stream-et me isLive=true që nuk janë përditësuar që nga maxLiveMs.
- * Kthen numrin e stream-eve të mbyllura.
- */
-async function expireStaleLiveStreams() {
-  const cutoff = new Date(Date.now() - getMaxLiveMs());
-  const stale = await Stream.findAll({
-    where: {
-      isLive: true,
-      updatedAt: { [Op.lt]: cutoff },
-    },
-    attributes: ['id', 'streamerId'],
-  });
+function isStreamStale(stream) {
+  if (!stream?.isLive) return false;
+  const now = Date.now();
+  const updated = stream.updatedAt ? new Date(stream.updatedAt).getTime() : 0;
+  const created = stream.createdAt ? new Date(stream.createdAt).getTime() : 0;
 
-  if (!stale.length) return 0;
-
-  const ids = stale.map((s) => s.id);
-  await Stream.update(
-    { isLive: false, viewers: 0 },
-    { where: { id: { [Op.in]: ids } } }
-  );
-
-  for (const id of ids) {
-    emitStreamEnded(id);
-  }
-
-  return stale.length;
+  if (created && now - created > getMaxSessionMs()) return true;
+  if (updated && now - updated > getHeartbeatMs()) return true;
+  return false;
 }
 
 /**
- * Mbyll të gjitha stream-et live të një streameri, përveç opsionalisht një të ri.
+ * Mbyll stream-et live që kanë humbur heartbeat-in ose kanë tejkaluar kohën max.
  */
+async function expireStaleLiveStreams() {
+  const live = await Stream.findAll({
+    where: { isLive: true },
+    attributes: ['id', 'streamerId', 'createdAt', 'updatedAt', 'viewers', 'isLive'],
+  });
+
+  const staleIds = live.filter(isStreamStale).map((s) => s.id);
+  if (!staleIds.length) return 0;
+
+  await Stream.update(
+    { isLive: false, viewers: 0 },
+    { where: { id: { [Op.in]: staleIds } } }
+  );
+
+  for (const id of staleIds) {
+    emitStreamEnded(id);
+  }
+
+  return staleIds.length;
+}
+
 async function endOtherLiveStreamsForStreamer(streamerId, exceptStreamId = null) {
   const where = {
     streamerId,
@@ -76,16 +92,11 @@ async function endOtherLiveStreamsForStreamer(streamerId, exceptStreamId = null)
   return ids.length;
 }
 
-function isStreamStale(stream) {
-  if (!stream?.isLive) return false;
-  const updated = stream.updatedAt ? new Date(stream.updatedAt) : null;
-  if (!updated || Number.isNaN(updated.getTime())) return true;
-  return Date.now() - updated.getTime() > getMaxLiveMs();
-}
-
 module.exports = {
   expireStaleLiveStreams,
   endOtherLiveStreamsForStreamer,
   isStreamStale,
   getMaxLiveMs,
+  getHeartbeatMs,
+  getMaxSessionMs,
 };

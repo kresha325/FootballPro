@@ -277,6 +277,31 @@ export default function EmbedGoLive() {
     };
   }, [stopTracks]);
 
+  useEffect(() => {
+    if (!streamId || !['livekit', 'youtube'].includes(phase)) return undefined;
+    const tick = () => {
+      streamsAPI.heartbeatStream(streamId).catch(() => {});
+    };
+    tick();
+    const interval = setInterval(tick, 30_000);
+    return () => clearInterval(interval);
+  }, [streamId, phase]);
+
+  useEffect(() => {
+    if (!streamId || phase === 'ended') return undefined;
+    const onLeave = () => {
+      const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+      const token = localStorage.getItem('token');
+      fetch(`${base}/streams/${streamId}/end`, {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        keepalive: true,
+      }).catch(() => {});
+    };
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, [streamId, phase]);
+
   const handleClose = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/streams');
