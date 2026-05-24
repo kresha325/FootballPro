@@ -9,7 +9,7 @@ import {
   seasonLabel,
   todayDateInputValue,
 } from '../utils/footballSeason';
-import axios from 'axios';
+import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -44,9 +44,44 @@ function avatarUrl(photo) {
   return `${base}${photo.startsWith('/') ? '' : '/'}${photo}`;
 }
 
-function MatchBroadcastModal({ open, loading, error, data, participantType, onClose }) {
-  if (!open) return null;
+function scorerLine(row) {
+  const name = [row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `Lojtari #${row.userId}`;
+  const assistName = row.assistUser
+    ? [row.assistUser.firstName, row.assistUser.lastName].filter(Boolean).join(' ')
+    : null;
+  const minute = row.minute != null ? `${row.minute}'` : null;
+  if (minute && assistName) return `${name} ${minute} (asist: ${assistName})`;
+  if (minute) return `${name} ${minute}`;
+  if (assistName) return `${name} (asist: ${assistName})`;
+  return name;
+}
+
+function MatchBroadcastModal({
+  open,
+  loading,
+  error,
+  data,
+  participantType,
+  onClose,
+  canEdit = false,
+  participants = [],
+  onSaveMatch,
+  saving = false,
+}) {
+  const [scoreHomeInput, setScoreHomeInput] = useState('');
+  const [scoreAwayInput, setScoreAwayInput] = useState('');
+  const [goalEvents, setGoalEvents] = useState([]);
+
   const m = data?.match;
+
+  useEffect(() => {
+    if (!m) return;
+    setScoreHomeInput(m.scoreHome != null ? String(m.scoreHome) : '');
+    setScoreAwayInput(m.scoreAway != null ? String(m.scoreAway) : '');
+    setGoalEvents(eventsFromMatchData(data));
+  }, [m?.id, data]);
+
+  if (!open) return null;
   const home = m?.homeUser;
   const away = m?.awayUser;
   const scH = data?.scorersBySide?.home || [];
@@ -159,10 +194,8 @@ function MatchBroadcastModal({ open, loading, error, data, participantType, onCl
                   <ul className="space-y-2">
                     {scH.map((row) => (
                       <li key={row.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="font-medium text-slate-100">
-                          {[row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `Lojtari #${row.userId}`}
-                        </span>
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300">{row.goals}</span>
+                        <span className="font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300">{row.goals ?? 1}</span>
                       </li>
                     ))}
                   </ul>
@@ -176,10 +209,8 @@ function MatchBroadcastModal({ open, loading, error, data, participantType, onCl
                   <ul className="space-y-2">
                     {scA.map((row) => (
                       <li key={row.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="font-medium text-slate-100">
-                          {[row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `Lojtari #${row.userId}`}
-                        </span>
-                        <span className="rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-cyan-200">{row.goals}</span>
+                        <span className="font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-cyan-200">{row.goals ?? 1}</span>
                       </li>
                     ))}
                   </ul>
@@ -203,12 +234,14 @@ function MatchBroadcastModal({ open, loading, error, data, participantType, onCl
                   </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Asiste (rekord)</p>
-                  <p className="text-lg font-bold tabular-nums">{m.assists != null ? m.assists : '—'}</p>
+                  <p className="text-[10px] uppercase text-slate-500">Asiste (detaj)</p>
+                  <p className="text-lg font-bold tabular-nums">
+                    {[...(scH || []), ...(scA || [])].filter((row) => row.assistUserId).length}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Gola (fushë JSON)</p>
-                  <p className="text-lg font-bold tabular-nums">{m.goals != null ? m.goals : '—'}</p>
+                  <p className="text-[10px] uppercase text-slate-500">Status</p>
+                  <p className="text-lg font-bold tabular-nums capitalize">{m.status || '—'}</p>
                 </div>
               </div>
               {hasScore && (data?.scorerTotals?.home !== sh || data?.scorerTotals?.away !== sa) && (
@@ -217,6 +250,62 @@ function MatchBroadcastModal({ open, loading, error, data, participantType, onCl
                 </p>
               )}
             </div>
+
+            {canEdit ? (
+              <div className="border-t border-white/10 bg-slate-950/80 px-4 py-5 sm:px-6">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-emerald-300">Raporto rezultatin</h4>
+                <div className="mb-4 flex items-center justify-center gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    value={scoreHomeInput}
+                    onChange={(e) => setScoreHomeInput(e.target.value)}
+                    className="w-20 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-xl font-bold text-white"
+                    placeholder="0"
+                  />
+                  <span className="text-2xl font-bold text-slate-400">:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={scoreAwayInput}
+                    onChange={(e) => setScoreAwayInput(e.target.value)}
+                    className="w-20 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-xl font-bold text-white"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white p-4 text-gray-900">
+                  <MatchGoalEventsForm
+                    participants={participants}
+                    homeUserId={m.homeUserId}
+                    awayUserId={m.awayUserId}
+                    initialEvents={goalEvents}
+                    onChange={setGoalEvents}
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() =>
+                    onSaveMatch?.({
+                      scoreHome: Number(scoreHomeInput),
+                      scoreAway: Number(scoreAwayInput),
+                      status: 'finished',
+                      goalEvents: goalEvents
+                        .filter((ev) => ev.userId)
+                        .map((ev) => ({
+                          userId: Number(ev.userId),
+                          minute: ev.minute === '' ? null : Number(ev.minute),
+                          assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
+                          side: ev.side || undefined,
+                        })),
+                    })
+                  }
+                  className="mt-4 w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60"
+                >
+                  {saving ? 'Duke ruajtur…' : 'Ruaj rezultatin & golat'}
+                </button>
+              </div>
+            ) : null}
           </>
         )}
       </div>
@@ -238,6 +327,7 @@ export default function TournamentSimple() {
     stats: null,
   });
   const [matchModal, setMatchModal] = useState({ open: false, loading: false, error: null, data: null });
+  const [savingMatch, setSavingMatch] = useState(false);
   /** Seksioni aktiv në modalin e turneut: përmbledhje | tabelë sipas pikëve | ndeshjet | skuadra */
   const [detailTab, setDetailTab] = useState('overview');
 
@@ -319,6 +409,51 @@ export default function TournamentSimple() {
   }, [selectedTournament?.id]);
 
   const closeMatchModal = () => setMatchModal({ open: false, loading: false, error: null, data: null });
+
+  const refreshTournamentDetail = async () => {
+    const id = selectedTournament?.id;
+    if (!id) return;
+    const [tRes, stRes, mRes, statRes] = await Promise.all([
+      API.get(`/tournaments/${id}`),
+      API.get(`/tournaments/${id}/standings`).catch(() => ({ data: null })),
+      API.get(`/tournaments/${id}/matches`).catch(() => ({ data: [] })),
+      API.get(`/tournaments/${id}/stats`).catch(() => ({ data: null })),
+    ]);
+    setSelectedTournament(tRes.data);
+    setDetailExtras({
+      standings: stRes.data,
+      matches: Array.isArray(mRes.data) ? mRes.data : [],
+      stats: statRes.data,
+    });
+  };
+
+  const canEditMatch = (match) => {
+    if (!match || !user?.id) return false;
+    const uid = user.id;
+    return (
+      selectedTournament?.creatorId === uid ||
+      match.homeUserId === uid ||
+      match.awayUserId === uid
+    );
+  };
+
+  const saveMatchReport = async (payload) => {
+    const matchId = matchModal.data?.match?.id;
+    if (!matchId) return;
+    setSavingMatch(true);
+    try {
+      await API.put(`/tournaments/matches/${matchId}/score`, payload);
+      const tid = selectedTournament?.id;
+      const res = await API.get(`/tournaments/${tid}/matches/${matchId}`);
+      setMatchModal((prev) => ({ ...prev, data: res.data }));
+      await refreshTournamentDetail();
+      alert('Rezultati dhe golat u ruajtën.');
+    } catch (e) {
+      alert(e.response?.data?.msg || 'Nuk u ruajt dot rezultati.');
+    } finally {
+      setSavingMatch(false);
+    }
+  };
 
   const openMatchDetail = async (matchId) => {
     const tid = selectedTournament?.id;
@@ -952,6 +1087,10 @@ export default function TournamentSimple() {
         data={matchModal.data}
         participantType={selectedTournament?.participantType || 'individual'}
         onClose={closeMatchModal}
+        canEdit={canEditMatch(matchModal.data?.match)}
+        participants={selectedTournament?.participants || []}
+        onSaveMatch={saveMatchReport}
+        saving={savingMatch}
       />
     </div>
   );

@@ -30,6 +30,22 @@ const MatchScorer = sequelize.define('MatchScorer', {
     defaultValue: 1,
     allowNull: false,
   },
+  minute: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  assistUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: User,
+      key: 'id',
+    },
+  },
+  side: {
+    type: DataTypes.ENUM('home', 'away'),
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
@@ -43,6 +59,7 @@ const MatchScorer = sequelize.define('MatchScorer', {
 MatchScorer.belongsTo(Match, { foreignKey: 'matchId' });
 Match.hasMany(MatchScorer, { foreignKey: 'matchId' });
 MatchScorer.belongsTo(User, { foreignKey: 'userId' });
+MatchScorer.belongsTo(User, { as: 'assistUser', foreignKey: 'assistUserId' });
 User.hasMany(MatchScorer, { foreignKey: 'userId' });
 
 module.exports = MatchScorer;

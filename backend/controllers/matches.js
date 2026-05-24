@@ -72,19 +72,20 @@ const Tournament = db.Tournament;
 const { TournamentParticipant } = require('../models/Tournament');
 const User = db.User;
 const MatchScorer = db.MatchScorer;
+const { saveMatchGoalEvents } = require('../utils/matchGoalEvents');
+
 // Ruaj golashënuesit për një ndeshje
 exports.saveMatchScorers = async (req, res) => {
   try {
-    const matchId = parseInt(req.params.matchId);
-    const { scorers } = req.body; // [{userId, goals}]
-    if (!Array.isArray(scorers)) return res.status(400).json({ msg: 'Invalid scorers' });
+    const matchId = parseInt(req.params.matchId, 10);
+    const { scorers, goalEvents } = req.body;
+    const events = goalEvents || scorers;
+    if (!Array.isArray(events)) return res.status(400).json({ msg: 'Invalid scorers' });
 
-    // Fshij të vjetrit
-    await MatchScorer.destroy({ where: { matchId } });
+    const match = await Match.findByPk(matchId);
+    if (!match) return res.status(404).json({ msg: 'Match not found' });
 
-    // Shto të rinjtë
-    const toCreate = scorers.map(s => ({ matchId, userId: s.userId, goals: s.goals }));
-    await MatchScorer.bulkCreate(toCreate);
+    await saveMatchGoalEvents(matchId, events, match);
 
     res.json({ msg: 'Scorers saved' });
   } catch (err) {

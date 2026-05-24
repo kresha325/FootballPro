@@ -43,6 +43,10 @@ export default function PublicProfileTournamentsTab({
               <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.scorerGoals ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Personal goals</Text>
             </View>
+            <View style={styles.totalItem}>
+              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.scorerAssists ?? 0}</Text>
+              <Text style={[styles.totalLabel, { color: theme.muted }]}>Assists</Text>
+            </View>
           </View>
         </View>
       ) : null}
@@ -81,6 +85,7 @@ export default function PublicProfileTournamentsTab({
               <Text style={[styles.stat, { color: theme.text }]}>{row.played ?? 0} pl</Text>
               <Text style={[styles.stat, { color: theme.text }]}>{row.goalsFor ?? 0} GF</Text>
               <Text style={[styles.stat, { color: theme.text }]}>{row.scorerGoals ?? 0} personal G</Text>
+              <Text style={[styles.stat, { color: theme.text }]}>{row.scorerAssists ?? 0} ast</Text>
               <Text style={[styles.stat, { color: theme.text }]}>GD {row.goalDifference ?? 0}</Text>
             </View>
             <Text style={styles.tapHint}>Tap to open tournament</Text>

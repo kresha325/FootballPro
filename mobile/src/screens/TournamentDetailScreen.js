@@ -164,7 +164,21 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [scoreHomeInput, setScoreHomeInput] = useState('');
   const [scoreAwayInput, setScoreAwayInput] = useState('');
   const [savingScore, setSavingScore] = useState(false);
+  const [goalEvents, setGoalEvents] = useState([]);
   const [startingTournament, setStartingTournament] = useState(false);
+
+  const parseGoalEvents = (data) => {
+    const all = [
+      ...(data?.scorersBySide?.home || []).map((row) => ({ ...row, side: 'home' })),
+      ...(data?.scorersBySide?.away || []).map((row) => ({ ...row, side: 'away' })),
+    ];
+    return all.map((row) => ({
+      userId: String(row.userId),
+      minute: row.minute != null ? String(row.minute) : '',
+      assistUserId: row.assistUserId ? String(row.assistUserId) : '',
+      side: row.side || '',
+    }));
+  };
 
   const loadDetail = useCallback(async () => {
     if (!tournamentId) return;
@@ -231,12 +245,14 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const openMatch = async (matchId) => {
     setScoreHomeInput('');
     setScoreAwayInput('');
+    setGoalEvents([]);
     setMatchModal({ open: true, loading: true, data: null, error: '' });
     try {
       const res = await tournamentMatchDetailRequest(tournamentId, matchId);
       const m = res.data?.match;
       setScoreHomeInput(m?.scoreHome != null ? String(m.scoreHome) : '');
       setScoreAwayInput(m?.scoreAway != null ? String(m.scoreAway) : '');
+      setGoalEvents(parseGoalEvents(res.data));
       setMatchModal({ open: true, loading: false, data: res.data, error: '' });
     } catch (err) {
       setMatchModal({
@@ -309,13 +325,23 @@ export default function TournamentDetailScreen({ route, navigation }) {
   };
 
   const canEditMatchScore = (match) => {
-    if (!match || match.status === 'finished') return false;
+    if (!match || !user?.id) return false;
     const uid = String(user?.id);
-    return (
-      isCreator ||
-      String(match.homeUserId) === uid ||
-      String(match.awayUserId) === uid
-    );
+    if (isCreator) return true;
+    if (match.status === 'finished') return false;
+    return String(match.homeUserId) === uid || String(match.awayUserId) === uid;
+  };
+
+  const addGoalEvent = () => {
+    setGoalEvents((prev) => [...prev, { userId: '', minute: '', assistUserId: '', side: '' }]);
+  };
+
+  const updateGoalEvent = (index, patch) => {
+    setGoalEvents((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const removeGoalEvent = (index) => {
+    setGoalEvents((prev) => prev.filter((_, i) => i !== index));
   };
 
   const onSaveMatchScore = async () => {
@@ -333,6 +359,14 @@ export default function TournamentDetailScreen({ route, navigation }) {
         scoreHome,
         scoreAway,
         status: 'finished',
+        goalEvents: goalEvents
+          .filter((ev) => ev.userId)
+          .map((ev) => ({
+            userId: Number(ev.userId),
+            minute: ev.minute === '' ? null : Number(ev.minute),
+            assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
+            side: ev.side || undefined,
+          })),
       });
       Alert.alert('Ruajtur', 'Rezultati u përditësua.');
       setMatchModal({ open: false, loading: false, data: null, error: '' });
@@ -652,6 +686,62 @@ export default function TournamentDetailScreen({ route, navigation }) {
                         maxLength={3}
                       />
                     </View>
+                    <Text style={styles.scoreFormTitle}>Golat (golashënues, minuta, asist)</Text>
+                    {goalEvents.map((ev, index) => {
+                      const scorer = participants.find((p) => String(p.id) === String(ev.userId));
+                      const assist = participants.find((p) => String(p.id) === String(ev.assistUserId));
+                      return (
+                        <View key={`goal-${index}`} style={styles.goalEventRow}>
+                          <Text style={styles.goalEventText} numberOfLines={2}>
+                            {scorer ? participantLabel(scorer, pt) : 'Zgjidh golashënuesin'} · min {ev.minute || '—'}
+                            {assist ? ` · asist ${participantLabel(assist, pt)}` : ''}
+                          </Text>
+                          <View style={styles.goalEventActions}>
+                            <TouchableOpacity onPress={() => removeGoalEvent(index)}>
+                              <Text style={styles.rejectBtnText}>Fshi</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                    <TouchableOpacity style={styles.secondaryBtn} onPress={addGoalEvent}>
+                      <Text style={styles.secondaryBtnText}>+ Shto gol</Text>
+                    </TouchableOpacity>
+                    {goalEvents.length > 0 && goalEvents[goalEvents.length - 1]?.userId === '' ? (
+                      <View style={styles.goalPickerBox}>
+                        <Text style={styles.muted}>Golashënuesi (ID nga lista e pjesëmarrësve)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {participants.map((p) => (
+                            <TouchableOpacity
+                              key={`scorer-pick-${p.id}`}
+                              style={styles.chipBtn}
+                              onPress={() => updateGoalEvent(goalEvents.length - 1, { userId: String(p.id) })}
+                            >
+                              <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                        <TextInput
+                          style={styles.goalMinuteInput}
+                          keyboardType="number-pad"
+                          placeholder="Minuta"
+                          value={goalEvents[goalEvents.length - 1]?.minute || ''}
+                          onChangeText={(v) => updateGoalEvent(goalEvents.length - 1, { minute: v })}
+                        />
+                        <Text style={styles.muted}>Asist (opsional)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {participants.map((p) => (
+                            <TouchableOpacity
+                              key={`assist-pick-${p.id}`}
+                              style={styles.chipBtn}
+                              onPress={() => updateGoalEvent(goalEvents.length - 1, { assistUserId: String(p.id) })}
+                            >
+                              <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    ) : null}
                     <TouchableOpacity
                       style={[styles.primaryBtn, savingScore && styles.btnDisabled]}
                       onPress={onSaveMatchScore}
@@ -793,4 +883,37 @@ const styles = StyleSheet.create({
   modalClose: { alignSelf: 'flex-end', marginBottom: 8 },
   modalCloseText: { color: '#0f766e', fontWeight: '700' },
   modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  goalEventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+  },
+  goalEventText: { flex: 1, color: '#0f172a', fontSize: 13, fontWeight: '600' },
+  goalEventActions: { marginLeft: 8 },
+  goalPickerBox: { marginTop: 8, marginBottom: 8 },
+  chipBtn: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#0f766e',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  chipBtnText: { color: '#0f766e', fontWeight: '700', fontSize: 12 },
+  goalMinuteInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
+    marginTop: 4,
+  },
 });

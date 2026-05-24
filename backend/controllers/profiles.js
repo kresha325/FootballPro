@@ -943,7 +943,7 @@ exports.getUserTournamentSummary = async (req, res) => {
       return res.json({
         userId,
         tournaments: [],
-        totals: { points: 0, goalsFor: 0, scorerGoals: 0, tournamentsPlayed: 0 },
+        totals: { points: 0, goalsFor: 0, scorerGoals: 0, scorerAssists: 0, tournamentsPlayed: 0 },
       });
     }
 
@@ -964,6 +964,21 @@ exports.getUserTournamentSummary = async (req, res) => {
     const scorerGoalsByTournament = {};
     for (const row of scorerRows) {
       scorerGoalsByTournament[row.tournamentId] = Number(row.scorerGoals) || 0;
+    }
+
+    const assistRows = await MatchScorer.findAll({
+      attributes: [
+        [col('Match.tournamentId'), 'tournamentId'],
+        [fn('COUNT', col('MatchScorer.id')), 'scorerAssists'],
+      ],
+      include: [{ model: Match, attributes: [], required: true, where: { tournamentId: { [Op.in]: tournamentIds } } }],
+      where: { assistUserId: userId },
+      group: [col('Match.tournamentId')],
+      raw: true,
+    });
+    const assistsByTournament = {};
+    for (const row of assistRows) {
+      assistsByTournament[row.tournamentId] = Number(row.scorerAssists) || 0;
     }
 
     const allParticipants = await TournamentParticipant.findAll({
@@ -1023,6 +1038,7 @@ exports.getUserTournamentSummary = async (req, res) => {
         goalsAgainst: myRow.goalsAgainst,
         goalDifference: myRow.goalDifference,
         scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
+        scorerAssists: assistsByTournament[t.id] ?? 0,
         played: (myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0),
       });
     }
@@ -1034,7 +1050,8 @@ exports.getUserTournamentSummary = async (req, res) => {
         points: tournaments.reduce((sum, row) => sum + (row.points || 0), 0),
         goalsFor: tournaments.reduce((sum, row) => sum + (row.goalsFor || 0), 0),
         scorerGoals: tournaments.reduce((sum, row) => sum + (row.scorerGoals || 0), 0),
-        tournamentsPlayed: tournaments.filter((row) => row.participantStatus === 'accepted').length,
+        scorerAssists: tournaments.reduce((sum, row) => sum + (row.scorerAssists || 0), 0),
+        tournamentsPlayed: tournaments.length,
       },
     });
   } catch (err) {

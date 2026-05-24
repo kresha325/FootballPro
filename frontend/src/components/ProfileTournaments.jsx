@@ -22,12 +22,13 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
   return (
     <div className="space-y-4">
       {totals ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: 'Tournaments', value: totals.tournamentsPlayed ?? 0 },
             { label: 'Points', value: totals.points ?? 0 },
             { label: 'Team goals', value: totals.goalsFor ?? 0 },
             { label: 'Personal goals', value: totals.scorerGoals ?? 0 },
+            { label: 'Assists', value: totals.scorerAssists ?? 0 },
           ].map((item) => (
             <div key={item.label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
               <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{item.value}</div>
@@ -63,7 +64,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
             {row.rank ? <span className="text-emerald-700 dark:text-emerald-400 font-bold">#{row.rank}</span> : null}
           </div>
           <p className="mt-3 text-sm font-medium text-gray-800 dark:text-gray-200">
-            {row.points ?? 0} pts · {row.played ?? 0} played · {row.goalsFor ?? 0} team GF · {row.scorerGoals ?? 0} personal G · GD {row.goalDifference ?? 0}
+            {row.points ?? 0} pts · {row.played ?? 0} played · {row.goalsFor ?? 0} team GF · {row.scorerGoals ?? 0} personal G · {row.scorerAssists ?? 0} ast · GD {row.goalDifference ?? 0}
           </p>
           <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-2 inline-block">View tournament →</span>
         </Link>

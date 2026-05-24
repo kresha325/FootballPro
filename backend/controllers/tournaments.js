@@ -7,6 +7,7 @@ const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
 const { notifyMessage, notifyTournament } = require('./notifications');
 const { resolveTournamentSeason } = require('../utils/footballSeason');
+const { saveMatchGoalEvents, sumGoalsForSide } = require('../utils/matchGoalEvents');
 
 exports.createTournament = async (req, res) => {
   try {
@@ -413,7 +414,7 @@ exports.getBracket = async (req, res) => {
 exports.updateMatchScore = async (req, res) => {
   try {
     const { matchId } = req.params;
-    const { scoreHome, scoreAway, status } = req.body;
+    const { scoreHome, scoreAway, status, goalEvents, scorers } = req.body;
 
     const match = await Match.findByPk(matchId, {
       include: [{ model: Tournament }],
@@ -432,10 +433,14 @@ exports.updateMatchScore = async (req, res) => {
 
     await match.update({ scoreHome, scoreAway, status });
 
+  if (Array.isArray(goalEvents) || Array.isArray(scorers)) {
+      await saveMatchGoalEvents(match.id, goalEvents || scorers, match);
+    }
+
     // If match finished, update standings
     if (status === 'finished') {
       await updateStandings(match);
-      
+
       if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
         await tryAdvanceKnockoutRound(match);
       }
@@ -641,6 +646,12 @@ exports.getTournamentMatchDetail = async (req, res) => {
               attributes: ['id', 'firstName', 'lastName', 'role'],
               include: [{ model: Profile, attributes: ['profilePhoto', 'position'] }],
             },
+            {
+              model: User,
+              as: 'assistUser',
+              attributes: ['id', 'firstName', 'lastName', 'role'],
+              required: false,
+            },
           ],
         },
       ],
@@ -648,20 +659,25 @@ exports.getTournamentMatchDetail = async (req, res) => {
 
     if (!match) return res.status(404).json({ msg: 'Match not found' });
 
-    const scorers = (match.MatchScorers || []).slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const scorers = (match.MatchScorers || [])
+      .slice()
+      .sort((a, b) => {
+        const ma = a.minute != null ? Number(a.minute) : 9999;
+        const mb = b.minute != null ? Number(b.minute) : 9999;
+        if (ma !== mb) return ma - mb;
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      });
     const homeId = match.homeUserId;
     const awayId = match.awayUserId;
-    const homeScorers = scorers.filter((s) => s.userId === homeId);
-    const awayScorers = scorers.filter((s) => s.userId === awayId);
-
-    const sumGoals = (arr) => arr.reduce((acc, s) => acc + (Number(s.goals) || 0), 0);
+    const homeScorers = scorers.filter((s) => s.side === 'home' || (!s.side && Number(s.userId) === Number(homeId)));
+    const awayScorers = scorers.filter((s) => s.side === 'away' || (!s.side && Number(s.userId) === Number(awayId)));
 
     res.json({
       match,
       scorersBySide: { home: homeScorers, away: awayScorers },
       scorerTotals: {
-        home: sumGoals(homeScorers),
-        away: sumGoals(awayScorers),
+        home: sumGoalsForSide(scorers, 'home', homeId),
+        away: sumGoalsForSide(scorers, 'away', awayId),
       },
     });
   } catch (err) {
