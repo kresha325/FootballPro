@@ -10,6 +10,7 @@ router.get('/:id', streamsCtrl.getStream);
 router.post('/', auth, streamsCtrl.createStream);
 router.put('/:id/start', auth, streamsCtrl.startStream);
 router.put('/:id/end', auth, streamsCtrl.endStream);
+router.post('/:id/save-replay', auth, streamsCtrl.saveLiveReplay);
 router.put('/:id/viewers', streamsCtrl.updateViewersInternal);
 router.put('/:id/end-internal', streamsCtrl.endStreamInternal);
 router.post('/:id/join', auth, streamsCtrl.joinStream);

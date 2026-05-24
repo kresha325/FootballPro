@@ -254,6 +254,7 @@ function ProfileNavigator() {
         component={GoLiveBroadcastScreen}
         options={{ title: 'Transmetim LIVE', headerShown: true, headerBackTitleVisible: true }}
       />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
     </ProfileStack.Navigator>
   );
 }
@@ -290,7 +291,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />

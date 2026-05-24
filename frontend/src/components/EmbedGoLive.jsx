@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Room, createLocalTracks, RoomEvent } from 'livekit-client';
-import { livekitAPI, streamsAPI } from '../services/api';
+import { livekitAPI, profileAPI, streamsAPI } from '../services/api';
 import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
+import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 
 function postToNative(payload) {
   try {
@@ -20,12 +21,18 @@ export default function EmbedGoLive() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const streamIdFromQuery = parseInt(params.get('streamId') || '', 10);
+  const skipConfirm = params.get('confirmed') === '1';
 
   const [streamId, setStreamId] = useState(Number.isFinite(streamIdFromQuery) ? streamIdFromQuery : null);
   const [stream, setStream] = useState(null);
-  const [phase, setPhase] = useState('init'); // init | livekit | youtube | error | ended
+  const [broadcastStarted, setBroadcastStarted] = useState(skipConfirm);
+  const [confirmYoutubeId, setConfirmYoutubeId] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(!skipConfirm);
+  const [phase, setPhase] = useState('init'); // init | livekit | youtube | error | ended | confirm
   const [error, setError] = useState('');
   const [ending, setEnding] = useState(false);
+  const [uploadingReplay, setUploadingReplay] = useState(false);
+  const [replaySaved, setReplaySaved] = useState(false);
 
   const videoRef = useRef(null);
   const roomRef = useRef(null);
@@ -110,6 +117,35 @@ export default function EmbedGoLive() {
   );
 
   useEffect(() => {
+    if (broadcastStarted) return undefined;
+    let cancelled = false;
+    (async () => {
+      setConfirmLoading(true);
+      try {
+        if (Number.isFinite(streamIdFromQuery)) {
+          const detail = await streamsAPI.getStream(streamIdFromQuery);
+          if (!cancelled) {
+            setConfirmYoutubeId(normalizeYoutubeChannelId(detail?.data?.youtubeChannelId) || null);
+          }
+        } else {
+          const prof = await profileAPI.getMyProfile();
+          if (!cancelled) {
+            setConfirmYoutubeId(normalizeYoutubeChannelId(prof?.data?.youtubeChannelId) || null);
+          }
+        }
+      } catch (_e) {
+        if (!cancelled) setConfirmYoutubeId(null);
+      } finally {
+        if (!cancelled) setConfirmLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [broadcastStarted, streamIdFromQuery]);
+
+  useEffect(() => {
+    if (!broadcastStarted) return undefined;
     let cancelled = false;
 
     (async () => {
@@ -173,7 +209,7 @@ export default function EmbedGoLive() {
     return () => {
       cancelled = true;
     };
-  }, [streamIdFromQuery, title, description, startLiveKit]);
+  }, [broadcastStarted, streamId, title, description, startLiveKit]);
 
   useEffect(() => {
     return () => {
@@ -190,11 +226,90 @@ export default function EmbedGoLive() {
     else navigate('/streams');
   };
 
+  const handleReplayUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !streamId) return;
+    setUploadingReplay(true);
+    try {
+      const fd = new FormData();
+      fd.append('video', file);
+      fd.append('streamId', String(streamId));
+      fd.append('title', stream?.title || title);
+      if (description) fd.append('description', description);
+      await streamsAPI.uploadRecording(fd);
+      setReplaySaved(true);
+      postToNative({ type: 'goLiveReplaySaved', streamId });
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || 'Ngarkimi dështoi');
+    } finally {
+      setUploadingReplay(false);
+    }
+  };
+
+  if (!broadcastStarted) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
+        <h1 className="text-xl font-bold mb-3">Konfirmo Go Live</h1>
+        <p className="text-sm text-gray-300 mb-1">
+          Titulli: <strong>{title}</strong>
+        </p>
+        {description ? <p className="text-xs text-gray-500 mb-4">{description}</p> : <div className="mb-4" />}
+        {confirmLoading ? (
+          <p className="text-gray-400 text-sm mb-6">Duke lexuar kanalin nga profili…</p>
+        ) : confirmYoutubeId ? (
+          <p className="text-sm text-teal-300 mb-6 text-center">
+            YouTube (automatik nga profili):
+            <br />
+            <code className="text-xs bg-gray-800 px-2 py-1 rounded mt-2 inline-block">{confirmYoutubeId}</code>
+          </p>
+        ) : (
+          <p className="text-sm text-amber-200 mb-6 text-center">
+            YouTube nuk është vendosur te Settings. Do përdoret LiveKit ose udhëzime OBS.
+          </p>
+        )}
+        <button
+          type="button"
+          className="w-full py-3 rounded-lg bg-red-600 font-bold mb-3"
+          onClick={() => setBroadcastStarted(true)}
+        >
+          Nis LIVE
+        </button>
+        <button type="button" className="w-full py-2 rounded-lg bg-gray-700" onClick={handleClose}>
+          Anulo
+        </button>
+      </div>
+    );
+  }
+
   if (phase === 'ended') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6">
-        <p className="text-lg font-semibold mb-2">Transmetimi u mbyll</p>
-        <button type="button" className="px-4 py-2 rounded-lg bg-teal-600" onClick={handleClose}>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
+        <p className="text-lg font-semibold mb-2 text-center">Transmetimi u mbyll</p>
+        {replaySaved ? (
+          <p className="text-teal-300 text-sm mb-4 text-center">
+            Regjistrimi u ruajt te <strong>Videot Live</strong> të profilit (jo te upload-et normale).
+          </p>
+        ) : (
+          <>
+            <p className="text-gray-400 text-sm mb-4 text-center">
+              Ke regjistrim nga telefoni/PC? Ngarkoje që të shfaqet te profili si video live.
+            </p>
+            <label className="w-full mb-3">
+              <span className="block w-full py-3 px-4 rounded-lg bg-teal-700 text-center font-bold cursor-pointer">
+                {uploadingReplay ? 'Duke ngarkuar…' : 'Ngarko regjistrimin live'}
+              </span>
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                disabled={uploadingReplay}
+                onChange={handleReplayUpload}
+              />
+            </label>
+          </>
+        )}
+        {error ? <p className="text-red-300 text-xs mb-3">{error}</p> : null}
+        <button type="button" className="px-4 py-2 rounded-lg bg-gray-700" onClick={handleClose}>
           Mbyll
         </button>
       </div>

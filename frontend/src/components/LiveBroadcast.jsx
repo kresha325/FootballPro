@@ -129,11 +129,16 @@ export default function LiveBroadcast({ streamId }) {
       try {
         // If we previously uploaded a temp file and have its server URL, finalize it server-side (upload -> Cloudinary + create Post)
         if (recordedBlobUrl && recordedBlobUrl.startsWith('/uploads/')) {
-          const res = await streamsAPI.finalize({ tempUrl: recordedBlobUrl, content: 'Live session' });
-          if (res && res.data && res.data.post) {
-            alert('Transmetimi u ndau dhe u ruajt në gallery!');
+          const res = await streamsAPI.finalize({
+            tempUrl: recordedBlobUrl,
+            content: 'Live session',
+            saveAs: 'live',
+            title: 'Live session',
+          });
+          if (res?.data?.stream || res?.data?.liveVideos) {
+            alert('Regjistrimi live u ruajt te videot live të profilit!');
           } else {
-            alert('Transmetimi u ndau, por krijimi i postimit dështoi');
+            alert('Transmetimi u ndau, por ruajtja e regjistrimit dështoi');
           }
         } else {
           // Fallback: upload directly via posts API

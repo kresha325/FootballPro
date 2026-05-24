@@ -281,6 +281,16 @@ exports.getProfile = async (req, res) => {
     if (response.clubLogo) {
       response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
     }
+    if (Array.isArray(response.liveVideos) && response.liveVideos.length) {
+      response.liveVideos = response.liveVideos.map((item) => {
+        if (!item || typeof item !== 'object') return item;
+        return {
+          ...item,
+          url: item.url ? toAbsoluteUploadsUrl(req, item.url) : item.url,
+          thumbnail: item.thumbnail ? toAbsoluteUploadsUrl(req, item.thumbnail) : item.thumbnail,
+        };
+      });
+    }
 
     res.json(response);
   } catch (err) {

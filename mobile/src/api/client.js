@@ -132,11 +132,12 @@ export const createStreamRequest = (payload) => api.post('/api/streams', payload
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
-export const uploadStreamRecordingRequest = ({ video, title, description }) => {
+export const uploadStreamRecordingRequest = ({ video, title, description, streamId }) => {
   const form = new FormData();
   form.append('video', video);
   if (title) form.append('title', String(title));
   if (description) form.append('description', String(description));
+  if (streamId != null) form.append('streamId', String(streamId));
   return api.post('/api/streams/upload-recording', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,

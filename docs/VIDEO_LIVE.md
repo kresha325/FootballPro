@@ -6,7 +6,10 @@
 |--------|-------------|----------|
 | **LiveKit** | Web Navbar, `/embed-go-live`, mobile WebView | `/live/:id` (web + mobile WebView) |
 | **YouTube** | OBS / YouTube Studio (UC… në Settings) | Embed YouTube në `/live/:id` |
-| **Regjistrim** | Upload skedar `/streams/upload-recording` | `videoUrl` + player (expo-av / HTML5) |
+| **Regjistrim live** | `/streams/upload-recording` ose `/streams/:id/save-replay` | `Profile.liveVideos` + `Streams.videoUrl` (jo te upload-et normale) |
+| **Upload video** | `/api/videos` (Gallery / Videos) | Tab **Uploaded Videos** në profil |
+
+Pas **Mbyll LIVE**, ngarko regjistrimin nga `/embed-go-live` — ruhet te **Live Videos** (`liveVideos`), jo si post i feed-it dhe jo te lista e videove të ngarkuara manualisht.
 
 ## Mobile
 

@@ -704,7 +704,13 @@ export default function PublicProfileScreen({ route, navigation }) {
                 />
               ) : null}
               {profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
-              {profileTab === 'videos' ? <PublicProfileVideosTab videos={videos} theme={theme} /> : null}
+              {profileTab === 'videos' ? (
+                <PublicProfileVideosTab
+                  videos={videos}
+                  liveVideos={Array.isArray(profile?.liveVideos) ? profile.liveVideos : []}
+                  theme={theme}
+                />
+              ) : null}
               {profileTab === 'about' ? (
                 <PublicProfileAboutTab
                   profile={profile}

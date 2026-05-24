@@ -6,54 +6,63 @@ const socketUtil = require('../utils/socket');
 const cloudinary = require('../utils/cloudinary');
 const Gallery = require('../models/Gallery');
 const Post = require('../models/Post');
+const { persistLiveReplay } = require('../utils/persistLiveReplay');
+
 exports.uploadRecording = async (req, res) => {
   try {
-    console.log('[uploadRecording] req.user:', req.user);
-    console.log('[uploadRecording] req.file:', req.file);
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const { title, description } = req.body;
+    const { title, description, streamId } = req.body;
     const streamerId = req.user.id;
-    // Gjej stream-in ekzistues të tipit 'webrtc' për këtë user
-    let stream = await Stream.findOne({ where: { streamerId, type: 'webrtc' } });
-    if (stream) {
-      stream.videoUrl = `/uploads/${req.file.filename}`;
-      stream.isLive = false;
-      stream.type = 'recording';
-      stream.title = title || stream.title;
-      stream.description = description || stream.description;
-      await stream.save();
-      console.log('[uploadRecording] Stream updated:', stream.id, stream.videoUrl);
-      try {
-        const io = socketUtil.getIo();
-        if (io) {
-          io.emit('stream:updated', { id: stream.id });
-          io.to('streams').emit('stream:updated', { id: stream.id });
-          io.to(`stream:${stream.id}`).emit('stream:updated', { id: stream.id });
-        }
-      } catch (e) {}
-      res.json({ success: true, stream });
-    } else {
-      // Nëse nuk ka stream live, krijo të ri si më parë
-      stream = await Stream.create({
-        title: title || 'WebRTC Recording',
-        description: description || '',
-        streamerId,
-        isPremium: false,
-        isLive: false,
-        type: 'recording',
-        streamKey: null,
-        videoUrl: `/uploads/${req.file.filename}`,
+    let videoUrl = `/uploads/${req.file.filename}`;
+    let publicId = null;
+
+    const isCloudinaryEnabled = !!(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
+    if (isCloudinaryEnabled) {
+      const full = path.join(__dirname, '..', 'uploads', req.file.filename);
+      const cloudRes = await cloudinary.uploader.upload(full, {
+        resource_type: 'video',
+        folder: 'live-replays',
       });
-      console.log('[uploadRecording] Stream created:', stream.id, stream.videoUrl);
+      videoUrl = cloudRes.secure_url;
+      publicId = cloudRes.public_id;
       try {
-        const io = socketUtil.getIo();
-        if (io) {
-          io.emit('stream:created', { id: stream.id });
-          io.to('streams').emit('stream:created', { id: stream.id });
-        }
-      } catch (e) {}
-      res.json({ success: true, stream });
+        fs.unlinkSync(full);
+      } catch (_e) {
+        /* ignore */
+      }
     }
+
+    const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
+    const result = await persistLiveReplay({
+      userId: streamerId,
+      streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
+      videoUrl,
+      title: title || 'Live Recording',
+      description: description || '',
+      publicId,
+    });
+    const stream = result.stream;
+    console.log('[uploadRecording] live replay saved:', stream.id, stream.videoUrl);
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:updated', { id: stream.id });
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    res.json({
+      success: true,
+      stream,
+      liveVideos: result.liveVideos,
+      video: result.video,
+    });
   } catch (err) {
     console.error('[uploadRecording] ERROR:', err);
     res.status(500).json({ error: err.message });
@@ -91,10 +100,10 @@ exports.deleteTemp = async (req, res) => {
   }
 };
 
-// Finalize a temporary upload: move to Cloudinary (recommended) and create Gallery + Post
+// Finalize a temporary upload: live replay (default) or gallery + post (saveAs: 'post')
 exports.finalizeTemp = async (req, res) => {
   try {
-    const { tempUrl, content } = req.body;
+    const { tempUrl, content, saveAs, streamId, title, description } = req.body;
     if (!tempUrl) return res.status(400).json({ error: 'tempUrl required' });
     // Accept cloud URLs directly
     let imageUrl = null;
@@ -136,6 +145,33 @@ exports.finalizeTemp = async (req, res) => {
       if (/\.(mp4|mov|mkv|webm|avi)(\?|$)/.test(tempUrl)) videoUrl = tempUrl; else imageUrl = tempUrl;
     } else {
       return res.status(400).json({ error: 'Unsupported tempUrl format' });
+    }
+
+    const mode = saveAs === 'post' ? 'post' : 'live';
+    if (mode === 'live' && videoUrl) {
+      const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
+      const result = await persistLiveReplay({
+        userId: req.user.id,
+        streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
+        videoUrl,
+        title: title || content || 'Live Recording',
+        description: description || '',
+      });
+      try {
+        const io = socketUtil.getIo();
+        if (io) {
+          io.emit('stream:updated', { id: result.stream.id });
+          io.to('streams').emit('stream:updated', { id: result.stream.id });
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      return res.json({
+        saveAs: 'live',
+        stream: result.stream,
+        liveVideos: result.liveVideos,
+        video: result.video,
+      });
     }
 
     // Create gallery entry if media was produced
@@ -435,6 +471,45 @@ exports.startStream = async (req, res) => {
     res.json({ message: 'Stream started', stream });
   } catch (error) {
     console.error('Start stream error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.saveLiveReplay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { videoUrl, title, description, thumbnailUrl, duration } = req.body;
+    if (!videoUrl) return res.status(400).json({ error: 'videoUrl required' });
+    const stream = await Stream.findByPk(id);
+    if (!stream || stream.streamerId !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    const result = await persistLiveReplay({
+      userId: req.user.id,
+      streamId: stream.id,
+      videoUrl,
+      title: title || stream.title,
+      description: description || stream.description || '',
+      thumbnailUrl: thumbnailUrl || null,
+      duration,
+    });
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    res.json({
+      success: true,
+      stream: result.stream,
+      liveVideos: result.liveVideos,
+      video: result.video,
+    });
+  } catch (error) {
+    console.error('saveLiveReplay error:', error);
     res.status(500).json({ error: error.message });
   }
 };

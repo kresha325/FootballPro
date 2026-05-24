@@ -7,7 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "npx sequelize-cli db:migrate",
-    "smoke:api": "node scripts/smoke-api.js"
+    "smoke:api": "node scripts/smoke-api.js",
+    "set:youtube": "node scripts/set-youtube-channel.js",
+    "set:youtube:db": "node scripts/set-youtube-by-email.js"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

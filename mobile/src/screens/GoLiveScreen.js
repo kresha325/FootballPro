@@ -1,22 +1,26 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import {
   createStreamRequest,
   endStreamRequest,
   extractErrorMessage,
+  myProfileRequest,
   startStreamRequest,
   streamsRequest,
   uploadStreamRecordingRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
 
 export default function GoLiveScreen({ route, navigation }) {
-  const { user } = useAuth();
+  const { user, refreshMe } = useAuth();
+  const [profileYoutubeId, setProfileYoutubeId] = useState(() => getProfileYoutubeChannelId(user));
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const [title, setTitle] = useState('Mobile Live Session');
@@ -99,10 +103,16 @@ export default function GoLiveScreen({ route, navigation }) {
     setCameraChecked(true);
   };
 
-  const onGoLive = async () => {
+  const startLiveAfterConfirm = async () => {
     setLoading(true);
     try {
-      const createRes = await createStreamRequest({ title, description, isPremium: false });
+      const trimmedTitle = title.trim() || 'Live';
+      const trimmedDesc = description.trim() || '';
+      const createRes = await createStreamRequest({
+        title: trimmedTitle,
+        description: trimmedDesc,
+        isPremium: false,
+      });
       const stream = createRes?.data;
       const streamId = stream?.id;
 
@@ -110,10 +120,22 @@ export default function GoLiveScreen({ route, navigation }) {
         throw new Error('Stream creation did not return an id');
       }
 
+      try {
+        await startStreamRequest(streamId);
+      } catch (_e) {
+        /* stream may already be marked live */
+      }
+
+      const ytFromStream = stream?.youtubeChannelId || profileYoutubeId;
+      if (ytFromStream) {
+        setProfileYoutubeId(ytFromStream);
+      }
+
       navigation.navigate('GoLiveBroadcast', {
         streamId,
-        title: title.trim() || 'Live',
-        description: description.trim() || '',
+        title: trimmedTitle,
+        description: trimmedDesc,
+        confirmed: true,
       });
     } catch (err) {
       console.error('Go Live failed:', err?.response?.data || err?.message || err);
@@ -122,6 +144,45 @@ export default function GoLiveScreen({ route, navigation }) {
       setLoading(false);
     }
   };
+
+  const onGoLive = () => {
+    const trimmedTitle = title.trim() || 'Live';
+    const trimmedDesc = description.trim() || '';
+    confirmGoLiveAlert({
+      title: trimmedTitle,
+      description: trimmedDesc,
+      youtubeChannelId: profileYoutubeId,
+      onConfirm: startLiveAfterConfirm,
+      onOpenSettings: () => {
+        try {
+          navigation.navigate('Settings');
+        } catch (_e) {
+          navigation.getParent()?.navigate('More', { screen: 'Settings' });
+        }
+      },
+    });
+  };
+
+  const refreshYoutubeFromProfile = useCallback(async () => {
+    try {
+      const me = await refreshMe();
+      const fromMe = getProfileYoutubeChannelId(me);
+      if (fromMe) {
+        setProfileYoutubeId(fromMe);
+        return;
+      }
+      const prof = await myProfileRequest();
+      setProfileYoutubeId(getProfileYoutubeChannelId(user, prof?.data));
+    } catch (_e) {
+      setProfileYoutubeId(getProfileYoutubeChannelId(user));
+    }
+  }, [user, refreshMe]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshYoutubeFromProfile();
+    }, [refreshYoutubeFromProfile])
+  );
 
   const onEndStream = async (streamId) => {
     try {
@@ -245,8 +306,26 @@ export default function GoLiveScreen({ route, navigation }) {
         Nis transmetimin me kamerë (LiveKit në web) ose YouTube; ngarko regjistrime video më poshtë.
       </Text>
       <Text style={[styles.hint, isDark && styles.textMutedDark]}>
-        Kërkon WEB_APP_URL të konfiguruar. YouTube: vendos UC… te Settings (web ose mobile).
+        Kërkon WEB_APP_URL. YouTube Channel ID merret automatikisht nga Settings kur nis LIVE.
       </Text>
+      {profileYoutubeId ? (
+        <View style={[styles.ytBadge, isDark && styles.ytBadgeDark]}>
+          <Text style={[styles.ytBadgeLabel, isDark && styles.textMutedDark]}>YouTube (nga profili):</Text>
+          <Text style={[styles.ytBadgeId, isDark && styles.textPrimaryDark]}>{profileYoutubeId}</Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={() => {
+            try {
+              navigation.navigate('Settings');
+            } catch (_e) {
+              navigation.getParent()?.navigate('More', { screen: 'Settings' });
+            }
+          }}
+        >
+          <Text style={styles.ytLink}>Vendos YouTube Channel ID te Settings →</Text>
+        </TouchableOpacity>
+      )}
 
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
@@ -265,7 +344,7 @@ export default function GoLiveScreen({ route, navigation }) {
       />
 
       <TouchableOpacity style={styles.button} onPress={onGoLive} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start Live (kamera)</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nis LIVE</Text>}
       </TouchableOpacity>
 
       <View style={[styles.uploadSection, isDark && styles.cardDark]}>
@@ -360,11 +439,26 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   hint: {
-    marginBottom: 14,
+    marginBottom: 8,
     fontSize: 12,
     color: '#64748b',
     lineHeight: 18,
   },
+  ytBadge: {
+    marginBottom: 14,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  ytBadgeDark: {
+    backgroundColor: '#1c1917',
+    borderColor: '#7f1d1d',
+  },
+  ytBadgeLabel: { fontSize: 11, color: '#64748b', marginBottom: 2 },
+  ytBadgeId: { fontSize: 12, fontFamily: 'Menlo', color: '#0f172a', fontWeight: '600' },
+  ytLink: { marginBottom: 14, fontSize: 13, color: '#0f766e', fontWeight: '600' },
   input: {
     borderColor: '#cbd5e1',
     backgroundColor: '#fff',

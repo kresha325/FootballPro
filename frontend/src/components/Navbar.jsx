@@ -4,7 +4,9 @@ import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XM
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { Room, createLocalTracks } from 'livekit-client';
-import { liveStreamAPI, livekitAPI, messagingAPI, notificationsAPI, streamsAPI } from '../services/api';
+import { liveStreamAPI, livekitAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
+import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
+import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { APP_BRAND_NAME } from '../config/branding';
 
 
@@ -83,6 +85,23 @@ function Navbar() {
     e.preventDefault();
     if (!cameraReady) {
       alert('Open camera first before starting live.');
+      return;
+    }
+
+    let youtubeChannelId = null;
+    try {
+      const prof = await profileAPI.getMyProfile();
+      youtubeChannelId = normalizeYoutubeChannelId(prof?.data?.youtubeChannelId);
+    } catch (_e) {
+      /* ignore */
+    }
+
+    if (
+      !confirmGoLiveInBrowser({
+        title: liveTitle?.trim() || 'Live Stream',
+        youtubeChannelId,
+      })
+    ) {
       return;
     }
 

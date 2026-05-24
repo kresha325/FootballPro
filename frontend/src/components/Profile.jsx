@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
+import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
+import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
 import { usePosts } from '../contexts/PostsContext';
@@ -388,6 +390,23 @@ const Profile = () => {
     e.preventDefault();
     if (!cameraReady) {
       alert('Open camera first before starting live.');
+      return;
+    }
+
+    let youtubeChannelId = null;
+    try {
+      const prof = await profileAPI.getMyProfile();
+      youtubeChannelId = normalizeYoutubeChannelId(prof?.data?.youtubeChannelId);
+    } catch (_e) {
+      /* ignore */
+    }
+
+    if (
+      !confirmGoLiveInBrowser({
+        title: liveTitle?.trim() || 'Live Stream',
+        youtubeChannelId,
+      })
+    ) {
       return;
     }
 
@@ -1281,6 +1300,7 @@ const Profile = () => {
                     </div>
                   </div>
                 )}
+                <h3 className="text-xl font-bold mb-2 mt-2">Uploaded Videos</h3>
                 <Videos userId={id} onlyUserVideos />
               </div>
             )}

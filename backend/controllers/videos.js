@@ -90,6 +90,12 @@ exports.getVideos = async (req, res) => {
 
     if (category) {
       whereClause.category = category;
+    } else {
+      whereClause[Op.or] = [
+        { category: { [Op.ne]: 'live' } },
+        { category: null },
+        { category: '' },
+      ];
     }
 
     if (search) {
@@ -160,7 +166,15 @@ exports.getUserVideos = async (req, res) => {
   try {
     const { userId } = req.params;
     const videos = await Video.findAll({
-      where: { userId, processingStatus: 'completed' },
+      where: {
+        userId,
+        processingStatus: 'completed',
+        [Op.or]: [
+          { category: { [Op.ne]: 'live' } },
+          { category: null },
+          { category: '' },
+        ],
+      },
       order: [['createdAt', 'DESC']],
     });
 
@@ -226,7 +240,14 @@ exports.getTrendingVideos = async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     const videos = await Video.findAll({
-      where: { processingStatus: 'completed' },
+      where: {
+        processingStatus: 'completed',
+        [Op.or]: [
+          { category: { [Op.ne]: 'live' } },
+          { category: null },
+          { category: '' },
+        ],
+      },
       include: [
         {
           model: User,

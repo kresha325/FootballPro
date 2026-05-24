@@ -152,6 +152,7 @@ export const postsAPI = {
 ========================= */
 export const profileAPI = {
   getAllProfiles: (params) => API.get('/profiles', { params }),
+  getMyProfile: () => API.get('/profiles/me'),
   getProfile: (id) => API.get(`/profiles/${id}`),
   createProfile: (data) => API.post(`/profiles/me`, data, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -223,6 +224,9 @@ export const streamsAPI = {
   uploadTemp: (formData) => API.post('/streams/upload-temp', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteTemp: (filename) => API.delete(`/streams/temp/${filename}`),
   finalize: (data) => API.post('/streams/finalize', data),
+  uploadRecording: (formData) =>
+    API.post('/streams/upload-recording', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  saveReplay: (streamId, data) => API.post(`/streams/${streamId}/save-replay`, data),
 };
 
 export const liveStreamAPI = {

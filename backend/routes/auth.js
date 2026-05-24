@@ -106,7 +106,7 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
         'verified',
         'createdAt',
       ],
-      include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+      include: [{ model: Profile, attributes: ['profilePhoto', 'youtubeChannelId'], required: false }],
     });
 
     if (!user) {

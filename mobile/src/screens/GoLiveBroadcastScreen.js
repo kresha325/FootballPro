@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';
 
 export default function GoLiveBroadcastScreen({ route, navigation }) {
-  const { streamId, title = '', description = '' } = route.params || {};
+  const { streamId, title = '', description = '', confirmed = false } = route.params || {};
   const { token } = useAuth();
 
   const uri = useMemo(() => {
@@ -16,8 +16,9 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       title: title || 'Live',
       description: description || '',
     });
+    if (confirmed) q.set('confirmed', '1');
     return `${base}/embed-go-live?${q.toString()}`;
-  }, [streamId, title, description]);
+  }, [streamId, title, description, confirmed]);
 
   const injectedBefore = useMemo(() => {
     const t = token ? JSON.stringify(token) : '""';
