@@ -58,7 +58,8 @@ const VideoCallHistory = require('./VideoCallHistory')(sequelize, DataTypes);
 const LiveStream = require('./LiveStream');
 const Stream = require('./Stream');
 
-
+Stream.belongsTo(User, { as: 'streamer', foreignKey: 'streamerId' });
+User.hasMany(Stream, { as: 'streams', foreignKey: 'streamerId' });
 
 // User/Reward
 User.hasMany(UserReward, { foreignKey: 'userId' });
