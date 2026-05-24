@@ -82,6 +82,13 @@ async function main() {
   if (push.status === 200) pass('POST /api/profiles/me/push-token');
   else fail('POST /api/profiles/me/push-token', `status ${push.status}`);
 
+  const leaderboard = await get('/api/gamification/leaderboard', token);
+  if (leaderboard.status === 200 && Array.isArray(leaderboard.data?.leaderboard)) {
+    pass('GET /api/gamification/leaderboard');
+  } else {
+    fail('GET /api/gamification/leaderboard', `status ${leaderboard.status} ${JSON.stringify(leaderboard.data).slice(0, 120)}`);
+  }
+
   console.log(failed ? `\n${failed} failure(s).\n` : '\nAll smoke checks passed.\n');
   process.exit(failed ? 1 : 0);
 }

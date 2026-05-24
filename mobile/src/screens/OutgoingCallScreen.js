@@ -57,6 +57,7 @@ export default function OutgoingCallScreen({ route, navigation }) {
       mediaPlaybackRequiresUserAction={false}
       allowsFullscreenVideo
       mixedContentMode="always"
+      mediaCapturePermissionGrantType="grant"
       onError={() => Alert.alert('Gabim', 'Nuk u ngarkua faqja e thirrjes. Kontrollo WEB_APP_URL dhe rrjetin.')}
       onHttpError={() => Alert.alert('Gabim HTTP', 'Serveri i web-it u përgjigj me gabim.')}
     />

@@ -373,6 +373,37 @@ async function getBadges(req, res) {
   }
 };
 
+// Get global leaderboard (top users by points)
+async function getLeaderboard(req, res) {
+  try {
+    const currentUserId = req.user?.id;
+    const users = await User.findAll({
+      attributes: ['id', 'firstName', 'lastName', 'points', 'level'],
+      order: [
+        ['points', 'DESC'],
+        ['level', 'DESC'],
+        ['id', 'ASC'],
+      ],
+      limit: 50,
+    });
+
+    const leaderboard = users.map((u, idx) => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      level: Number(u.level) || 1,
+      points: Number(u.points) || 0,
+      rank: idx + 1,
+      isCurrentUser: currentUserId != null && String(currentUserId) === String(u.id),
+    }));
+
+    res.json({ leaderboard });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ error: 'Leaderboard error' });
+  }
+}
+
 // Claim reward
 async function claimReward(req, res) {
   try {
@@ -402,5 +433,6 @@ module.exports = {
   getUserGamification,
   getAchievements,
   getBadges,
+  getLeaderboard,
   claimReward
 };

@@ -59,6 +59,11 @@ function getWebRtcIceConfiguration() {
   return { iceServers: servers };
 }
 
+function isLiveKitSignaling(offerOrAnswer) {
+  const type = offerOrAnswer?.type;
+  return type === 'livekit-invite' || type === 'livekit-accepted';
+}
+
 export default function VideoCallSimple({
   targetUser,
   onClose,
@@ -115,6 +120,12 @@ export default function VideoCallSimple({
   const ringtoneRef = useRef({ ctx: null, osc: null, gain: null, intervalId: null });
   const livekitRoomRef = useRef(null);
   const livekitTracksRef = useRef([]);
+  const currentCallIdRef = useRef(null);
+  const initialAcceptDoneRef = useRef(false);
+
+  useEffect(() => {
+    currentCallIdRef.current = currentCallId;
+  }, [currentCallId]);
 
   // Thirrja niset vetëm me klikim (jo automatikisht)
 
@@ -128,7 +139,7 @@ export default function VideoCallSimple({
     socket.on('call:answered', handleCallAnswered);
     // Server-confirmed DB connection
     socket.on('call:connected', ({ callId }) => {
-      if (callId && callId === currentCallId) {
+      if (callId && callId === currentCallIdRef.current) {
         console.log('✅ Server confirmed call connected:', callId);
         setServerConnected(true);
       }
@@ -147,13 +158,12 @@ export default function VideoCallSimple({
     socket.on('call:incoming', handleIncomingCall);
     
     return () => {
-      socket.off('call:answered');
-      socket.off('call:ice-candidate');
-      socket.off('call:rejected');
-      socket.off('call:ended');
-      socket.off('call:incoming');
+      socket.off('call:answered', handleCallAnswered);
+      socket.off('call:ice-candidate', handleRemoteIceCandidate);
+      socket.off('call:rejected', handleCallRejected);
+      socket.off('call:ended', handleRemoteCallEnd);
+      socket.off('call:incoming', handleIncomingCall);
       socket.off('call:connected');
-      cleanup();
     };
   }, [socket, connected]);
 
@@ -210,7 +220,23 @@ export default function VideoCallSimple({
   // Handler for incoming call offer
   const handleIncomingCall = ({ from, callerName, offer, callId }) => {
     if (!user || !from) return;
-    if (callStatus !== 'idle') {
+
+    if (
+      initialIncomingCall?.callId &&
+      callId &&
+      String(initialIncomingCall.callId) === String(callId)
+    ) {
+      return;
+    }
+
+    if (callStatusRef.current !== 'idle') {
+      if (
+        callId &&
+        currentCallIdRef.current &&
+        String(callId) === String(currentCallIdRef.current)
+      ) {
+        return;
+      }
       socket.emit('call:reject', { to: from });
       return;
     }
@@ -222,22 +248,48 @@ export default function VideoCallSimple({
     const incoming = callObj || incomingCall;
     if (!incoming) return;
     const { from, offer, callId } = incoming;
+    const liveKitCall = !!callId || isLiveKitSignaling(offer);
 
-    if (callId) {
+    if (liveKitCall && callId) {
+      if (!socket?.connected) {
+        throw new Error('Socket not connected yet');
+      }
       try {
+        setCallStatus('connecting');
         await joinLiveKitRoom(callId);
         socket.emit('call:answer', { to: from, answer: { type: 'livekit-accepted' }, callId });
-        if (callId) setCurrentCallId(callId);
+        setCurrentCallId(callId);
         setIncomingCall(null);
         setCallStatus('connected');
         return;
       } catch (err) {
-        console.error('LiveKit accept failed, falling back to legacy WebRTC:', err);
+        console.error('LiveKit accept failed:', err);
+        setIncomingCall(incoming);
+        setCallStatus('ringing');
+        alert('Nuk u lidh thirrja. Kontrollo lejet e kamerës/mikrofonit dhe internetin, pastaj shtyp Prano përsëri.');
+        return;
       }
+    }
+
+    if (isLiveKitSignaling(offer)) {
+      alert('Thirrja LiveKit nuk u lidh. Mungon callId.');
+      setCallStatus('idle');
+      setIncomingCall(null);
+      return;
+    }
+
+    if (!offer || isLiveKitSignaling(offer) || offer.type !== 'offer') {
+      alert('Oferta e thirrjes është e pavlefshme.');
+      setCallStatus('idle');
+      setIncomingCall(null);
+      return;
     }
 
     try {
       console.log('Accepting incoming call from:', from, 'callId:', incoming.callId);
+      if (!socket?.connected) {
+        throw new Error('Socket not connected yet');
+      }
       const stream = localStream || userGestureStream || await startLocalStream();
       if (!stream) {
         setCallStatus('idle');
@@ -251,14 +303,13 @@ export default function VideoCallSimple({
       socket.emit('call:answer', { to: from, answer, callId: incoming.callId });
       if (incoming.callId) setCurrentCallId(incoming.callId);
       setIncomingCall(null);
-      // mark as connecting; actual connected state will be set on peerConnection.onconnectionstatechange
       setCallStatus('connecting');
       console.log('Emitted call:answer for', from, 'callId:', incoming.callId);
     } catch (err) {
       console.error('Error accepting incoming call:', err);
-      socket.emit('call:reject', { to: incomingCall.from });
-      setIncomingCall(null);
-      setCallStatus('idle');
+      alert('Nuk u pranua thirrja. Provo përsëri.');
+      setIncomingCall(incoming);
+      setCallStatus('ringing');
     }
   };
 
@@ -271,11 +322,16 @@ export default function VideoCallSimple({
   };
 
   useEffect(() => {
-    if (initialIncomingCall) {
-      setIncomingCall(initialIncomingCall);
-      acceptIncomingCall(initialIncomingCall).catch(() => {});
-    }
-  }, [initialIncomingCall]);
+    if (!initialIncomingCall || initialAcceptDoneRef.current) return;
+    if (!socket || !connected || !user) return;
+
+    initialAcceptDoneRef.current = true;
+    setIncomingCall(initialIncomingCall);
+    acceptIncomingCall(initialIncomingCall).catch((err) => {
+      console.error('Auto accept failed:', err);
+      initialAcceptDoneRef.current = false;
+    });
+  }, [initialIncomingCall, socket, connected, user]);
 
   const startLocalStream = async () => {
     try {
@@ -529,11 +585,13 @@ export default function VideoCallSimple({
     return pc;
   };
 
-  const handleCallAnswered = async ({ from, answer }) => {
+  const handleCallAnswered = async ({ from, answer, callId }) => {
     console.log('✅ Call answered by user:', from);
     try {
-      if (answer?.type === 'livekit-accepted' && currentCallId) {
-        await joinLiveKitRoom(currentCallId);
+      const activeCallId = callId || currentCallIdRef.current;
+      if (answer?.type === 'livekit-accepted' && activeCallId) {
+        if (!currentCallIdRef.current) setCurrentCallId(activeCallId);
+        await joinLiveKitRoom(activeCallId);
         return;
       }
       if (peerConnectionRef.current) {

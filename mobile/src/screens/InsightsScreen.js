@@ -52,7 +52,7 @@ export default function InsightsScreen() {
         gamificationUserRequest(),
         gamificationAchievementsRequest().catch(() => ({ data: [] })),
         gamificationBadgesRequest().catch(() => ({ data: [] })),
-        gamificationLeaderboardRequest(),
+        gamificationLeaderboardRequest().catch(() => ({ data: { leaderboard: [] } })),
       ]);
 
       setOverview(dashboardRes?.data?.overview || null);

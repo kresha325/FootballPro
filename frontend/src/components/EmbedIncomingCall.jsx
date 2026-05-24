@@ -27,7 +27,7 @@ export default function EmbedIncomingCall() {
 
   const load = useCallback(async () => {
     const data = readIncomingPayload();
-    if (!data?.from || !data?.offer) {
+    if (!data?.from || (!data?.offer && !data?.callId)) {
       setError('Nuk u gjet thirrja hyrëse. Hap nga aplikacioni mobil pas Prano.');
       return;
     }

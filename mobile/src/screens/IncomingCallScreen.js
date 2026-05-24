@@ -29,7 +29,7 @@ export default function IncomingCallScreen({ navigation }) {
     return `(function(){try{localStorage.setItem('token',${t});sessionStorage.setItem('fp_embed_incoming_call',${incoming});}catch(e){}})();true;`;
   }, [token, payload]);
 
-  if (!payload?.from || !payload?.offer) {
+  if (!payload?.from || (!payload?.offer && !payload?.callId)) {
     return (
       <View style={styles.centered}>
         <Text style={styles.error}>Të dhënat e thirrjes mungojnë ose skadojnë.</Text>
@@ -66,6 +66,7 @@ export default function IncomingCallScreen({ navigation }) {
       mediaPlaybackRequiresUserAction={false}
       allowsFullscreenVideo
       mixedContentMode="always"
+      mediaCapturePermissionGrantType="grant"
       onError={() => Alert.alert('Gabim', 'Nuk u ngarkua faqja e thirrjes hyrëse.')}
       onHttpError={() => Alert.alert('Gabim HTTP', 'Kontrollo WEB_APP_URL dhe që frontend-i është i deploy-uar.')}
     />
