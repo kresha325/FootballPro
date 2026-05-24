@@ -351,11 +351,14 @@ export default function TournamentDetailScreen({ route, navigation }) {
     );
   }
 
-  const standingRows = Array.isArray(standings?.standings)
-    ? standings.standings
-    : Array.isArray(standings)
-      ? standings
-      : [];
+  const standingRows = Array.isArray(standings?.rows)
+    ? standings.rows
+    : Array.isArray(standings?.standings)
+      ? standings.standings
+      : Array.isArray(standings)
+        ? standings
+        : [];
+  const standingsCaption = standings?.caption;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -443,16 +446,23 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
       {tab === 'table' ? (
         <View style={styles.card}>
+          {standingsCaption ? <Text style={styles.muted}>{standingsCaption}</Text> : null}
           {standingRows.length === 0 ? (
-            <Text style={styles.muted}>No standings yet.</Text>
+            <Text style={styles.muted}>
+              {isKnockoutType
+                ? 'No finished matches yet. For knockout, see Matches for the bracket; this table fills in after results are saved.'
+                : 'No standings yet.'}
+            </Text>
           ) : (
             standingRows.map((row, idx) => (
               <View key={String(row.userId || row.id || idx)} style={styles.standRow}>
                 <Text style={styles.standName}>
-                  #{row.position || idx + 1}{' '}
-                  {row.name || participantLabel(row.user || row, pt)}
+                  #{row.rank ?? row.position ?? idx + 1}{' '}
+                  {participantLabel(row.User || row.user || row, pt)}
                 </Text>
-                <Text style={styles.standPts}>{row.points ?? row.pts ?? 0} pts</Text>
+                <Text style={styles.standPts}>
+                  {row.points ?? 0} pts · {row.played ?? 0} pl · GD {row.goalDifference ?? 0}
+                </Text>
               </View>
             ))
           )}
