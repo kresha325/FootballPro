@@ -14,7 +14,7 @@ Last updated: May 2026. Goal: **feature-complete platform** with **payments disa
 | Marketplace | ✅ | ✅ | ✅ | **JonCoin only** (Stripe shop disabled) |
 | Wallet / JonCoin | ✅ | ✅ | ✅ | Balance, orders, withdrawals |
 | Premium | ✅ | ✅ | ✅ | **Demo mode** (no live Stripe) |
-| Streams / Go Live | ✅ | ✅ | ✅ | Metadata + YouTube/recording; native broadcast optional |
+| Streams / Go Live | ✅ | ✅ | ✅ | LiveKit via embed-go-live; YouTube UC; upload recording |
 | Gamification | ✅ | ✅ | ✅ | XP, badges, leaderboard |
 | Notifications | ✅ | partial | ✅ | Push API wired; mobile needs expo-notifications build |
 | Admin | ✅ | — | ✅ | Web admin panel |
@@ -59,7 +59,7 @@ See `mobile/RELEASE_QA.md` and `mobile/scripts/smoke-checklist.js`.
 
 ## Known limitations (honest)
 
-1. **Native live broadcast** — Go Live creates stream records; video is YouTube embed, WebView, or uploaded recording (not full RTMP studio in-app).
+1. **RTMP ingest server** — OBS stream key shown; nginx-rtmp not on Render (optional). In-app broadcast uses **LiveKit** (web embed) or **YouTube** parallel stream.
 2. **Push notifications on mobile** — API ready (`POST /api/profiles/me/push-token`); requires `expo-notifications` in EAS build.
 3. **Dual live APIs** — `/api/streams` (primary) + legacy `/api/live-stream` (web profile); unified long-term.
 4. **i18n** — Web has locales; mobile English/Albanian mix in UI strings.

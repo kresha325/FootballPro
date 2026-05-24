@@ -54,6 +54,11 @@ const Stream = sequelize.define('Stream', {
     allowNull: true,
     comment: 'YouTube UC... për playback me embed live_stream',
   },
+  videoUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Path or URL to uploaded recording when not live',
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

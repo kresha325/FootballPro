@@ -5,6 +5,7 @@ const uploadLocal = require('../middleware/uploadLocal');
 const streamsCtrl = require('../controllers/streams');
 
 router.get('/', streamsCtrl.getStreams);
+router.get('/my/stream-info', auth, streamsCtrl.getMyStreamInfo);
 router.get('/:id', streamsCtrl.getStream);
 router.post('/', auth, streamsCtrl.createStream);
 router.put('/:id/start', auth, streamsCtrl.startStream);

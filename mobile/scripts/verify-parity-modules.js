@@ -16,7 +16,8 @@ const checks = [
   { file: 'src/components/XPNotificationManager.js', must: ['subscribeXpNotifications', 'Level Up'] },
   { file: 'src/screens/PremiumScreen.js', must: ['premiumCheckoutRequest', 'onVerifyPayment'] },
   { file: 'src/screens/PublicProfileScreen.js', must: ['goLiveBtn', 'onGoLive'] },
-  { file: 'src/screens/GoLiveScreen.js', must: ['uploadStreamRecordingRequest', 'Ngarko regjistrim'] },
+  { file: 'src/screens/GoLiveScreen.js', must: ['uploadStreamRecordingRequest', 'Ngarko regjistrim', 'GoLiveBroadcast'] },
+  { file: 'src/screens/GoLiveBroadcastScreen.js', must: ['embed-go-live', 'react-native-webview'] },
   { file: 'src/navigation/AppNavigator.js', must: ['IncomingCall', 'GoLive', 'IncomingCallListener'] },
   { file: 'App.js', must: ['XPNotificationManager'] },
 ];
@@ -40,6 +41,19 @@ for (const { file, must } of checks) {
   } else {
     console.log(`PASS  ${file}`);
   }
+}
+
+const embedGoLivePath = path.join(root, '..', 'frontend', 'src', 'components', 'EmbedGoLive.jsx');
+if (fs.existsSync(embedGoLivePath)) {
+  const eg = fs.readFileSync(embedGoLivePath, 'utf8');
+  if (eg.includes('livekit') && eg.includes('goLiveEnded')) {
+    console.log('PASS  frontend EmbedGoLive.jsx');
+  } else {
+    console.log('FAIL  frontend EmbedGoLive.jsx');
+    failed += 1;
+  }
+} else {
+  console.log('SKIP  frontend EmbedGoLive.jsx');
 }
 
 // Frontend embed route (sibling repo)

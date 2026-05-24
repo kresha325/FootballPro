@@ -9,7 +9,8 @@ export default function LiveStreamViewer() {
   const [stream, setStream] = useState(null);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(true);
-  const [playback, setPlayback] = useState('livekit'); // 'livekit' | 'youtube'
+  const [playback, setPlayback] = useState('livekit'); // 'livekit' | 'youtube' | 'recording'
+  const [recordingUrl, setRecordingUrl] = useState('');
   const [youtubeChannelId, setYoutubeChannelId] = useState(null);
   const roomRef = useRef(null);
 
@@ -42,6 +43,19 @@ export default function LiveStreamViewer() {
         setStream(streamData);
 
         if (!streamData?.isLive) {
+          const rec = streamData?.videoUrl;
+          if (rec) {
+            const rawApi = import.meta.env.VITE_API_URL || '';
+            const siteRoot = rawApi.replace(/\/api\/?$/i, '').replace(/\/$/, '');
+            const full = /^https?:\/\//i.test(rec)
+              ? rec
+              : `${siteRoot}${rec.startsWith('/') ? rec : `/${rec}`}`;
+            setRecordingUrl(full);
+            setPlayback('recording');
+            setStream(streamData);
+            if (mounted) setConnecting(false);
+            return;
+          }
           setError('This stream is not live right now.');
           setConnecting(false);
           return;
@@ -143,7 +157,9 @@ export default function LiveStreamViewer() {
         ) : null}
 
         <div className="mt-4 rounded-lg overflow-hidden bg-black min-h-[320px] flex items-center justify-center">
-          {playback === 'youtube' && youtubeChannelId ? (
+          {playback === 'recording' && recordingUrl ? (
+            <video src={recordingUrl} controls autoPlay className="w-full h-auto" />
+          ) : playback === 'youtube' && youtubeChannelId ? (
             <iframe
               title="YouTube Live"
               className="w-full aspect-video"

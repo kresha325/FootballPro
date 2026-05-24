@@ -29,6 +29,7 @@ import IncomingCallScreen from '../screens/IncomingCallScreen';
 import IncomingCallListener from '../components/IncomingCallListener';
 import { navigationRef } from './navigationRef';
 import GoLiveScreen from '../screens/GoLiveScreen';
+import GoLiveBroadcastScreen from '../screens/GoLiveBroadcastScreen';
 import MessagingScreen from '../screens/MessagingScreen';
 import ConversationScreen from '../screens/ConversationScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -248,6 +249,11 @@ function ProfileNavigator() {
         component={GoLiveScreen}
         options={{ title: 'Go Live', headerShown: true, headerBackTitleVisible: true }}
       />
+      <ProfileStack.Screen
+        name="GoLiveBroadcast"
+        component={GoLiveBroadcastScreen}
+        options={{ title: 'Transmetim LIVE', headerShown: true, headerBackTitleVisible: true }}
+      />
     </ProfileStack.Navigator>
   );
 }
@@ -274,6 +280,11 @@ function MoreNavigator() {
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen
+        name="GoLiveBroadcast"
+        component={GoLiveBroadcastScreen}
+        options={{ title: 'Transmetim LIVE', headerBackTitleVisible: true }}
+      />
       <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: APP_BRAND_NAME }} />

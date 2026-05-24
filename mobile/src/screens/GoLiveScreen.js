@@ -102,10 +102,6 @@ export default function GoLiveScreen({ route, navigation }) {
   const onGoLive = async () => {
     setLoading(true);
     try {
-      if (!cameraChecked) {
-        await openCameraCheck();
-      }
-
       const createRes = await createStreamRequest({ title, description, isPremium: false });
       const stream = createRes?.data;
       const streamId = stream?.id;
@@ -114,10 +110,11 @@ export default function GoLiveScreen({ route, navigation }) {
         throw new Error('Stream creation did not return an id');
       }
 
-      const startRes = await startStreamRequest(streamId);
-      setLastStream(startRes?.data?.stream || stream);
-      await loadStreams();
-      Alert.alert('Success', 'Stream created and marked as live.');
+      navigation.navigate('GoLiveBroadcast', {
+        streamId,
+        title: title.trim() || 'Live',
+        description: description.trim() || '',
+      });
     } catch (err) {
       console.error('Go Live failed:', err?.response?.data || err?.message || err);
       Alert.alert('Go Live failed', extractErrorMessage(err, 'Could not start stream'));
@@ -245,10 +242,10 @@ export default function GoLiveScreen({ route, navigation }) {
     >
       <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Streams & Go Live</Text>
       <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>
-        Nis live, shiko stream-et aktive, ose ngarko një regjistrim (si faqja Streams në web).
+        Nis transmetimin me kamerë (LiveKit në web) ose YouTube; ngarko regjistrime video më poshtë.
       </Text>
       <Text style={[styles.hint, isDark && styles.textMutedDark]}>
-        Për shikim në YouTube Live: vendos ID-në e kanalit (UC…) te Settings → Profil në web; stream i ri e kopjon automatikisht.
+        Kërkon WEB_APP_URL të konfiguruar. YouTube: vendos UC… te Settings (web ose mobile).
       </Text>
 
       <TextInput
@@ -267,21 +264,8 @@ export default function GoLiveScreen({ route, navigation }) {
         multiline
       />
 
-      <TouchableOpacity
-        style={styles.cameraButton}
-        onPress={async () => {
-          try {
-            await openCameraCheck();
-          } catch (err) {
-            Alert.alert('Camera check failed', extractErrorMessage(err, 'Could not open camera'));
-          }
-        }}
-      >
-        <Text style={styles.cameraButtonText}>{cameraChecked ? 'Camera ready' : 'Open camera first'}</Text>
-      </TouchableOpacity>
-
       <TouchableOpacity style={styles.button} onPress={onGoLive} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start Live</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Start Live (kamera)</Text>}
       </TouchableOpacity>
 
       <View style={[styles.uploadSection, isDark && styles.cardDark]}>
