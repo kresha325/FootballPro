@@ -17,16 +17,20 @@ function eventsFromMatchData(data) {
   }));
 }
 
+const fieldClass =
+  'w-full rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800/90 dark:text-white';
+
 export default function MatchGoalEventsForm({
   participants = [],
   homeUserId,
   awayUserId,
   initialEvents = [],
   onChange,
+  variant = 'light',
 }) {
   const [events, setEvents] = useState(initialEvents.length ? initialEvents : []);
-
   const options = useMemo(() => participants.filter(Boolean), [participants]);
+  const isDark = variant === 'dark';
 
   useEffect(() => {
     setEvents(initialEvents.length ? initialEvents : []);
@@ -38,15 +42,7 @@ export default function MatchGoalEventsForm({
   };
 
   const addEvent = () => {
-    emit([
-      ...events,
-      {
-        userId: '',
-        minute: '',
-        assistUserId: '',
-        side: '',
-      },
-    ]);
+    emit([...events, { userId: '', minute: '', assistUserId: '', side: '' }]);
   };
 
   const updateEvent = (index, patch) => {
@@ -63,82 +59,122 @@ export default function MatchGoalEventsForm({
     return '';
   };
 
+  const labelClass = isDark
+    ? 'text-[10px] font-bold uppercase tracking-wider text-slate-400'
+    : 'text-[10px] font-bold uppercase tracking-wider text-slate-500';
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Golat & asistet (minuta)</h4>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>⚽ Golat & asistet</p>
+          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Regjistro çdo gol me minutë dhe asist</p>
+        </div>
         <button
           type="button"
           onClick={addEvent}
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:brightness-110"
         >
           + Shto gol
         </button>
       </div>
 
       {events.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-          Shto çdo gol me golashënuesin, minutën dhe asistin (opsional).
-        </p>
+        <div
+          className={`rounded-2xl border border-dashed px-4 py-8 text-center ${
+            isDark ? 'border-slate-600 bg-slate-800/40 text-slate-400' : 'border-slate-300 bg-slate-50 text-slate-500'
+          }`}
+        >
+          <p className="text-3xl mb-2">🎯</p>
+          <p className="text-sm font-medium">Ende pa gola të regjistruar</p>
+          <p className="text-xs mt-1 opacity-80">Shto golashënuesin, minutën dhe asistin për statistika në profil</p>
+        </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {events.map((ev, index) => (
             <li
               key={index}
-              className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/40 sm:grid-cols-[1fr_80px_1fr_100px_auto]"
+              className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${
+                isDark
+                  ? 'border-slate-700/80 bg-slate-900/60 ring-1 ring-white/5'
+                  : 'border-slate-200 bg-gradient-to-br from-white to-slate-50'
+              }`}
             >
-              <select
-                value={ev.userId}
-                onChange={(e) => {
-                  const userId = e.target.value;
-                  updateEvent(index, { userId, side: inferSide(userId) || ev.side });
-                }}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
-              >
-                <option value="">Golashënuesi</option>
-                {options.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {participantName(p)}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="0"
-                max="130"
-                placeholder="Min"
-                value={ev.minute}
-                onChange={(e) => updateEvent(index, { minute: e.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
-              />
-              <select
-                value={ev.assistUserId}
-                onChange={(e) => updateEvent(index, { assistUserId: e.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
-              >
-                <option value="">Asist (opsional)</option>
-                {options.map((p) => (
-                  <option key={`assist-${p.id}`} value={p.id}>
-                    {participantName(p)}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={ev.side || inferSide(ev.userId)}
-                onChange={(e) => updateEvent(index, { side: e.target.value })}
-                className="rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
-              >
-                <option value="">Ekipi</option>
-                <option value="home">Vendas</option>
-                <option value="away">Mysafir</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => removeEvent(index)}
-                className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
-              >
-                Fshi
-              </button>
+              <div className="mb-3 flex items-center justify-between">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${
+                    isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  Goli #{index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeEvent(index)}
+                  className="rounded-lg px-2 py-1 text-xs font-bold text-red-500 hover:bg-red-500/10"
+                >
+                  Fshi
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Golashënuesi</label>
+                  <select
+                    value={ev.userId}
+                    onChange={(e) => {
+                      const userId = e.target.value;
+                      updateEvent(index, { userId, side: inferSide(userId) || ev.side });
+                    }}
+                    className={fieldClass}
+                  >
+                    <option value="">Zgjidh lojtarin</option>
+                    {options.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {participantName(p)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Minuta</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="130"
+                    placeholder="p.sh. 67"
+                    value={ev.minute}
+                    onChange={(e) => updateEvent(index, { minute: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Ekipi</label>
+                  <select
+                    value={ev.side || inferSide(ev.userId)}
+                    onChange={(e) => updateEvent(index, { side: e.target.value })}
+                    className={fieldClass}
+                  >
+                    <option value="">Auto</option>
+                    <option value="home">🏠 Vendas</option>
+                    <option value="away">✈️ Mysafir</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Asist (opsional)</label>
+                  <select
+                    value={ev.assistUserId}
+                    onChange={(e) => updateEvent(index, { assistUserId: e.target.value })}
+                    className={fieldClass}
+                  >
+                    <option value="">Pa asist</option>
+                    {options.map((p) => (
+                      <option key={`assist-${p.id}`} value={p.id}>
+                        {participantName(p)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

@@ -9,6 +9,7 @@ import {
   seasonLabel,
   todayDateInputValue,
 } from '../utils/footballSeason';
+import axios from 'axios';
 import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -273,13 +274,14 @@ function MatchBroadcastModal({
                     placeholder="0"
                   />
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white p-4 text-gray-900">
+                <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-4 ring-1 ring-emerald-500/20">
                   <MatchGoalEventsForm
                     participants={participants}
                     homeUserId={m.homeUserId}
                     awayUserId={m.awayUserId}
                     initialEvents={goalEvents}
                     onChange={setGoalEvents}
+                    variant="dark"
                   />
                 </div>
                 <button
@@ -531,29 +533,42 @@ export default function TournamentSimple() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-950">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-emerald-400 border-t-transparent" />
+          <p className="text-sm font-semibold tracking-wide text-emerald-200/80">Duke ngarkuar turnetë…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Turnetë</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Klube ose individë — ndeshje, rezultate dhe tabelë sipas llojit të turneut (ligë me pikë, cup/knockout me
-            bracket + përmbledhje nga ndeshjet).
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20">
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="relative mb-10 overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-emerald-900/20">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-400/90">FootballPro · Competitions</p>
+            <h1 className="mt-2 text-3xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
+            <p className="mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
+              Ligë, cup dhe knockout — tabela live, raport golash, minuta dhe asiste direkt në profilin e atletit.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-white/10">{tournaments.length} turne</span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-cyan-200 ring-1 ring-white/10">Sezon FIFA</span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-white/10">Stats Pro</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:scale-[1.02] hover:brightness-110"
+          >
+            + Krijo turne
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-md"
-        >
-          + Krijo Turne
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -570,7 +585,7 @@ export default function TournamentSimple() {
           return (
             <div
               key={tournament.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all p-6 border border-gray-200 dark:border-gray-700"
+              className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-500/10 dark:border-slate-700/80 dark:bg-slate-900/80 dark:shadow-black/20"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -1092,6 +1107,7 @@ export default function TournamentSimple() {
         onSaveMatch={saveMatchReport}
         saving={savingMatch}
       />
+    </div>
     </div>
   );
 }
