@@ -425,9 +425,8 @@ exports.updateMatchScore = async (req, res) => {
     if (status === 'finished') {
       await updateStandings(match);
       
-      // For knockout, create next round match
       if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
-        await progressToNextRound(match);
+        await tryAdvanceKnockoutRound(match);
       }
     }
 
@@ -477,44 +476,85 @@ async function updateStandings(match) {
   await awayParticipant.save();
 }
 
-// Helper: Progress winner to next round
-async function progressToNextRound(match) {
-  const { scoreHome, scoreAway, round, tournamentId } = match;
-  const winnerId = scoreHome > scoreAway ? match.homeUserId : match.awayUserId;
+/** When an entire knockout round is finished, pair winners into the next round (or end the tournament). */
+async function tryAdvanceKnockoutRound(match) {
+  const tournament =
+    match.Tournament || (await Tournament.findByPk(match.tournamentId));
+  if (!tournament || (tournament.type !== 'knockout' && tournament.type !== 'cup')) {
+    return;
+  }
 
-  // Check if there's a next round match position
-  const currentBracket = await Bracket.findOne({ where: { matchId: match.id } });
-  const nextRound = round + 1;
-  const nextPosition = Math.floor(currentBracket.position / 2);
-
-  // Check if next round match exists
-  let nextMatch = await Match.findOne({
-    where: { tournamentId, round: nextRound },
-    include: [{ model: Bracket, where: { position: nextPosition } }],
+  const { tournamentId, round } = match;
+  const currentRoundMatches = await Match.findAll({
+    where: { tournamentId, round },
   });
 
-  if (!nextMatch) {
-    // Create next round match (waiting for opponent)
-    nextMatch = await Match.create({
-      tournamentId,
-      round: nextRound,
-      homeUserId: winnerId,
-      status: 'scheduled',
-    });
+  if (!currentRoundMatches.length) return;
 
+  const allFinished = currentRoundMatches.every((m) => m.status === 'finished');
+  if (!allFinished) return;
+
+  const sh = Number(match.scoreHome);
+  const sa = Number(match.scoreAway);
+  if (!Number.isFinite(sh) || !Number.isFinite(sa) || sh === sa) return;
+
+  const nextRound = round + 1;
+  const nextRoundExists = await Match.count({ where: { tournamentId, round: nextRound } });
+  if (nextRoundExists > 0) return;
+
+  const winners = currentRoundMatches.map((m) => {
+    const h = Number(m.scoreHome) || 0;
+    const a = Number(m.scoreAway) || 0;
+    return h > a ? m.homeUserId : m.awayUserId;
+  });
+
+  if (winners.length === 1) {
+    tournament.status = 'finished';
+    await tournament.save();
+    await notifyTournament(
+      winners[0],
+      tournamentId,
+      'Tournament Winner! 🏆',
+      `Congratulations! You won ${tournament.name}!`
+    );
+    return;
+  }
+
+  const nextRoundMatches = [];
+  for (let i = 0; i < winners.length; i += 2) {
+    if (i + 1 < winners.length) {
+      nextRoundMatches.push({
+        tournamentId,
+        homeUserId: winners[i],
+        awayUserId: winners[i + 1],
+        status: 'scheduled',
+        round: nextRound,
+        matchDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      });
+    }
+  }
+
+  if (winners.length % 2 === 1) {
+    nextRoundMatches.push({
+      tournamentId,
+      homeUserId: winners[winners.length - 1],
+      awayUserId: null,
+      status: 'scheduled',
+      round: nextRound,
+      matchDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+    });
+  }
+
+  if (!nextRoundMatches.length) return;
+
+  const created = await Match.bulkCreate(nextRoundMatches);
+  for (let i = 0; i < created.length; i += 1) {
     await Bracket.create({
       tournamentId,
       round: nextRound,
-      position: nextPosition,
-      matchId: nextMatch.id,
+      position: i,
+      matchId: created[i].id,
     });
-  } else {
-    // Add winner as opponent
-    if (!nextMatch.homeUserId) {
-      await nextMatch.update({ homeUserId: winnerId });
-    } else if (!nextMatch.awayUserId) {
-      await nextMatch.update({ awayUserId: winnerId });
-    }
   }
 }
 
@@ -841,8 +881,18 @@ exports.startTournamentAndGenerateMatches = async (req, res) => {
       }
     }
 
-    // Create all matches in database
     const createdMatches = await Match.bulkCreate(matches);
+
+    if (tournament.type === 'knockout' || tournament.type === 'cup') {
+      for (let i = 0; i < createdMatches.length; i += 1) {
+        await Bracket.create({
+          tournamentId,
+          round: createdMatches[i].round || 1,
+          position: i,
+          matchId: createdMatches[i].id,
+        });
+      }
+    }
 
     // Notify all participants
     for (const participant of participants) {
@@ -928,56 +978,9 @@ exports.updateMatchResultForTournament = async (req, res) => {
       }
     }
 
-    // For knockout, determine winner and create next round match
     if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
-      const winnerId = scoreHome > scoreAway ? match.homeUserId : match.awayUserId;
-      
-      // Check if there are other matches in current round that are finished
-      const currentRoundMatches = await Match.findAll({
-        where: {
-          tournamentId: match.tournamentId,
-          round: match.round
-        }
-      });
-
-      const allRoundFinished = currentRoundMatches.every(m => m.status === 'finished');
-
-      if (allRoundFinished && currentRoundMatches.length >= 2) {
-        // Create next round matches
-        const winners = currentRoundMatches.map(m => 
-          m.scoreHome > m.scoreAway ? m.homeUserId : m.awayUserId
-        );
-
-        const nextRoundMatches = [];
-        for (let i = 0; i < winners.length; i += 2) {
-          if (i + 1 < winners.length) {
-            nextRoundMatches.push({
-              tournamentId: match.tournamentId,
-              homeUserId: winners[i],
-              awayUserId: winners[i + 1],
-              status: 'scheduled',
-              round: match.round + 1,
-              matchDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days from now
-            });
-          }
-        }
-
-        if (nextRoundMatches.length > 0) {
-          await Match.bulkCreate(nextRoundMatches);
-        } else if (winners.length === 1) {
-          // Tournament finished - we have a winner!
-          match.Tournament.status = 'finished';
-          await match.Tournament.save();
-          
-          const winnerUserId = winners[0];
-          await notifyTournament(
-            winnerUserId,
-            match.tournamentId,
-            'Tournament Winner! 🏆',
-            `Congratulations! You won ${match.Tournament.name}!`
-          );
-        }
-      }
+      await updateStandings(match);
+      await tryAdvanceKnockoutRound(match);
     }
 
     res.json({

@@ -25,7 +25,7 @@ const Match = sequelize.define('Match', {
   },
   awayUserId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'Users',
       key: 'id',

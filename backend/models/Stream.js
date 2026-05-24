@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const User = require('./User');
 
 const Stream = sequelize.define('Stream', {
   id: {
@@ -62,4 +63,8 @@ const Stream = sequelize.define('Stream', {
     defaultValue: DataTypes.NOW,
   },
 });
+
+Stream.belongsTo(User, { as: 'streamer', foreignKey: 'streamerId' });
+User.hasMany(Stream, { as: 'streams', foreignKey: 'streamerId' });
+
 module.exports = Stream;
