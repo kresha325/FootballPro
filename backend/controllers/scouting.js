@@ -3,6 +3,7 @@ const Profile = require('../models/Profile');
 const User = require('../models/User');
 const Post = require('../models/Post');
 const { Op } = require('sequelize');
+const { profileCompletenessScore, profileNationality } = require('../utils/profileFields');
 
 // Advanced scoring algorithm with multiple factors
 const calculateScore = async (playerProfile, player, scoutProfile) => {
@@ -77,15 +78,11 @@ const calculateScore = async (playerProfile, player, scoutProfile) => {
   }
 
   // 4. Profile Completeness (10 points max)
-  let completeness = 0;
-  const profileFields = ['bio', 'club', 'position', 'nationality', 'height', 'weight', 'preferredFoot'];
-  profileFields.forEach(field => {
-    if (playerProfile[field]) completeness++;
-  });
-  const completenessScore = (completeness / profileFields.length) * weights.profile;
+  const { filled: completeness, total: completenessTotal } = profileCompletenessScore(playerProfile);
+  const completenessScore = (completeness / completenessTotal) * weights.profile;
   score += completenessScore;
   if (completeness >= 5) {
-    reasons.push(`✓ ${Math.round((completeness / profileFields.length) * 100)}% complete profile`);
+    reasons.push(`✓ ${Math.round((completeness / completenessTotal) * 100)}% complete profile`);
   }
 
   // 5. Recent Activity (10 points max)
@@ -164,7 +161,7 @@ exports.getRecommendations = async (req, res) => {
             email: athlete.email,
             position: athlete.Profile.position,
             club: athlete.Profile.club,
-            nationality: athlete.Profile.nationality,
+            nationality: profileNationality(athlete.Profile),
             age: athlete.Profile.age || null,
             score,
             maxScore,

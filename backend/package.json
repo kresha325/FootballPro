@@ -9,6 +9,7 @@
     "migrate": "npx sequelize-cli db:migrate",
     "smoke:api": "node scripts/smoke-api.js",
     "smoke:video-calls": "node scripts/smoke-video-calls.js",
+    "smoke:profiles-by-role": "node scripts/smoke-profiles-by-role.js",
     "set:youtube": "node scripts/set-youtube-channel.js",
     "set:youtube:db": "node scripts/set-youtube-by-email.js"
   },

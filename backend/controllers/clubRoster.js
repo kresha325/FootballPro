@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { sendNotification } = require('./notifications');
 const { sendEmail } = require('../services/emailService');
+const { PROFILE_ROSTER_ATTRIBUTES } = require('../utils/profileFields');
 
 // Submit roster request (athlete → club)
 exports.submitRosterRequest = async (req, res) => {
@@ -91,7 +92,7 @@ exports.getPendingRequests = async (req, res) => {
           attributes: ['id', 'firstName', 'lastName', 'email'],
           include: [{
             model: Profile,
-            attributes: ['profilePhoto', 'position', 'bio', 'stats', 'nationality', 'age']
+            attributes: PROFILE_ROSTER_ATTRIBUTES
           }]
         }
       ],
@@ -319,9 +320,14 @@ exports.getClubRoster = async (req, res) => {
   try {
     const { clubId } = req.params;
 
+    const parsedClubId = parseInt(clubId, 10);
+    if (!Number.isFinite(parsedClubId)) {
+      return res.status(400).json({ error: 'Invalid club id' });
+    }
+
     const roster = await ClubRosterRequest.findAll({
       where: {
-        clubId,
+        clubId: parsedClubId,
         status: 'approved'
       },
       include: [
@@ -331,7 +337,7 @@ exports.getClubRoster = async (req, res) => {
           attributes: ['id', 'firstName', 'lastName', 'email'],
           include: [{
             model: Profile,
-            attributes: ['profilePhoto', 'position', 'bio', 'stats', 'nationality', 'age', 'height', 'weight', 'preferredFoot']
+            attributes: PROFILE_ROSTER_ATTRIBUTES
           }]
         }
       ],

@@ -956,7 +956,7 @@ exports.getUserTournamentSummary = async (req, res) => {
         [col('Match.tournamentId'), 'tournamentId'],
         [fn('SUM', col('MatchScorer.goals')), 'scorerGoals'],
       ],
-      include: [{ model: Match, attributes: [], required: true, where: { tournamentId: tournamentIds } }],
+      include: [{ model: Match, attributes: [], required: true, where: { tournamentId: { [Op.in]: tournamentIds } } }],
       where: { userId },
       group: [col('Match.tournamentId')],
       raw: true,

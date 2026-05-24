@@ -1,25 +1,37 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  
+
   if (!token) {
-    console.log('❌ AUTH: No token provided');
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
-  
+
   try {
     const secret = process.env.JWT_SECRET || 'dev_jwt_secret';
     const decoded = jwt.verify(token, secret);
-    console.log('✅ AUTH: Token decoded:', decoded);
-    req.user = decoded.user;
+    const userId = decoded?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ msg: 'Token is not valid' });
+    }
+
+    const dbUser = await User.findByPk(userId, {
+      attributes: ['id', 'role', 'firstName', 'lastName', 'email', 'premium', 'verified'],
+    });
+
+    if (!dbUser) {
+      return res.status(401).json({ msg: 'User not found' });
+    }
+
+    req.user = dbUser.get({ plain: true });
     next();
   } catch (err) {
-    console.error('❌ AUTH: Token verification failed:', err.message);
+    console.error('AUTH token verification failed:', err.message);
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };
 
-// Export both named and default
 module.exports = auth;
 module.exports.protect = auth;
