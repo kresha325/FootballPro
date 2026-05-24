@@ -13,6 +13,10 @@ function postToNative(payload) {
   }
 }
 
+function isReactNativeWebView() {
+  return typeof window !== 'undefined' && !!window.ReactNativeWebView;
+}
+
 /**
  * Broadcaster për mobile WebView dhe web: LiveKit nëse është konfiguruar,
  * përndryshe udhëzime YouTube/OBS (kanali nga profili).
@@ -158,6 +162,7 @@ export default function EmbedGoLive() {
             title,
             description,
             isPremium: false,
+            ...(isReactNativeWebView() ? { playbackSource: 'livekit' } : {}),
           });
           id = created?.data?.id;
           if (!id) throw new Error('Stream creation returned no id');
@@ -177,7 +182,9 @@ export default function EmbedGoLive() {
           }
         };
 
-        if (streamData?.youtubeChannelId) {
+        const mobileEmbed = isReactNativeWebView();
+
+        if (streamData?.youtubeChannelId && !mobileEmbed) {
           await markLive();
           setPhase('youtube');
           postToNative({ type: 'goLiveStarted', streamId: id, mode: 'youtube' });
@@ -187,6 +194,11 @@ export default function EmbedGoLive() {
         try {
           await startLiveKit(id);
           await markLive();
+          if (streamData?.youtubeChannelId && mobileEmbed) {
+            setError(
+              'Kamera aktive (LiveKit). Për shikues në YouTube, nis edhe transmetimin në YouTube Studio/OBS për të njëjtin kanal.'
+            );
+          }
         } catch (lkErr) {
           console.warn('LiveKit broadcast failed:', lkErr);
           setPhase('youtube');

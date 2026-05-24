@@ -112,6 +112,7 @@ export default function GoLiveScreen({ route, navigation }) {
         title: trimmedTitle,
         description: trimmedDesc,
         isPremium: false,
+        playbackSource: 'livekit',
       });
       const stream = createRes?.data;
       const streamId = stream?.id;

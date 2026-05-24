@@ -1,70 +1,91 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import { WebView } from 'react-native-webview';
-import { absoluteBackendUrl, BACKEND_URL } from '../config/constants';
+import { absoluteBackendUrl, WEB_APP_URL } from '../config/constants';
 import { extractErrorMessage, getStreamRequest, joinStreamRequest, leaveStreamRequest } from '../api/client';
-import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
+import { useAuth } from '../context/AuthContext';
+import { buildYoutubeChannelLiveWatchUrl } from '../utils/youtubeLiveEmbed';
 
-export default function LiveViewerScreen({ route }) {
+export default function LiveViewerScreen({ route, navigation }) {
   const streamId = route?.params?.streamId;
-  const frontendBase = BACKEND_URL.replace(/\/api\/?$/, '');
-  const [uri, setUri] = useState(null);
+  const { token } = useAuth();
+  const [mode, setMode] = useState('loading'); // loading | web | recording | error
+  const [webUri, setWebUri] = useState('');
   const [recordingUri, setRecordingUri] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [youtubeChannelId, setYoutubeChannelId] = useState(null);
+  const [streamTitle, setStreamTitle] = useState('');
+
+  const injectedBefore = useMemo(() => {
+    const t = token ? JSON.stringify(token) : '""';
+    return `(function(){try{localStorage.setItem('token',${t});}catch(e){}})();true;`;
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!streamId) {
         setError('Missing stream id.');
-        setLoading(false);
+        setMode('error');
         return;
       }
-      setLoading(true);
+      setMode('loading');
       setError('');
-      setUri(null);
+      setWebUri('');
+      setRecordingUri(null);
+      setYoutubeChannelId(null);
+
       try {
         const res = await getStreamRequest(streamId);
         const data = res?.data;
         if (cancelled) return;
+
+        setStreamTitle(data?.title || 'Live');
+        setYoutubeChannelId(data?.youtubeChannelId || null);
+
         if (!data?.isLive) {
           const rec = absoluteBackendUrl(data?.videoUrl) || data?.videoUrl;
           if (rec) {
             setRecordingUri(rec);
-            setLoading(false);
+            setMode('recording');
             return;
           }
-          setError('This stream is not live right now.');
-          setLoading(false);
+          setError('Ky stream nuk është live tani.');
+          setMode('error');
           return;
         }
+
         try {
           await joinStreamRequest(streamId);
         } catch (_joinErr) {
           /* viewer count best-effort */
         }
-        if (data.youtubeChannelId) {
-          setUri(buildYoutubeChannelLiveEmbedUrl(data.youtubeChannelId));
-        } else {
-          setUri(`${frontendBase}/live/${streamId}`);
+
+        if (!WEB_APP_URL) {
+          setError('WEB_APP_URL nuk është konfiguruar në app.');
+          setMode('error');
+          return;
         }
+
+        const base = WEB_APP_URL.replace(/\/$/, '');
+        setWebUri(`${base}/live/${streamId}`);
+        setMode('web');
       } catch (err) {
         if (!cancelled) {
           setError(extractErrorMessage(err, 'Could not load stream'));
+          setMode('error');
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
       if (streamId) {
         leaveStreamRequest(streamId).catch(() => {});
       }
     };
-  }, [streamId, frontendBase]);
+  }, [streamId]);
 
   if (!streamId) {
     return (
@@ -74,23 +95,27 @@ export default function LiveViewerScreen({ route }) {
     );
   }
 
-  if (loading) {
+  if (mode === 'loading') {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#0f766e" />
+        <Text style={styles.loadingText}>Duke hapur stream…</Text>
       </View>
     );
   }
 
-  if (error && !recordingUri) {
+  if (mode === 'error') {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
+          <Text style={styles.btnText}>Kthehu</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  if (recordingUri) {
+  if (mode === 'recording' && recordingUri) {
     return (
       <View style={styles.container}>
         <Video
@@ -104,33 +129,83 @@ export default function LiveViewerScreen({ route }) {
     );
   }
 
-  if (!uri) {
+  if (mode === 'web' && webUri) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Could not open player.</Text>
+      <View style={styles.container}>
+        {youtubeChannelId ? (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText} numberOfLines={3}>
+              Nëse videoja YouTube është bosh, streameri duhet të nisë LIVE edhe në YouTube Studio për kanalin{' '}
+              {youtubeChannelId}.
+            </Text>
+          </View>
+        ) : null}
+        <WebView
+          style={styles.webview}
+          source={{ uri: webUri }}
+          injectedJavaScriptBeforeContentLoaded={injectedBefore}
+          javaScriptEnabled
+          domStorageEnabled
+          startInLoadingState
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          mixedContentMode="always"
+          onError={() =>
+            Alert.alert(
+              'Gabim',
+              'Nuk u ngarkua player-i. Kontrollo internetin dhe që footballpro.al është online.'
+            )
+          }
+          renderLoading={() => (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#0f766e" />
+            </View>
+          )}
+        />
+        {youtubeChannelId ? (
+          <TouchableOpacity
+            style={styles.ytLink}
+            onPress={() => {
+              const url = buildYoutubeChannelLiveWatchUrl(youtubeChannelId);
+              if (url) Linking.openURL(url).catch(() => {});
+            }}
+          >
+            <Text style={styles.ytLinkText}>Hap në YouTube</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <WebView
-        source={{ uri }}
-        startInLoadingState
-        renderLoading={() => (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#0f766e" />
-          </View>
-        )}
-        mediaPlaybackRequiresUserAction={false}
-        allowsInlineMediaPlayback
-      />
+    <View style={styles.centered}>
+      <Text style={styles.errorText}>Could not open player.</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontWeight: '700', padding: 16, textAlign: 'center' },
+  webview: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
+  loadingText: { marginTop: 12, color: '#64748b' },
+  errorText: { color: '#ef4444', fontWeight: '700', textAlign: 'center', marginBottom: 16 },
+  btn: { backgroundColor: '#0f766e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  btnText: { color: '#fff', fontWeight: '700' },
+  banner: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fcd34d',
+  },
+  bannerText: { color: '#92400e', fontSize: 12, lineHeight: 17 },
+  ytLink: {
+    padding: 10,
+    alignItems: 'center',
+    backgroundColor: '#111',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  ytLinkText: { color: '#5eead4', fontWeight: '700' },
 });

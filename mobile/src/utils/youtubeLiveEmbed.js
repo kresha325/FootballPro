@@ -11,3 +11,8 @@ export function buildYoutubeChannelLiveEmbedUrl(channelId, opts = {}) {
   });
   return `https://www.youtube.com/embed/live_stream?${q.toString()}`;
 }
+
+export function buildYoutubeChannelLiveWatchUrl(channelId) {
+  if (!channelId || typeof channelId !== 'string') return '';
+  return `https://www.youtube.com/channel/${channelId.trim()}/live`;
+}

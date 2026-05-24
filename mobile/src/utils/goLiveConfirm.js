@@ -16,8 +16,8 @@ export function getProfileYoutubeChannelId(user, profileData) {
  */
 export function confirmGoLiveAlert({ title, description, youtubeChannelId, onConfirm, onOpenSettings }) {
   const yt = youtubeChannelId
-    ? `Kanali YouTube (automatik):\n${youtubeChannelId}\n\nShikuesit shohin live-in e këtij kanali në YouTube.`
-    : 'YouTube: nuk ke vendosur Channel ID te Settings.\n\nDo përdoret LiveKit (kamera) ose udhëzime YouTube.';
+    ? `Kanali YouTube (profil): ${youtubeChannelId}\n\nNë telefon përdoret kamera (LiveKit). YouTube është opsional (Studio/OBS).`
+    : 'Do përdoret kamera (LiveKit) nga telefoni.';
 
   const buttons = [{ text: 'Anulo', style: 'cancel' }];
   if (!youtubeChannelId && onOpenSettings) {

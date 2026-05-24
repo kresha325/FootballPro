@@ -292,13 +292,15 @@ exports.createStream = async (req, res) => {
 
     const trimmedBody =
       bodyChannel !== undefined && bodyChannel !== null ? String(bodyChannel).trim() : '';
+    const playbackSource = String(req.body.playbackSource || 'auto').toLowerCase();
     let youtubeChannelId = null;
+
     if (trimmedBody) {
       youtubeChannelId = normalizeYoutubeChannelId(trimmedBody);
       if (!youtubeChannelId) {
         return res.status(400).json({ error: 'Invalid YouTube channel ID (expected UC… or /channel/UC… link).' });
       }
-    } else {
+    } else if (playbackSource !== 'livekit') {
       const prof = await Profile.findOne({
         where: { userId: streamerId },
         attributes: ['youtubeChannelId'],

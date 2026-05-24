@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Room, RoomEvent } from 'livekit-client';
 import { livekitAPI, streamsAPI } from '../services/api';
-import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
+import {
+  buildYoutubeChannelLiveEmbedUrl,
+  buildYoutubeChannelLiveWatchUrl,
+} from '../utils/youtubeLiveEmbed';
 
 export default function LiveStreamViewer() {
   const { streamId } = useParams();
@@ -142,10 +145,26 @@ export default function LiveStreamViewer() {
           </p>
         ) : null}
         {playback === 'youtube' && youtubeChannelId ? (
-          <p className="text-xs text-teal-700 dark:text-teal-300 mt-2">
-            Playback: YouTube Live (kanali i streamerit). Sigurohu që transmetimi është nisur në YouTube Studio / OBS për të
-            njëjtin kanal.
-          </p>
+          <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-sm text-amber-900 dark:text-amber-100">
+            <p className="font-semibold mb-1">YouTube Live — si funksionon</p>
+            <p className="text-xs leading-relaxed">
+              FootballPro shënon stream-in si LIVE, por videoja vjen nga <strong>YouTube</strong>. Nëse shikon
+              «This video is unavailable», në YouTube <strong>nuk ke filluar ende</strong> transmetimin për kanalin{' '}
+              <span className="font-mono">{youtubeChannelId}</span>.
+            </p>
+            <p className="text-xs mt-2 leading-relaxed">
+              Streameri: nis LIVE në <strong>YouTube Studio</strong> ose <strong>OBS</strong> (i njëjti kanal), pastaj
+              rifresko këtë faqe.
+            </p>
+            <a
+              href={buildYoutubeChannelLiveWatchUrl(youtubeChannelId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-xs font-semibold text-teal-700 dark:text-teal-300 underline"
+            >
+              Hap kanalin në YouTube →
+            </a>
+          </div>
         ) : null}
 
         {error ? (
