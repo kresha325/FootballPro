@@ -287,6 +287,17 @@ export const generateTournamentBracketRequest = (tournamentId) =>
 export const updateTournamentMatchScoreRequest = (matchId, payload) =>
   api.put(`/api/tournaments/matches/${matchId}/score`, payload);
 
+export const acceptTournamentParticipantRequest = (tournamentId, userId) =>
+  api.put(`/api/tournaments/${tournamentId}/participants/${userId}/accept`);
+
+export const rejectTournamentParticipantRequest = (tournamentId, userId) =>
+  api.put(`/api/tournaments/${tournamentId}/participants/${userId}/reject`);
+
+export const publicConfigRequest = () => api.get('/api/config/public');
+
+export const registerPushTokenRequest = (token, type = 'mobile') =>
+  api.post('/api/profiles/me/push-token', { token, type });
+
 export const premiumCheckoutRequest = (plan) => api.post('/api/premium/checkout', { plan });
 export const premiumVerifySessionRequest = (sessionId) => api.get(`/api/premium/verify-session/${sessionId}`);
 

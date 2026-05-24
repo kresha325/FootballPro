@@ -2,6 +2,7 @@ const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
 const stripe = require('stripe')(stripeKey);
 const User = require('../models/User');
 const Payment = require('../models/Payment');
+const { stripeLiveReady } = require('../config/payments');
 
 const PLANS = {
   monthly: {
@@ -19,8 +20,7 @@ const PLANS = {
 };
 
 function stripeConfigured() {
-  const key = process.env.STRIPE_SECRET_KEY || '';
-  return key && !key.includes('dummy') && key.startsWith('sk_');
+  return stripeLiveReady();
 }
 
 function frontendBase() {
@@ -89,7 +89,8 @@ exports.createPremiumCheckout = async (req, res) => {
       return res.json({
         mode: 'demo',
         success: true,
-        message: 'Premium activated (demo mode — configure STRIPE_SECRET_KEY for live payments).',
+        message:
+          'Premium aktiv (demo). Pagesat me kartë nuk janë aktive — vendos PAYMENTS_ENABLED=true vetëm kur të jesh gati për Stripe.',
         ...result,
       });
     }

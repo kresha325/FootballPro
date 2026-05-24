@@ -11,7 +11,8 @@ const {
   unfollowUser,
   getFollowers,
   getFollowing,
-  checkFollowStatus
+  checkFollowStatus,
+  registerPushToken,
 } = require('../controllers/profiles');
 const uploadCloud = require('../middleware/uploadCloudinary');
 
@@ -46,6 +47,8 @@ router.put('/me', auth, uploadCloud.fields([
   { name: 'profilePhoto', maxCount: 1 },
   { name: 'coverPhoto', maxCount: 1 }
 ]), updateProfile);
+
+router.post('/me/push-token', auth, registerPushToken);
 
 /**
  * FOLLOW A USER

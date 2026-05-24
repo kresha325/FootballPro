@@ -14,6 +14,7 @@ export default function SettingsScreen() {
     bio: user?.Profile?.bio || '',
     city: user?.Profile?.city || '',
     country: user?.Profile?.country || '',
+    youtubeChannelId: user?.Profile?.youtubeChannelId || '',
   });
 
   const handleSave = async () => {
@@ -37,6 +38,7 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Dark mode</Text>
           <Switch value={darkMode} onValueChange={setDarkMode} />
         </View>
+        <Text style={styles.hint}>Dark mode në mobile vjen në një përditësim të ardhshëm.</Text>
       </View>
 
       <View style={styles.card}>
@@ -45,6 +47,7 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Enable notifications</Text>
           <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} />
         </View>
+        <Text style={styles.hint}>Njoftimet push kërkojnë build me expo-notifications (API gati në server).</Text>
       </View>
 
       <View style={styles.card}>
@@ -54,6 +57,16 @@ export default function SettingsScreen() {
         <TextInput style={styles.input} value={profile.bio} onChangeText={(v) => setProfile((p) => ({ ...p, bio: v }))} placeholder="Bio" placeholderTextColor="#94a3b8" multiline />
         <TextInput style={styles.input} value={profile.city} onChangeText={(v) => setProfile((p) => ({ ...p, city: v }))} placeholder="City" placeholderTextColor="#94a3b8" />
         <TextInput style={styles.input} value={profile.country} onChangeText={(v) => setProfile((p) => ({ ...p, country: v }))} placeholder="Country" placeholderTextColor="#94a3b8" />
+        <Text style={styles.fieldLabel}>YouTube Channel ID (live)</Text>
+        <TextInput
+          style={styles.input}
+          value={profile.youtubeChannelId}
+          onChangeText={(v) => setProfile((p) => ({ ...p, youtubeChannelId: v }))}
+          placeholder="UCxxxxxxxxxxxxxxxx"
+          placeholderTextColor="#94a3b8"
+          autoCapitalize="none"
+        />
+        <Text style={styles.hint}>Për Go Live me YouTube embed (si në web Settings).</Text>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
           <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Settings'}</Text>
@@ -76,6 +89,8 @@ const styles = StyleSheet.create({
   },
   title: { color: '#0f172a', fontWeight: '800', fontSize: 16, marginBottom: 10 },
   label: { color: '#334155' },
+  fieldLabel: { color: '#475569', fontWeight: '600', marginBottom: 4, marginTop: 4 },
+  hint: { color: '#94a3b8', fontSize: 12, marginTop: 8, lineHeight: 16 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   input: {
     borderWidth: 1,

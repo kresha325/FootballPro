@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
   extractErrorMessage,
   premiumCheckoutRequest,
   premiumVerifySessionRequest,
+  publicConfigRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -40,6 +41,13 @@ export default function PremiumScreen() {
   const [selectedPlan, setSelectedPlan] = useState('monthly');
   const [loading, setLoading] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState(null);
+  const [paymentsLive, setPaymentsLive] = useState(false);
+
+  useEffect(() => {
+    publicConfigRequest()
+      .then((res) => setPaymentsLive(!!res.data?.paymentsEnabled && res.data?.premiumMode === 'stripe'))
+      .catch(() => setPaymentsLive(false));
+  }, []);
 
   React.useEffect(() => {
     AsyncStorage.getItem(PENDING_SESSION_KEY).then((id) => {
@@ -122,6 +130,15 @@ export default function PremiumScreen() {
         <Text style={styles.heroSub}>Zhblloko mjetet premium për karrierën tënde.</Text>
       </View>
 
+      {!paymentsLive ? (
+        <View style={styles.demoBanner}>
+          <Text style={styles.demoBannerTitle}>Pagesat jo aktive</Text>
+          <Text style={styles.demoBannerText}>
+            Premium aktivizohet në mënyrë demo (pa kartë). Pagesat Stripe do të aktivizohen më vonë.
+          </Text>
+        </View>
+      ) : null}
+
       <View style={[styles.statusCard, isPremium ? styles.active : styles.inactive]}>
         <Text style={styles.statusTitle}>{isPremium ? 'Premium aktiv' : 'Plani falas'}</Text>
         <Text style={styles.statusText}>
@@ -172,11 +189,13 @@ export default function PremiumScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>{isPremium ? 'Tashmë Premium' : 'Upgrade tani'}</Text>
+          <Text style={styles.buttonText}>
+            {isPremium ? 'Tashmë Premium' : paymentsLive ? 'Upgrade tani' : 'Aktivizo Premium (demo)'}
+          </Text>
         )}
       </TouchableOpacity>
 
-      {pendingSessionId && !isPremium ? (
+      {paymentsLive && pendingSessionId && !isPremium ? (
         <TouchableOpacity style={styles.verifyBtn} onPress={onVerifyPayment} disabled={loading}>
           <Text style={styles.verifyBtnText}>Kam përfunduar pagesën</Text>
         </TouchableOpacity>
@@ -200,6 +219,16 @@ const styles = StyleSheet.create({
   },
   heroTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
   heroSub: { color: 'rgba(255,255,255,0.9)', marginTop: 6, fontSize: 15 },
+  demoBanner: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  demoBannerTitle: { color: '#92400e', fontWeight: '800', marginBottom: 4 },
+  demoBannerText: { color: '#78350f', fontSize: 13, lineHeight: 18 },
   statusCard: {
     borderWidth: 1,
     borderRadius: 12,

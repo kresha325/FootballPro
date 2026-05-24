@@ -13,6 +13,8 @@ import {
 import {
   extractErrorMessage,
   generateTournamentBracketRequest,
+  acceptTournamentParticipantRequest,
+  rejectTournamentParticipantRequest,
   joinTournamentRequest,
   leaveTournamentRequest,
   startTournamentRequest,
@@ -137,6 +139,10 @@ const statsStyles = StyleSheet.create({
   recentScore: { fontSize: 15, fontWeight: '800', color: '#0f172a', fontVariant: ['tabular-nums'] },
   recentNames: { fontSize: 12, color: '#64748b', marginTop: 2 },
 });
+
+function participantJoinStatus(p) {
+  return p?.TournamentParticipant?.status || p?.status || 'accepted';
+}
 
 export default function TournamentDetailScreen({ route, navigation }) {
   const { user } = useAuth();
@@ -335,6 +341,33 @@ export default function TournamentDetailScreen({ route, navigation }) {
     }
   };
 
+  const onRejectParticipant = (participantUserId) => {
+    Alert.alert('Refuzo pjesëmarrësin', 'Je i sigurt?', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Refuzo',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await rejectTournamentParticipantRequest(tournamentId, participantUserId);
+            loadDetail();
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u refuzua'));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onAcceptParticipant = async (participantUserId) => {
+    try {
+      await acceptTournamentParticipantRequest(tournamentId, participantUserId);
+      loadDetail();
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u pranua'));
+    }
+  };
+
   if (!tournamentId) {
     return (
       <View style={styles.centered}>
@@ -449,11 +482,29 @@ export default function TournamentDetailScreen({ route, navigation }) {
           {participants.length === 0 ? (
             <Text style={styles.muted}>No participants yet.</Text>
           ) : (
-            participants.slice(0, 30).map((p) => (
-              <Text key={String(p.id)} style={styles.row}>
-                {participantLabel(p, pt)}
-              </Text>
-            ))
+            participants.slice(0, 30).map((p) => {
+              const joinStatus = participantJoinStatus(p);
+              return (
+                <View key={String(p.id)} style={styles.participantRow}>
+                  <View style={styles.participantInfo}>
+                    <Text style={styles.row}>{participantLabel(p, pt)}</Text>
+                    {joinStatus !== 'accepted' ? (
+                      <Text style={styles.participantStatus}>{joinStatus}</Text>
+                    ) : null}
+                  </View>
+                  {isCreator && tournament?.status === 'open' && joinStatus === 'pending' ? (
+                    <View style={styles.participantActions}>
+                      <TouchableOpacity style={styles.acceptBtn} onPress={() => onAcceptParticipant(p.id)}>
+                        <Text style={styles.acceptBtnText}>Prano</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.rejectBtn} onPress={() => onRejectParticipant(p.id)}>
+                        <Text style={styles.rejectBtnText}>Refuzo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })
           )}
           <TournamentStatsBlock stats={stats} onOpenMatch={openMatch} />
         </View>
@@ -684,6 +735,21 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontWeight: '800', color: '#0f172a', marginBottom: 8 },
   row: { color: '#334155', marginBottom: 4 },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  participantInfo: { flex: 1, marginRight: 8 },
+  participantStatus: { color: '#b45309', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
+  participantActions: { flexDirection: 'row', gap: 6 },
+  acceptBtn: { backgroundColor: '#0f766e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  acceptBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  rejectBtn: { borderWidth: 1, borderColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  rejectBtnText: { color: '#dc2626', fontWeight: '700', fontSize: 12 },
   muted: { color: '#64748b', marginBottom: 6 },
   standRow: {
     flexDirection: 'row',

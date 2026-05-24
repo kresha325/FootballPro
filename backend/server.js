@@ -204,6 +204,7 @@ try {
 
 // Routes
 
+app.use('/api/config', require('./routes/config'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/profiles', require('./routes/profiles'));
