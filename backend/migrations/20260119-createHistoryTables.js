@@ -1,6 +1,6 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-        // Krijo tipin ENUM për staffRole nëse mungon
+        // Krijo tipet ENUM për ClubStaff nëse mungojnë (para createTable)
         await queryInterface.sequelize.query(`
           DO $$
           BEGIN
@@ -12,6 +12,14 @@ module.exports = {
                 'medical_staff', 'doctor', 'assistant_doctor', 'physiotherapist', 'sports_psychologist', 'nutritionist',
                 'masseur', 'scout', 'analyst', 'video_analyst', 'media_officer', 'security_officer', 'logistics_manager',
                 'kit_manager', 'equipment_manager', 'groundskeeper', 'other'
+              );
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_ClubStaff_status') THEN
+              CREATE TYPE "enum_ClubStaff_status" AS ENUM ('pending', 'active', 'inactive');
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_ClubStaff_teamType') THEN
+              CREATE TYPE "enum_ClubStaff_teamType" AS ENUM (
+                'first_team', 'youth', 'women', 'men', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u9'
               );
             END IF;
           END$$;

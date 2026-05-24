@@ -386,8 +386,8 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
-      <>
+    <View style={{ flex: 1 }}>
+      <NavigationContainer ref={navigationRef} linking={linking} style={{ flex: 1 }}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!token ? (
             <>
@@ -409,8 +409,8 @@ export default function AppNavigator() {
             </>
           )}
         </Stack.Navigator>
-        {token ? <IncomingCallListener /> : null}
-      </>
-    </NavigationContainer>
+      </NavigationContainer>
+      {token ? <IncomingCallListener /> : null}
+    </View>
   );
 }

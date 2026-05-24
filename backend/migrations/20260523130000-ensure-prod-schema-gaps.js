@@ -25,22 +25,37 @@ async function addColumnIfMissing(queryInterface, Sequelize, table, column, defi
   await queryInterface.addColumn(table, column, definition);
 }
 
-async function ensureClubStaffEnum(queryInterface) {
-  await queryInterface.sequelize.query(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_ClubStaff_staffRole') THEN
-        CREATE TYPE "enum_ClubStaff_staffRole" AS ENUM (
-          'president', 'vice_president', 'chairman', 'ceo', 'general_manager', 'sporting_director', 'technical_director',
+async function ensureClubStaffEnums(queryInterface) {
+  const blocks = [
+    {
+      typname: 'enum_ClubStaff_staffRole',
+      values: `'president', 'vice_president', 'chairman', 'ceo', 'general_manager', 'sporting_director', 'technical_director',
           'director_of_football', 'academy_director', 'youth_director', 'team_manager', 'secretary_general', 'secretary',
           'head_coach', 'assistant_coach', 'fitness_coach', 'goalkeeper_coach', 'technical_coach', 'tactical_coach',
           'medical_staff', 'doctor', 'assistant_doctor', 'physiotherapist', 'sports_psychologist', 'nutritionist',
           'masseur', 'scout', 'analyst', 'video_analyst', 'media_officer', 'security_officer', 'logistics_manager',
-          'kit_manager', 'equipment_manager', 'groundskeeper', 'other'
-        );
-      END IF;
-    END$$;
-  `);
+          'kit_manager', 'equipment_manager', 'groundskeeper', 'other'`,
+    },
+    {
+      typname: 'enum_ClubStaff_status',
+      values: `'pending', 'active', 'inactive'`,
+    },
+    {
+      typname: 'enum_ClubStaff_teamType',
+      values: `'first_team', 'youth', 'women', 'men', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u9'`,
+    },
+  ];
+
+  for (const { typname, values } of blocks) {
+    await queryInterface.sequelize.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '${typname}') THEN
+          CREATE TYPE "${typname}" AS ENUM (${values});
+        END IF;
+      END$$;
+    `);
+  }
 }
 
 module.exports = {
@@ -264,7 +279,7 @@ module.exports = {
     }
 
     if (dialect === 'postgres') {
-      await ensureClubStaffEnum(queryInterface);
+      await ensureClubStaffEnums(queryInterface);
     }
 
     if (!(await tableExists(queryInterface, 'ClubStaff'))) {
