@@ -4,6 +4,7 @@ import { Room, createLocalTracks, RoomEvent } from 'livekit-client';
 import { livekitAPI, profileAPI, streamsAPI } from '../services/api';
 import { buildYoutubeChannelLiveEmbedUrl } from '../utils/youtubeLiveEmbed';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
+import { preferLiveKitBroadcast } from '../utils/device';
 
 function postToNative(payload) {
   try {
@@ -11,10 +12,6 @@ function postToNative(payload) {
   } catch (_e) {
     /* not in WebView */
   }
-}
-
-function isReactNativeWebView() {
-  return typeof window !== 'undefined' && !!window.ReactNativeWebView;
 }
 
 /**
@@ -162,7 +159,7 @@ export default function EmbedGoLive() {
             title,
             description,
             isPremium: false,
-            ...(isReactNativeWebView() ? { playbackSource: 'livekit' } : {}),
+            ...(preferLiveKitBroadcast() ? { playbackSource: 'livekit' } : {}),
           });
           id = created?.data?.id;
           if (!id) throw new Error('Stream creation returned no id');
@@ -182,9 +179,9 @@ export default function EmbedGoLive() {
           }
         };
 
-        const mobileEmbed = isReactNativeWebView();
+        const useLiveKitFirst = preferLiveKitBroadcast();
 
-        if (streamData?.youtubeChannelId && !mobileEmbed) {
+        if (streamData?.youtubeChannelId && !useLiveKitFirst) {
           await markLive();
           setPhase('youtube');
           postToNative({ type: 'goLiveStarted', streamId: id, mode: 'youtube' });
@@ -194,7 +191,7 @@ export default function EmbedGoLive() {
         try {
           await startLiveKit(id);
           await markLive();
-          if (streamData?.youtubeChannelId && mobileEmbed) {
+          if (streamData?.youtubeChannelId && useLiveKitFirst) {
             setError(
               'Kamera aktive (LiveKit). Për shikues në YouTube, nis edhe transmetimin në YouTube Studio/OBS për të njëjtin kanal.'
             );
@@ -260,7 +257,7 @@ export default function EmbedGoLive() {
 
   if (!broadcastStarted) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
+      <div className="min-h-[100dvh] bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
         <h1 className="text-xl font-bold mb-3">Konfirmo Go Live</h1>
         <p className="text-sm text-gray-300 mb-1">
           Titulli: <strong>{title}</strong>
@@ -295,7 +292,7 @@ export default function EmbedGoLive() {
 
   if (phase === 'ended') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
+      <div className="min-h-[100dvh] bg-gray-900 text-white flex flex-col items-center justify-center p-6 max-w-md mx-auto">
         <p className="text-lg font-semibold mb-2 text-center">Transmetimi u mbyll</p>
         {replaySaved ? (
           <p className="text-teal-300 text-sm mb-4 text-center">
@@ -330,7 +327,7 @@ export default function EmbedGoLive() {
 
   if (phase === 'error' && !stream) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-gray-900 text-white flex flex-col items-center justify-center p-6">
         <p className="text-center text-red-300 mb-6">{error || 'Gabim'}</p>
         <button type="button" className="px-4 py-2 rounded-lg bg-gray-700" onClick={handleClose}>
           Mbyll
@@ -343,7 +340,7 @@ export default function EmbedGoLive() {
   const ytEmbed = ytId ? buildYoutubeChannelLiveEmbedUrl(ytId) : null;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-black text-white flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800">
         <div className="min-w-0">
           <p className="font-bold truncate">{stream?.title || title}</p>
@@ -362,8 +359,14 @@ export default function EmbedGoLive() {
       </div>
 
       {phase === 'livekit' ? (
-        <div className="flex-1 relative bg-black flex items-center justify-center">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-[70vh] object-contain" />
+        <div className="flex-1 relative bg-black flex items-center justify-center min-h-0">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full max-h-[calc(100dvh-3.5rem)] object-cover sm:object-contain"
+          />
           <p className="absolute bottom-4 left-4 text-xs bg-black/60 px-2 py-1 rounded">
             Shikuesit: {stream?.viewers ?? 0}
           </p>

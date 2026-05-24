@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { streamsAPI } from '../services/api';
+import { dedupeLiveByStreamer } from '../utils/liveStreams';
 import LiveViewer from './LiveViewer';
 import io from 'socket.io-client';
 
@@ -9,8 +10,8 @@ export default function LiveAvatars({ onOpenViewer }) {
 
   const fetchLive = async () => {
     try {
-      const res = await streamsAPI.getStreams();
-      const live = (res.data || []).filter(s => s.isLive);
+      const res = await streamsAPI.getStreams({ isLive: true, limit: 12 });
+      const live = dedupeLiveByStreamer((res.data || []).filter((s) => s.isLive));
       setLiveStreams(live);
     } catch (e) {
       console.error('Failed to fetch live streams', e);

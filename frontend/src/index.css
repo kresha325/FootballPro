@@ -11,6 +11,14 @@
   .hide-scrollbar-mobile::-webkit-scrollbar {
     display: none;
   }
+
+  .live-fullscreen {
+    @apply bg-black;
+  }
+
+  .live-fullscreen main {
+    @apply bg-black;
+  }
 }
 
 /* ---------------- GLOBAL BASE ---------------- */

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { profileAPI } from '../services/api';
+import { profileAPI, youtubeAPI } from '../services/api';
+import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
@@ -17,6 +18,9 @@ const Settings = () => {
   });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+  const [resolvingYoutube, setResolvingYoutube] = useState(false);
+  const [resolveError, setResolveError] = useState('');
+  const resolveSkipRef = useRef(false);
 
   useEffect(() => {
     setDarkMode(localStorage.getItem('theme') === 'dark');
@@ -52,6 +56,71 @@ const Settings = () => {
     localStorage.setItem(NOTIFICATIONS_PREF_KEY, next ? 'true' : 'false');
   };
 
+  const resolveYoutubeFromInput = async (raw, { silent } = { silent: false }) => {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) {
+      setResolveError('');
+      return null;
+    }
+    const existing = normalizeYoutubeChannelId(trimmed);
+    if (existing) {
+      setResolveError('');
+      if (trimmed !== existing) {
+        resolveSkipRef.current = true;
+        setProfile((p) => ({ ...p, youtubeChannelId: existing }));
+      }
+      return existing;
+    }
+    if (!needsYoutubeResolve(trimmed)) {
+      setResolveError('Format i panjohur — përdor linkun nga YouTube Share.');
+      return null;
+    }
+
+    setResolvingYoutube(true);
+    setResolveError('');
+    try {
+      const res = await youtubeAPI.resolveChannel(trimmed);
+      const id = res.data?.channelId || null;
+      if (!id) {
+        setResolveError('Nuk u gjet kanali. Kontrollo emrin @ ose lidhu me internet.');
+        if (!silent) setSaveMessage({ type: 'error', text: 'Nuk u gjet Channel ID.' });
+        return null;
+      }
+      resolveSkipRef.current = true;
+      setProfile((p) => ({ ...p, youtubeChannelId: id }));
+      setResolveError('');
+      if (!silent) setSaveMessage({ type: 'ok', text: `U gjet ID: ${id}` });
+      return id;
+    } catch (err) {
+      const msg = err?.response?.data?.msg || err?.message || 'Nuk u gjet Channel ID';
+      setResolveError(msg);
+      if (!silent) setSaveMessage({ type: 'error', text: msg });
+      return null;
+    } finally {
+      setResolvingYoutube(false);
+    }
+  };
+
+  useEffect(() => {
+    const raw = String(profile.youtubeChannelId || '').trim();
+    if (!raw || normalizeYoutubeChannelId(raw)) {
+      setResolveError('');
+      return undefined;
+    }
+    if (!needsYoutubeResolve(raw)) return undefined;
+    if (resolveSkipRef.current) {
+      resolveSkipRef.current = false;
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      resolveYoutubeFromInput(raw, { silent: true });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [profile.youtubeChannelId]);
+
+  const handleResolveYoutube = () => resolveYoutubeFromInput(profile.youtubeChannelId, { silent: false });
+
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setSaveMessage({ type: '', text: '' });
@@ -66,11 +135,24 @@ const Settings = () => {
 
     setSaving(true);
     try {
+      let yt = String(profile.youtubeChannelId || '').trim();
+      let ytNorm = normalizeYoutubeChannelId(yt);
+
+      if (yt && !ytNorm && needsYoutubeResolve(yt)) {
+        ytNorm = await resolveYoutubeFromInput(yt, { silent: true });
+        if (ytNorm) yt = ytNorm;
+      }
+
+      if (yt && !ytNorm) {
+        setSaveMessage({ type: 'error', text: 'YouTube ID i pavlefshëm ose nuk u zgjidh.' });
+        return;
+      }
+
       const form = new FormData();
       form.append('firstName', firstName);
       form.append('lastName', lastName);
       form.append('bio', profile.bio || '');
-      form.append('youtubeChannelId', (profile.youtubeChannelId || '').trim());
+      form.append('youtubeChannelId', ytNorm || yt);
       await profileAPI.updateProfile(form);
       await refreshUser();
       setSaveMessage({ type: 'ok', text: 'Profili u përditësua.' });
@@ -83,7 +165,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-white dark:bg-gray-800 rounded-lg shadow-md">
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Settings</h1>
 
 
@@ -192,17 +274,34 @@ const Settings = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               YouTube channel ID (live)
             </label>
-            <input
-              type="text"
-              value={profile.youtubeChannelId}
-              onChange={(e) => setProfile({ ...profile, youtubeChannelId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
-              placeholder="UC… (24 karaktere) ose link …/channel/UC…"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Lëre bosh për LiveKit. Nëse e plotëson, çdo stream i ri do të lidhet me live-in e këtij kanali në YouTube (OBS →
-              YouTube), dhe shikuesit hapin embed YouTube.
-            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={profile.youtubeChannelId}
+                onChange={(e) => setProfile({ ...profile, youtubeChannelId: e.target.value })}
+                className="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+                placeholder="UC… ose link @handle / Share"
+              />
+              <button
+                type="button"
+                onClick={handleResolveYoutube}
+                disabled={resolvingYoutube || !profile.youtubeChannelId?.trim()}
+                className="shrink-0 px-3 py-2 rounded-md bg-gray-800 dark:bg-gray-600 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {resolvingYoutube ? 'Duke kërkuar…' : 'Gjej UC…'}
+              </button>
+            </div>
+            {resolveError ? (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{resolveError}</p>
+            ) : needsYoutubeResolve(profile.youtubeChannelId) ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Link @ — do të zgjidhet automatikisht ose shtyp «Gjej UC…».
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Lëre bosh për LiveKit. Nëse e plotëson, stream-et e reja lidhen me YouTube (OBS → YouTube).
+              </p>
+            )}
           </div>
           <button
             type="submit"

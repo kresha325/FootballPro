@@ -114,7 +114,7 @@ function Navbar() {
 
       let res;
       try {
-        res = await streamsAPI.createStream({ ...payload, isPremium: false });
+        res = await streamsAPI.createStream({ ...payload, isPremium: false, playbackSource: 'livekit' });
       } catch (_streamErr) {
         res = await liveStreamAPI.start(payload);
       }

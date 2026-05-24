@@ -47,6 +47,15 @@ if (db.Match) {
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
 setInterval(deleteExpiredAds, 60 * 60 * 1000);
+const { expireStaleLiveStreams } = require('./utils/streamLive');
+expireStaleLiveStreams()
+  .then((n) => {
+    if (n > 0) console.log(`Expired ${n} stale live stream(s) on startup`);
+  })
+  .catch((err) => console.warn('expireStaleLiveStreams startup:', err?.message || err));
+setInterval(() => {
+  expireStaleLiveStreams().catch((err) => console.warn('expireStaleLiveStreams:', err?.message || err));
+}, 15 * 60 * 1000);
 // Import models
 const User = require('./models/User');
 const Achievement = require('./models/Achievement');

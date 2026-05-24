@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import { streamsAPI } from '../services/api';
+import { dedupeLiveByStreamer } from '../utils/liveStreams';
 
 const POLL_MS = 8000;
 const LIMIT = 12;
@@ -35,7 +36,7 @@ export default function FeedLiveNow() {
     try {
       const res = await streamsAPI.getStreams({ isLive: true, limit: LIMIT });
       const list = Array.isArray(res.data) ? res.data : [];
-      setLiveStreams(list.filter((s) => s.isLive));
+      setLiveStreams(dedupeLiveByStreamer(list.filter((s) => s.isLive)));
     } catch (e) {
       console.error('FeedLiveNow: failed to fetch live streams', e);
       setLiveStreams([]);
@@ -90,7 +91,7 @@ export default function FeedLiveNow() {
           See all
         </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex gap-3 overflow-x-auto pb-1 hide-scrollbar-mobile" style={{ WebkitOverflowScrolling: 'touch' }}>
         {liveStreams.map((stream) => {
           const streamer = stream?.streamer || {};
           const name =

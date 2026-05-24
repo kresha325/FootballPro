@@ -419,7 +419,7 @@ const Profile = () => {
 
       let res;
       try {
-        res = await streamsAPI.createStream({ ...payload, isPremium: false });
+        res = await streamsAPI.createStream({ ...payload, isPremium: false, playbackSource: 'livekit' });
       } catch (_streamErr) {
         // Keep compatibility with deployments that still use /live-stream.
         res = await liveStreamAPI.start(payload);

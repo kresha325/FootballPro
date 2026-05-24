@@ -337,5 +337,9 @@ export const aiAPI = {
   suggestPost: (data) => API.post('/ai/suggest-post', data),
 };
 
+export const youtubeAPI = {
+  resolveChannel: (url) => API.get('/youtube/resolve', { params: { url } }),
+};
+
 export default API;
 export { API };

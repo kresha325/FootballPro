@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { dedupeLiveByStreamer } from '../utils/liveStreams';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -55,7 +56,7 @@ export default function StreamsPage() {
         const res = await API.get('/streams', { params: { limit: 50 } });
         const all = Array.isArray(res.data) ? res.data : [];
         setStreams(all);
-        setLiveStreams(all.filter((s) => s.isLive));
+        setLiveStreams(dedupeLiveByStreamer(all.filter((s) => s.isLive)));
       } catch (err) {
         console.error('Streams fetch error:', err);
         setStreams([]);
@@ -92,7 +93,7 @@ export default function StreamsPage() {
   const recorded = streams.filter((s) => !s.isLive && s.videoUrl);
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="max-w-3xl mx-auto py-6 sm:py-8 px-3 sm:px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Streams</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         Live aktive hapen me të njëjtin player si në Feed (YouTube ose LiveKit). Ngarko regjistrime më poshtë.

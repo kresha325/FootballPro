@@ -7,6 +7,11 @@ const cloudinary = require('../utils/cloudinary');
 const Gallery = require('../models/Gallery');
 const Post = require('../models/Post');
 const { persistLiveReplay } = require('../utils/persistLiveReplay');
+const {
+  expireStaleLiveStreams,
+  endOtherLiveStreamsForStreamer,
+  isStreamStale,
+} = require('../utils/streamLive');
 
 exports.uploadRecording = async (req, res) => {
   try {
@@ -224,11 +229,13 @@ exports.goLiveWebRTC = async (req, res) => {
         isLive: true,
         type: 'webrtc',
       });
+      await endOtherLiveStreamsForStreamer(streamerId, stream.id);
     } else {
       stream.isLive = true;
-        stream.title = req.body.title || 'WebRTC Live';
-        stream.description = req.body.description || '';
+      stream.title = req.body.title || 'WebRTC Live';
+      stream.description = req.body.description || '';
       await stream.save();
+      await endOtherLiveStreamsForStreamer(streamerId, stream.id);
     }
     try {
       const io = socketUtil.getIo();
@@ -338,6 +345,8 @@ exports.createStream = async (req, res) => {
 
 exports.getStreams = async (req, res) => {
   try {
+    await expireStaleLiveStreams();
+
     const { isLive, limit = 20, userId } = req.query;
     const whereClause = {};
     if (isLive === 'true') {
@@ -381,6 +390,9 @@ exports.getStreams = async (req, res) => {
     // Shto hlsUrl për çdo stream live
     const streamsWithHls = streams.map(stream => {
       const s = stream.toJSON ? stream.toJSON() : stream;
+      if (isStreamStale(s)) {
+        s.isLive = false;
+      }
       if (s.isLive && s.streamKey) {
         s.hlsUrl = `/live/${s.streamKey}/index.m3u8`;
       }
@@ -408,6 +420,8 @@ exports.getStreams = async (req, res) => {
 
 exports.getStream = async (req, res) => {
   try {
+    await expireStaleLiveStreams();
+
     const { id } = req.params;
     const stream = await Stream.findByPk(id, {
       attributes: [
@@ -442,6 +456,13 @@ exports.getStream = async (req, res) => {
     }
 
     const out = stream.toJSON ? stream.toJSON() : stream;
+    if (isStreamStale(out)) {
+      stream.isLive = false;
+      stream.viewers = 0;
+      await stream.save();
+      out.isLive = false;
+      out.viewers = 0;
+    }
     if (out.youtubeChannelId) {
       out.youtubeEmbedUrl = youtubeLiveEmbedUrl(out.youtubeChannelId);
     }
@@ -462,6 +483,8 @@ exports.startStream = async (req, res) => {
 
     stream.isLive = true;
     await stream.save();
+
+    await endOtherLiveStreamsForStreamer(stream.streamerId, stream.id);
 
     try {
       const io = socketUtil.getIo();

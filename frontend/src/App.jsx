@@ -54,6 +54,8 @@ import AuthCallback from './components/AuthCallback';
 function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const isFullscreenRoute =
+    location.pathname.startsWith('/embed-') || /^\/live\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
     document.title = 'FootballPro';
@@ -74,13 +76,21 @@ function App() {
     <ErrorBoundary>
       <CartProvider>
       <PostsProvider>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-          {user && <Navbar />}
-          {user && <BottomNav />}
+        <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isFullscreenRoute ? 'live-fullscreen' : ''}`}>
+          {user && !isFullscreenRoute && <Navbar />}
+          {user && !isFullscreenRoute && <BottomNav />}
           {user && <XPNotificationManager />}
           {user && <VideoCallManager />}
 
-          <main className={user ? "pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto" : ''}>
+          <main
+            className={
+              user
+                ? isFullscreenRoute
+                  ? 'min-h-[100dvh] max-w-none mx-0 px-0 pt-0 pb-0'
+                  : 'pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto'
+                : ''
+            }
+          >
           <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
             <Routes>
 
