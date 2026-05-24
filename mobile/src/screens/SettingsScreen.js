@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -38,6 +38,8 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resolvingYoutube, setResolvingYoutube] = useState(false);
+  const [resolveError, setResolveError] = useState('');
+  const resolveSkipRef = useRef(false);
   const [profile, setProfile] = useState(() => profileFromUser(user));
 
   useEffect(() => {
@@ -49,51 +51,78 @@ export default function SettingsScreen() {
     [profile.youtubeChannelId]
   );
 
-  const handleResolveYoutube = async () => {
-    const raw = String(profile.youtubeChannelId || '').trim();
-    if (!raw) {
-      Alert.alert('YouTube', 'Ngjit linkun e kanalit (@emri ose Share link).');
-      return;
+  const resolveYoutubeFromInput = async (raw, { silent } = { silent: false }) => {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) {
+      setResolveError('');
+      return null;
     }
-    const existing = normalizeYoutubeChannelId(raw);
+    const existing = normalizeYoutubeChannelId(trimmed);
     if (existing) {
-      setProfile((p) => ({ ...p, youtubeChannelId: existing }));
-      Alert.alert('OK', `ID tashmë valid:\n${existing}`);
-      return;
-    }
-    setResolvingYoutube(true);
-    try {
-      const res = await youtubeResolveChannelRequest(raw);
-      const id = res.data?.channelId;
-      if (!id) {
-        Alert.alert('Nuk u gjet', 'Kontrollo që ke kanal publik dhe linkun e saktë nga Share.');
-        return;
+      setResolveError('');
+      if (trimmed !== existing) {
+        resolveSkipRef.current = true;
+        setProfile((p) => ({ ...p, youtubeChannelId: existing }));
       }
+      return existing;
+    }
+    if (!needsYoutubeResolve(trimmed)) {
+      setResolveError('Format i panjohur — përdor linkun nga YouTube Share.');
+      return null;
+    }
+
+    setResolvingYoutube(true);
+    setResolveError('');
+    try {
+      const res = await youtubeResolveChannelRequest(trimmed);
+      const id = res.data?.channelId || null;
+      if (!id) {
+        setResolveError('Nuk u gjet kanali. Kontrollo emrin @ ose lidhu me internet.');
+        if (!silent) Alert.alert('Nuk u gjet', 'Kontrollo që ke kanal publik dhe linkun e saktë nga Share.');
+        return null;
+      }
+      resolveSkipRef.current = true;
       setProfile((p) => ({ ...p, youtubeChannelId: id }));
-      Alert.alert('U gjet ID', id);
+      setResolveError('');
+      if (!silent) Alert.alert('U gjet ID', id);
+      return id;
     } catch (err) {
-      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u gjet Channel ID'));
+      const msg = extractErrorMessage(err, 'Nuk u gjet Channel ID');
+      setResolveError(msg);
+      if (!silent) Alert.alert('Gabim', msg);
+      return null;
     } finally {
       setResolvingYoutube(false);
     }
   };
+
+  useEffect(() => {
+    const raw = String(profile.youtubeChannelId || '').trim();
+    if (!raw || normalizeYoutubeChannelId(raw)) {
+      setResolveError('');
+      return undefined;
+    }
+    if (!needsYoutubeResolve(raw)) return undefined;
+    if (resolveSkipRef.current) {
+      resolveSkipRef.current = false;
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      resolveYoutubeFromInput(raw, { silent: true });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [profile.youtubeChannelId]);
+
+  const handleResolveYoutube = () => resolveYoutubeFromInput(profile.youtubeChannelId, { silent: false });
 
   const handleSave = async () => {
     let yt = String(profile.youtubeChannelId || '').trim();
     let ytNorm = normalizeYoutubeChannelId(yt);
 
     if (yt && !ytNorm && needsYoutubeResolve(yt)) {
-      setSaving(true);
-      try {
-        const res = await youtubeResolveChannelRequest(yt);
-        ytNorm = res.data?.channelId || null;
-        if (ytNorm) {
-          yt = ytNorm;
-          setProfile((p) => ({ ...p, youtubeChannelId: ytNorm }));
-        }
-      } catch (_err) {
-        /* provo mesazh më poshtë */
-      }
+      ytNorm = await resolveYoutubeFromInput(yt, { silent: true });
+      if (ytNorm) yt = ytNorm;
     }
 
     if (yt && !ytNorm) {
@@ -193,11 +222,19 @@ export default function SettingsScreen() {
         />
 
         {profile.youtubeChannelId?.trim() ? (
-          normalizedYoutube ? (
+          resolvingYoutube ? (
+            <Text style={styles.pendingHint}>Duke gjetur Channel ID nga linku…</Text>
+          ) : normalizedYoutube ? (
             <Text style={styles.okHint}>✓ ID valid: {normalizedYoutube}</Text>
+          ) : resolveError ? (
+            <Text style={styles.errHint}>{resolveError}</Text>
+          ) : needsYoutubeResolve(profile.youtubeChannelId) ? (
+            <Text style={styles.pendingHint}>
+              Link @ i saktë — shtyp butonin e gjelbër ose prit pak sekonda…
+            </Text>
           ) : (
             <Text style={styles.errHint}>
-              Jo valid — përdor «Gjej ID nga linku» ose UC… (~24 karaktere gjithsej)
+              Jo valid — duhet UC… (~24 karaktere) ose link @ nga Share
             </Text>
           )
         ) : (

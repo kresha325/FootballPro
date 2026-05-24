@@ -41,6 +41,9 @@ function buildYoutubeFetchTarget(input) {
   if (/^https?:\/\//i.test(s)) {
     return { fetchUrl: s, channelId: null };
   }
+  if (/^(www\.)?youtube\.com/i.test(s) || /^(www\.)?youtu\.be/i.test(s)) {
+    return { fetchUrl: `https://${s.replace(/^\/+/, '')}`, channelId: null };
+  }
 
   const handleFromAt = s.match(/(?:youtube\.com\/@|youtu\.be\/@?)([a-zA-Z0-9._-]+)/i);
   const bareHandle = s.replace(/^@/, '').split(/[/?#]/)[0];
