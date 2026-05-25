@@ -68,12 +68,12 @@ function BottomNav() {
     <NavLink
       to="/feed"
       className={({ isActive }) =>
-        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
       aria-label="Home"
     >
       <span className="text-2xl">🏠</span>
-      <span className="text-xs md:hidden">Home</span>
+      <span className="text-xs">Home</span>
     </NavLink>
   );
 
@@ -81,7 +81,7 @@ function BottomNav() {
     <NavLink
       to="/marketplace"
       className={({ isActive }) =>
-        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
       aria-label="Marketplace"
     >
@@ -93,20 +93,7 @@ function BottomNav() {
           </span>
         ) : null}
       </span>
-      <span className="text-xs md:hidden">Shop</span>
-    </NavLink>
-  );
-
-  const tournamentsLink = (extra = "") => (
-    <NavLink
-      to="/tournaments"
-      className={({ isActive }) =>
-        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
-      }
-      aria-label="Tournaments"
-    >
-      <span className="text-2xl">🏆</span>
-      <span className="text-xs md:hidden">Cups</span>
+      <span className="text-xs">Shop</span>
     </NavLink>
   );
 
@@ -117,7 +104,7 @@ function BottomNav() {
       <NavLink
         to="/messaging"
         className={({ isActive }) =>
-          `flex flex-col items-center gap-0.5 px-2 py-1 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} md:flex-row md:gap-1 md:px-4 md:py-2 ${elevated ? "rounded-full bg-white dark:bg-gray-900 shadow-md ring-2 ring-blue-500/30 -mt-3 mb-0.5" : ""}`
+          `flex flex-col items-center gap-0.5 px-2 py-1 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${elevated ? "rounded-full bg-white dark:bg-gray-900 shadow-md ring-2 ring-blue-500/30 -mt-3 mb-0.5" : ""}`
         }
         aria-label="Chats"
       >
@@ -129,7 +116,7 @@ function BottomNav() {
             </span>
           ) : null}
         </span>
-        <span className="text-[10px] md:text-xs leading-none md:hidden">Chats</span>
+        <span className="text-[10px] leading-none">Chats</span>
       </NavLink>
     );
   };
@@ -141,11 +128,11 @@ function BottomNav() {
         onClick={() =>
           window.dispatchEvent(new CustomEvent("open-live-modal", { detail: { openCameraFirst: true } }))
         }
-        className={`flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 text-red-600 ${extra}`}
+        className={`flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 text-red-600 ${extra}`}
         aria-label="Go Live"
       >
         <span className="text-2xl">🔴</span>
-        <span className="text-xs md:hidden">Live</span>
+        <span className="text-xs">Live</span>
       </button>
     ) : null;
 
@@ -153,7 +140,7 @@ function BottomNav() {
     <NavLink
       to={`/profile/${user?.id}`}
       className={({ isActive }) =>
-        `flex flex-col md:flex-row items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
       aria-label="Profile"
     >
@@ -172,41 +159,27 @@ function BottomNav() {
           {user?.firstName?.[0]}
         </div>
       )}
-      <span className="text-xs md:hidden">Profile</span>
+      <span className="text-xs">Profile</span>
     </NavLink>
   );
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 md:fixed md:right-6 md:top-1/2 md:-translate-y-1/2 md:left-auto md:bottom-auto bg-white dark:bg-gray-800 border-t md:border md:border-gray-200 dark:border-gray-700 md:rounded-full shadow-lg z-50 md:py-4 md:px-2 md:w-auto">
-      {/* Mobile: Chats në qendër (3 + qendër + 2) */}
-      <div className="md:hidden">
-        {user ? (
-          <div className="relative flex w-full items-end justify-between min-h-[56px] px-1 pb-1 pt-0.5">
-            <div className="flex flex-1 justify-evenly items-end min-w-0 pr-11">{homeLink()} {shopLink()} {tournamentsLink()}</div>
-            <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex flex-col items-center pointer-events-auto">
-              {chatsLink({ elevated: true })}
-            </div>
-            <div className="flex flex-1 justify-evenly items-end min-w-0 pl-11">{liveButton()} {profileLink()}</div>
+    <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+      {user ? (
+        <div className="relative flex w-full items-end justify-between min-h-[56px] px-1 pb-1 pt-0.5">
+          <div className="flex flex-1 justify-evenly items-end min-w-0 pr-11">{homeLink()} {shopLink()}</div>
+          <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex flex-col items-center pointer-events-auto">
+            {chatsLink({ elevated: true })}
           </div>
-        ) : (
-          <div className="flex items-center justify-around py-2">
-            {homeLink()}
-            {shopLink()}
-            {tournamentsLink()}
-            {profileLink()}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop: kolonë vertikale */}
-      <div className="hidden md:flex md:flex-col gap-0 md:gap-6 items-center justify-center py-2 md:py-0">
-        {homeLink()}
-        {shopLink()}
-        {chatsLink()}
-        {tournamentsLink()}
-        {liveButton()}
-        {profileLink()}
-      </div>
+          <div className="flex flex-1 justify-evenly items-end min-w-0 pl-11">{liveButton()} {profileLink()}</div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-around py-2">
+          {homeLink()}
+          {shopLink()}
+          {profileLink()}
+        </div>
+      )}
     </nav>
   );
 }

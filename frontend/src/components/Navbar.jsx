@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useCart } from "../contexts/CartContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
@@ -14,6 +15,8 @@ import { APP_BRAND_NAME } from '../config/branding';
 
 function Navbar() {
   const { user, logout } = useAuth();
+  const { totalPieces } = useCart();
+  const cartBadge = totalPieces > 0 ? (totalPieces > 99 ? '99+' : String(totalPieces)) : null;
   const navigate = useNavigate();
   const rawApiUrl = import.meta.env.VITE_API_URL || '';
   const apiRoot = rawApiUrl ? rawApiUrl.replace('/api','') : '';
@@ -317,6 +320,32 @@ function Navbar() {
               All
             </button>
           </div>
+
+          {/* Profile — vetëm desktop (mobile: bottom nav) */}
+          {user ? (
+            <Link
+              to={`/profile/${user.id}`}
+              className="hidden md:flex items-center rounded-full ring-2 ring-blue-500/40 hover:ring-blue-500 transition-all"
+              aria-label="Profile"
+            >
+              {user.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
+                <img
+                  src={getFullUrl(user.profilePhoto)}
+                  alt="Profile"
+                  className="w-9 h-9 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                  {user.firstName?.[0]}
+                </div>
+              )}
+            </Link>
+          ) : null}
+
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="relative p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -338,6 +367,63 @@ function Navbar() {
           
           {/* MENU ITEMS */}
           <div className="space-y-2">
+
+            {/* Navigim kryesor — desktop (mobile: bottom nav) */}
+            <div className="hidden md:block space-y-2 pb-4 mb-2 border-b border-gray-200 dark:border-gray-700">
+              <Link
+                to="/feed"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="text-2xl">🏠</span>
+                <span className="font-medium">Home</span>
+              </Link>
+
+              <Link
+                to="/marketplace"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="text-2xl">🛒</span>
+                <span className="font-medium">Marketplace</span>
+                {cartBadge ? (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
+                    {cartBadge}
+                  </span>
+                ) : null}
+              </Link>
+
+              <Link
+                to="/tournaments"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="text-2xl">🏆</span>
+                <span className="font-medium">Tournaments</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent('open-live-modal', { detail: { openCameraFirst: true } }));
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <span className="text-2xl">🔴</span>
+                <span className="font-medium">Go Live</span>
+              </button>
+            </div>
+
+            {/* Tournaments — mobile (desktop: seksioni më sipër) */}
+            <Link
+              to="/tournaments"
+              onClick={() => setIsMenuOpen(false)}
+              className="md:hidden flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <span className="text-2xl">🏆</span>
+              <span className="font-medium">Tournaments</span>
+            </Link>
             
             {/* Notifications */}
             <Link 
