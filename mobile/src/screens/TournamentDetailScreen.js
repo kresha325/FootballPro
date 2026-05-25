@@ -32,13 +32,16 @@ import { useAuth } from '../context/AuthContext';
 import { openUserProfile } from '../utils/openUserProfile';
 import { groupMatchesByRound, knockoutRoundLabel, roundsFromBracketApi } from '../utils/tournamentBracket';
 import { formatTournamentTitle } from '../utils/footballSeason';
+import { resolveParticipantUserId } from '../utils/tournamentParticipants';
 
 function participantLabel(p, participantType) {
   const club = p?.Profile?.club;
   const name = [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim();
-  if (participantType === 'club') return name || club || `Club #${p?.id}`;
+  const uid = resolveParticipantUserId(p);
+  const tag = uid ? `#${uid}` : '';
+  if (participantType === 'club') return name || club || (tag ? `Club ${tag}` : 'Club');
   if (club && name) return `${name} (${club})`;
-  return name || `User #${p?.id}`;
+  return name || (tag ? `User ${tag}` : 'User');
 }
 
 function TournamentStatsBlock({ stats, onOpenMatch }) {
@@ -144,7 +147,7 @@ const statsStyles = StyleSheet.create({
 });
 
 function participantJoinStatus(p) {
-  return p?.TournamentParticipant?.status || p?.status || 'accepted';
+  return p?.participantStatus || p?.TournamentParticipant?.status || p?.status || 'accepted';
 }
 
 export default function TournamentDetailScreen({ route, navigation }) {
@@ -210,7 +213,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
   const participants = Array.isArray(tournament?.participants) ? tournament.participants : [];
   const participantCount = participants.length;
-  const isJoined = participants.some((p) => String(p.id) === String(user?.id));
+  const isJoined = participants.some((p) => String(resolveParticipantUserId(p)) === String(user?.id));
   const isCreator = String(tournament?.creatorId) === String(user?.id);
   const pt = tournament?.participantType || 'individual';
 
@@ -522,20 +525,37 @@ export default function TournamentDetailScreen({ route, navigation }) {
           ) : (
             participants.slice(0, 30).map((p) => {
               const joinStatus = participantJoinStatus(p);
+              const uid = resolveParticipantUserId(p);
+              const canOpenProfile = uid && joinStatus !== 'pending';
               return (
-                <View key={String(p.id)} style={styles.participantRow}>
-                  <View style={styles.participantInfo}>
-                    <Text style={styles.row}>{participantLabel(p, pt)}</Text>
-                    {joinStatus !== 'accepted' ? (
-                      <Text style={styles.participantStatus}>{joinStatus}</Text>
-                    ) : null}
-                  </View>
-                  {isCreator && tournament?.status === 'open' && joinStatus === 'pending' ? (
+                <View key={String(uid || p.id)} style={styles.participantRow}>
+                  <TouchableOpacity
+                    style={styles.participantInfo}
+                    activeOpacity={canOpenProfile ? 0.85 : 1}
+                    disabled={!canOpenProfile}
+                    onPress={() => canOpenProfile && openUserProfile(navigation, uid)}
+                  >
+                    <UserAvatar
+                      user={p}
+                      uri={resolveUserPhotoUri(p)}
+                      size={36}
+                      style={styles.standAvatar}
+                    />
+                    <View style={styles.standBody}>
+                      <Text style={[styles.row, canOpenProfile && styles.rowLink]}>
+                        {participantLabel(p, pt)}
+                      </Text>
+                      {joinStatus !== 'accepted' ? (
+                        <Text style={styles.participantStatus}>{joinStatus}</Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                  {isCreator && tournament?.status === 'open' && joinStatus === 'pending' && uid ? (
                     <View style={styles.participantActions}>
-                      <TouchableOpacity style={styles.acceptBtn} onPress={() => onAcceptParticipant(p.id)}>
+                      <TouchableOpacity style={styles.acceptBtn} onPress={() => onAcceptParticipant(uid)}>
                         <Text style={styles.acceptBtnText}>Prano</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.rejectBtn} onPress={() => onRejectParticipant(p.id)}>
+                      <TouchableOpacity style={styles.rejectBtn} onPress={() => onRejectParticipant(uid)}>
                         <Text style={styles.rejectBtnText}>Refuzo</Text>
                       </TouchableOpacity>
                     </View>
@@ -688,8 +708,8 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     </View>
                     <Text style={styles.scoreFormTitle}>Golat (golashënues, minuta, asist)</Text>
                     {goalEvents.map((ev, index) => {
-                      const scorer = participants.find((p) => String(p.id) === String(ev.userId));
-                      const assist = participants.find((p) => String(p.id) === String(ev.assistUserId));
+                      const scorer = participants.find((p) => String(resolveParticipantUserId(p)) === String(ev.userId));
+                      const assist = participants.find((p) => String(resolveParticipantUserId(p)) === String(ev.assistUserId));
                       return (
                         <View key={`goal-${index}`} style={styles.goalEventRow}>
                           <Text style={styles.goalEventText} numberOfLines={2}>
@@ -713,9 +733,13 @@ export default function TournamentDetailScreen({ route, navigation }) {
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           {participants.map((p) => (
                             <TouchableOpacity
-                              key={`scorer-pick-${p.id}`}
+                              key={`scorer-pick-${resolveParticipantUserId(p)}`}
                               style={styles.chipBtn}
-                              onPress={() => updateGoalEvent(goalEvents.length - 1, { userId: String(p.id) })}
+                              onPress={() =>
+                                updateGoalEvent(goalEvents.length - 1, {
+                                  userId: String(resolveParticipantUserId(p)),
+                                })
+                              }
                             >
                               <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
                             </TouchableOpacity>
@@ -732,9 +756,13 @@ export default function TournamentDetailScreen({ route, navigation }) {
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           {participants.map((p) => (
                             <TouchableOpacity
-                              key={`assist-pick-${p.id}`}
+                              key={`assist-pick-${resolveParticipantUserId(p)}`}
                               style={styles.chipBtn}
-                              onPress={() => updateGoalEvent(goalEvents.length - 1, { assistUserId: String(p.id) })}
+                              onPress={() =>
+                                updateGoalEvent(goalEvents.length - 1, {
+                                  assistUserId: String(resolveParticipantUserId(p)),
+                                })
+                              }
                             >
                               <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
                             </TouchableOpacity>
@@ -853,7 +881,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
-  participantInfo: { flex: 1, marginRight: 8 },
+  participantInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
+  rowLink: { color: '#0f766e' },
   participantStatus: { color: '#b45309', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
   participantActions: { flexDirection: 'row', gap: 6 },
   acceptBtn: { backgroundColor: '#0f766e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },

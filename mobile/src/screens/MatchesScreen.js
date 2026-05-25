@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import {
   createMatchRequest,
   extractErrorMessage,
@@ -10,10 +11,13 @@ import {
   updateMatchScoreRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 
 const CREATOR_ROLES = new Set(['admin', 'coach', 'manager', 'club', 'federation']);
 
 export default function MatchesScreen() {
+  const navigation = useNavigation();
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [tournaments, setTournaments] = useState([]);
@@ -30,6 +34,7 @@ export default function MatchesScreen() {
   });
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [scoreForm, setScoreForm] = useState({ matchId: '', scoreHome: '', scoreAway: '' });
+  const [listSearch, setListSearch] = useState('');
 
   const canCreate = CREATOR_ROLES.has(user?.role);
 
@@ -77,8 +82,19 @@ export default function MatchesScreen() {
 
   const upcoming = useMemo(() => {
     const now = new Date();
-    return matches.filter((m) => new Date(m?.scheduledAt || m?.matchDate || 0) > now);
-  }, [matches]);
+    const base = matches.filter((m) => new Date(m?.scheduledAt || m?.matchDate || 0) > now);
+    return filterBySearch(base, listSearch, (m) => [
+      m.homeTeam,
+      m.awayTeam,
+      m.location,
+      m.status,
+      m.Tournament?.name,
+      m.homeUser?.firstName,
+      m.homeUser?.lastName,
+      m.awayUser?.firstName,
+      m.awayUser?.lastName,
+    ]);
+  }, [matches, listSearch]);
 
   const handleCreate = async () => {
     if (!form.tournamentId || !form.homeUserId || !form.awayUserId) {
@@ -165,6 +181,12 @@ export default function MatchesScreen() {
             <Text style={styles.headerSub}>Upcoming fixtures and scheduling</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
+          <ListSearchBar
+            value={listSearch}
+            onChangeText={setListSearch}
+            placeholder="Kërko ndeshje…"
+            onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
+          />
 
           {canCreate ? (
             <View style={styles.formCard}>

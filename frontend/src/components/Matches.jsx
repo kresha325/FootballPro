@@ -1,5 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { CalendarIcon, MapPinIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline';
@@ -67,10 +69,19 @@ function Matches() {
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editMatch, setEditMatch] = useState(null);
+  const [listSearch, setListSearch] = useState('');
 
-  // Filter matches for upcoming (scheduled in the future)
   const now = new Date();
-  const upcomingMatches = matches.filter(m => new Date(m.scheduledAt || m.matchDate) > now);
+  const upcomingMatches = useMemo(() => {
+    const base = matches.filter((m) => new Date(m.scheduledAt || m.matchDate) > now);
+    return filterBySearch(base, listSearch, (m) => [
+      m.homeTeam,
+      m.awayTeam,
+      m.location,
+      m.status,
+      m.Tournament?.name,
+    ]);
+  }, [matches, listSearch]);
 
   useEffect(() => {
     fetchMatches();
@@ -144,10 +155,11 @@ function Matches() {
   return (
     <div>
       {/* Create Match Button (visible for all, or add role check if needed) */}
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <ListSearchBar value={listSearch} onChange={setListSearch} placeholder="Kërko ndeshje, ekip, vend…" className="mb-0 flex-1" />
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow shrink-0"
         >
           Krijo Ndeshje
         </button>

@@ -182,7 +182,13 @@ export const galleryAPI = {
    SEARCH
 ========================= */
 export const searchAPI = {
-  search: (query) => API.get(`/search?q=${query}`),
+  search: (query) => API.get('/search', { params: { q: query } }),
+  searchUsers: (params) => API.get('/search/users', { params }),
+  searchPosts: (params) => API.get('/search/posts', { params }),
+  getSuggestions: (q, type = 'all') => API.get('/search/suggestions', { params: { q, type } }),
+  getTrendingPosts: () => API.get('/search/trending/posts'),
+  getTrendingUsers: () => API.get('/search/trending/users'),
+  getRecommended: () => API.get('/search/recommended'),
 };
 
 /* =========================

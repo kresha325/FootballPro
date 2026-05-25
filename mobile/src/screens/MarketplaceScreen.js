@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import {
   ActivityIndicator,
   Alert,
@@ -95,6 +97,12 @@ export default function MarketplaceScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [listSearch, setListSearch] = useState('');
+
+  const displayProducts = useMemo(
+    () => filterBySearch(products, listSearch, (p) => [p.name, p.description, p.category]),
+    [products, listSearch]
+  );
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -189,13 +197,21 @@ export default function MarketplaceScreen() {
   return (
     <View style={styles.wrap}>
       <FlatList
-        data={products.slice(0, visibleCount)}
+        data={displayProducts.slice(0, visibleCount)}
         keyExtractor={(item, idx) => String(item?.id || idx)}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <View style={styles.balanceWrap}>
-            <Text style={styles.balanceLabel}>JonCoin Balance</Text>
-            <Text style={styles.balanceValue}>{balance}</Text>
+          <View>
+            <View style={styles.balanceWrap}>
+              <Text style={styles.balanceLabel}>JonCoin Balance</Text>
+              <Text style={styles.balanceValue}>{balance}</Text>
+            </View>
+            <ListSearchBar
+              value={listSearch}
+              onChangeText={setListSearch}
+              placeholder="Kërko produkte…"
+              onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
+            />
           </View>
         }
         renderItem={({ item }) => (
@@ -203,11 +219,11 @@ export default function MarketplaceScreen() {
         )}
         onEndReachedThreshold={0.5}
         onEndReached={() => {
-          if (visibleCount < products.length) {
-            setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, products.length));
+          if (visibleCount < displayProducts.length) {
+            setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, displayProducts.length));
           }
         }}
-        ListFooterComponent={visibleCount < products.length ? <Text style={styles.footer}>Loading more...</Text> : null}
+        ListFooterComponent={visibleCount < displayProducts.length ? <Text style={styles.footer}>Loading more...</Text> : null}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

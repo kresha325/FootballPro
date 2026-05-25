@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -53,6 +55,12 @@ export default function NotificationsScreen() {
   const [markingAll, setMarkingAll] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
+  const [listSearch, setListSearch] = useState('');
+
+  const filteredItems = useMemo(
+    () => filterBySearch(items, listSearch, (n) => [n.title, n.message, n.type, n.body]),
+    [items, listSearch]
+  );
 
   const loadNotifications = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -154,8 +162,14 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      <ListSearchBar
+        value={listSearch}
+        onChangeText={setListSearch}
+        placeholder="Kërko njoftime…"
+        onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
+      />
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         refreshControl={

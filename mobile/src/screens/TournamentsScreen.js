@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import {
   ActivityIndicator,
   Alert,
@@ -66,6 +68,7 @@ export default function TournamentsScreen({ navigation }) {
   const [trending, setTrending] = useState([]);
   const [allTournaments, setAllTournaments] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [listSearch, setListSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
@@ -157,7 +160,17 @@ export default function TournamentsScreen({ navigation }) {
     );
   }
 
-  const merged = [...trending, ...allTournaments.filter((t) => !trending.some((tr) => tr.id === t.id))];
+  const merged = useMemo(() => {
+    const base = [...trending, ...allTournaments.filter((t) => !trending.some((tr) => tr.id === t.id))];
+    return filterBySearch(base, listSearch, (t) => [
+      t.name,
+      t.description,
+      t.type,
+      t.season,
+      t.status,
+      formatTournamentTitle(t),
+    ]);
+  }, [trending, allTournaments, listSearch]);
 
   return (
     <>
@@ -185,6 +198,12 @@ export default function TournamentsScreen({ navigation }) {
                 <Text style={styles.createHeaderBtnText}>+ Create tournament</Text>
               </TouchableOpacity>
             </View>
+            <ListSearchBar
+              value={listSearch}
+              onChangeText={setListSearch}
+              placeholder="Kërko turne…"
+              onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
+            />
           </View>
         }
         renderItem={({ item }) => (

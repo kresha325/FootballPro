@@ -1,4 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,7 +41,13 @@ function VideoCard({ item, onLike }) {
 }
 
 export default function VideosScreen() {
+  const navigation = useNavigation();
   const [videos, setVideos] = useState([]);
+  const [listSearch, setListSearch] = useState('');
+  const displayVideos = useMemo(
+    () => filterBySearch(videos, listSearch, (v) => [v.title, v.description, v.User?.firstName, v.User?.lastName]),
+    [videos, listSearch]
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [title, setTitle] = useState('');
@@ -125,7 +134,7 @@ export default function VideosScreen() {
 
   return (
     <FlatList
-      data={videos}
+      data={displayVideos}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.listContent}
       refreshControl={
@@ -155,6 +164,12 @@ export default function VideosScreen() {
           <TouchableOpacity style={[styles.primaryBtn, uploading && styles.disabled]} onPress={upload} disabled={uploading}>
             <Text style={styles.primaryBtnText}>{uploading ? 'Uploading...' : 'Upload'}</Text>
           </TouchableOpacity>
+          <ListSearchBar
+            value={listSearch}
+            onChangeText={setListSearch}
+            placeholder="Kërko video…"
+            onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
+          />
         </View>
       }
       renderItem={({ item }) => <VideoCard item={item} onLike={onLike} />}

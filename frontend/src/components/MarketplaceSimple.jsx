@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import axios from 'axios';
@@ -35,6 +37,7 @@ export default function MarketplaceSimple() {
   const [searchParams] = useSearchParams();
     const [imageFile, setImageFile] = useState(null);
   const [products, setProducts] = useState([]);
+  const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -238,6 +241,11 @@ export default function MarketplaceSimple() {
     return found ? found.icon : '📦';
   };
 
+  const displayProducts = useMemo(
+    () => filterBySearch(products, listSearch, (p) => [p.name, p.description, p.category]),
+    [products, listSearch]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -291,6 +299,12 @@ export default function MarketplaceSimple() {
         </button>
       </div>
 
+      <ListSearchBar
+        value={listSearch}
+        onChange={setListSearch}
+        placeholder="Kërko produkte sipas emrit ose përshkrimit…"
+      />
+
       {/* Category Filter */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {categories.map((cat) => (
@@ -310,7 +324,7 @@ export default function MarketplaceSimple() {
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product) => {
+        {displayProducts.map((product) => {
           const isOwner = Number(product.sellerId) === Number(user?.id);
           const isSold = Number(product.stock || 0) <= 0 || product.status === 'sold';
 

@@ -1,49 +1,146 @@
-// Universal search: returns users, tournaments, posts, etc.
+// Universal search: returns users, tournaments, posts, products, streams, videos, matches
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const { User, Profile, Tournament, Post } = require('../models');
+const Product = require('../models/Product');
+const Stream = require('../models/Stream');
+const Video = require('../models/Video');
+const Match = require('../models/Match');
 const Follow = require('../models/Follow');
+
+const SEARCH_LIMIT = 20;
+
+function textMatch(q, ...parts) {
+  if (!q) return true;
+  const needle = String(q).trim().toLowerCase();
+  if (!needle) return true;
+  return parts.some((p) => String(p || '').toLowerCase().includes(needle));
+}
+
 exports.searchEverything = async (req, res) => {
-  const { q } = req.query;
+  const q = (req.query.q || '').trim();
   try {
-    // Users
     const users = await User.findAll({
       where: q ? {
         [Op.or]: [
           { firstName: { [Op.iLike]: `%${q}%` } },
           { lastName: { [Op.iLike]: `%${q}%` } },
           { email: { [Op.iLike]: `%${q}%` } },
-        ]
+        ],
       } : {},
       include: [
         {
           model: Profile,
           attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
-        }
+        },
       ],
       attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'createdAt'],
-      limit: 20
+      limit: SEARCH_LIMIT,
     });
 
-    // Tournaments
     const tournaments = await Tournament.findAll({
       where: q ? {
-        name: { [Op.iLike]: `%${q}%` }
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${q}%` } },
+          { description: { [Op.iLike]: `%${q}%` } },
+        ],
       } : {},
       attributes: ['id', 'name', 'description', 'type', 'season', 'startDate', 'endDate', 'status'],
-      limit: 20
+      limit: SEARCH_LIMIT,
     });
 
-    // Posts
     const posts = await Post.findAll({
-      where: q ? {
-        content: { [Op.iLike]: `%${q}%` }
-      } : {},
+      where: q ? { content: { [Op.iLike]: `%${q}%` } } : {},
       attributes: ['id', 'content', 'createdAt', 'userId'],
-      limit: 20
+      limit: SEARCH_LIMIT,
     });
 
-    res.json({ users, tournaments, posts });
+    const products = await Product.findAll({
+      where: q ? {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${q}%` } },
+          { description: { [Op.iLike]: `%${q}%` } },
+        ],
+      } : {},
+      attributes: ['id', 'name', 'description', 'price', 'category', 'imageUrl', 'stock', 'sellerId'],
+      limit: SEARCH_LIMIT,
+    });
+
+    const streams = await Stream.findAll({
+      where: q ? {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${q}%` } },
+          { description: { [Op.iLike]: `%${q}%` } },
+        ],
+      } : {},
+      attributes: ['id', 'title', 'description', 'streamerId', 'isLive', 'viewers', 'createdAt'],
+      include: [
+        {
+          model: User,
+          as: 'streamer',
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false,
+        },
+      ],
+      limit: SEARCH_LIMIT,
+      order: [['isLive', 'DESC'], ['createdAt', 'DESC']],
+    });
+
+    const videos = await Video.findAll({
+      where: q ? {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${q}%` } },
+          { description: { [Op.iLike]: `%${q}%` } },
+        ],
+      } : {},
+      attributes: ['id', 'title', 'description', 'thumbnailUrl', 'userId', 'createdAt'],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false,
+        },
+      ],
+      limit: SEARCH_LIMIT,
+      order: [['createdAt', 'DESC']],
+    });
+
+    let matches = await Match.findAll({
+      include: [
+        { model: Tournament, attributes: ['id', 'name'] },
+        { model: User, as: 'homeUser', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'awayUser', attributes: ['id', 'firstName', 'lastName'] },
+      ],
+      limit: q ? 40 : SEARCH_LIMIT,
+      order: [['matchDate', 'DESC']],
+    });
+
+    if (q) {
+      matches = matches
+        .filter((m) => {
+          const row = m.toJSON ? m.toJSON() : m;
+          return textMatch(
+            q,
+            row.Tournament?.name,
+            row.homeUser?.firstName,
+            row.homeUser?.lastName,
+            row.awayUser?.firstName,
+            row.awayUser?.lastName,
+            row.status
+          );
+        })
+        .slice(0, SEARCH_LIMIT);
+    }
+
+    res.json({
+      users,
+      tournaments,
+      posts,
+      products,
+      streams,
+      videos,
+      matches,
+    });
   } catch (err) {
     console.error('Universal search error:', err);
     res.status(500).json({ msg: 'Server error' });

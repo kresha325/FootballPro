@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import UserAvatarLink from './UserAvatarLink';
+import { resolveParticipantUserId } from '../utils/tournamentParticipants';
 import { APP_BRAND_NAME } from '../config/branding';
 import {
   formatTournamentTitle,
@@ -23,19 +26,21 @@ function participantLabel(p, participantType) {
   const club = p.Profile?.club;
   const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim();
   const role = p.role;
+  const uid = resolveParticipantUserId(p);
+  const fallback = uid ? `#${uid}` : '';
   if (participantType === 'club') {
-    return name || club || `Klubi #${p.id}`;
+    return name || club || (fallback ? `Klubi ${fallback}` : 'Klubi');
   }
   if (participantType === 'mixed') {
-    if (role === 'club') return name || club || `Klubi #${p.id}`;
+    if (role === 'club') return name || club || (fallback ? `Klubi ${fallback}` : 'Klubi');
     if (role === 'athlete') {
       if (club && name) return `${name} (${club})`;
-      return name || `Atleti #${p.id}`;
+      return name || (fallback ? `Atleti ${fallback}` : 'Atlet');
     }
-    return name || `Përdorues #${p.id}`;
+    return name || (fallback ? `Përdorues ${fallback}` : 'Përdorues');
   }
   if (club && name) return `${name} (${club})`;
-  return name || club || `Përdorues #${p.id}`;
+  return name || club || (fallback ? `Përdorues ${fallback}` : 'Përdorues');
 }
 
 function avatarUrl(photo) {
@@ -319,6 +324,7 @@ export default function TournamentSimple() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [tournaments, setTournaments] = useState([]);
+  const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
@@ -531,6 +537,19 @@ export default function TournamentSimple() {
     }
   };
 
+  const filteredTournaments = useMemo(
+    () =>
+      filterBySearch(tournaments, listSearch, (t) => [
+        t.name,
+        t.description,
+        t.type,
+        t.season,
+        t.status,
+        formatTournamentTitle(t),
+      ]),
+    [tournaments, listSearch]
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-950">
@@ -571,11 +590,19 @@ export default function TournamentSimple() {
         </div>
       </div>
 
+      <ListSearchBar
+        value={listSearch}
+        onChange={setListSearch}
+        placeholder="Kërko turne sipas emrit, sezonit, statusit…"
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tournaments.map((tournament) => {
+        {filteredTournaments.map((tournament) => {
           const isCreator = tournament.creatorId === user?.id;
           const participantCount = tournament.participants?.length || 0;
-          const isJoined = tournament.participants?.some((p) => p.id === user?.id);
+          const isJoined = tournament.participants?.some(
+            (p) => resolveParticipantUserId(p) === user?.id
+          );
           const pt = tournament.participantType || 'individual';
           const joinBlocked =
             (pt === 'club' && user?.role !== 'club') ||
@@ -1068,23 +1095,43 @@ export default function TournamentSimple() {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Lista e pjesëmarrësve</h3>
                 {selectedTournament.participants?.length > 0 ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {selectedTournament.participants.map((participant) => (
-                      <div key={participant.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white">
-                          {(participant.firstName?.[0] || '?').toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                            {participantLabel(participant, selectedTournament.participantType || 'individual')}
-                          </p>
-                          {participant.Profile?.club &&
-                            ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
-                            participant.role === 'athlete' && (
-                              <p className="truncate text-xs text-gray-500">Klubi: {participant.Profile.club}</p>
+                    {selectedTournament.participants.map((participant) => {
+                      const uid = resolveParticipantUserId(participant);
+                      const label = participantLabel(participant, selectedTournament.participantType || 'individual');
+                      return (
+                        <div
+                          key={uid || `p-${participant.firstName}-${participant.lastName}`}
+                          className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700"
+                        >
+                          <UserAvatarLink
+                            user={participant}
+                            userId={uid}
+                            size={40}
+                            name={label}
+                          />
+                          <div className="min-w-0 flex-1">
+                            {uid ? (
+                              <Link
+                                to={`/profile/${uid}`}
+                                className="truncate text-sm font-medium text-gray-900 dark:text-white hover:text-emerald-600 hover:underline"
+                              >
+                                {label}
+                              </Link>
+                            ) : (
+                              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{label}</p>
                             )}
+                            {participant.Profile?.club &&
+                              ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
+                              participant.role === 'athlete' && (
+                                <p className="truncate text-xs text-gray-500">Klubi: {participant.Profile.club}</p>
+                              )}
+                            {participant.participantStatus && participant.participantStatus !== 'accepted' ? (
+                              <p className="text-xs capitalize text-amber-600">{participant.participantStatus}</p>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-gray-600 dark:text-gray-400">Ende pa pjesëmarrës.</p>

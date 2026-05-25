@@ -20,7 +20,7 @@ const Profile = lazy(() => import('./components/Profile'));
 const BrowseProfiles = lazy(() => import('./components/BrowseProfiles'));
 const Gallery = lazy(() => import('./components/Gallery'));
 const Feed = lazy(() => import('./components/Feed'));
-const Search = lazy(() => import('./components/SearchSimple'));
+const Search = lazy(() => import('./components/GlobalSearch'));
 const Messaging = lazy(() => import('./components/Messaging'));
 const Marketplace = lazy(() => import('./components/MarketplaceSimple'));
 const WalletPage = lazy(() => import('./components/WalletPage'));

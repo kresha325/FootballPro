@@ -34,13 +34,23 @@ function dedupeUsersById(list) {
   return out;
 }
 
-export default function SearchScreen({ navigation }) {
+const EXTRA_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'tournaments', label: 'Cups' },
+  { id: 'products', label: 'Shop' },
+  { id: 'streams', label: 'Live' },
+  { id: 'videos', label: 'Video' },
+  { id: 'matches', label: 'Matches' },
+];
+
+export default function SearchScreen({ navigation, route }) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const browseColors = useBrowseColors(isDark);
+  const initialQuery = route?.params?.initialQuery || '';
 
-  const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('discover');
+  const [query, setQuery] = useState(initialQuery);
+  const [activeTab, setActiveTab] = useState(initialQuery ? 'all' : 'discover');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -51,8 +61,13 @@ export default function SearchScreen({ navigation }) {
   const [discoverUsers, setDiscoverUsers] = useState([]);
   const [discoverPosts, setDiscoverPosts] = useState([]);
   const [discoverTournaments, setDiscoverTournaments] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [streams, setStreams] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [matches, setMatches] = useState([]);
 
-  const isSearching = query.trim().length > 0 || activeTab !== 'discover';
+  const isSearching = query.trim().length > 0 || (activeTab !== 'discover' && activeTab !== 'all');
   const showUserBrowse = activeTab === 'discover' || activeTab === 'users';
 
   const openPublicProfile = useCallback(
@@ -118,14 +133,30 @@ export default function SearchScreen({ navigation }) {
           const usersRes = await searchUsersRequest({ q, ...userFilters });
           setUsers(Array.isArray(usersRes?.data?.users) ? usersRes.data.users : []);
           setPosts([]);
+          setTournaments([]);
+          setProducts([]);
+          setStreams([]);
+          setVideos([]);
+          setMatches([]);
         } else if (activeTab === 'posts') {
           const postsRes = await searchPostsRequest({ q, ...postFilters });
           setPosts(Array.isArray(postsRes?.data?.posts) ? postsRes.data.posts : []);
           setUsers([]);
+          setTournaments([]);
+          setProducts([]);
+          setStreams([]);
+          setVideos([]);
+          setMatches([]);
         } else {
           const res = await searchEverythingRequest({ q });
-          setUsers(Array.isArray(res?.data?.users) ? res.data.users : []);
-          setPosts(Array.isArray(res?.data?.posts) ? res.data.posts : []);
+          const data = res?.data || {};
+          setUsers(Array.isArray(data.users) ? data.users : []);
+          setPosts(Array.isArray(data.posts) ? data.posts : []);
+          setTournaments(Array.isArray(data.tournaments) ? data.tournaments : []);
+          setProducts(Array.isArray(data.products) ? data.products : []);
+          setStreams(Array.isArray(data.streams) ? data.streams : []);
+          setVideos(Array.isArray(data.videos) ? data.videos : []);
+          setMatches(Array.isArray(data.matches) ? data.matches : []);
         }
       } catch (err) {
         setError(extractErrorMessage(err, 'Search failed'));
@@ -140,6 +171,13 @@ export default function SearchScreen({ navigation }) {
   useEffect(() => {
     loadDiscovery();
   }, [loadDiscovery]);
+
+  useEffect(() => {
+    if (initialQuery.trim()) {
+      runSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const browseUserItems = useMemo(() => {
     if (activeTab === 'discover') return discoverUsers;
@@ -201,12 +239,27 @@ export default function SearchScreen({ navigation }) {
             Posts
           </Text>
         </TouchableOpacity>
+        {EXTRA_TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.id}
+            style={[
+              styles.tabBtn,
+              { borderColor: browseColors.border, backgroundColor: browseColors.bg },
+              activeTab === tab.id && styles.tabActive,
+            ]}
+            onPress={() => setActiveTab(tab.id)}
+          >
+            <Text style={[styles.tabText, { color: browseColors.text }, activeTab === tab.id && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
       <View style={styles.searchRow}>
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search users or posts"
+          placeholder="Kërko përdorues, postime, turne, shop…"
           placeholderTextColor={browseColors.muted}
           style={[
             styles.input,
@@ -333,6 +386,80 @@ export default function SearchScreen({ navigation }) {
     );
   }
 
+  const entityTabs = new Set(['all', 'tournaments', 'products', 'streams', 'videos', 'matches']);
+  if (entityTabs.has(activeTab)) {
+    const show = (key) => activeTab === 'all' || activeTab === key;
+    const sections = [];
+    if (show('users') && users.length) sections.push({ title: 'Users', items: users, type: 'user' });
+    if (show('posts') && posts.length) sections.push({ title: 'Posts', items: posts, type: 'post' });
+    if (show('tournaments') && tournaments.length) sections.push({ title: 'Tournaments', items: tournaments, type: 'tournament' });
+    if (show('products') && products.length) sections.push({ title: 'Shop', items: products, type: 'product' });
+    if (show('streams') && streams.length) sections.push({ title: 'Streams', items: streams, type: 'stream' });
+    if (show('videos') && videos.length) sections.push({ title: 'Videos', items: videos, type: 'video' });
+    if (show('matches') && matches.length) sections.push({ title: 'Matches', items: matches, type: 'match' });
+
+    return (
+      <ScrollView
+        style={[styles.root, { backgroundColor: browseColors.bg }]}
+        contentContainerStyle={styles.postsContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                if (query.trim()) await runSearch({ silent: true });
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            colors={['#0f766e']}
+          />
+        }
+      >
+        {ListHeader}
+        {loading && !refreshing ? (
+          <ActivityIndicator size="large" color="#0f766e" style={{ marginVertical: 24 }} />
+        ) : sections.length === 0 ? (
+          <Text style={[styles.empty, { color: browseColors.muted }]}>
+            {query.trim() ? 'No results.' : 'Type a query and tap Search.'}
+          </Text>
+        ) : (
+          sections.map((sec) => (
+            <View key={sec.title} style={{ marginBottom: 16 }}>
+              <Text style={[styles.stripTitle, { color: browseColors.text, paddingHorizontal: 0 }]}>{sec.title}</Text>
+              {sec.items.map((item) => (
+                <TouchableOpacity
+                  key={`${sec.type}-${item.id}`}
+                  style={[styles.postCard, { borderColor: browseColors.border, backgroundColor: browseColors.card }]}
+                  onPress={() => {
+                    if (sec.type === 'user') openPublicProfile(item.id);
+                    else if (sec.type === 'tournament') navigation.navigate('TournamentDetail', { tournamentId: item.id });
+                    else if (sec.type === 'stream') navigation.navigate('LiveViewer', { streamId: item.id });
+                    else if (sec.type === 'video') navigation.navigate('Videos');
+                    else if (sec.type === 'match') navigation.navigate('Matches');
+                    else if (sec.type === 'product') navigation.navigate('Marketplace');
+                  }}
+                >
+                  <Text style={[styles.postAuthor, { color: browseColors.text }]}>
+                    {sec.type === 'user'
+                      ? `${item.firstName || ''} ${item.lastName || ''}`.trim()
+                      : item.name || item.title || item.content?.slice(0, 40) || 'Item'}
+                  </Text>
+                  {item.description || item.content ? (
+                    <Text style={[styles.postBody, { color: browseColors.muted }]} numberOfLines={2}>
+                      {item.description || item.content}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))
+        )}
+      </ScrollView>
+    );
+  }
+
   return (
     <FlatList
       data={postsForList}
@@ -393,7 +520,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerTitle: { fontWeight: '800', fontSize: 20, marginBottom: 10 },
-  tabRow: { flexDirection: 'row', marginBottom: 8 },
+  tabRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
   tabBtn: {
     paddingVertical: 7,
     paddingHorizontal: 10,

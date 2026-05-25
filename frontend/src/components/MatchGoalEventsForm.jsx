@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { resolveParticipantUserId } from '../utils/tournamentParticipants';
 
 function participantName(p) {
-  return [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim() || `User #${p?.id}`;
+  const uid = resolveParticipantUserId(p);
+  const name = [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim();
+  return name || (uid ? `User #${uid}` : 'User');
 }
 
 function eventsFromMatchData(data) {
@@ -128,11 +131,15 @@ export default function MatchGoalEventsForm({
                     className={fieldClass}
                   >
                     <option value="">Zgjidh lojtarin</option>
-                    {options.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {participantName(p)}
-                      </option>
-                    ))}
+                    {options.map((p) => {
+                      const uid = resolveParticipantUserId(p);
+                      if (!uid) return null;
+                      return (
+                        <option key={uid} value={uid}>
+                          {participantName(p)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
@@ -167,11 +174,15 @@ export default function MatchGoalEventsForm({
                     className={fieldClass}
                   >
                     <option value="">Pa asist</option>
-                    {options.map((p) => (
-                      <option key={`assist-${p.id}`} value={p.id}>
-                        {participantName(p)}
-                      </option>
-                    ))}
+                    {options.map((p) => {
+                      const uid = resolveParticipantUserId(p);
+                      if (!uid) return null;
+                      return (
+                        <option key={`assist-${uid}`} value={uid}>
+                          {participantName(p)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>

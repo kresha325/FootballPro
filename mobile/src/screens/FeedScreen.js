@@ -32,6 +32,8 @@ import {
   unlikePostRequest,
 } from '../api/client';
 import FeedAdSlot from '../components/FeedAdSlot';
+import ListSearchBar from '../components/ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import PostSponsorStrip from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
@@ -382,12 +384,26 @@ export default function FeedScreen({ navigation }) {
   const [feedAds, setFeedAds] = useState([]);
   const [feedScope, setFeedScope] = useState('all');
   const [sharingPostId, setSharingPostId] = useState(null);
+  const [feedSearch, setFeedSearch] = useState('');
 
   const onToggleShare = useCallback((postId) => {
     setSharingPostId((prev) => (prev === postId ? null : postId));
   }, []);
 
-  const feedListData = useMemo(() => mergePostsWithAdSlots(posts), [posts]);
+  const filteredPosts = useMemo(
+    () =>
+      filterBySearch(posts, feedSearch, (post) => [
+        post.content,
+        post.location,
+        post.author?.firstName,
+        post.author?.lastName,
+        post.User?.firstName,
+        post.User?.lastName,
+      ]),
+    [posts, feedSearch]
+  );
+
+  const feedListData = useMemo(() => mergePostsWithAdSlots(filteredPosts), [filteredPosts]);
 
   const openPostFullscreen = useCallback(
     (post) => {
@@ -748,6 +764,15 @@ export default function FeedScreen({ navigation }) {
               <Text style={styles.galleryButtonText}>My Gallery</Text>
             </TouchableOpacity>
           </View>
+          <ListSearchBar
+            value={feedSearch}
+            onChangeText={setFeedSearch}
+            placeholder="Kërko postime në feed…"
+            onGlobalPress={() => {
+              const more = navigation.getParent?.();
+              if (more?.navigate) more.navigate('More', { screen: 'Search', params: { initialQuery: feedSearch } });
+            }}
+          />
           {error ? (
             <View style={styles.errorBanner}>
               <Text style={styles.errorBannerText}>{error}</Text>

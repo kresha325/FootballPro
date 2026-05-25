@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { clubMembersAPI, clubStaffAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -25,6 +27,7 @@ function ClubRoster() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('approved'); // approved, pending, staff
   const [teamFilter, setTeamFilter] = useState('all'); // all, first_team, women, men, youth teams
+  const [listSearch, setListSearch] = useState('');
   const [showTeamSelectModal, setShowTeamSelectModal] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState(null);
   const [selectedTeamType, setSelectedTeamType] = useState('first_team');
@@ -117,6 +120,17 @@ function ClubRoster() {
 
     return false;
   };
+
+  const approvedMembersFiltered = useMemo(() => {
+    const byTeam = members.filter(matchesTeamFilter);
+    return filterBySearch(byTeam, listSearch, (m) => [
+      m.athlete?.firstName,
+      m.athlete?.lastName,
+      m.teamType,
+      m.athlete?.Profile?.position,
+      m.athlete?.Profile?.club,
+    ]);
+  }, [members, teamFilter, listSearch]);
 
   useEffect(() => {
     if (user && user.role === 'club') {
@@ -322,10 +336,18 @@ function ClubRoster() {
         </div>
       )}
 
+      {activeTab === 'approved' ? (
+        <ListSearchBar
+          value={listSearch}
+          onChange={setListSearch}
+          placeholder="Kërko lojtar në roster…"
+        />
+      ) : null}
+
       {/* Approved Members */}
       {activeTab === 'approved' && (
         <div className="space-y-4">
-          {members.filter(matchesTeamFilter).length === 0 ? (
+          {approvedMembersFiltered.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
               <div className="text-6xl mb-4">👥</div>
               <p className="text-gray-500 text-lg">No athletes in your squad yet</p>
@@ -334,7 +356,7 @@ function ClubRoster() {
               </p>
             </div>
           ) : (
-            members.filter(matchesTeamFilter).map((membership) => (
+            approvedMembersFiltered.map((membership) => (
               <div
                 key={membership.id}
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition"

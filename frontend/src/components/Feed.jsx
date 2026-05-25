@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { postsAPI, sponsorAPI } from '../services/api';
 // import streamsAPI from '../services/streamsAPI';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,6 +78,7 @@ const Feed = () => {
   const [commentInputs, setCommentInputs] = useState({});
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletingComment, setDeletingComment] = useState(null);
+  const [feedSearch, setFeedSearch] = useState('');
   // feed filter is controlled from Navbar (reads/writes localStorage)
 
   // Sponsor state per post
@@ -327,6 +330,19 @@ const Feed = () => {
     setCommentInputs({ ...commentInputs, [postId]: '' });
   };
 
+  const displayPosts = useMemo(
+    () =>
+      filterBySearch(allPosts, feedSearch, (post) => [
+        post.content,
+        post.location,
+        post.author?.firstName,
+        post.author?.lastName,
+        post.User?.firstName,
+        post.User?.lastName,
+      ]),
+    [allPosts, feedSearch]
+  );
+
   if (postsLoading) {
     return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Loading posts...</div>;
   }
@@ -344,6 +360,12 @@ const Feed = () => {
       <UserCardsSection />
 
       <FeedLiveNow />
+
+      <ListSearchBar
+        value={feedSearch}
+        onChange={setFeedSearch}
+        placeholder="Kërko postime në feed…"
+      />
 
       {/* Create Post Form (flat background, no grid overlay) */}
       <div className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -483,7 +505,7 @@ const Feed = () => {
 
       {/* Posts List */}
       <div className="space-y-6">
-        {allPosts.map((post, index) => (
+        {displayPosts.map((post, index) => (
           <div 
             key={post.id}
             ref={(el) => postRefs.current[post.id] = el}
@@ -836,7 +858,7 @@ const Feed = () => {
             )}
           </div>
         ))}
-        {allPosts.length === 0 && (
+        {displayPosts.length === 0 && (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             No posts yet. Be the first to share something!
           </div>

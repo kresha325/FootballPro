@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +9,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [listSearch, setListSearch] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -104,6 +107,17 @@ const Notifications = () => {
     return `${weeks}w ago`;
   };
 
+  const filteredNotifications = useMemo(
+    () =>
+      filterBySearch(notifications, listSearch, (n) => [
+        n.title,
+        n.message,
+        n.type,
+        n.body,
+      ]),
+    [notifications, listSearch]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -134,10 +148,16 @@ const Notifications = () => {
         </div>
       </div>
 
+      <ListSearchBar
+        value={listSearch}
+        onChange={setListSearch}
+        placeholder="Kërko njoftime…"
+      />
+
       {/* Notifications List */}
       <div className="space-y-3">
-        {notifications.length > 0 ? (
-          notifications.map((notification) => (
+        {filteredNotifications.length > 0 ? (
+          filteredNotifications.map((notification) => (
             <div
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}

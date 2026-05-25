@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ListSearchBar from './ListSearchBar';
+import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -48,6 +50,28 @@ export default function StreamsPage() {
   const [videoFile, setVideoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [listSearch, setListSearch] = useState('');
+
+  const filteredLive = useMemo(
+    () =>
+      filterBySearch(liveStreams, listSearch, (s) => [
+        s.title,
+        s.description,
+        s.streamer?.firstName,
+        s.streamer?.lastName,
+      ]),
+    [liveStreams, listSearch]
+  );
+
+  const recorded = useMemo(() => {
+    const rec = streams.filter((s) => !s.isLive && s.videoUrl);
+    return filterBySearch(rec, listSearch, (s) => [
+      s.title,
+      s.description,
+      s.streamer?.firstName,
+      s.streamer?.lastName,
+    ]);
+  }, [streams, listSearch]);
 
   useEffect(() => {
     const fetchStreams = async () => {
@@ -90,8 +114,6 @@ export default function StreamsPage() {
     }
   };
 
-  const recorded = streams.filter((s) => !s.isLive && s.videoUrl);
-
   return (
     <div className="max-w-3xl mx-auto py-6 sm:py-8 px-3 sm:px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Streams</h1>
@@ -99,11 +121,17 @@ export default function StreamsPage() {
         Live aktive hapen me të njëjtin player si në Feed (YouTube ose LiveKit). Ngarko regjistrime më poshtë.
       </p>
 
-      {liveStreams.length > 0 ? (
+      <ListSearchBar
+        value={listSearch}
+        onChange={setListSearch}
+        placeholder="Kërko stream sipas titullit ose streamer-it…"
+      />
+
+      {filteredLive.length > 0 ? (
         <section className="mb-8 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3">
           <h2 className="text-base font-extrabold text-red-800 dark:text-red-300 mb-3">Live Now</h2>
           <div className="flex gap-3 overflow-x-auto pb-1">
-            {liveStreams.map((stream) => {
+            {filteredLive.map((stream) => {
               const streamer = stream?.streamer || {};
               const name =
                 `${streamer.firstName || ''} ${streamer.lastName || ''}`.trim() || stream?.title || 'Live';

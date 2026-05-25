@@ -9,6 +9,43 @@ const { notifyMessage, notifyTournament } = require('./notifications');
 const { resolveTournamentSeason } = require('../utils/footballSeason');
 const { saveMatchGoalEvents, sumGoalsForSide } = require('../utils/matchGoalEvents');
 
+/** Siguron që çdo pjesëmarrës ka userId/id të user-it (jo id të rreshtit në TournamentParticipant). */
+function serializeTournamentParticipants(participants) {
+  if (!Array.isArray(participants)) return [];
+  return participants.map((p) => {
+    const j = p && typeof p.toJSON === 'function' ? p.toJSON() : { ...p };
+    const through = j.TournamentParticipant || j.tournament_participant || {};
+    const userId = Number(through.userId ?? j.userId ?? j.id);
+    const safeUserId = Number.isFinite(userId) && userId > 0 ? userId : null;
+    const {
+      TournamentParticipant: _tp,
+      tournament_participant: _tp2,
+      ...rest
+    } = j;
+    return {
+      ...rest,
+      id: safeUserId,
+      userId: safeUserId,
+      participantStatus: through.status ?? j.participantStatus ?? 'accepted',
+      points: through.points ?? j.points,
+      wins: through.wins ?? j.wins,
+      draws: through.draws ?? j.draws,
+      losses: through.losses ?? j.losses,
+      goalsFor: through.goalsFor ?? j.goalsFor,
+      goalsAgainst: through.goalsAgainst ?? j.goalsAgainst,
+    };
+  });
+}
+
+function serializeTournament(tournament) {
+  if (!tournament) return tournament;
+  const j = tournament && typeof tournament.toJSON === 'function' ? tournament.toJSON() : { ...tournament };
+  return {
+    ...j,
+    participants: serializeTournamentParticipants(j.participants),
+  };
+}
+
 exports.createTournament = async (req, res) => {
   try {
     const { name, description, type, startDate, endDate, maxParticipants, participantType, season } = req.body;
@@ -49,7 +86,7 @@ exports.getTournaments = async (req, res) => {
         { model: User, as: 'participants', attributes: ['id', 'firstName', 'lastName', 'role'], through: { attributes: [] } },
       ],
     });
-    res.json(tournaments);
+    res.json(tournaments.map(serializeTournament));
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
@@ -80,7 +117,7 @@ exports.getTrendingTournaments = async (req, res) => {
     });
 
     // Return top 5 by default
-    res.json(platformCreated.slice(0, 5));
+    res.json(platformCreated.slice(0, 5).map(serializeTournament));
   } catch (err) {
     console.error('Get trending tournaments error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -103,7 +140,7 @@ exports.getTournament = async (req, res) => {
       ],
     });
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
-    res.json(tournament);
+    res.json(serializeTournament(tournament));
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
