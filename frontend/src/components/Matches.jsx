@@ -247,7 +247,7 @@ function Matches() {
         matchDate: formData.matchDate,
         round: formData.round,
       });
-      alert('Match scheduled successfully!');
+      alert('Ndeshja u planifikua me sukses!');
       setShowCreateModal(false);
       setFormData({
         tournamentId: '',
@@ -259,7 +259,7 @@ function Matches() {
       fetchMatches();
     } catch (error) {
       console.error('Error creating match:', error);
-      alert('Failed to schedule match');
+      alert('Nuk u arrit planifikimi i ndeshjes');
     }
   };
 
@@ -289,7 +289,7 @@ function Matches() {
           ) : upcomingMatches.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
               <CalendarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No upcoming matches scheduled</p>
+              <p className="text-gray-500 text-lg">Nuk ka ndeshje të ardhshme të planifikuara</p>
             </div>
           ) : (
             upcomingMatches.map((match) => (
@@ -304,14 +304,14 @@ function Matches() {
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                         {match.homeTeam}
                       </h3>
-                      <span className="text-sm text-gray-500">Home</span>
+                      <span className="text-sm text-gray-500">Vendas</span>
                     </div>
                     <div className="text-3xl font-bold text-gray-400">VS</div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                         {match.awayTeam}
                       </h3>
-                      <span className="text-sm text-gray-500">Away</span>
+                      <span className="text-sm text-gray-500">Mysafir</span>
                     </div>
                   </div>
                   {/* Match Info */}
@@ -345,11 +345,11 @@ function Matches() {
                   {/* Status Badge */}
                   <div>
                     <span className="inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium">
-                      {match.status || 'Scheduled'}
+                      {match.status || 'E planifikuar'}
                     </span>
                   </div>
                   <button className="ml-4 px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500" onClick={() => handleEditMatch(match)}>
-                    Edit
+                    Ndrysho
                   </button>
                 </div>
                 {match.description && (

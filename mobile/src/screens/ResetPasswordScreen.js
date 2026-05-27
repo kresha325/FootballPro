@@ -12,25 +12,25 @@ export default function ResetPasswordScreen({ route, navigation }) {
   const onSubmit = async () => {
     setError('');
     if (!token) {
-      setError('Invalid or missing reset link.');
+      setError('Linku i rivendosjes është i pavlefshëm ose mungon.');
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      setError('Fjalëkalimi duhet të ketë të paktën 6 karaktere.');
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError('Fjalëkalimet nuk përputhen.');
       return;
     }
     setLoading(true);
     try {
       const res = await resetPasswordRequest(token, password);
-      Alert.alert('Success', res?.data?.msg || 'Password updated. You can log in now.', [
+      Alert.alert('Sukses', res?.data?.msg || 'Fjalëkalimi u përditësua. Tani mund të hyni.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Could not reset password'));
+      setError(extractErrorMessage(err, 'Nuk u arrit rivendosja e fjalëkalimit'));
     } finally {
       setLoading(false);
     }
@@ -38,12 +38,12 @@ export default function ResetPasswordScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Reset password</Text>
-      <Text style={styles.sub}>Enter a new password for your account.</Text>
+      <Text style={styles.title}>Rivendos fjalëkalimin</Text>
+      <Text style={styles.sub}>Shkruani një fjalëkalim të ri për llogarinë tuaj.</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TextInput
         style={styles.input}
-        placeholder="New password"
+        placeholder="Fjalëkalimi i ri"
         placeholderTextColor="#94a3b8"
         secureTextEntry
         value={password}
@@ -52,7 +52,7 @@ export default function ResetPasswordScreen({ route, navigation }) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Confirm password"
+        placeholder="Konfirmo fjalëkalimin"
         placeholderTextColor="#94a3b8"
         secureTextEntry
         value={confirm}
@@ -60,10 +60,10 @@ export default function ResetPasswordScreen({ route, navigation }) {
         autoCapitalize="none"
       />
       <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Update password</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Përditëso fjalëkalimin</Text>}
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Back to login</Text>
+        <Text style={styles.link}>Kthehu te hyrja</Text>
       </TouchableOpacity>
     </View>
   );

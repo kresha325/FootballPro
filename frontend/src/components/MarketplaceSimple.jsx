@@ -180,7 +180,7 @@ export default function MarketplaceSimple() {
       fetchProducts();
     } catch (error) {
       console.error('Error creating product:', error);
-      alert('Failed to create product');
+      alert('Nuk u arrit krijimi i produktit');
     }
   };
 
@@ -288,7 +288,7 @@ export default function MarketplaceSimple() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Marketplace</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Tregu</h1>
           <p className="text-gray-600 dark:text-gray-400">Bli dhe shit pajisje sportive</p>
         </div>
         <button

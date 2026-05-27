@@ -14,7 +14,7 @@ exports.submitRosterRequest = async (req, res) => {
     // Validate club exists and is a club account
     const club = await User.findByPk(clubId);
     if (!club || club.role !== 'club') {
-      return res.status(400).json({ error: 'Invalid club ID' });
+      return res.status(400).json({ error: 'ID e klubit është e pavlefshme' });
     }
 
     // Check for existing pending request
@@ -27,7 +27,7 @@ exports.submitRosterRequest = async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ error: 'You already have a pending request to this club' });
+      return res.status(400).json({ error: 'Ju tashmë keni një kërkesë në pritje për këtë klub' });
     }
 
     // Create request
@@ -77,7 +77,7 @@ exports.getPendingRequests = async (req, res) => {
     const clubId = req.user.id;
 
     if (req.user.role !== 'club') {
-      return res.status(403).json({ error: 'Only clubs can view roster requests' });
+      return res.status(403).json({ error: 'Vetëm klubet mund t’i shohin kërkesat e formacionit' });
     }
 
     const requests = await ClubRosterRequest.findAll({
@@ -176,15 +176,15 @@ exports.approveRequest = async (req, res) => {
     });
 
     if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
+      return res.status(404).json({ error: 'Kërkesa nuk u gjet' });
     }
 
     if (request.clubId !== clubId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
     if (request.status !== 'pending') {
-      return res.status(400).json({ error: 'Request already processed' });
+      return res.status(400).json({ error: 'Kërkesa është përpunuar tashmë' });
     }
 
     // Update request
@@ -269,15 +269,15 @@ exports.rejectRequest = async (req, res) => {
     });
 
     if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
+      return res.status(404).json({ error: 'Kërkesa nuk u gjet' });
     }
 
     if (request.clubId !== clubId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
     if (request.status !== 'pending') {
-      return res.status(400).json({ error: 'Request already processed' });
+      return res.status(400).json({ error: 'Kërkesa është përpunuar tashmë' });
     }
 
     // Update request
@@ -322,7 +322,7 @@ exports.getClubRoster = async (req, res) => {
 
     const parsedClubId = parseInt(clubId, 10);
     if (!Number.isFinite(parsedClubId)) {
-      return res.status(400).json({ error: 'Invalid club id' });
+      return res.status(400).json({ error: 'ID e klubit është e pavlefshme' });
     }
 
     const roster = await ClubRosterRequest.findAll({
@@ -360,11 +360,11 @@ exports.removeFromRoster = async (req, res) => {
     const request = await ClubRosterRequest.findByPk(requestId);
 
     if (!request) {
-      return res.status(404).json({ error: 'Roster entry not found' });
+      return res.status(404).json({ error: 'Regjistrimi në formacion nuk u gjet' });
     }
 
     if (request.clubId !== clubId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
     await request.destroy();

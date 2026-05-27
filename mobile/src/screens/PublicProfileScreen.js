@@ -139,13 +139,13 @@ export default function PublicProfileScreen({ route, navigation }) {
   const displayName = useMemo(() => {
     if (!profile) return APP_BRAND_NAME;
     const n = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
-    return n || 'User';
+    return n || 'Përdorues';
   }, [profile]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: ownProfileRoot && !profile ? 'My Profile' : displayName,
-      headerTitle: ownProfileRoot && !profile ? 'My Profile' : displayName,
+      title: ownProfileRoot && !profile ? 'Profili im' : displayName,
+      headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
     });
   }, [navigation, displayName, ownProfileRoot, profile]);
 
@@ -259,7 +259,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           setClubStaff([]);
         }
       } catch (err) {
-        setError(extractErrorMessage(err, 'Failed to load profile'));
+        setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i profilit'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -271,7 +271,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   useFocusEffect(
     useCallback(() => {
       if (userId == null || userId === '') {
-        setError('Missing user');
+        setError('Mungon përdoruesi');
         setLoading(false);
         return;
       }
@@ -293,7 +293,7 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const onSaveTransfer = async () => {
     if (!transferForm.toClub.trim()) {
-      Alert.alert('Validation', 'Destination club is required.');
+      Alert.alert('Validim', 'Klubi i destinacionit është i detyrueshëm.');
       return;
     }
     setTransferSaving(true);
@@ -310,24 +310,24 @@ export default function PublicProfileScreen({ route, navigation }) {
       setTransferModalOpen(false);
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Error', extractErrorMessage(err, 'Could not add transfer'));
+      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit shtimi i transferit'));
     } finally {
       setTransferSaving(false);
     }
   };
 
   const onDeleteTransfer = (transfer) => {
-    Alert.alert('Delete transfer', 'Remove this transfer record?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Fshi transferin', 'Ta heq këtë regjistrim transferi?', [
+      { text: 'Anulo', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Fshi',
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteTransferHistoryRequest(transfer.id);
             await loadProfile({ silent: true });
           } catch (err) {
-            Alert.alert('Error', extractErrorMessage(err, 'Could not delete transfer'));
+            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit fshirja e transferit'));
           }
         },
       },
@@ -347,7 +347,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       }
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Follow', extractErrorMessage(err, 'Could not update follow status'));
+      Alert.alert('Ndjekja', extractErrorMessage(err, 'Nuk u arrit përditësimi i statusit të ndjekjes'));
     } finally {
       setBusy(false);
     }
@@ -357,7 +357,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     try {
       const res = await getOrCreateConversationRequest(userId);
       const conversationId = res?.data?.id;
-      if (!conversationId) throw new Error('Conversation could not be created');
+      if (!conversationId) throw new Error('Biseda nuk u krijua');
       const parent = navigation.getParent?.();
       const convParams = {
         conversationId,
@@ -370,7 +370,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         navigation.navigate('Messages', { screen: 'Conversation', params: convParams });
       }
     } catch (err) {
-      Alert.alert('Message', extractErrorMessage(err, 'Could not open conversation'));
+      Alert.alert('Mesazh', extractErrorMessage(err, 'Nuk u arrit hapja e bisedës'));
     }
   };
 
@@ -401,21 +401,21 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const tabs = useMemo(() => {
     const base = [
-      { key: 'overview', label: '🏠 Overview' },
-      { key: 'posts', label: '📝 Posts' },
+      { key: 'overview', label: '🏠 Përmbledhje' },
+      { key: 'posts', label: '📝 Postime' },
     ];
     if (isAthlete) {
-      base.push({ key: 'matches', label: '⚽ Matches' });
-      base.push({ key: 'tournaments', label: '🏆 Tournaments' });
-      base.push({ key: 'achievements', label: '🎖️ Achievements' });
+      base.push({ key: 'matches', label: '⚽ Ndeshje' });
+      base.push({ key: 'tournaments', label: '🏆 Turne' });
+      base.push({ key: 'achievements', label: '🎖️ Arritje' });
     }
     base.push(
-      { key: 'gallery', label: '🖼️ Gallery' },
-      { key: 'videos', label: '🎥 Videos' },
-      { key: 'about', label: 'ℹ️ About' },
-      { key: 'contact', label: '✉️ Contact' }
+      { key: 'gallery', label: '🖼️ Galeria' },
+      { key: 'videos', label: '🎥 Videot' },
+      { key: 'about', label: 'ℹ️ Rreth' },
+      { key: 'contact', label: '✉️ Kontakt' }
     );
-    if (isSelf) base.push({ key: 'sponsors', label: '🤝 Sponsors' });
+    if (isSelf) base.push({ key: 'sponsors', label: '🤝 Sponsorë' });
     return base;
   }, [isSelf, isAthlete]);
 
@@ -456,7 +456,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   if (!profile) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.bg }]}>
-        <Text style={{ color: theme.muted }}>Profile not found</Text>
+        <Text style={{ color: theme.muted }}>Profili nuk u gjet</Text>
       </View>
     );
   }
@@ -504,7 +504,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             activeOpacity={0.92}
             onPress={() => setHeaderImagePreview(coverUri)}
             accessibilityRole="imagebutton"
-            accessibilityLabel="View cover photo"
+            accessibilityLabel="Shiko foton e kopertinës"
           >
             <ImageBackground source={{ uri: coverUri }} style={styles.cover} imageStyle={styles.coverImage}>
               <View style={styles.coverTint} />
@@ -526,7 +526,7 @@ export default function PublicProfileScreen({ route, navigation }) {
               disabled={!photoUri}
               onPress={() => photoUri && setHeaderImagePreview(photoUri)}
               accessibilityRole={photoUri ? 'imagebutton' : 'none'}
-              accessibilityLabel={photoUri ? 'View profile photo' : undefined}
+              accessibilityLabel={photoUri ? 'Shiko foton e profilit' : undefined}
             >
             <View
               style={[
@@ -570,7 +570,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             <View style={styles.chipRow}>
               {profile.age != null && profile.ageGroup ? (
                 <Chip icon="calendar-outline">
-                  {profile.age} yrs ({profile.ageGroup})
+                  {profile.age} vjeç ({profile.ageGroup})
                 </Chip>
               ) : null}
               {profile.position ? <Chip icon="football-outline">{profile.position}</Chip> : null}
@@ -588,15 +588,15 @@ export default function PublicProfileScreen({ route, navigation }) {
             <View style={styles.statsRow}>
               <View style={styles.statCell}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{postCount}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Posts</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Postime</Text>
               </View>
               <View style={styles.statCell}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.followers ?? 0}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Followers</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Ndjekës</Text>
               </View>
               <View style={styles.statCell}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.following ?? 0}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Following</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>Duke ndjekur</Text>
               </View>
             </View>
 
@@ -649,7 +649,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                       following && { color: theme.muted },
                     ]}
                   >
-                    {busy ? '…' : following ? 'Following' : 'Follow'}
+                    {busy ? '…' : following ? 'Duke ndjekur' : 'Ndiq'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -660,7 +660,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onPress={onSendMessage}
                 >
                   <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.text} />
-                  <Text style={[styles.msgBtnText, { color: theme.text }]}>Message</Text>
+                  <Text style={[styles.msgBtnText, { color: theme.text }]}>Mesazh</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.videoBtn} onPress={onVideoCall}>
                   <Ionicons name="videocam-outline" size={18} color="#fff" />
@@ -676,7 +676,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                 ) : null}
                 <TouchableOpacity style={styles.goLiveBtn} onPress={onGoLive} activeOpacity={0.88}>
                   <Ionicons name="videocam" size={20} color="#fff" />
-                  <Text style={styles.goLiveBtnText}>Go Live</Text>
+                  <Text style={styles.goLiveBtnText}>Dil LIVE</Text>
                 </TouchableOpacity>
                 <View style={styles.selfActionsRow}>
                   <TouchableOpacity
@@ -684,14 +684,14 @@ export default function PublicProfileScreen({ route, navigation }) {
                     onPress={() => navigation.navigate('EditProfile')}
                   >
                     <Ionicons name="create-outline" size={18} color="#fff" />
-                    <Text style={styles.selfPrimaryBtnText}>Edit profile</Text>
+                    <Text style={styles.selfPrimaryBtnText}>Ndrysho profilin</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.selfSecondaryBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                     onPress={() => navigation.navigate('BrowseProfiles')}
                   >
                     <Ionicons name="people-outline" size={18} color="#0f766e" />
-                    <Text style={styles.selfSecondaryBtnText}>Browse</Text>
+                    <Text style={styles.selfSecondaryBtnText}>Shfleto</Text>
                   </TouchableOpacity>
                 </View>
               </View>

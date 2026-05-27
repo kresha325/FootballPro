@@ -198,7 +198,7 @@ function MarketplaceNavigator() {
         ...(route.name !== 'MarketplaceHome' ? { headerRight: () => <NotificationHeaderButton /> } : {}),
       })}
     >
-      <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
+      <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Tregu' }} />
       <MarketplaceStack.Screen
         name="CreateProduct"
         component={CreateProductScreen}
@@ -224,13 +224,13 @@ function ProfileNavigator() {
         component={PublicProfileScreen}
         initialParams={{ ownProfile: true }}
         options={{
-          title: 'My Profile',
+          title: 'Profili im',
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
               <NotificationHeaderButton />
               <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
                 <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Logout</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Dil</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -248,7 +248,7 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="GoLive"
         component={GoLiveScreen}
-        options={{ title: 'Go Live', headerShown: true, headerBackTitleVisible: true }}
+        options={{ title: 'Dil LIVE', headerShown: true, headerBackTitleVisible: true }}
       />
       <ProfileStack.Screen
         name="GoLiveBroadcast"
@@ -258,9 +258,9 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="LiveViewer"
         component={LiveViewerScreen}
-        options={{ title: 'Live', headerBackTitleVisible: true }}
+        options={{ title: 'LIVE', headerBackTitleVisible: true }}
       />
-      <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
     </ProfileStack.Navigator>
   );
 }
@@ -281,9 +281,9 @@ function MoreNavigator() {
       <MoreStack.Screen
         name="TournamentDetail"
         component={TournamentDetailScreen}
-        options={{ title: 'Tournament', headerBackTitleVisible: true }}
+        options={{ title: 'Turneu', headerBackTitleVisible: true }}
       />
-      <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videos' }} />
+      <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videot' }} />
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
@@ -297,7 +297,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />
@@ -345,13 +345,13 @@ function AppTabs() {
           },
         })}
       >
-      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Feed' }} />
+      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Lajmet' }} />
       <Tabs.Screen
         name="Marketplace"
         component={MarketplaceNavigator}
         options={{
           headerShown: false,
-          tabBarLabel: 'Market',
+          tabBarLabel: 'Tregu',
           tabBarBadge: formatBadge(totalPieces),
         }}
       />
@@ -376,7 +376,7 @@ function AppTabs() {
         component={MessagingNavigator}
         options={{
           headerShown: false,
-          tabBarLabel: 'Chats',
+          tabBarLabel: 'Bisedat',
           tabBarBadge: formatBadge(messagesCount),
         }}
       />
@@ -413,7 +413,7 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="ResetPassword"
                 component={ResetPasswordScreen}
-                options={{ headerShown: true, title: 'Reset password' }}
+                options={{ headerShown: true, title: 'Rivendos fjalëkalimin' }}
               />
             </>
           ) : pendingOnboarding ? (

@@ -50,6 +50,13 @@ const API = axios.create({
   baseURL: API_BASE_URL,
 });
 
+export const extractApiMessage = (error, fallback = 'Ndodhi një gabim') =>
+  error?.response?.data?.msg ||
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  fallback;
+
 if (import.meta.env.DEV) {
   console.log('FRONTEND: API baseURL =', API_BASE_URL);
 }

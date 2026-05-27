@@ -166,7 +166,7 @@ const Settings = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-white dark:bg-gray-800 rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Settings</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Cilësimet</h1>
 
 
 
@@ -178,7 +178,7 @@ const Settings = () => {
           Appearance
         </h2>
         <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <span className="text-gray-700 dark:text-gray-300">Dark Mode</span>
+          <span className="text-gray-700 dark:text-gray-300">Modaliteti i errët</span>
           <button
             onClick={toggleDarkMode}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -198,10 +198,10 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <BellIcon className="w-6 h-6 mr-2" />
-          Notifications
+          Njoftimet
         </h2>
         <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <span className="text-gray-700 dark:text-gray-300">Enable Notifications</span>
+          <span className="text-gray-700 dark:text-gray-300">Aktivizo njoftimet</span>
           <button
             type="button"
             onClick={toggleNotifications}
@@ -222,7 +222,7 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <UserIcon className="w-6 h-6 mr-2" />
-          Profile
+          Profili
         </h2>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           {saveMessage.text ? (
@@ -317,17 +317,17 @@ const Settings = () => {
       <div>
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <ShieldCheckIcon className="w-6 h-6 mr-2" />
-          Privacy & Security
+          Privatësia dhe siguria
         </h2>
         <div className="space-y-2">
           <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-            Change Password
+            Ndrysho fjalëkalimin
           </button>
           <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-            Privacy Settings
+            Cilësimet e privatësisë
           </button>
           <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-red-600">
-            Delete Account
+            Fshi llogarinë
           </button>
         </div>
       </div>

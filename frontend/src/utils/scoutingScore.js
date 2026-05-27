@@ -1,5 +1,5 @@
 export const AGE_GROUP_OPTIONS = [
-  { id: 'all', label: 'All Ages' },
+  { id: 'all', label: 'Të gjitha grupmoshat' },
   { id: 'U13', label: 'U13' },
   { id: 'U15', label: 'U15' },
   { id: 'U17', label: 'U17' },
@@ -21,10 +21,10 @@ export function winnerForMetric(metricWinners, key, side) {
 }
 
 export function metricLabel(key) {
-  if (key === 'goals') return 'Goals';
-  if (key === 'assists') return 'Assists';
-  if (key === 'likes') return 'Likes';
-  if (key === 'followers') return 'Followers';
+  if (key === 'goals') return 'Gola';
+  if (key === 'assists') return 'Asiste';
+  if (key === 'likes') return 'Pëlqime';
+  if (key === 'followers') return 'Ndjekës';
   return key;
 }
 

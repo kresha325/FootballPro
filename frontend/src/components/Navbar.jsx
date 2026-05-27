@@ -147,7 +147,7 @@ function Navbar() {
       });
     } catch (err) {
       console.error('Failed to start live stream:', err);
-      alert('Failed to start live stream. Please try again.');
+      alert('Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.');
     }
   };
 
@@ -169,10 +169,10 @@ function Navbar() {
     try {
       await streamsAPI.endStream(activeLiveStreamId);
       setActiveLiveStreamId(null);
-      alert('Live stream ended.');
+      alert('Transmetimi live përfundoi.');
     } catch (err) {
       console.error('Failed to end live stream:', err);
-      alert('Failed to end live stream. Please try again.');
+      alert('Nuk u arrit përfundimi i transmetimit live. Ju lutem provoni përsëri.');
     } finally {
       setIsEndingLive(false);
     }
@@ -190,7 +190,7 @@ function Navbar() {
       }
     } catch (err) {
       console.error('Camera open failed:', err);
-      alert('Camera/Microphone permission is required.');
+      alert('Leja për kamerë/mikrofon është e detyrueshme.');
     }
   }, [cameraReady]);
 
@@ -341,7 +341,7 @@ function Navbar() {
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="text-2xl">🏠</span>
-                <span className="font-medium">Home</span>
+                <span className="font-medium">Ballina</span>
               </Link>
 
               <Link
@@ -350,7 +350,7 @@ function Navbar() {
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="text-2xl">🛒</span>
-                <span className="font-medium">Marketplace</span>
+                <span className="font-medium">Tregu</span>
                 {cartBadge ? (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
                     {cartBadge}
@@ -364,7 +364,7 @@ function Navbar() {
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="text-2xl">🏆</span>
-                <span className="font-medium">Tournaments</span>
+                <span className="font-medium">Turnetë</span>
               </Link>
 
               <button
@@ -376,7 +376,7 @@ function Navbar() {
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <span className="text-2xl">🔴</span>
-                <span className="font-medium">Go Live</span>
+                <span className="font-medium">Dil LIVE</span>
               </button>
             </div>
 
@@ -387,7 +387,7 @@ function Navbar() {
               className="md:hidden flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">🏆</span>
-              <span className="font-medium">Tournaments</span>
+              <span className="font-medium">Turnetë</span>
             </Link>
             
             {/* Notifications */}
@@ -397,7 +397,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">🔔</span>
-              <span className="font-medium">Notifications</span>
+              <span className="font-medium">Njoftimet</span>
               {unreadCount > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -412,7 +412,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">💬</span>
-              <span className="font-medium">Messages</span>
+              <span className="font-medium">Mesazhet</span>
               {messagesUnread > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
                   {messagesUnread > 99 ? '99+' : messagesUnread}
@@ -427,7 +427,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">👥</span>
-              <span className="font-medium">Browse Profiles</span>
+              <span className="font-medium">Shfleto Profilet</span>
             </Link>
 
             {/* Analytics */}
@@ -437,7 +437,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
-              <span className="font-medium">Analytics</span>
+              <span className="font-medium">Analitika</span>
             </Link>
 
             {/* Gamification */}
@@ -447,7 +447,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <TrophyIcon className="h-6 w-6" />
-              <span className="font-medium">Gamification</span>
+              <span className="font-medium">Gamifikimi</span>
             </Link>
 
             {/* Videos */}
@@ -457,7 +457,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <VideoCameraIcon className="h-6 w-6" />
-              <span className="font-medium">Videos</span>
+              <span className="font-medium">Videot</span>
             </Link>
 
             {/* Matches */}
@@ -467,7 +467,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">⚽</span>
-              <span className="font-medium">Matches</span>
+              <span className="font-medium">Ndeshjet</span>
             </Link>
 
             {/* Scouting (for scouts) */}
@@ -490,7 +490,7 @@ function Navbar() {
                 className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-colors"
               >
                 <span className="text-2xl">👥</span>
-                <span className="font-medium">Club Roster</span>
+                <span className="font-medium">Formacioni i Klubit</span>
               </Link>
             )}
 
@@ -502,7 +502,7 @@ function Navbar() {
                 className="flex items-center gap-3 p-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
                 <span className="text-2xl">🔐</span>
-                <span className="font-medium">Admin Dashboard</span>
+                <span className="font-medium">Paneli i Adminit</span>
               </Link>
             )}
 
@@ -514,7 +514,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors"
             >
               <span className="text-2xl">👑</span>
-              <span className="font-medium">Go Premium</span>
+              <span className="font-medium">Kalo në Premium</span>
             </Link>
 
             {/* Shto Reklamë */}
@@ -536,7 +536,7 @@ function Navbar() {
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <span className="text-2xl">⚙️</span>
-              <span className="font-medium">Settings</span>
+              <span className="font-medium">Cilësimet</span>
             </Link>
 
             {/* Logout */}
@@ -549,7 +549,7 @@ function Navbar() {
               className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               <span className="text-2xl">🚪</span>
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">Dil</span>
             </button>
 
           </div>
@@ -570,18 +570,18 @@ function Navbar() {
       {user && showLiveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Start Live Stream</h2>
+            <h2 className="text-xl font-bold mb-4">Nis transmetim live</h2>
             <form onSubmit={handleStartLiveStream}>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Title</label>
+                <label className="block text-sm font-medium mb-1">Titulli</label>
                 <input type="text" value={liveTitle} onChange={e => setLiveTitle(e.target.value)} required className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium mb-1">Përshkrimi</label>
                 <textarea value={liveDescription} onChange={e => setLiveDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Public</label>
+                <label className="block text-sm font-medium mb-1">Publik</label>
                 <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
               </div>
               <button
@@ -589,14 +589,14 @@ function Navbar() {
                 onClick={handleOpenCameraFirst}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium mt-1"
               >
-                {cameraReady ? 'Camera ready' : 'Open camera first'}
+                {cameraReady ? 'Kamera gati' : 'Hap kamerën fillimisht'}
               </button>
               {cameraStream ? (
                 <div className="mt-3">
                   <video ref={livePreviewRef} autoPlay muted playsInline className="w-full rounded border" />
                 </div>
               ) : null}
-              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
+              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Nis LIVE</button>
               {activeLiveStreamId ? (
                 <button
                   type="button"
@@ -604,10 +604,10 @@ function Navbar() {
                   disabled={isEndingLive}
                   className="ml-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium mt-2"
                 >
-                  {isEndingLive ? 'Ending...' : 'End Current Live'}
+                  {isEndingLive ? 'Duke përfunduar...' : 'Përfundo LIVE aktual'}
                 </button>
               ) : null}
-              <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
+              <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Anulo</button>
             </form>
           </div>
         </div>

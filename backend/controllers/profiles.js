@@ -213,7 +213,7 @@ exports.createProfile = async (req, res) => {
     res.status(201).json(profile);
   } catch (err) {
       console.error('Create profile error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -231,7 +231,7 @@ exports.getProfile = async (req, res) => {
     });
 
     if (!profile) {
-      return res.status(404).json({ msg: 'Profile not found' });
+      return res.status(404).json({ msg: 'Profili nuk u gjet' });
     }
 
     // Calculate age and age group
@@ -300,7 +300,7 @@ exports.getProfile = async (req, res) => {
     res.json(response);
   } catch (err) {
       console.error('Get profile error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -658,7 +658,7 @@ exports.updateProfile = async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error('Profile update error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -773,7 +773,7 @@ exports.getAllProfiles = async (req, res) => {
     res.json(profilesWithUserData);
   } catch (err) {
     console.error('Get all profiles error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -781,7 +781,7 @@ exports.registerPushToken = async (req, res) => {
   const { token, type } = req.body; // type: 'mobile' or 'web'
   try {
     const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
+    if (!user) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
 
     if (type === 'mobile') {
       user.pushTokenMobile = token;
@@ -791,7 +791,7 @@ exports.registerPushToken = async (req, res) => {
     await user.save();
     res.json({ msg: 'Push token registered' });
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -803,13 +803,13 @@ exports.followUser = async (req, res) => {
 
     // Cannot follow yourself
     if (followerId === followingId) {
-      return res.status(400).json({ msg: 'Cannot follow yourself' });
+      return res.status(400).json({ msg: 'Nuk mund ta ndiqni veten' });
     }
 
     // Check if user to follow exists
     const userToFollow = await User.findByPk(followingId);
     if (!userToFollow) {
-      return res.status(404).json({ msg: 'User not found' });
+      return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     }
 
     // Check if already following
@@ -818,7 +818,7 @@ exports.followUser = async (req, res) => {
     });
 
     if (existingFollow) {
-      return res.status(400).json({ msg: 'Already following this user' });
+      return res.status(400).json({ msg: 'Tashmë po e ndiqni këtë përdorues' });
     }
 
     // Create follow relationship
@@ -850,7 +850,7 @@ exports.followUser = async (req, res) => {
     res.status(201).json({ msg: 'Successfully followed user', follow });
   } catch (err) {
     console.error('Follow user error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -865,15 +865,15 @@ exports.unfollowUser = async (req, res) => {
     });
 
     if (!follow) {
-      return res.status(404).json({ msg: 'Not following this user' });
+      return res.status(404).json({ msg: 'Nuk po e ndiqni këtë përdorues' });
     }
 
     await follow.destroy();
 
-    res.json({ msg: 'Successfully unfollowed user' });
+    res.json({ msg: 'Ndjekja u hoq me sukses' });
   } catch (err) {
     console.error('Unfollow user error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -902,7 +902,7 @@ exports.getFollowers = async (req, res) => {
     res.json(validFollowers);
   } catch (err) {
     console.error('Get followers error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -931,7 +931,7 @@ exports.getFollowing = async (req, res) => {
     res.json(validFollowing);
   } catch (err) {
     console.error('Get following error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -954,7 +954,7 @@ exports.getUserTournamentSummary = async (req, res) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (!Number.isFinite(userId)) {
-      return res.status(400).json({ msg: 'Invalid user id' });
+      return res.status(400).json({ msg: 'ID e përdoruesit është e pavlefshme' });
     }
 
     const participations = await TournamentParticipant.findAll({
@@ -1082,7 +1082,7 @@ exports.getUserTournamentSummary = async (req, res) => {
     });
   } catch (err) {
     console.error('getUserTournamentSummary:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -1106,6 +1106,6 @@ exports.checkFollowStatus = async (req, res) => {
     });
   } catch (err) {
     console.error('Check follow status error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };

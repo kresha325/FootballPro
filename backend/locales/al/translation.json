@@ -11,8 +11,13 @@
   "notifications": "Njoftimet",
   "messages": "Mesazhet",
   "tournaments": "Turnetë",
-
+  "streams": "Transmetimet",
   "gallery": "Galeria",
   "scouting": "Zbulimi",
-  "marketplace": "Tregu"
+  "marketplace": "Tregu",
+  "server_error": "Gabim në server",
+  "not_found": "Nuk u gjet",
+  "unauthorized": "Nuk je i autorizuar",
+  "forbidden": "Qasja u refuzua",
+  "validation_error": "Të dhënat nuk janë të vlefshme"
 }

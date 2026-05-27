@@ -15,7 +15,7 @@ const {
 
 exports.uploadRecording = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'Nuk u ngarkua asnjë skedar' });
     const { title, description, streamId } = req.body;
     const streamerId = req.user.id;
     let videoUrl = `/uploads/${req.file.filename}`;
@@ -46,7 +46,7 @@ exports.uploadRecording = async (req, res) => {
       userId: streamerId,
       streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
       videoUrl,
-      title: title || 'Live Recording',
+      title: title || 'Regjistrim Live',
       description: description || '',
       publicId,
     });
@@ -77,7 +77,7 @@ exports.uploadRecording = async (req, res) => {
 // Upload temporary recording (store in uploads/, but do not attach to Stream)
 exports.uploadTemp = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'Nuk u ngarkua asnjë skedar' });
     const tempPath = `/uploads/${req.file.filename}`;
     // Do not create DB records here; return path for frontend preview/decide-share
     try { const io = socketUtil.getIo(); if (io) io.to('streams').emit('stream:tempUploaded', { path: tempPath }); } catch(e) {}
@@ -92,13 +92,13 @@ exports.uploadTemp = async (req, res) => {
 exports.deleteTemp = async (req, res) => {
   try {
     const { filename } = req.params;
-    if (!filename || filename.includes('..') || filename.includes('/')) return res.status(400).json({ error: 'Invalid filename' });
+    if (!filename || filename.includes('..') || filename.includes('/')) return res.status(400).json({ error: 'Emri i skedarit është i pavlefshëm' });
     const full = path.join(__dirname, '..', 'uploads', filename);
     if (fs.existsSync(full)) {
       fs.unlinkSync(full);
-      return res.json({ message: 'Deleted' });
+      return res.json({ message: 'U fshi' });
     }
-    res.status(404).json({ error: 'Not found' });
+    res.status(404).json({ error: 'Nuk u gjet' });
   } catch (err) {
     console.error('Delete temp error:', err);
     res.status(500).json({ error: err.message });
@@ -109,7 +109,7 @@ exports.deleteTemp = async (req, res) => {
 exports.finalizeTemp = async (req, res) => {
   try {
     const { tempUrl, content, saveAs, streamId, title, description } = req.body;
-    if (!tempUrl) return res.status(400).json({ error: 'tempUrl required' });
+    if (!tempUrl) return res.status(400).json({ error: 'tempUrl është i detyrueshëm' });
     // Accept cloud URLs directly
     let imageUrl = null;
     let videoUrl = null;
@@ -122,7 +122,7 @@ exports.finalizeTemp = async (req, res) => {
     if (tempUrl.startsWith('/uploads/')) {
       const filename = tempUrl.replace('/uploads/', '');
       const full = path.join(__dirname, '..', 'uploads', filename);
-      if (!fs.existsSync(full)) return res.status(404).json({ error: 'File not found' });
+      if (!fs.existsSync(full)) return res.status(404).json({ error: 'Skedari nuk u gjet' });
       const ext = path.extname(full).toLowerCase();
       const isVideo = /\.(mp4|mov|mkv|webm|avi)$/.test(ext);
 
@@ -149,7 +149,7 @@ exports.finalizeTemp = async (req, res) => {
       // Already a public URL (maybe Cloudinary)
       if (/\.(mp4|mov|mkv|webm|avi)(\?|$)/.test(tempUrl)) videoUrl = tempUrl; else imageUrl = tempUrl;
     } else {
-      return res.status(400).json({ error: 'Unsupported tempUrl format' });
+      return res.status(400).json({ error: 'Formati i tempUrl nuk mbështetet' });
     }
 
     const mode = saveAs === 'post' ? 'post' : 'live';
@@ -159,7 +159,7 @@ exports.finalizeTemp = async (req, res) => {
         userId: req.user.id,
         streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
         videoUrl,
-        title: title || content || 'Live Recording',
+        title: title || content || 'Regjistrim Live',
         description: description || '',
       });
       try {
@@ -244,7 +244,7 @@ exports.goLiveWebRTC = async (req, res) => {
         io.to('streams').emit('stream:updated', { id: stream.id });
       }
     } catch (e) {}
-    res.json({ message: 'WebRTC stream started', stream });
+    res.json({ message: 'Transmetimi WebRTC u nis', stream });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -305,7 +305,7 @@ exports.createStream = async (req, res) => {
     if (trimmedBody) {
       youtubeChannelId = normalizeYoutubeChannelId(trimmedBody);
       if (!youtubeChannelId) {
-        return res.status(400).json({ error: 'Invalid YouTube channel ID (expected UC… or /channel/UC… link).' });
+        return res.status(400).json({ error: 'YouTube channel ID është i pavlefshëm (pritet UC... ose link /channel/UC...)' });
       }
     } else if (playbackSource !== 'livekit') {
       const prof = await Profile.findOne({
@@ -401,7 +401,7 @@ exports.getStreams = async (req, res) => {
       }
       // Siguro që gjithmonë të kthehet një objekt streamer me photoUrl
       if (!s.streamer) {
-        s.streamer = { firstName: 'Unknown', lastName: '', photoUrl: null };
+        s.streamer = { firstName: 'I panjohur', lastName: '', photoUrl: null };
       } else if (s.streamer.Profile && s.streamer.Profile.profilePhoto) {
         s.streamer.photoUrl = s.streamer.Profile.profilePhoto.startsWith('/uploads/')
           ? `https://localhost:5098${s.streamer.Profile.profilePhoto}`
@@ -449,11 +449,11 @@ exports.getStream = async (req, res) => {
         },
       ],
     });
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
 
     // Check if premium stream and user is not premium
     if (stream.isPremium && !req.user?.premium) {
-      return res.status(403).json({ error: 'Premium stream requires subscription' });
+      return res.status(403).json({ error: 'Transmetimi premium kërkon abonim' });
     }
 
     const out = stream.toJSON ? stream.toJSON() : stream;
@@ -479,7 +479,7 @@ exports.startStream = async (req, res) => {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
     if (!stream || stream.streamerId !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
     stream.isLive = true;
@@ -507,7 +507,7 @@ exports.heartbeatStream = async (req, res) => {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
     if (!stream || stream.streamerId !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
     if (!stream.isLive) {
       return res.status(400).json({ error: 'Stream is not live' });
@@ -528,7 +528,7 @@ exports.saveLiveReplay = async (req, res) => {
     if (!videoUrl) return res.status(400).json({ error: 'videoUrl required' });
     const stream = await Stream.findByPk(id);
     if (!stream || stream.streamerId !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
     const result = await persistLiveReplay({
       userId: req.user.id,
@@ -565,7 +565,7 @@ exports.endStream = async (req, res) => {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
     if (!stream || stream.streamerId !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
     stream.isLive = false;
@@ -587,7 +587,7 @@ exports.endStream = async (req, res) => {
 exports.updateViewersInternal = async (req, res) => {
   try {
     if (!isMediasoupInternalAuthorized(req)) {
-      return res.status(401).json({ error: 'Unauthorized mediasoup call' });
+      return res.status(401).json({ error: 'Thirrje mediasoup e paautorizuar' });
     }
 
     const { id } = req.params;
@@ -599,7 +599,7 @@ exports.updateViewersInternal = async (req, res) => {
     }
 
     const stream = await Stream.findByPk(id);
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
 
     stream.viewers = viewers;
     await Stream.update(
@@ -625,13 +625,13 @@ exports.updateViewersInternal = async (req, res) => {
 exports.endStreamInternal = async (req, res) => {
   try {
     if (!isMediasoupInternalAuthorized(req)) {
-      return res.status(401).json({ error: 'Unauthorized mediasoup call' });
+      return res.status(401).json({ error: 'Thirrje mediasoup e paautorizuar' });
     }
 
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
     if (!stream) {
-      return res.status(404).json({ error: 'Stream not found' });
+      return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
     }
 
     stream.isLive = false;
@@ -656,10 +656,10 @@ exports.joinStream = async (req, res) => {
   try {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
 
     if (stream.isPremium && !req.user.premium) {
-      return res.status(403).json({ error: 'Premium stream requires subscription' });
+      return res.status(403).json({ error: 'Transmetimi premium kërkon abonim' });
     }
 
     stream.viewers += 1;
@@ -682,7 +682,7 @@ exports.leaveStream = async (req, res) => {
   try {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
 
     if (stream.viewers > 0) {
       stream.viewers -= 1;

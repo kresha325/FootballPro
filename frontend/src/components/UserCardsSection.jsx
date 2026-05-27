@@ -104,42 +104,47 @@ const UserCardsSection = () => {
     <div className="mb-8">
       <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory flex-nowrap hide-scrollbar-mobile">
         {profiles.map(profile => (
-          <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col min-w-[220px] snap-start">
-            <div className="relative h-48 w-full overflow-hidden">
-              <img
-                src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.svg'}
-                alt={profile.firstName + ' ' + profile.lastName}
-                className={`object-cover w-full h-full border-4 transition-all duration-300 ${onlineStatus[profile.id] === true ? 'border-green-500' : 'border-gray-400'}`}
-                loading="lazy"
-                decoding="async"
-                onError={e => { e.target.src = '/default-avatar.svg'; }}
-              />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <div className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">
-                  {profile.firstName} {profile.lastName}
-                  {onlineStatus[profile.id] === true ? (
-                    <span title="Online" className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
-                  ) : (
-                    <span title="Offline" className="inline-block w-3 h-3 rounded-full bg-gray-400 border-2 border-white"></span>
-                  )}
-                </div>
-                <div className="text-white text-sm font-medium drop-shadow">{profile.position || '—'}</div>
+          <div
+            key={profile.id}
+            className="relative min-w-[220px] h-[320px] rounded-2xl shadow-xl overflow-hidden snap-start group"
+          >
+            <img
+              src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.svg'}
+              alt={profile.firstName + ' ' + profile.lastName}
+              className={`object-cover w-full h-full transition-transform duration-500 group-hover:scale-105 ${onlineStatus[profile.id] === true ? 'ring-2 ring-green-500/70' : 'ring-2 ring-white/20'}`}
+              loading="lazy"
+              decoding="async"
+              onError={e => { e.target.src = '/default-avatar.svg'; }}
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-black/45" />
+
+            <div className="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/45 to-transparent">
+              <div className="text-3xl font-bold text-white drop-shadow-lg leading-tight flex items-center gap-2">
+                {profile.firstName} {profile.lastName}
+                {onlineStatus[profile.id] === true ? (
+                  <span title="Online" className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
+                ) : (
+                  <span title="Offline" className="inline-block w-3 h-3 rounded-full bg-gray-400 border-2 border-white" />
+                )}
               </div>
+              <div className="text-white text-base font-semibold drop-shadow">{profile.position || '—'}</div>
             </div>
-              <div className="flex-1 flex flex-col justify-between p-4 bg-gray-900/90 text-white">
-              <div className="mb-2">
-                <div className="text-sm opacity-80">Mosha: {getProfileAge(profile) ?? '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
+
+            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/55 via-black/35 to-transparent">
+              <div className="mb-2 text-sm text-white/95 font-medium drop-shadow">
+                Mosha: {getProfileAge(profile) ?? '—'} {profile.country ? `🌍 ${profile.country}` : ''}
               </div>
-              <div className="flex gap-2 mt-auto">
+              <div className="flex gap-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-2">
                 <button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 rounded-md transition"
+                  className="flex-1 bg-green-600/95 hover:bg-green-700 text-white font-semibold text-xs py-2 rounded-lg transition"
                   onClick={() => navigate(`/profile/${profile.id}`)}
                 >
                   SHIKO PROFILIN
                 </button>
                 {user && user.id !== profile.id && (
                   <button
-                    className={`flex-1 font-medium text-xs py-2 rounded-md transition ${followStatus[profile.id] ? 'bg-gray-400 hover:bg-gray-500' : 'bg-gray-700 hover:bg-gray-800'} text-white`}
+                    className={`flex-1 font-semibold text-xs py-2 rounded-lg transition ${followStatus[profile.id] ? 'bg-gray-300/95 hover:bg-gray-400 text-gray-900' : 'bg-white/20 hover:bg-white/30 text-white border border-white/25'}`}
                     onClick={() => handleFollow(profile.id)}
                     disabled={loadingFollow[profile.id]}
                   >
@@ -147,7 +152,7 @@ const UserCardsSection = () => {
                   </button>
                 )}
                 {(!user || user.id === profile.id) && (
-                  <button className="flex-1 bg-gray-300 text-gray-600 font-medium text-xs py-2 rounded-md cursor-not-allowed" disabled>
+                  <button className="flex-1 bg-white/20 text-white/80 font-semibold text-xs py-2 rounded-lg cursor-not-allowed border border-white/25" disabled>
                     NDIQE
                   </button>
                 )}

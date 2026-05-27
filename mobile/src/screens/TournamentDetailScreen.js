@@ -51,42 +51,42 @@ function TournamentStatsBlock({ stats, onOpenMatch }) {
 
   return (
     <View style={statsStyles.wrap}>
-      <Text style={statsStyles.sectionTitle}>Stats</Text>
+      <Text style={statsStyles.sectionTitle}>Statistikat</Text>
       <View style={statsStyles.grid}>
         <View style={statsStyles.statBox}>
           <Text style={statsStyles.statLabel}>Matches</Text>
           <Text style={statsStyles.statValue}>
             {stats.finishedMatches ?? 0}/{stats.totalMatches ?? 0}
           </Text>
-          <Text style={statsStyles.statHint}>finished</Text>
+          <Text style={statsStyles.statHint}>të përfunduara</Text>
         </View>
         <View style={statsStyles.statBox}>
           <Text style={statsStyles.statLabel}>Goals</Text>
           <Text style={[statsStyles.statValue, statsStyles.statValueAccent]}>{stats.totalGoals ?? 0}</Text>
-          <Text style={statsStyles.statHint}>in tournament</Text>
+          <Text style={statsStyles.statHint}>në turne</Text>
         </View>
         <View style={statsStyles.statBox}>
-          <Text style={statsStyles.statLabel}>Top scorer</Text>
+          <Text style={statsStyles.statLabel}>Golashënuesi kryesor</Text>
           <Text style={statsStyles.statValueSmall} numberOfLines={1}>
             {stats.topScorerName || '—'}
           </Text>
-          <Text style={statsStyles.statHint}>{stats.topScorerGoals ?? 0} goals</Text>
+          <Text style={statsStyles.statHint}>{stats.topScorerGoals ?? 0} gola</Text>
         </View>
         <View style={statsStyles.statBox}>
-          <Text style={statsStyles.statLabel}>Points leader</Text>
+          <Text style={statsStyles.statLabel}>Kryesuesi i pikëve</Text>
           <Text style={statsStyles.statValueSmall} numberOfLines={1}>
             {stats.topTeamName || '—'}
           </Text>
-          <Text style={statsStyles.statHint}>{stats.topTeamPoints ?? 0} pts</Text>
+          <Text style={statsStyles.statHint}>{stats.topTeamPoints ?? 0} pikë</Text>
         </View>
       </View>
       <Text style={statsStyles.summary}>
-        Participants: {stats.totalParticipants ?? 0} · Scheduled: {stats.scheduledMatches ?? 0} · Avg goals
-        / finished match: {stats.avgGoalsPerMatch ?? 0}
+        Pjesëmarrës: {stats.totalParticipants ?? 0} · Të planifikuara: {stats.scheduledMatches ?? 0} · Mesatarja e golave
+        / ndeshje e përfunduar: {stats.avgGoalsPerMatch ?? 0}
       </Text>
       {recent.length > 0 ? (
         <View style={statsStyles.recentWrap}>
-          <Text style={statsStyles.recentTitle}>Recent results</Text>
+          <Text style={statsStyles.recentTitle}>Rezultatet e fundit</Text>
           {recent.map((r) => (
             <TouchableOpacity
               key={String(r.id)}
@@ -97,7 +97,7 @@ function TournamentStatsBlock({ stats, onOpenMatch }) {
                 {r.scoreHome ?? '—'} – {r.scoreAway ?? '—'}
               </Text>
               <Text style={statsStyles.recentNames} numberOfLines={1}>
-                {r.homeName || 'Home'} vs {r.awayName || 'Away'}
+                {r.homeName || 'Vendas'} vs {r.awayName || 'Mysafir'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -201,7 +201,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       setStats(statRes.data);
       setBracketData(bracketRes.data);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Could not load tournament'));
+      setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i turneut'));
     } finally {
       setLoading(false);
     }
@@ -220,25 +220,25 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const onJoin = async () => {
     try {
       await joinTournamentRequest(tournamentId);
-      Alert.alert('Joined', 'You joined the tournament.');
+      Alert.alert('Sukses', 'U bashkove në turne.');
       loadDetail();
     } catch (err) {
-      Alert.alert('Join failed', extractErrorMessage(err, 'Could not join'));
+      Alert.alert('Bashkimi dështoi', extractErrorMessage(err, 'Nuk u arrit bashkimi'));
     }
   };
 
   const onLeave = async () => {
-    Alert.alert('Leave tournament', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Dil nga turneu', 'A je i sigurt?', [
+      { text: 'Anulo', style: 'cancel' },
       {
-        text: 'Leave',
+        text: 'Dil',
         style: 'destructive',
         onPress: async () => {
           try {
             await leaveTournamentRequest(tournamentId);
             loadDetail();
           } catch (err) {
-            Alert.alert('Error', extractErrorMessage(err, 'Could not leave'));
+            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit dalja'));
           }
         },
       },
@@ -262,7 +262,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
         open: true,
         loading: false,
         data: null,
-        error: extractErrorMessage(err, 'Could not load match'),
+        error: extractErrorMessage(err, 'Nuk u arrit ngarkimi i ndeshjes'),
       });
     }
   };
@@ -411,7 +411,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
   if (!tournamentId) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.error}>Missing tournament id.</Text>
+        <Text style={styles.error}>Mungon ID e turneut.</Text>
       </View>
     );
   }
@@ -434,10 +434,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const standingsCaption = standings?.caption;
 
   const detailTabs = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'table', label: 'Standings' },
-    ...(isKnockoutType ? [{ key: 'bracket', label: 'Bracket' }] : []),
-    { key: 'matches', label: 'Matches' },
+    { key: 'overview', label: 'Përmbledhje' },
+    { key: 'table', label: 'Renditja' },
+    ...(isKnockoutType ? [{ key: 'bracket', label: 'Braketa' }] : []),
+    { key: 'matches', label: 'Ndeshjet' },
   ];
 
   const matchesGrouped = groupMatchesByRound(matches);
@@ -459,7 +459,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
         {tournament?.description ? <Text style={styles.desc}>{tournament.description}</Text> : null}
         {isCreator ? (
           <View style={styles.badgeWrap}>
-            <Text style={styles.badgeText}>Creator</Text>
+            <Text style={styles.badgeText}>Krijuesi</Text>
           </View>
         ) : null}
       </View>
@@ -467,15 +467,15 @@ export default function TournamentDetailScreen({ route, navigation }) {
       <View style={styles.actions}>
         {!isJoined && tournament?.status === 'open' && participantCount < (tournament?.maxParticipants || 999) ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={onJoin}>
-            <Text style={styles.primaryBtnText}>Join</Text>
+            <Text style={styles.primaryBtnText}>Bashkohu</Text>
           </TouchableOpacity>
         ) : null}
         {isJoined && !isCreator ? (
           <TouchableOpacity style={styles.secondaryBtn} onPress={onLeave}>
-            <Text style={styles.secondaryBtnText}>Leave</Text>
+            <Text style={styles.secondaryBtnText}>Dil</Text>
           </TouchableOpacity>
         ) : null}
-        {isJoined ? <Text style={styles.joinedLabel}>✓ In tournament</Text> : null}
+        {isJoined ? <Text style={styles.joinedLabel}>✓ Në turne</Text> : null}
         {canStartTournament ? (
           <TouchableOpacity
             style={[styles.startBtn, startingTournament && styles.btnDisabled]}
@@ -519,9 +519,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
       {tab === 'overview' ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Participants ({participantCount})</Text>
+          <Text style={styles.cardTitle}>Pjesëmarrës ({participantCount})</Text>
           {participants.length === 0 ? (
-            <Text style={styles.muted}>No participants yet.</Text>
+            <Text style={styles.muted}>Ende nuk ka pjesëmarrës.</Text>
           ) : (
             participants.slice(0, 30).map((p) => {
               const joinStatus = participantJoinStatus(p);
@@ -574,8 +574,8 @@ export default function TournamentDetailScreen({ route, navigation }) {
           {standingRows.length === 0 ? (
             <Text style={styles.muted}>
               {isKnockoutType
-                ? 'No finished matches yet. For knockout, see Matches for the bracket; this table fills in after results are saved.'
-                : 'No standings yet.'}
+                ? 'Ende nuk ka ndeshje të përfunduara. Për eliminim direkt, shih Ndeshjet; tabela mbushet pasi ruhen rezultatet.'
+                : 'Ende nuk ka renditje.'}
             </Text>
           ) : (
             standingRows.map((row, idx) => {
@@ -600,7 +600,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     {participantLabel(rowUser, pt)}
                   </Text>
                   <Text style={styles.standPts}>
-                    {row.points ?? 0} pts · {row.played ?? 0} pl · {row.goalsFor ?? 0} GF · GD {row.goalDifference ?? 0}
+                    {row.points ?? 0} pikë · {row.played ?? 0} ndeshje · {row.goalsFor ?? 0} GF · GD {row.goalDifference ?? 0}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -611,9 +611,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
       {tab === 'bracket' && isKnockoutType ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Knockout bracket</Text>
+          <Text style={styles.cardTitle}>Braketa e eliminimit direkt</Text>
           <Text style={styles.muted}>
-            Swipe sideways for rounds. Tap a match to enter scores.
+            Lëviz horizontalisht për raundet. Prek një ndeshje për të vendosur rezultatin.
           </Text>
           <TournamentBracketView
             rounds={bracketRounds}
@@ -626,7 +626,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       {tab === 'matches' ? (
         <View style={styles.card}>
           {matches.length === 0 ? (
-            <Text style={styles.muted}>No matches scheduled.</Text>
+            <Text style={styles.muted}>Nuk ka ndeshje të planifikuara.</Text>
           ) : isKnockoutType && matchesByRound.length > 0 ? (
             matchesByRound.map(({ round, matches: roundMatches }) => (
               <View key={String(round)} style={styles.roundSection}>
@@ -643,7 +643,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                       {participantLabel(m.homeUser, pt)} vs {participantLabel(m.awayUser, pt)}
                     </Text>
                     <Text style={styles.muted}>
-                      {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'TBD'}
+                      {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -656,7 +656,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                   {participantLabel(m.homeUser, pt)} vs {participantLabel(m.awayUser, pt)}
                 </Text>
                 <Text style={styles.muted}>
-                  {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'TBD'}
+                  {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
                   {m.round ? ` · R${m.round}` : ''}
                 </Text>
               </TouchableOpacity>

@@ -24,31 +24,31 @@ exports.register = async (req, res) => {
     // 1. Validim bazë
     if (!email || !password || !firstName || !lastName) {
       console.log('BACKEND: Missing required fields');
-      return res.status(400).json({ msg: 'All fields are required' });
+      return res.status(400).json({ msg: 'Të gjitha fushat janë të detyrueshme' });
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ msg: 'Invalid email address' });
+      return res.status(400).json({ msg: 'Adresa e email-it është e pavlefshme' });
     }
 
     if (String(password).length < 6) {
-      return res.status(400).json({ msg: 'Password must be at least 6 characters' });
+      return res.status(400).json({ msg: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' });
     }
 
     const normalizedRole = String(role || 'athlete').trim().toLowerCase();
     if (!ALLOWED_REGISTER_ROLES.includes(normalizedRole)) {
-      return res.status(400).json({ msg: 'Invalid account type' });
+      return res.status(400).json({ msg: 'Lloji i llogarisë është i pavlefshëm' });
     }
 
     let parsedDob = null;
     if (dateOfBirth) {
       const dob = parseDateOnly(dateOfBirth);
       if (!dob.valid) {
-        return res.status(400).json({ msg: 'Invalid date of birth (use YYYY-MM-DD)' });
+        return res.status(400).json({ msg: 'Data e lindjes është e pavlefshme (përdor YYYY-MM-DD)' });
       }
       parsedDob = dob.value;
       if (normalizedRole === 'athlete' && ageFromDateOnly(parsedDob) < 6) {
-        return res.status(400).json({ msg: 'Athletes must be at least 6 years old' });
+        return res.status(400).json({ msg: 'Atletët duhet të jenë të paktën 6 vjeç' });
       }
     }
 
@@ -62,7 +62,7 @@ exports.register = async (req, res) => {
     });
     if (existingUser) {
       console.log('BACKEND: User already exists');
-      return res.status(400).json({ msg: 'User already exists' });
+      return res.status(400).json({ msg: 'Përdoruesi ekziston tashmë' });
     }
 
     // 3. Hash password
@@ -137,7 +137,7 @@ exports.register = async (req, res) => {
     console.error('BACKEND: REGISTER ERROR:', err);
     console.error('BACKEND: Error message:', err.message);
     console.error('BACKEND: Error stack:', err.stack);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -150,7 +150,7 @@ exports.login = async (req, res) => {
 
   try {
     if (!email || !password) {
-      return res.status(400).json({ msg: 'Email and password are required' });
+      return res.status(400).json({ msg: 'Email-i dhe fjalëkalimi janë të detyrueshëm' });
     }
 
     const user = await User.findOne({
@@ -161,26 +161,26 @@ exports.login = async (req, res) => {
     });
     console.log('BACKEND: User found:', user ? user.id : 'not found');
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Kredencialet janë të pasakta' });
     }
 
     if (!user.password || !String(user.password).startsWith('$2')) {
       if (user.googleId) {
         return res.status(400).json({
-          msg: 'This account uses Google sign-in on web. Use Forgot password in the app to set a password.',
+          msg: 'Kjo llogari përdor hyrjen me Google në web. Përdor “Ke harruar fjalëkalimin?” në aplikacion për të vendosur fjalëkalim.',
         });
       }
       if (user.facebookId) {
         return res.status(400).json({
-          msg: 'This account uses Facebook sign-in on web. Use Forgot password in the app to set a password.',
+          msg: 'Kjo llogari përdor hyrjen me Facebook në web. Përdor “Ke harruar fjalëkalimin?” në aplikacion për të vendosur fjalëkalim.',
         });
       }
-      return res.status(400).json({ msg: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Kredencialet janë të pasakta' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Kredencialet janë të pasakta' });
     }
 
     // Krijo profil automatikisht nëse nuk ekziston (best-effort)
@@ -218,7 +218,7 @@ exports.login = async (req, res) => {
 
   } catch (err) {
     console.error('BACKEND: LOGIN ERROR:', err);
-    res.status(500).json({ msg: 'Server error', error: err && err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err && err.message });
   }
 };
 
@@ -236,7 +236,7 @@ exports.forgotPassword = async (req, res) => {
     
     if (!user) {
       // Don't reveal if email exists or not for security
-      return res.json({ msg: 'If that email exists, a reset link has been sent.' });
+      return res.json({ msg: 'Nëse ky email ekziston, është dërguar linku për rivendosje.' });
     }
 
     // Generate reset token
@@ -260,13 +260,13 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const payload = {
-      msg: 'If that email exists, a reset link has been sent.',
+      msg: 'Nëse ky email ekziston, është dërguar linku për rivendosje.',
     };
     const isNonProduction = process.env.NODE_ENV !== 'production';
     if (isNonProduction) {
       payload.resetUrl = resetUrl;
       if (!emailSent) {
-        payload.emailHint = 'Email delivery failed or is not configured; use resetUrl in development only.';
+        payload.emailHint = 'Dërgimi i email-it dështoi ose nuk është i konfiguruar; përdor resetUrl vetëm në development.';
       }
     } else if (!emailSent) {
       console.warn('Password reset: email not sent for user id', user.id);
@@ -275,7 +275,7 @@ exports.forgotPassword = async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -295,12 +295,12 @@ exports.resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid or expired reset token' });
+      return res.status(400).json({ msg: 'Tokeni i rivendosjes është i pavlefshëm ose i skaduar' });
     }
 
     // Check if token is expired
     if (user.resetPasswordExpire < Date.now()) {
-      return res.status(400).json({ msg: 'Reset token has expired' });
+      return res.status(400).json({ msg: 'Tokeni i rivendosjes ka skaduar' });
     }
 
     // Hash new password
@@ -313,9 +313,9 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordExpire = null;
     await user.save();
 
-    res.json({ msg: 'Password has been reset successfully' });
+    res.json({ msg: 'Fjalëkalimi u rivendos me sukses' });
   } catch (err) {
     console.error('Reset password error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };

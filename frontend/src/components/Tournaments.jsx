@@ -509,13 +509,13 @@ export default function Tournaments() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <TrophyIcon className="w-8 h-8 text-yellow-500" />
-            Tournaments
+            Turnetë
           </h1>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
           >
-            {showCreateForm ? 'Cancel' : 'Create Tournament'}
+            {showCreateForm ? 'Anulo' : 'Krijo turne'}
           </button>
         </div>
 
@@ -524,7 +524,7 @@ export default function Tournaments() {
             <div className="grid md:grid-cols-2 gap-4">
               <input
                 type="text"
-                placeholder="Tournament Name"
+                placeholder="Emri i turneut"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -535,9 +535,9 @@ export default function Tournaments() {
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="league">League</option>
-                <option value="cup">Cup</option>
-                <option value="knockout">Knockout</option>
+                <option value="league">Ligë</option>
+                <option value="cup">Kupë</option>
+                <option value="knockout">Eliminim direkt</option>
               </select>
               <input
                 type="date"
@@ -553,7 +553,7 @@ export default function Tournaments() {
               />
               <input
                 type="number"
-                placeholder="Max Participants"
+                placeholder="Maksimumi i pjesëmarrësve"
                 value={formData.maxParticipants}
                 onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })}
                 className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -561,7 +561,7 @@ export default function Tournaments() {
               />
             </div>
             <textarea
-              placeholder="Description"
+              placeholder="Përshkrimi"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-2 border rounded-lg mt-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -571,7 +571,7 @@ export default function Tournaments() {
               type="submit"
               className="mt-4 bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600"
             >
-              Create Tournament
+              Krijo turne
             </button>
           </form>
         )}
@@ -602,7 +602,7 @@ export default function Tournaments() {
               </div>
 
               <div className="p-4">
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{tournament.description || 'No description'}</p>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{tournament.description || 'Pa përshkrim'}</p>
                 
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                   <CalendarIcon className="w-4 h-4" />
@@ -621,14 +621,14 @@ export default function Tournaments() {
                     }}
                     className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                   >
-                    View Details
+                    Shiko detajet
                   </button>
                   {tournament.status === 'open' && !isParticipant(tournament) && (
                     <button
                       onClick={() => handleJoinTournament(tournament.id)}
                       className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
                     >
-                      Join
+                      Bashkohu
                     </button>
                   )}
                   {tournament.status === 'open' && isParticipant(tournament) && (
@@ -636,7 +636,7 @@ export default function Tournaments() {
                       onClick={() => handleLeaveTournament(tournament.id)}
                       className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
                     >
-                      Leave
+                      Dil
                     </button>
                   )}
                 </div>
@@ -648,7 +648,7 @@ export default function Tournaments() {
         {tournaments.length === 0 && (
           <div className="text-center text-gray-500 py-12">
             <TrophyIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p>No tournaments yet. Create one!</p>
+            <p>Ende nuk ka turne. Krijo një!</p>
           </div>
         )}
       </div>
@@ -662,7 +662,7 @@ export default function Tournaments() {
         onClick={() => setView('list')}
         className="mb-4 text-blue-500 hover:underline"
       >
-        ← Back to Tournaments
+        ← Kthehu te turnetë
       </button>
 
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -671,9 +671,9 @@ export default function Tournaments() {
             <h1 className="text-3xl font-bold mb-2">{selectedTournament.name}</h1>
             <p className="text-gray-600">{selectedTournament.description}</p>
             <div className="flex gap-4 mt-2 text-sm text-gray-500">
-              <span>Type: {selectedTournament.type}</span>
-              <span>Status: {selectedTournament.status}</span>
-              <span>Participants: {selectedTournament.participants?.length}/{selectedTournament.maxParticipants}</span>
+              <span>Lloji: {selectedTournament.type}</span>
+              <span>Statusi: {selectedTournament.status}</span>
+              <span>Pjesëmarrës: {selectedTournament.participants?.length}/{selectedTournament.maxParticipants}</span>
             </div>
           </div>
           {isCreator(selectedTournament) && selectedTournament.status === 'open' && (
@@ -681,7 +681,7 @@ export default function Tournaments() {
               onClick={handleGenerateBracket}
               className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600"
             >
-              Start Tournament
+              Nise turneun
             </button>
           )}
         </div>
@@ -689,19 +689,19 @@ export default function Tournaments() {
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <p className="text-sm text-gray-500">Total Matches</p>
+              <p className="text-sm text-gray-500">Ndeshje totale</p>
               <p className="text-2xl font-bold">{stats.totalMatches}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Finished</p>
+              <p className="text-sm text-gray-500">Përfunduara</p>
               <p className="text-2xl font-bold">{stats.finishedMatches}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Goals</p>
+              <p className="text-sm text-gray-500">Gola totale</p>
               <p className="text-2xl font-bold">{stats.totalGoals}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Avg Goals/Match</p>
+              <p className="text-sm text-gray-500">Mes. gola/ndeshje</p>
               <p className="text-2xl font-bold">{stats.avgGoalsPerMatch}</p>
             </div>
           </div>

@@ -74,18 +74,18 @@ const Scouting = () => {
   };
 
   if (!user || user.role !== 'scout' || !user.premium) {
-    return <div className="p-4">Access denied. This is a premium feature for scouts.</div>;
+    return <div className="p-4">Qasja u refuzua. Kjo është veçori premium për scout-at.</div>;
   }
 
-  if (loading) return <div className="p-4">Loading recommendations...</div>;
+  if (loading) return <div className="p-4">Duke ngarkuar rekomandimet...</div>;
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">AI Scouting Recommendations</h2>
+      <h2 className="text-2xl font-bold mb-4">Rekomandime Scouting</h2>
 
       <div className="mb-4 flex gap-4">
         <select name="position" value={filters.position} onChange={handleFilterChange} className="p-2 border rounded">
-          <option value="">All Positions</option>
+          <option value="">Të gjitha pozicionet</option>
           <option value="Forward">Forward</option>
           <option value="Midfielder">Midfielder</option>
           <option value="Defender">Defender</option>
@@ -96,7 +96,7 @@ const Scouting = () => {
           name="minScore"
           value={filters.minScore}
           onChange={handleFilterChange}
-          placeholder="Min Score"
+          placeholder="Pikë minimale"
           className="p-2 border rounded"
         />
       </div>
@@ -119,9 +119,9 @@ const Scouting = () => {
                 {rec.playerName}
               </Link>
             </h3>
-            <p>Position: {rec.position}</p>
-            <p>Score: {Number(rec.score || 0).toFixed(2)}</p>
-            <p>Reasons: {Array.isArray(rec.reasons) ? rec.reasons.join(', ') : '-'}</p>
+            <p>Pozita: {rec.position}</p>
+            <p>Pikët: {Number(rec.score || 0).toFixed(2)}</p>
+            <p>Arsyet: {Array.isArray(rec.reasons) ? rec.reasons.join(', ') : '-'}</p>
             {canUseAi ? (
               <button
                 type="button"

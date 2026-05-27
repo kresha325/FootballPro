@@ -8,14 +8,14 @@ import {
 import { searchAPI } from '../services/api';
 
 const TABS = [
-  { id: 'discover', label: 'Discover', icon: SparklesIcon },
+  { id: 'discover', label: 'Zbulo', icon: SparklesIcon },
   { id: 'all', label: 'Të gjitha' },
   { id: 'users', label: 'Përdorues' },
   { id: 'posts', label: 'Postime' },
   { id: 'tournaments', label: 'Turne' },
-  { id: 'products', label: 'Shop' },
-  { id: 'streams', label: 'Stream' },
-  { id: 'videos', label: 'Video' },
+  { id: 'products', label: 'Tregu' },
+  { id: 'streams', label: 'Transmetime' },
+  { id: 'videos', label: 'Videot' },
   { id: 'matches', label: 'Ndeshje' },
 ];
 
@@ -181,7 +181,7 @@ export default function GlobalSearch() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Kërkim</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Përdorues, postime, turne, shop, stream, video dhe ndeshje — një vend për gjithçka.
+          Përdorues, postime, turne, treg, transmetime, video dhe ndeshje — një vend për gjithçka.
         </p>
       </div>
 

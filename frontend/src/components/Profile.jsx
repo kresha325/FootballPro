@@ -363,7 +363,7 @@ const Profile = () => {
       setProfile(res.data);
     } catch (error) {
       console.error('Error setting photo:', error);
-      alert('Failed to update photo');
+      alert('Nuk u arrit përditësimi i fotos');
     }
   };
 
@@ -399,7 +399,7 @@ const Profile = () => {
         }
       } catch (err) {
         console.error('Error opening/creating conversation:', err);
-        alert('Failed to open or create conversation.');
+      alert('Nuk u arrit hapja ose krijimi i bisedës.');
       }
     }
   };
@@ -414,7 +414,7 @@ const Profile = () => {
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
     if (!cameraReady) {
-      alert('Open camera first before starting live.');
+      alert('Hape kamerën fillimisht para se të nisësh live.');
       return;
     }
 
@@ -428,7 +428,7 @@ const Profile = () => {
 
     if (
       !confirmGoLiveInBrowser({
-        title: liveTitle?.trim() || 'Live Stream',
+        title: liveTitle?.trim() || 'Transmetim Live',
         youtubeChannelId,
       })
     ) {
@@ -437,7 +437,7 @@ const Profile = () => {
 
     try {
       const payload = {
-        title: liveTitle?.trim() || 'Live Stream',
+        title: liveTitle?.trim() || 'Transmetim Live',
         description: liveDescription?.trim() || '',
         isPublic: !!liveIsPublic,
       };
@@ -476,7 +476,7 @@ const Profile = () => {
       });
     } catch (err) {
       console.error('Failed to start live stream:', err);
-      alert('Failed to start live stream. Please try again.');
+      alert('Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.');
     }
   };
 
@@ -502,7 +502,7 @@ const Profile = () => {
       }
     } catch (err) {
       console.error('Camera open failed:', err);
-      alert('Camera/Microphone permission is required.');
+      alert('Leja për kamerë/mikrofon është e detyrueshme.');
     }
   };
 
@@ -696,7 +696,7 @@ const Profile = () => {
       });
     } catch (error) {
       console.error('Follow error:', error);
-      alert(error.response?.data?.msg || 'Failed to update follow status');
+      alert(error.response?.data?.msg || 'Nuk u arrit përditësimi i statusit të ndjekjes');
     } finally {
       setFollowLoading(false);
     }
@@ -735,15 +735,16 @@ const Profile = () => {
   
   if (!profile) return (
     <div className="flex items-center justify-center h-screen">
-      <p className="text-xl text-gray-500">Profile not found</p>
+      <p className="text-xl text-gray-500">Profili nuk u gjet</p>
     </div>
   );
 
   const isOwner = user != null && profile != null && Number(user.id) === Number(profile.id);
   const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
+  const isSponsoredProfile = sponsorList.length > 0;
   const tabs = [
     { key: 'overview', label: '🏠 Overview' },
-    { key: 'posts', label: '📝 Posts' },
+    { key: 'posts', label: '📝 Postime' },
   ];
   if (isAthlete) {
     tabs.push({ key: 'tournaments', label: '🏆 Tournaments' });
@@ -793,7 +794,13 @@ const Profile = () => {
       </div>
 
       {/* Profile Header */}
-      <div className={`shadow mt-28 ${sponsorList.length > 0 ? 'bg-green-100 border-green-300 border-2' : 'bg-white dark:bg-gray-800'}` }>
+      <div
+        className={`shadow mt-28 bg-white dark:bg-gray-800 border rounded-xl ${
+          isSponsoredProfile
+            ? 'border-emerald-200 dark:border-emerald-800'
+            : 'border-gray-200 dark:border-gray-700'
+        }`}
+      >
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
             {/* Avatar */}
@@ -846,8 +853,10 @@ const Profile = () => {
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 )}
-                {sponsorList.length > 0 && (
-                  <span className="text-xs font-bold animate-pulse" style={{ color: '#22c55e', letterSpacing: '1px', textShadow: '0 0 8px #bbf7d0, 0 0 2px #fff' }}>Sponsored</span>
+                {isSponsoredProfile && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
+                    <span>Sponsored</span>
+                  </span>
                 )}
                 {/* JonCoin — vetëm në profilin tënd (wallet nga ledger) */}
                 {user && Number(user.id) === Number(id) && (
@@ -878,7 +887,7 @@ const Profile = () => {
                   </span>
                 )}
                 {profile.club && (
-                  <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
                     {profile.clubLogo ? (
                       <img
                         src={getFullUrl(profile.clubLogo)}
@@ -909,15 +918,15 @@ const Profile = () => {
               <div className="flex items-center justify-center md:justify-start gap-6 mt-10">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.posts}</div>
-                  <div className="text-sm text-gray-500">Posts</div>
+                  <div className="text-sm text-gray-500">Postime</div>
                 </div>
                 <div className="text-center cursor-pointer hover:text-blue-600 transition">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.followers}</div>
-                  <div className="text-sm text-gray-500">Followers</div>
+                  <div className="text-sm text-gray-500">Ndjekës</div>
                 </div>
                 <div className="text-center cursor-pointer hover:text-blue-600 transition">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.following}</div>
-                  <div className="text-sm text-gray-500">Following</div>
+                  <div className="text-sm text-gray-500">Duke ndjekur</div>
                 </div>
               </div>
               
@@ -968,7 +977,7 @@ const Profile = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-8 md:mt-4 flex gap-2">
+            <div className="mt-8 md:mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
               {isOwner && (
                 <button
                   onClick={() => setShowLiveModal(true)}
@@ -986,7 +995,7 @@ const Profile = () => {
                   onClick={() => setEditOpen(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg"
                 >
-                  Edit Profile
+                  Ndrysho profilin
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -997,13 +1006,13 @@ const Profile = () => {
                       isFollowing 
                         ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white' 
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    } px-6 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50`}
+                    } px-5 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50`}
                   >
-                    {followLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
+                    {followLoading ? '...' : (isFollowing ? 'Duke ndjekur' : 'Ndiq')}
                   </button>
                   <button 
                     onClick={handleMessage}
-                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center gap-2"
+                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-5 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center gap-2"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
@@ -1012,7 +1021,7 @@ const Profile = () => {
                   </button>
                   <button 
                     onClick={() => setShowVideoCall(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center gap-2"
+                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center gap-2"
                     title="Start Video Call"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -1164,7 +1173,7 @@ const Profile = () => {
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                                        {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'Unknown'}
+                                        {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
                                       </span>
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -1467,7 +1476,7 @@ const Profile = () => {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">👤</span>
                     <a href={profile.contact.facebook.startsWith('http') ? profile.contact.facebook : `https://facebook.com/${profile.contact.facebook}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      Facebook Profile
+                      Profili në Facebook
                     </a>
                   </div>
                 )}
@@ -1614,13 +1623,13 @@ const Profile = () => {
                     onClick={() => setAsProfilePhoto(selectedGalleryImage.imageUrl, 'profile')}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
                   >
-                    📷 Set as Profile Photo
+                    📷 Vendose si foto profili
                   </button>
                   <button
                     onClick={() => setAsProfilePhoto(selectedGalleryImage.imageUrl, 'cover')}
                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition"
                   >
-                    🖼️ Set as Cover Photo
+                    🖼️ Vendose si foto kopertine
                   </button>
                 </div>
               )}
@@ -1690,18 +1699,18 @@ const Profile = () => {
       {isOwner && showLiveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Start Live Stream</h2>
+            <h2 className="text-xl font-bold mb-4">Nis transmetim live</h2>
             <form onSubmit={handleStartLiveStream}>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Title</label>
+                <label className="block text-sm font-medium mb-1">Titulli</label>
                 <input type="text" value={liveTitle} onChange={e => setLiveTitle(e.target.value)} required className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium mb-1">Përshkrimi</label>
                 <textarea value={liveDescription} onChange={e => setLiveDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Public</label>
+                <label className="block text-sm font-medium mb-1">Publik</label>
                 <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
               </div>
               <button
@@ -1709,15 +1718,15 @@ const Profile = () => {
                 onClick={handleOpenCameraFirst}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium mt-1"
               >
-                {cameraReady ? 'Camera ready' : 'Open camera first'}
+                {cameraReady ? 'Kamera gati' : 'Hap kamerën fillimisht'}
               </button>
               {cameraStream ? (
                 <div className="mt-3">
                   <video ref={livePreviewRef} autoPlay muted playsInline className="w-full rounded border" />
                 </div>
               ) : null}
-              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Start Live</button>
-              <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Cancel</button>
+              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Nis LIVE</button>
+              <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Anulo</button>
             </form>
 
             {liveStreamId ? (

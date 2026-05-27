@@ -91,9 +91,9 @@ const FeedScoutingReport = () => {
     <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-4 md:p-5 mb-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Scouting Report</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Raporti i Scouting</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Compare two followed athletes by goals, assists, likes and followers.
+            Krahaso dy atletë të ndjekur sipas golave, asistimeve, pëlqimeve dhe ndjekësve.
           </p>
         </div>
         <select
@@ -101,7 +101,7 @@ const FeedScoutingReport = () => {
           onChange={(e) => setAgeGroup(e.target.value)}
           className="min-h-11 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
         >
-          {AGE_GROUP_OPTIONS.map((group) => (
+              {AGE_GROUP_OPTIONS.map((group) => (
             <option key={group.id} value={group.id}>
               {group.label}
             </option>
@@ -117,7 +117,7 @@ const FeedScoutingReport = () => {
         </div>
       ) : candidates.length < 2 ? (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-4 text-sm text-slate-600 dark:text-slate-300">
-          You need at least 2 followed athletes in this age group to generate a scouting comparison.
+          Të duhen të paktën 2 atletë të ndjekur në këtë grupmoshë për të gjeneruar krahasimin.
         </div>
       ) : (
         <>
@@ -138,15 +138,14 @@ const FeedScoutingReport = () => {
                 </select>
               </div>
             ))}
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 flex flex-col justify-between sticky bottom-20 lg:static bg-white dark:bg-gray-900">
-              <p className="text-sm text-slate-600 dark:text-slate-300">Generate 0-100 rule-based score and metric winners.</p>
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 flex flex-col justify-end sticky bottom-20 lg:static bg-white dark:bg-gray-900">
               <button
                 type="button"
                 onClick={runCompare}
                 disabled={!canCompare || comparing}
-                className="mt-2 min-h-11 px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700"
+                className="min-h-11 px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700"
               >
-                {comparing ? 'Comparing...' : 'Compare Players'}
+                  {comparing ? 'Duke krahasuar...' : 'Krahaso Lojtarët'}
               </button>
             </div>
           </div>
@@ -163,7 +162,7 @@ const FeedScoutingReport = () => {
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-white truncate">{item.player?.fullName || '-'}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {item.player?.position || 'No position'} {item.player?.club ? `· ${item.player.club}` : ''}
+                      {item.player?.position || 'Pa pozicion'} {item.player?.club ? `· ${item.player.club}` : ''}
                     </p>
                   </div>
                 </div>
@@ -181,14 +180,14 @@ const FeedScoutingReport = () => {
         <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
           <div className="grid grid-cols-3 items-center gap-2 mb-3">
             <div className="text-center">
-              <p className="text-xs text-slate-500">Player A</p>
+              <p className="text-xs text-slate-500">Lojtari A</p>
               <p className={`text-2xl font-bold ${scoreTone(compareData.players.A.score)}`}>{compareData.players.A.score}</p>
             </div>
             <div className="text-center text-xs uppercase tracking-wide text-slate-500">
-              {compareData.comparison?.winner === 'draw' ? 'Draw' : `${compareData.comparison?.winner} wins`}
+              {compareData.comparison?.winner === 'draw' ? 'Barazim' : `${compareData.comparison?.winner} fiton`}
             </div>
             <div className="text-center">
-              <p className="text-xs text-slate-500">Player B</p>
+              <p className="text-xs text-slate-500">Lojtari B</p>
               <p className={`text-2xl font-bold ${scoreTone(compareData.players.B.score)}`}>{compareData.players.B.score}</p>
             </div>
           </div>

@@ -122,11 +122,11 @@ const calculateScore = async (playerProfile, player, scoutProfile) => {
 exports.getRecommendations = async (req, res) => {
   try {
     if (req.user.role !== 'scout' && req.user.role !== 'club') {
-      return res.status(403).json({ msg: 'Access denied. Scout or Club role required.' });
+      return res.status(403).json({ msg: 'Qasja u refuzua. Kërkohet roli Scout ose Club.' });
     }
 
     const scoutProfile = await Profile.findOne({ where: { userId: req.user.id } });
-    if (!scoutProfile) return res.status(404).json({ msg: 'Profile not found' });
+    if (!scoutProfile) return res.status(404).json({ msg: 'Profili nuk u gjet' });
 
     // Get filters from query
     const { position, minScore, limit = 20 } = req.query;
@@ -194,7 +194,7 @@ exports.getRecommendations = async (req, res) => {
     });
   } catch (err) {
     console.error('Scouting recommendations error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -347,7 +347,7 @@ exports.getCompareCandidates = async (req, res) => {
     const ageGroup = normalizeAgeGroup(req.query.ageGroup);
 
     if (source !== 'followers') {
-      return res.status(400).json({ msg: 'Unsupported source. Only source=followers is allowed in MVP.' });
+      return res.status(400).json({ msg: 'Burim i pambështetur. Në MVP lejohet vetëm source=followers.' });
     }
 
     const candidates = await getFollowersAthleteCandidates(req.user.id, ageGroup || '');
@@ -363,7 +363,7 @@ exports.getCompareCandidates = async (req, res) => {
     });
   } catch (err) {
     console.error('Scouting candidates error:', err);
-    return res.status(500).json({ msg: 'Server error', error: err.message });
+    return res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -374,16 +374,16 @@ exports.comparePlayers = async (req, res) => {
     const ageGroup = normalizeAgeGroup(req.query.ageGroup);
 
     if (!Number.isFinite(playerAId) || !Number.isFinite(playerBId)) {
-      return res.status(400).json({ msg: 'playerAId and playerBId are required numeric values.' });
+      return res.status(400).json({ msg: 'playerAId dhe playerBId duhet të jenë vlera numerike të detyrueshme.' });
     }
     if (playerAId === playerBId) {
-      return res.status(400).json({ msg: 'Please select two different players.' });
+      return res.status(400).json({ msg: 'Ju lutem zgjidhni dy lojtarë të ndryshëm.' });
     }
 
     const candidates = await getFollowersAthleteCandidates(req.user.id, ageGroup || '');
     const allowedIds = new Set(candidates.map((c) => c.id));
     if (!allowedIds.has(playerAId) || !allowedIds.has(playerBId)) {
-      return res.status(403).json({ msg: 'Selected players must be athlete followers (with current age-group filter).' });
+      return res.status(403).json({ msg: 'Lojtarët e zgjedhur duhet të jenë atletë që i ndiqni (sipas filtrit aktual të grupmoshës).' });
     }
 
     const [playerA, playerB] = await Promise.all([
@@ -400,7 +400,7 @@ exports.comparePlayers = async (req, res) => {
     ]);
 
     if (!playerA || !playerB) {
-      return res.status(404).json({ msg: 'One or both players were not found.' });
+      return res.status(404).json({ msg: 'Njëri ose të dy lojtarët nuk u gjetën.' });
     }
 
     const [metricsA, metricsB] = await Promise.all([
@@ -408,7 +408,7 @@ exports.comparePlayers = async (req, res) => {
       getPlayerMetrics(playerBId),
     ]);
     if (!metricsA || !metricsB) {
-      return res.status(404).json({ msg: 'Missing player profile metrics.' });
+      return res.status(404).json({ msg: 'Mungojnë metrikat e profilit të lojtarit.' });
     }
 
     const maxValues = {
@@ -480,6 +480,6 @@ exports.comparePlayers = async (req, res) => {
     });
   } catch (err) {
     console.error('Scouting compare error:', err);
-    return res.status(500).json({ msg: 'Server error', error: err.message });
+    return res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };

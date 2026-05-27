@@ -14,5 +14,9 @@
   "streams": "Streams",
   "gallery": "Gallery",
   "scouting": "Scouting",
-  "marketplace": "Marketplace"
+  "marketplace": "Marketplace",
+  "error_generic": "Something went wrong",
+  "loading": "Loading...",
+  "save": "Save",
+  "cancel": "Cancel"
 }

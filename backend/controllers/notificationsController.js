@@ -35,7 +35,7 @@ exports.getNotifications = async (req, res) => {
     });
   } catch (err) {
     console.error('Get notifications error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -52,7 +52,7 @@ exports.getUnreadCount = async (req, res) => {
     res.json({ count });
   } catch (err) {
     console.error('Get unread count error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -67,14 +67,14 @@ exports.markAsRead = async (req, res) => {
     });
 
     if (!notification) {
-      return res.status(404).json({ msg: 'Notification not found' });
+      return res.status(404).json({ msg: 'Njoftimi nuk u gjet' });
     }
 
     await notification.update({ isRead: true });
-    res.json({ msg: 'Notification marked as read' });
+    res.json({ msg: 'Njoftimi u shënua si i lexuar' });
   } catch (err) {
     console.error('Mark as read error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -90,10 +90,10 @@ exports.markAllAsRead = async (req, res) => {
         },
       }
     );
-    res.json({ msg: 'All notifications marked as read' });
+    res.json({ msg: 'Të gjitha njoftimet u shënuan si të lexuara' });
   } catch (err) {
     console.error('Mark all as read error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -108,14 +108,14 @@ exports.deleteNotification = async (req, res) => {
     });
 
     if (!notification) {
-      return res.status(404).json({ msg: 'Notification not found' });
+      return res.status(404).json({ msg: 'Njoftimi nuk u gjet' });
     }
 
     await notification.destroy();
-    res.json({ msg: 'Notification deleted' });
+    res.json({ msg: 'Njoftimi u fshi' });
   } catch (err) {
     console.error('Delete notification error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -151,8 +151,8 @@ exports.notifyLike = async (postOwnerId, likerId, postId) => {
     userId: postOwnerId,
     actorId: likerId,
     type: 'like',
-    title: 'New Like',
-    message: `${liker.firstName} ${liker.lastName} liked your post`,
+    title: 'Pëlqim i ri',
+    message: `${liker.firstName} ${liker.lastName} pëlqeu postimin tuaj`,
     link: `/posts/${postId}`,
     entityType: 'post',
     entityId: postId,
@@ -167,8 +167,8 @@ exports.notifyComment = async (postOwnerId, commenterId, postId, commentText) =>
     userId: postOwnerId,
     actorId: commenterId,
     type: 'comment',
-    title: 'New Comment',
-    message: `${commenter.firstName} ${commenter.lastName} commented: "${commentText.substring(0, 50)}${commentText.length > 50 ? '...' : ''}"`,
+    title: 'Koment i ri',
+    message: `${commenter.firstName} ${commenter.lastName} komentoi: "${commentText.substring(0, 50)}${commentText.length > 50 ? '...' : ''}"`,
     link: `/posts/${postId}`,
     entityType: 'post',
     entityId: postId,
@@ -181,8 +181,8 @@ exports.notifyFollow = async (followedId, followerId) => {
     userId: followedId,
     actorId: followerId,
     type: 'follow',
-    title: 'New Follower',
-    message: `${follower.firstName} ${follower.lastName} started following you`,
+    title: 'Ndjekës i ri',
+    message: `${follower.firstName} ${follower.lastName} filloi t'ju ndjekë`,
     link: `/profile/${followerId}`,
     entityType: 'user',
     entityId: followerId,
@@ -200,13 +200,13 @@ exports.notifyMessage = async (recipientId, senderId, message) => {
   } else if (message && message.fileName) {
     preview = `[Media] ${message.fileName}`;
   } else {
-    preview = '[Media message]';
+    preview = '[Mesazh media]';
   }
   return exports.createNotification({
     userId: recipientId,
     actorId: senderId,
     type: 'message',
-    title: 'New Message',
+    title: 'Mesazh i ri',
     message: `${sender.firstName} ${sender.lastName}: ${preview}`,
     link: `/messages/${senderId}`,
     entityType: 'message',
@@ -230,8 +230,8 @@ exports.notifyAchievement = async (userId, achievementId, achievementName) => {
   return exports.createNotification({
     userId,
     type: 'achievement',
-    title: 'Achievement Unlocked!',
-    message: `Congratulations! You've earned the "${achievementName}" achievement!`,
+    title: 'Arritje e zhbllokuar!',
+    message: `Urime! Fitove arritjen "${achievementName}"!`,
     link: `/profile/${userId}?tab=achievements`,
     entityType: 'achievement',
     entityId: achievementId,

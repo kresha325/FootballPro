@@ -14,5 +14,9 @@
   "streams": "Transmetimet",
   "gallery": "Galeria",
   "scouting": "Zbulimi",
-  "marketplace": "Tregu"
+  "marketplace": "Tregu",
+  "error_generic": "Ndodhi një gabim",
+  "loading": "Duke ngarkuar...",
+  "save": "Ruaj",
+  "cancel": "Anulo"
 }

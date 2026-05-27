@@ -346,7 +346,7 @@ const Feed = () => {
   );
 
   if (postsLoading) {
-    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Loading posts...</div>;
+    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Duke ngarkuar postimet...</div>;
   }
 
   return (
@@ -375,7 +375,7 @@ const Feed = () => {
       <div className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="relative">
         <form onSubmit={handleCreatePost}>
-          <label htmlFor="new-post" className="sr-only">What's on your mind?</label>
+          <label htmlFor="new-post" className="sr-only">Çfarë po mendon?</label>
           {/* Goal-styled input box */}
           <div className="relative mx-auto" style={{ maxWidth: 760 }}>
             {/* Net background */}
@@ -398,7 +398,7 @@ const Feed = () => {
                 id="new-post"
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
-                placeholder="Shoot your penalty..."
+                placeholder="Shkruaj postimin tënd..."
                 className="w-full p-4 border border-transparent rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-transparent text-gray-900 placeholder-gray-500"
                 rows="3"
                 style={{ minHeight: 96 }}
@@ -499,10 +499,10 @@ const Feed = () => {
               className="bg-yellow-400 text-black px-6 py-2 rounded-md hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
               aria-describedby="post-button-desc"
             >
-              {posting ? 'Posting...' : 'Post'}
+              {posting ? 'Duke postuar...' : 'Posto'}
             </button>
           </div>
-          <div id="post-button-desc" className="sr-only">Submit your post to share with others</div>
+          <div id="post-button-desc" className="sr-only">Publiko postimin për ta ndarë me të tjerët</div>
         </form>
         </div>
       </div>
@@ -566,7 +566,7 @@ const Feed = () => {
                       <p className="font-semibold text-gray-900 dark:text-white hover:underline">
                         {post.author?.firstName && post.author?.lastName 
                           ? `${post.author.firstName} ${post.author.lastName}` 
-                          : 'Unknown'}
+                          : 'I panjohur'}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(post.createdAt).toLocaleDateString()}
@@ -593,7 +593,7 @@ const Feed = () => {
                       onClick={() => handleDeletePost(post.id)}
                       disabled={deletingPost === post.id}
                       className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
-                      title="Delete post"
+                      title="Fshi postimin"
                     >
                       {deletingPost === post.id ? '⏳' : '🗑️'}
                     </button>
@@ -720,7 +720,7 @@ const Feed = () => {
                       className={`flex items-center space-x-1 px-3 py-1 rounded-md ${
                         likedPosts.has(post.id) ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
-                      aria-label={likedPosts.has(post.id) ? `Unlike post by ${post.author?.username || 'Unknown'}` : `Like post by ${post.author?.username || 'Unknown'}`}
+                      aria-label={likedPosts.has(post.id) ? `Hiq pëlqimin për postimin e ${post.author?.username || 'I panjohur'}` : `Pëlqe postimin e ${post.author?.username || 'I panjohur'}`}
                       onContextMenu={e => { e.preventDefault(); setShowEmojiPicker(post.id); }}
                     >
                       <span>{post.emoji || '👍'}</span>
@@ -748,7 +748,7 @@ const Feed = () => {
                   <button
                     onClick={() => toggleComments(post.id)}
                     className="flex items-center space-x-1 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600" 
-                    aria-label={`Comment on post by ${post.author?.username || 'Unknown'}`}
+                    aria-label={`Komento postimin e ${post.author?.username || 'I panjohur'}`}
                   >
                     <span>💬</span>
                     <span>{post.comments || 0}</span>
@@ -756,8 +756,8 @@ const Feed = () => {
                   <button
                     onClick={() => setSharingPost(post.id)}
                     className="flex items-center justify-center px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white"
-                    aria-label={`Share post by ${post.author?.username || 'Unknown'}`}
-                    title="Share"
+                    aria-label={`Ndaj postimin e ${post.author?.username || 'I panjohur'}`}
+                    title="Ndaj"
                   >
                     <span className="text-sm">🟥</span>
                   </button>
@@ -768,8 +768,8 @@ const Feed = () => {
             {/* Share Modal */}
             {sharingPost === post.id && (
               <div className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4" role="dialog" aria-labelledby="share-dialog-title" aria-describedby="share-dialog-desc">
-                <p id="share-dialog-title" className="text-sm text-gray-600 dark:text-gray-400 mb-2">Share this post:</p>
-                <div id="share-dialog-desc" className="sr-only">Share options for the post</div>
+                <p id="share-dialog-title" className="text-sm text-gray-600 dark:text-gray-400 mb-2">Ndaje këtë postim:</p>
+                <div id="share-dialog-desc" className="sr-only">Opsionet e ndarjes për postimin</div>
                 <div className="flex space-x-2">
                   <FacebookShareButton url={`${window.location.origin}/post/${post.id}`} quote={post.content}>
                     <FacebookIcon size={32} round />
@@ -784,9 +784,9 @@ const Feed = () => {
                 <button
                   onClick={() => setSharingPost(null)}
                   className="mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                  aria-label="Close share options"
+                  aria-label="Mbyll opsionet e ndarjes"
                 >
-                  Close
+                  Mbyll
                 </button>
               </div>
             )}
@@ -827,7 +827,7 @@ const Feed = () => {
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                                {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'Unknown'}
+                                {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -838,7 +838,7 @@ const Feed = () => {
                                 onClick={() => handleDeleteComment(comment.id, post.id)}
                                 disabled={deletingComment === comment.id}
                                 className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 text-xs"
-                                title="Delete comment"
+                                title="Fshi komentin"
                               >
                                 {deletingComment === comment.id ? '⏳' : '🗑️'}
                               </button>
@@ -864,7 +864,7 @@ const Feed = () => {
         ))}
         {displayPosts.length === 0 && (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            No posts yet. Be the first to share something!
+            Ende nuk ka postime. Bëhu i pari që poston diçka!
           </div>
         )}
       </div>
@@ -877,7 +877,7 @@ const Feed = () => {
         {/* Ad 1 - Premium Subscription */}
         <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 text-white shadow-lg">
           <div className="text-3xl mb-2">⭐</div>
-          <h3 className="font-bold mb-2">Go Premium</h3>
+          <h3 className="font-bold mb-2">Kalo në Premium</h3>
           <p className="text-sm mb-3">Unlock exclusive features and remove ads</p>
           <button className="w-full bg-white text-orange-600 py-2 rounded-md font-semibold hover:bg-orange-50 transition">
             Upgrade
@@ -888,7 +888,7 @@ const Feed = () => {
         <div className="space-y-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
             <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <span>🔥</span> Trending Tournaments
+              <span>🔥</span> Turnetë në trend
             </h3>
             <div className="space-y-3">
               {/* Render fetched trending tournaments */}
@@ -910,14 +910,14 @@ const Feed = () => {
               )}
             </div>
             <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition text-sm">
-              View All
+              Shiko të gjitha
             </button>
           </div>
 
           {/* My Tournaments widget */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
             <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <span>⭐</span> My Tournaments
+              <span>⭐</span> Turnetë e mia
             </h3>
             <div className="space-y-2 text-sm">
               {user ? (
@@ -934,11 +934,11 @@ const Feed = () => {
                   <div className="text-sm text-gray-500">You have no tournaments</div>
                 )
               ) : (
-                <div className="text-sm text-gray-500">Log in to see your tournaments</div>
+                <div className="text-sm text-gray-500">Hyr për të parë turnetë e tua</div>
               )}
             </div>
             <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 rounded-md hover:bg-gray-300 transition text-sm">
-              Manage Tournaments
+              Menaxho turnetë
             </button>
           </div>
         </div>
@@ -964,15 +964,15 @@ const Feed = () => {
           <h4 className="font-bold text-gray-900 dark:text-white mb-3">📈 Platform Stats</h4>
           <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <div className="flex justify-between">
-              <span>Active Users</span>
+              <span>Përdorues aktivë</span>
               <span className="font-semibold">10,234</span>
             </div>
             <div className="flex justify-between">
-              <span>Daily Posts</span>
+              <span>Postime ditore</span>
               <span className="font-semibold">1,432</span>
             </div>
             <div className="flex justify-between">
-              <span>Tournaments</span>
+              <span>Turne</span>
               <span className="font-semibold">87</span>
             </div>
           </div>

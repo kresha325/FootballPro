@@ -76,37 +76,37 @@ const Register = () => {
 
     // Validation
     if (!formData.firstName.trim()) {
-      setError('First name is required');
+      setError('Emri është i detyrueshëm');
       setLoading(false);
       return;
     }
     if (!formData.lastName.trim()) {
-      setError('Last name is required');
+      setError('Mbiemri është i detyrueshëm');
       setLoading(false);
       return;
     }
     if (!formData.email.trim()) {
-      setError('Email is required');
+      setError('Email-i është i detyrueshëm');
       setLoading(false);
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError('Ju lutem shkruani një adresë email-i të vlefshme');
       setLoading(false);
       return;
     }
     if (!formData.password || formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Fjalëkalimi duhet të ketë të paktën 6 karaktere');
       setLoading(false);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Fjalëkalimet nuk përputhen');
       setLoading(false);
       return;
     }
     if (!formData.dateOfBirth) {
-      setError('Date of birth is required');
+      setError('Data e lindjes është e detyrueshme');
       setLoading(false);
       return;
     }
@@ -158,7 +158,7 @@ const Register = () => {
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">Date of birth</label>
+              <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">Data e lindjes</label>
               <div className="mt-1 flex gap-2 items-center">
                 <input
                   id="dob-day"
@@ -182,19 +182,19 @@ const Register = () => {
                   onChange={(e) => handleDobMonthChange(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option value="">Month</option>
-                  <option value="01">January</option>
-                  <option value="02">February</option>
-                  <option value="03">March</option>
-                  <option value="04">April</option>
-                  <option value="05">May</option>
-                  <option value="06">June</option>
-                  <option value="07">July</option>
-                  <option value="08">August</option>
-                  <option value="09">September</option>
-                  <option value="10">October</option>
-                  <option value="11">November</option>
-                  <option value="12">December</option>
+                  <option value="">Muaji</option>
+                  <option value="01">Janar</option>
+                  <option value="02">Shkurt</option>
+                  <option value="03">Mars</option>
+                  <option value="04">Prill</option>
+                  <option value="05">Maj</option>
+                  <option value="06">Qershor</option>
+                  <option value="07">Korrik</option>
+                  <option value="08">Gusht</option>
+                  <option value="09">Shtator</option>
+                  <option value="10">Tetor</option>
+                  <option value="11">Nëntor</option>
+                  <option value="12">Dhjetor</option>
                 </select>
                 <input
                   id="dob-year"
@@ -213,7 +213,7 @@ const Register = () => {
                   type="button"
                   onClick={() => setShowNativePicker((s) => !s)}
                   className="ml-1 px-2 py-2 border border-gray-300 rounded-md text-sm bg-white"
-                  aria-label="Toggle calendar picker"
+                  aria-label="Hap mbyll përzgjedhësin e kalendarit"
                 >
                   📅
                 </button>
@@ -240,7 +240,7 @@ const Register = () => {
               )}
             </div>
             <div>
-              <label htmlFor="firstName" className="sr-only">First Name</label>
+              <label htmlFor="firstName" className="sr-only">Emri</label>
               <input
                 id="firstName"
                 name="firstName"
@@ -248,14 +248,14 @@ const Register = () => {
                 required
                 autoComplete="given-name"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="First Name"
+                placeholder="Emri"
                 value={formData.firstName}
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
               />
             </div>
             <div>
-              <label htmlFor="lastName" className="sr-only">Last Name</label>
+              <label htmlFor="lastName" className="sr-only">Mbiemri</label>
               <input
                 id="lastName"
                 name="lastName"
@@ -263,14 +263,14 @@ const Register = () => {
                 required
                 autoComplete="family-name"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Last Name"
+                placeholder="Mbiemri"
                 value={formData.lastName}
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
               />
             </div>
             <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
+              <label htmlFor="email" className="sr-only">Adresa e email-it</label>
               <input
                 id="email"
                 name="email"
@@ -278,14 +278,14 @@ const Register = () => {
                 required
                 autoComplete="email"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                placeholder="Adresa e email-it"
                 value={formData.email}
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
               />
             </div>
             <div>
-              <label htmlFor="role" className="sr-only">Role</label>
+              <label htmlFor="role" className="sr-only">Roli</label>
               <select
                 id="role"
                 name="role"
@@ -296,19 +296,19 @@ const Register = () => {
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
               >
-                <option value="athlete">Athlete</option>
-                <option value="coach">Coach</option>
+                <option value="athlete">Atlet</option>
+                <option value="coach">Trajner</option>
                 <option value="scout">Scout</option>
-                <option value="manager">Manager</option>
+                <option value="manager">Menaxher</option>
                 <option value="referee">Referat</option>
-                <option value="club">Club</option>
-                <option value="federation">Federation</option>
+                <option value="club">Klub</option>
+                <option value="federation">Federatë</option>
                 <option value="media">Media</option>
-                <option value="business">Business</option>
+                <option value="business">Biznes</option>
               </select>
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
+              <label htmlFor="password" className="sr-only">Fjalëkalimi</label>
               <input
                 id="password"
                 name="password"
@@ -316,14 +316,14 @@ const Register = () => {
                 required
                 autoComplete="new-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder="Fjalëkalimi"
                 value={formData.password}
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
               />
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="sr-only">Konfirmo fjalëkalimin</label>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -331,7 +331,7 @@ const Register = () => {
                 required
                 autoComplete="new-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
+                placeholder="Konfirmo fjalëkalimin"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 aria-describedby={error ? "error-message" : undefined}
@@ -344,7 +344,7 @@ const Register = () => {
               disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? 'Duke krijuar llogarinë...' : 'Regjistrohu'}
             </button>
           </div>
           <div className="text-center">
@@ -352,7 +352,7 @@ const Register = () => {
               to="/login"
               className="font-medium text-blue-600 hover:text-blue-500"
             >
-              Already have an account? Sign in
+              Ke llogari? Hyr
             </Link>
           </div>
         </form>

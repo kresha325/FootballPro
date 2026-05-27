@@ -71,10 +71,10 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
-      aria-label="Home"
+      aria-label="Ballina"
     >
       <span className="text-2xl">🏠</span>
-      <span className="text-xs">Home</span>
+      <span className="text-xs">Ballina</span>
     </NavLink>
   );
 
@@ -84,7 +84,7 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
-      aria-label="Marketplace"
+      aria-label="Tregu"
     >
       <span className="relative inline-flex items-center justify-center">
         <span className="text-2xl">🛒</span>
@@ -94,7 +94,7 @@ function BottomNav() {
           </span>
         ) : null}
       </span>
-      <span className="text-xs">Shop</span>
+      <span className="text-xs">Tregu</span>
     </NavLink>
   );
 
@@ -107,7 +107,7 @@ function BottomNav() {
         className={({ isActive }) =>
           `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
         }
-        aria-label="Chats"
+        aria-label="Bisedat"
       >
         <span className="relative inline-flex items-center justify-center">
           <span className="text-2xl">💬</span>
@@ -117,7 +117,7 @@ function BottomNav() {
             </span>
           ) : null}
         </span>
-        <span className="text-xs">Chats</span>
+        <span className="text-xs">Biseda</span>
       </NavLink>
     );
   };
@@ -130,10 +130,10 @@ function BottomNav() {
           window.dispatchEvent(new CustomEvent("open-live-modal", { detail: { openCameraFirst: true } }))
         }
         className={`flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 text-red-600 ${extra}`}
-        aria-label="Go Live"
+        aria-label="Dil LIVE"
       >
         <span className="text-2xl">🔴</span>
-        <span className="text-xs">Live</span>
+        <span className="text-xs">LIVE</span>
       </button>
     ) : null;
 
@@ -143,7 +143,7 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
       }
-      aria-label="Profile"
+      aria-label="Profili"
     >
       {user?.profilePhoto && typeof user.profilePhoto === "string" && user.profilePhoto.trim() !== "" ? (
         <img
@@ -160,7 +160,7 @@ function BottomNav() {
           {user?.firstName?.[0]}
         </div>
       )}
-      <span className="text-xs">Profile</span>
+      <span className="text-xs">Profili</span>
     </NavLink>
   );
 

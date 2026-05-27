@@ -47,9 +47,10 @@ export const setAuthToken = (token) => {
   }
 };
 
-export const extractErrorMessage = (error, fallback = 'Something went wrong') => {
+export const extractErrorMessage = (error, fallback = 'Ndodhi një gabim') => {
   return (
     error?.response?.data?.msg ||
+    error?.response?.data?.message ||
     error?.response?.data?.error ||
     error?.message ||
     fallback

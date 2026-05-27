@@ -28,7 +28,7 @@ function NotificationRow({ item, onPress, onDelete, deleting }) {
     >
       <Text style={styles.icon}>{icon}</Text>
       <View style={styles.rowMain}>
-        <Text style={[styles.title, !item.isRead && styles.titleUnread]}>{item.title || 'Notification'}</Text>
+        <Text style={[styles.title, !item.isRead && styles.titleUnread]}>{item.title || 'Njoftim'}</Text>
         <Text style={styles.message}>{item.message || ''}</Text>
         <Text style={styles.meta}>{new Date(item.createdAt).toLocaleString()}</Text>
       </View>
@@ -37,7 +37,7 @@ function NotificationRow({ item, onPress, onDelete, deleting }) {
         onPress={() => onDelete(item.id)}
         disabled={deleting}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityLabel="Delete notification"
+        accessibilityLabel="Fshi njoftimin"
       >
         <Ionicons name="trash-outline" size={18} color="#b91c1c" />
       </TouchableOpacity>
@@ -71,7 +71,7 @@ export default function NotificationsScreen() {
       setItems(list);
       await refreshBadges();
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to load notifications'));
+      setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i njoftimeve'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -95,16 +95,16 @@ export default function NotificationsScreen() {
 
     const navigated = await navigateFromNotification(item, navigation);
     if (!navigated) {
-      Alert.alert('Notification', item.message || item.title || 'No destination for this notification.');
+      Alert.alert('Njoftim', item.message || item.title || 'Nuk ka destinacion për këtë njoftim.');
     }
   };
 
   const onDelete = (id) => {
     if (deletingId) return;
-    Alert.alert('Delete notification', 'Remove this notification?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Fshi njoftimin', 'Ta heq këtë njoftim?', [
+      { text: 'Anulo', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Fshi',
         style: 'destructive',
         onPress: async () => {
           setDeletingId(id);
@@ -115,7 +115,7 @@ export default function NotificationsScreen() {
             await refreshBadges();
           } catch (err) {
             setItems(prev);
-            setError(extractErrorMessage(err, 'Failed to delete notification'));
+            setError(extractErrorMessage(err, 'Nuk u arrit fshirja e njoftimit'));
           } finally {
             setDeletingId(null);
           }
@@ -134,7 +134,7 @@ export default function NotificationsScreen() {
       await refreshBadges();
     } catch (err) {
       setItems(prev);
-      setError(extractErrorMessage(err, 'Failed to mark all as read'));
+      setError(extractErrorMessage(err, 'Nuk u arrit shënimi i të gjithave si të lexuara'));
     } finally {
       setMarkingAll(false);
     }
@@ -152,13 +152,13 @@ export default function NotificationsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>Njoftimet</Text>
           {notificationsCount > 0 ? (
-            <Text style={styles.unreadHint}>{notificationsCount} unread</Text>
+            <Text style={styles.unreadHint}>{notificationsCount} të palexuara</Text>
           ) : null}
         </View>
         <TouchableOpacity onPress={onMarkAll} disabled={markingAll}>
-          <Text style={styles.headerAction}>{markingAll ? '...' : 'Mark all'}</Text>
+          <Text style={styles.headerAction}>{markingAll ? '...' : 'Shënoji të gjitha'}</Text>
         </TouchableOpacity>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -190,7 +190,7 @@ export default function NotificationsScreen() {
             deleting={deletingId === item.id}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No notifications.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>Nuk ka njoftime.</Text>}
       />
     </View>
   );
