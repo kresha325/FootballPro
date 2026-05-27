@@ -135,6 +135,8 @@ export default function VideoCallSimple({
   const ringtoneRef = useRef({ ctx: null, osc: null, gain: null, intervalId: null });
   const livekitRoomRef = useRef(null);
   const livekitTracksRef = useRef([]);
+  const livekitCallIdRef = useRef(null);
+  const intentionalLiveKitDisconnectRef = useRef(false);
   const currentCallIdRef = useRef(null);
   const initialAcceptDoneRef = useRef(false);
 
@@ -450,6 +452,15 @@ export default function VideoCallSimple({
       throw new Error('Missing callId for LiveKit room');
     }
 
+    // Already connected to this call room: do not reconnect/disconnect again.
+    if (
+      livekitRoomRef.current &&
+      livekitCallIdRef.current &&
+      String(livekitCallIdRef.current) === String(callId)
+    ) {
+      return;
+    }
+
     const roomName = `call-${callId}`;
     const tokenResponse = await API.post('/livekit/token', {
       roomName,
@@ -470,6 +481,7 @@ export default function VideoCallSimple({
 
     if (livekitRoomRef.current) {
       try {
+        intentionalLiveKitDisconnectRef.current = true;
         await livekitRoomRef.current.disconnect();
       } catch (_e) {}
       livekitRoomRef.current = null;
@@ -496,6 +508,10 @@ export default function VideoCallSimple({
     });
 
     room.on(RoomEvent.Disconnected, () => {
+      if (intentionalLiveKitDisconnectRef.current) {
+        intentionalLiveKitDisconnectRef.current = false;
+        return;
+      }
       if (callStatusRef.current !== 'ended') {
         setCallStatus('ended');
       }
@@ -514,6 +530,8 @@ export default function VideoCallSimple({
 
     livekitTracksRef.current = localTracks;
     livekitRoomRef.current = room;
+    livekitCallIdRef.current = callId;
+    intentionalLiveKitDisconnectRef.current = false;
     setUsingLiveKit(true);
     setCallStatus('connected');
     setServerConnected(true);
@@ -640,6 +658,10 @@ export default function VideoCallSimple({
       const activeCallId = callId || currentCallIdRef.current;
       if (answer?.type === 'livekit-accepted' && activeCallId) {
         if (!currentCallIdRef.current) setCurrentCallId(activeCallId);
+        if (livekitRoomRef.current && String(livekitCallIdRef.current) === String(activeCallId)) {
+          setCallStatus('connected');
+          return;
+        }
         await joinLiveKitRoom(activeCallId);
         return;
       }
@@ -769,6 +791,7 @@ export default function VideoCallSimple({
       peerConnectionRef.current.close();
     }
     if (livekitRoomRef.current) {
+      intentionalLiveKitDisconnectRef.current = true;
       livekitRoomRef.current.disconnect();
       livekitRoomRef.current = null;
     }
@@ -786,6 +809,8 @@ export default function VideoCallSimple({
     peerConnectionRef.current = null;
     setUsingLiveKit(false);
     setHasRemoteVideo(false);
+    livekitCallIdRef.current = null;
+    intentionalLiveKitDisconnectRef.current = false;
   };
 
   const toggleMute = () => {

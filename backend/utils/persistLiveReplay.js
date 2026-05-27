@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Stream, Profile } = require('../models');
+const { Stream, Profile, Post } = require('../models');
 const Video = require('../models/Video');
 
 const LIVE_CATEGORY = 'live';
@@ -107,6 +107,36 @@ async function persistLiveReplay({
       isProcessing: false,
       processingStatus: 'completed',
     });
+  }
+
+  // Krijo/azhurno post në feed që streameri të ketë "Was live" te postet e veta.
+  // E lidhim me URL-në /live/:id që të mos krijohen duplikate për të njëjtin stream.
+  const replayLink = `/live/${stream.id}`;
+  const replayContent = `🔴 Was live: ${title || stream.title || 'Live Stream'}\nShiko replay: ${replayLink}`;
+  const [replayPost] = await Post.findOrCreate({
+    where: {
+      userId,
+      content: { [Op.like]: `%${replayLink}` },
+    },
+    defaults: {
+      userId,
+      content: replayContent,
+      videoUrl,
+    },
+  });
+  if (replayPost) {
+    let changed = false;
+    if (replayPost.videoUrl !== videoUrl) {
+      replayPost.videoUrl = videoUrl;
+      changed = true;
+    }
+    if (replayPost.content !== replayContent) {
+      replayPost.content = replayContent;
+      changed = true;
+    }
+    if (changed) {
+      await replayPost.save();
+    }
   }
 
   return { stream, liveVideos, video: videoRecord };
