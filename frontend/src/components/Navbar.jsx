@@ -322,13 +322,13 @@ function Navbar() {
         </div>
       </div>
 
-      {/* BURGER MENU SIDEBAR — mobile: mbi bottom nav, jo nën të (logout i arritshëm) */}
+      {/* BURGER MENU SIDEBAR — mobile: plot lartësinë, me scroll, mbi bottom nav */}
       <div
         className={`fixed top-16 right-0 w-80 max-w-[min(20rem,100vw)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-[60] overflow-y-auto overscroll-contain ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        } max-md:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-0 md:h-[calc(100vh-4rem)]`}
+        } bottom-0 h-[calc(100vh-4rem)]`}
       >
-        <div className="p-6 space-y-6 pb-8">
+        <div className="p-6 space-y-6 pb-28">
           
           {/* MENU ITEMS */}
           <div className="space-y-2">
@@ -568,8 +568,8 @@ function Navbar() {
 
       {/* Modal për live stream */}
       {user && showLiveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Start Live Stream</h2>
             <form onSubmit={handleStartLiveStream}>
               <div className="mb-3">
