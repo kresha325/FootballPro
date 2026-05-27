@@ -690,6 +690,22 @@ export default function VideoCallSimple({
     }
   };
 
+  // LiveKit version differences: some tracks expose mute/unmute, not setEnabled.
+  const setLiveKitTrackEnabled = (track, enabled) => {
+    if (!track) return;
+    if (typeof track.setEnabled === 'function') {
+      track.setEnabled(enabled);
+      return;
+    }
+    if (enabled) {
+      if (typeof track.unmute === 'function') track.unmute();
+      if (track.mediaStreamTrack) track.mediaStreamTrack.enabled = true;
+      return;
+    }
+    if (typeof track.mute === 'function') track.mute();
+    if (track.mediaStreamTrack) track.mediaStreamTrack.enabled = false;
+  };
+
   const cleanup = () => {
     if (disconnectTimerRef.current) {
       clearTimeout(disconnectTimerRef.current);
@@ -725,7 +741,7 @@ export default function VideoCallSimple({
       const audioPublication = Array.from(livekitRoomRef.current.localParticipant.trackPublications.values())
         .find((publication) => publication.kind === 'audio');
       const enabled = !!audioPublication?.track && isMuted;
-      audioPublication?.track?.setEnabled(enabled);
+      setLiveKitTrackEnabled(audioPublication?.track, enabled);
       setIsMuted(!enabled);
       return;
     }
@@ -743,7 +759,7 @@ export default function VideoCallSimple({
       const videoPublication = Array.from(livekitRoomRef.current.localParticipant.trackPublications.values())
         .find((publication) => publication.kind === 'video');
       const enabled = !!videoPublication?.track && isVideoOff;
-      videoPublication?.track?.setEnabled(enabled);
+      setLiveKitTrackEnabled(videoPublication?.track, enabled);
       setIsVideoOff(!enabled);
       return;
     }
