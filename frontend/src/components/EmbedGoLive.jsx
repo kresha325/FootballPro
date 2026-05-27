@@ -27,6 +27,7 @@ export default function EmbedGoLive() {
   const navigate = useNavigate();
   const streamIdFromQuery = parseInt(params.get('streamId') || '', 10);
   const skipConfirm = params.get('confirmed') === '1';
+  const forceLiveKit = skipConfirm || params.get('livekit') === '1';
 
   const [streamId, setStreamId] = useState(Number.isFinite(streamIdFromQuery) ? streamIdFromQuery : null);
   const [stream, setStream] = useState(null);
@@ -226,7 +227,7 @@ export default function EmbedGoLive() {
           }
         };
 
-        const useLiveKitFirst = preferLiveKitBroadcast();
+        const useLiveKitFirst = forceLiveKit || preferLiveKitBroadcast();
 
         if (streamData?.youtubeChannelId && !useLiveKitFirst) {
           await markLive();

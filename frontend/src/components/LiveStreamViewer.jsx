@@ -8,7 +8,7 @@ import {
   buildYoutubeChannelLiveWatchUrl,
 } from '../utils/youtubeLiveEmbed';
 
-function waitForRemoteVideo(room, timeoutMs = 4500) {
+function waitForRemoteVideo(room, timeoutMs = 12000) {
   return new Promise((resolve) => {
     const hasVideo = () =>
       [...room.remoteParticipants.values()].some((p) =>

@@ -5,6 +5,21 @@ import { PhoneIcon, PhoneXMarkIcon, VideoCameraIcon, MicrophoneIcon } from '@her
 import axios from 'axios';
 import { Room, RoomEvent, createLocalTracks } from 'livekit-client';
 import { API_URL } from '../config/api';
+function getVideoCallCaptureOptions() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    return {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      facingMode: 'user',
+    };
+  }
+  return {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    facingMode: 'user',
+  };
+}
 
 const API = axios.create({ baseURL: API_URL });
 API.interceptors.request.use((config) => {
@@ -85,6 +100,7 @@ export default function VideoCallSimple({
   const [serverConnected, setServerConnected] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [usingLiveKit, setUsingLiveKit] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
   useEffect(() => {
     if (initialCallId) setCurrentCallId(initialCallId);
@@ -216,6 +232,34 @@ export default function VideoCallSimple({
       localVideoRef.current.play?.().catch(() => {});
     }
   }, [localStream]);
+
+  const attachLiveKitLocalPreview = () => {
+    const videoTrack = livekitTracksRef.current.find((t) => t.kind === 'video');
+    if (videoTrack && localVideoRef.current && !isVideoOff) {
+      videoTrack.attach(localVideoRef.current);
+    }
+  };
+
+  const attachLiveKitRemoteTracks = (room) => {
+    room.remoteParticipants.forEach((participant) => {
+      participant.trackPublications.forEach((publication) => {
+        const track = publication.track;
+        if (!track) return;
+        if (track.kind === 'video' && remoteVideoRef.current) {
+          track.attach(remoteVideoRef.current);
+          setHasRemoteVideo(true);
+        }
+        if (track.kind === 'audio' && remoteAudioRef.current) {
+          track.attach(remoteAudioRef.current);
+        }
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (!usingLiveKit) return;
+    attachLiveKitLocalPreview();
+  }, [usingLiveKit, isVideoOff, callStatus]);
   // Handler for incoming call offer
   const handleIncomingCall = ({ from, callerName, offer, callId }) => {
     if (!user || !from) return;
@@ -430,12 +474,14 @@ export default function VideoCallSimple({
       } catch (_e) {}
       livekitRoomRef.current = null;
     }
+    setHasRemoteVideo(false);
 
     const room = new Room();
 
     room.on(RoomEvent.TrackSubscribed, (track) => {
       if (track.kind === 'video' && remoteVideoRef.current) {
         track.attach(remoteVideoRef.current);
+        setHasRemoteVideo(true);
       }
       if (track.kind === 'audio' && remoteAudioRef.current) {
         track.attach(remoteAudioRef.current);
@@ -443,6 +489,9 @@ export default function VideoCallSimple({
     });
 
     room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      if (track.kind === 'video') {
+        setHasRemoteVideo(false);
+      }
       track.detach();
     });
 
@@ -453,13 +502,14 @@ export default function VideoCallSimple({
     });
 
     await room.connect(wsUrl, token, { autoSubscribe: true });
+    attachLiveKitRemoteTracks(room);
 
-    const localTracks = await createLocalTracks({ audio: true, video: !audioOnly });
+    const localTracks = await createLocalTracks({
+      audio: true,
+      video: audioOnly ? false : getVideoCallCaptureOptions(),
+    });
     for (const track of localTracks) {
       await room.localParticipant.publishTrack(track);
-      if (track.kind === 'video' && localVideoRef.current) {
-        track.attach(localVideoRef.current);
-      }
     }
 
     livekitTracksRef.current = localTracks;
@@ -467,6 +517,7 @@ export default function VideoCallSimple({
     setUsingLiveKit(true);
     setCallStatus('connected');
     setServerConnected(true);
+    requestAnimationFrame(() => attachLiveKitLocalPreview());
   };
 
   const startRingtone = () => {
@@ -734,6 +785,7 @@ export default function VideoCallSimple({
     setRemoteStream(null);
     peerConnectionRef.current = null;
     setUsingLiveKit(false);
+    setHasRemoteVideo(false);
   };
 
   const toggleMute = () => {
@@ -761,6 +813,11 @@ export default function VideoCallSimple({
       const enabled = !!videoPublication?.track && isVideoOff;
       setLiveKitTrackEnabled(videoPublication?.track, enabled);
       setIsVideoOff(!enabled);
+      if (enabled) {
+        requestAnimationFrame(() => attachLiveKitLocalPreview());
+      } else if (videoPublication?.track && localVideoRef.current) {
+        videoPublication.track.detach(localVideoRef.current);
+      }
       return;
     }
     if (localStream) {
@@ -787,9 +844,13 @@ export default function VideoCallSimple({
           autoPlay
           playsInline
           muted={false}
-          className={`w-full h-full object-cover ${callStatus === 'connected' && remoteStream ? '' : 'hidden'}`}
+          className={`w-full h-full object-cover ${
+            callStatus === 'connected' && (remoteStream || (usingLiveKit && hasRemoteVideo))
+              ? ''
+              : 'hidden'
+          }`}
         />
-        {!(callStatus === 'connected' && remoteStream) && (
+        {!(callStatus === 'connected' && (remoteStream || (usingLiveKit && hasRemoteVideo))) && (
           <div className="w-full h-full flex flex-col items-center justify-center text-white px-4">
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-700 flex items-center justify-center text-3xl sm:text-4xl mb-4">
               {targetUser.firstName?.[0]}{targetUser.lastName?.[0]}
@@ -822,9 +883,13 @@ export default function VideoCallSimple({
           </div>
         )}
 
-        {/* Local Video (Picture in Picture) - Responsive */}
-        {localStream && !audioOnly && (
-          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 w-20 h-28 sm:w-32 sm:h-48 bg-gray-800 rounded-lg overflow-hidden shadow-lg">
+        {/* Local Video (Picture in Picture) — gjithmonë në DOM për LiveKit attach */}
+        {!audioOnly && (localStream || usingLiveKit) ? (
+          <div
+            className={`absolute top-2 right-2 sm:top-4 sm:right-4 w-20 h-28 sm:w-32 sm:h-48 bg-gray-800 rounded-lg overflow-hidden shadow-lg ${
+              isVideoOff ? 'opacity-0 pointer-events-none' : ''
+            }`}
+          >
             <video
               ref={localVideoRef}
               autoPlay
@@ -834,7 +899,7 @@ export default function VideoCallSimple({
               style={{ transform: 'scaleX(-1)' }}
             />
           </div>
-        )}
+        ) : null}
 
         {/* Call Status Indicator - Mobile */}
         {callStatus === 'connected' && (

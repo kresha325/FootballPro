@@ -5,6 +5,7 @@ import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate } from 'react-router-dom';
 import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
 import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
+import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
@@ -466,7 +467,13 @@ const Profile = () => {
       }
 
       setLiveStreamId(createdId);
-      alert('Live stream started. You can now share the link.');
+      stopCameraPreview();
+      setShowLiveModal(false);
+      navigateToEmbedGoLive(navigate, {
+        streamId: createdId,
+        title: payload.title,
+        description: payload.description,
+      });
     } catch (err) {
       console.error('Failed to start live stream:', err);
       alert('Failed to start live stream. Please try again.');

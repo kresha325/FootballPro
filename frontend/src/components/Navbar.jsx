@@ -4,9 +4,9 @@ import { useCart } from "../contexts/CartContext";
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
-import { Room, createLocalTracks } from 'livekit-client';
-import { liveStreamAPI, livekitAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
+import { liveStreamAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
 import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
+import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { APP_BRAND_NAME } from '../config/branding';
 
@@ -43,8 +43,6 @@ function Navbar() {
   const [activeLiveStreamId, setActiveLiveStreamId] = useState(null);
   const [isEndingLive, setIsEndingLive] = useState(false);
   const livePreviewRef = useRef(null);
-  const livekitRoomRef = useRef(null);
-  const livekitTracksRef = useRef([]);
   // Feed toggle (My / All)
   const { fetchPosts } = usePosts();
   const initialFollowedOnly = (() => {
@@ -139,34 +137,14 @@ function Navbar() {
         /* stream may already be live */
       }
 
-      const roomName = `stream-${createdId}`;
-      const tokenRes = await livekitAPI.createToken({
-        roomName,
-        participantName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || String(user?.id || 'streamer'),
-        metadata: { streamId: createdId, role: 'broadcaster' },
-        canPublish: true,
-        canSubscribe: true,
-      });
-
-      const wsUrl = tokenRes?.data?.wsUrl;
-      const token = tokenRes?.data?.token;
-
-      if (!wsUrl || !token) {
-        throw new Error('LiveKit token response is invalid');
-      }
-
-      const room = new Room();
-      await room.connect(wsUrl, token, { autoSubscribe: true });
-      const localTracks = await createLocalTracks({ audio: true, video: true });
-      for (const track of localTracks) {
-        await room.localParticipant.publishTrack(track);
-      }
-      livekitRoomRef.current = room;
-      livekitTracksRef.current = localTracks;
       setActiveLiveStreamId(createdId);
-
-      alert('Live stream started.');
+      stopCameraPreview();
       setShowLiveModal(false);
+      navigateToEmbedGoLive(navigate, {
+        streamId: createdId,
+        title: payload.title,
+        description: payload.description,
+      });
     } catch (err) {
       console.error('Failed to start live stream:', err);
       alert('Failed to start live stream. Please try again.');
@@ -189,22 +167,6 @@ function Navbar() {
 
     setIsEndingLive(true);
     try {
-      if (livekitTracksRef.current?.length) {
-        livekitTracksRef.current.forEach((track) => {
-          try {
-            track.stop();
-          } catch {
-            /* track may already be stopped */
-          }
-        });
-      }
-      livekitTracksRef.current = [];
-
-      if (livekitRoomRef.current) {
-        livekitRoomRef.current.disconnect();
-        livekitRoomRef.current = null;
-      }
-
       await streamsAPI.endStream(activeLiveStreamId);
       setActiveLiveStreamId(null);
       alert('Live stream ended.');
@@ -260,20 +222,6 @@ function Navbar() {
   useEffect(() => {
     return () => {
       stopCameraPreview();
-      if (livekitTracksRef.current?.length) {
-        livekitTracksRef.current.forEach((track) => {
-          try {
-            track.stop();
-          } catch {
-            /* track may already be stopped */
-          }
-        });
-        livekitTracksRef.current = [];
-      }
-      if (livekitRoomRef.current) {
-        livekitRoomRef.current.disconnect();
-        livekitRoomRef.current = null;
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -374,9 +322,13 @@ function Navbar() {
         </div>
       </div>
 
-      {/* BURGER MENU SIDEBAR */}
-      <div className={`fixed top-16 right-0 h-[calc(100vh-4rem)] w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}>
-        <div className="p-6 space-y-6">
+      {/* BURGER MENU SIDEBAR — mobile: mbi bottom nav, jo nën të (logout i arritshëm) */}
+      <div
+        className={`fixed top-16 right-0 w-80 max-w-[min(20rem,100vw)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-[60] overflow-y-auto overscroll-contain ${
+          isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        } max-md:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-0 md:h-[calc(100vh-4rem)]`}
+      >
+        <div className="p-6 space-y-6 pb-8">
           
           {/* MENU ITEMS */}
           <div className="space-y-2">

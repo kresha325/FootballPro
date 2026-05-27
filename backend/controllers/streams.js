@@ -401,13 +401,13 @@ exports.getStreams = async (req, res) => {
       }
       // Siguro që gjithmonë të kthehet një objekt streamer me photoUrl
       if (!s.streamer) {
-        s.streamer = { firstName: 'Unknown', lastName: '', photoUrl: '/default-avatar.png' };
+        s.streamer = { firstName: 'Unknown', lastName: '', photoUrl: null };
       } else if (s.streamer.Profile && s.streamer.Profile.profilePhoto) {
         s.streamer.photoUrl = s.streamer.Profile.profilePhoto.startsWith('/uploads/')
           ? `https://localhost:5098${s.streamer.Profile.profilePhoto}`
           : s.streamer.Profile.profilePhoto;
       } else {
-        s.streamer.photoUrl = '/default-avatar.png';
+        s.streamer.photoUrl = null;
       }
       return s;
     })

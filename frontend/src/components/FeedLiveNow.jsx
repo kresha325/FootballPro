@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import { streamsAPI } from '../services/api';
 import { dedupeLiveByStreamer } from '../utils/liveStreams';
+import { resolveStreamerPhotoUrl } from '../utils/avatarUrl';
 
 const POLL_MS = 8000;
 const LIMIT = 12;
@@ -10,21 +11,11 @@ const LIMIT = 12;
 const rawApi = import.meta.env.VITE_API_URL || '';
 const siteRoot = rawApi.replace(/\/api\/?$/i, '').replace(/\/$/, '');
 
-function resolvePhotoUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  const u = url.trim();
-  if (!u) return null;
-  if (/^https?:\/\//i.test(u)) return u;
-  if (!siteRoot) return u.startsWith('/') ? u : `/${u}`;
-  return siteRoot + (u.startsWith('/') ? u : `/${u}`);
-}
-
 function streamPhoto(stream) {
   const s = stream?.streamer;
   if (!s) return null;
-  if (s.photoUrl) return resolvePhotoUrl(s.photoUrl);
-  const p = s.Profile?.profilePhoto;
-  return resolvePhotoUrl(p);
+  if (s.photoUrl) return resolveStreamerPhotoUrl(s.photoUrl, siteRoot);
+  return resolveStreamerPhotoUrl(s.Profile?.profilePhoto, siteRoot);
 }
 
 function streamerName(stream) {

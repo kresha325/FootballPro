@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { dedupeLiveByStreamer } from '../utils/liveStreams';
+import { resolveStreamerPhotoUrl } from '../utils/avatarUrl';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -17,20 +18,11 @@ const siteRoot = String(import.meta.env.VITE_API_URL || '')
   .replace(/\/api\/?$/i, '')
   .replace(/\/$/, '');
 
-function resolvePhoto(url) {
-  if (!url || typeof url !== 'string') return null;
-  const u = url.trim();
-  if (!u) return null;
-  if (/^https?:\/\//i.test(u)) return u;
-  if (!siteRoot) return u.startsWith('/') ? u : `/${u}`;
-  return siteRoot + (u.startsWith('/') ? u : `/${u}`);
-}
-
 function streamAvatar(stream) {
   const s = stream?.streamer;
   if (!s) return null;
-  if (s.photoUrl) return resolvePhoto(s.photoUrl);
-  return resolvePhoto(s.Profile?.profilePhoto);
+  if (s.photoUrl) return resolveStreamerPhotoUrl(s.photoUrl, siteRoot);
+  return resolveStreamerPhotoUrl(s.Profile?.profilePhoto, siteRoot);
 }
 
 function recordingSrc(videoUrl) {

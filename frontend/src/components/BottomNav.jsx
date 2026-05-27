@@ -165,7 +165,7 @@ function BottomNav() {
   );
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+    <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 pb-[env(safe-area-inset-bottom,0px)]">
       {user ? (
         <div className="relative flex w-full items-end justify-between min-h-[56px] px-1 pb-1 pt-0.5">
           <div className="flex flex-1 justify-evenly items-end min-w-0 pr-11">{homeLink()} {shopLink()}</div>
