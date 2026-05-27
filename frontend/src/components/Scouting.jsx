@@ -29,9 +29,15 @@ const Scouting = () => {
   const fetchRecommendations = async () => {
     try {
       const response = await scoutingAPI.getRecommendations();
-      setRecommendations(response.data);
+      const list = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.recommendations)
+          ? response.data.recommendations
+          : [];
+      setRecommendations(list);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
@@ -42,8 +48,9 @@ const Scouting = () => {
     if (filters.position) {
       filtered = filtered.filter(rec => rec.position === filters.position);
     }
-    if (filters.minScore > 0) {
-      filtered = filtered.filter(rec => rec.score >= filters.minScore);
+    const minScore = Number(filters.minScore) || 0;
+    if (minScore > 0) {
+      filtered = filtered.filter((rec) => Number(rec.score || 0) >= minScore);
     }
     setFilteredRecommendations(filtered);
   };
@@ -113,8 +120,8 @@ const Scouting = () => {
               </Link>
             </h3>
             <p>Position: {rec.position}</p>
-            <p>Score: {rec.score.toFixed(2)}</p>
-            <p>Reasons: {rec.reasons.join(', ')}</p>
+            <p>Score: {Number(rec.score || 0).toFixed(2)}</p>
+            <p>Reasons: {Array.isArray(rec.reasons) ? rec.reasons.join(', ') : '-'}</p>
             {canUseAi ? (
               <button
                 type="button"
