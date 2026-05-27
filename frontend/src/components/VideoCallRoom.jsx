@@ -13,7 +13,18 @@ API.interceptors.request.use((config) => {
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL || BACKEND_URL || 'http://localhost:10000';
 
-const VideoCallRoom = ({ roomId, userId }) => {
+function RemoteVideo({ stream }) {
+  const videoRef = useRef(null);
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play?.().catch(() => {});
+    }
+  }, [stream]);
+  return <video ref={videoRef} autoPlay playsInline style={{ width: 240 }} />;
+}
+
+const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => {
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [localStream, setLocalStream] = useState(null);
   const [joined, setJoined] = useState(false);
@@ -141,7 +152,12 @@ const VideoCallRoom = ({ roomId, userId }) => {
       localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
     }
+    if (onClose) onClose();
   };
+
+  useEffect(() => {
+    if (autoJoin) setJoined(true);
+  }, [autoJoin]);
 
   const handleMute = () => {
     if (localStream) {
@@ -183,9 +199,9 @@ const VideoCallRoom = ({ roomId, userId }) => {
               ))}
             </ul>
           </div>
-          <div>
+          <div className="flex flex-wrap gap-2">
             {remoteStreams.map((stream, idx) => (
-              <video key={idx} srcObject={stream} autoPlay playsInline style={{ width: 300 }} />
+              <RemoteVideo key={idx} stream={stream} />
             ))}
           </div>
         </div>

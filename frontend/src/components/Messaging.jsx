@@ -3,8 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
-import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown } from 'react-icons/fi';
+import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
+import VideoCallRoom from './VideoCallRoom';
 import ForwardButton from './ForwardButton';
 
 import { API_URL, BACKEND_URL } from '../config/api';
@@ -97,6 +98,10 @@ function Messaging() {
   const [replyTo, setReplyTo] = useState(null);
   const [showCall, setShowCall] = useState(false);
   const [callType, setCallType] = useState('video'); // 'video' or 'audio'
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const [conversationSearch, setConversationSearch] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
   const [messagePagination, setMessagePagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -656,8 +661,58 @@ function Messaging() {
 
   // --- WebRTC/Call logic ---
   function startCall(isVideo) {
+    if (selectedConversation?.isGroup && !isVideo) {
+      alert('Group audio call nuk është aktiv ende. Përdor Group Video Call.');
+      return;
+    }
     setCallType(isVideo ? 'video' : 'audio');
     setShowCall(true);
+  }
+
+  const directContacts = useMemo(() => {
+    const map = new Map();
+    conversations.forEach((conv) => {
+      if (conv?.isGroup || !Array.isArray(conv?.members)) return;
+      const other = conv.members.find((m) => m?.id !== user?.id);
+      if (other?.id && !map.has(other.id)) {
+        map.set(other.id, {
+          id: other.id,
+          name: `${other.firstName || ''} ${other.lastName || ''}`.trim() || 'Unknown',
+          profilePhoto: other.profilePhoto || other.Profile?.profilePhoto || '',
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [conversations, user?.id]);
+
+  async function createGroupConversation() {
+    if (!groupName.trim()) {
+      alert('Shkruaj emrin e grupit.');
+      return;
+    }
+    if (groupMembers.length < 2) {
+      alert('Zgjidh të paktën 2 anëtarë.');
+      return;
+    }
+    setCreatingGroup(true);
+    try {
+      const res = await api.post('/messaging/conversations/group', {
+        name: groupName.trim(),
+        memberIds: groupMembers,
+      });
+      const created = res?.data;
+      if (!created?.id) throw new Error('Group was not created');
+      setConversations((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+      setSelectedConversation(created);
+      setShowCreateGroup(false);
+      setGroupName('');
+      setGroupMembers([]);
+    } catch (err) {
+      console.error('Create group failed:', err);
+      alert('Nuk u krijua grupi. Provo përsëri.');
+    } finally {
+      setCreatingGroup(false);
+    }
   }
 
   if (loading) {
@@ -671,21 +726,54 @@ function Messaging() {
     <div className="flex h-[calc(100vh-64px)] relative">
       {modalImage && <MediaModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
       {showCall && selectedConversation && (
-        <VideoCallSimple
-          targetUser={{
-            id: getOtherMember(selectedConversation).id || getOtherMember(selectedConversation)._id,
-            firstName: getOtherMember(selectedConversation).name?.split(' ')[0] || '',
-            lastName: getOtherMember(selectedConversation).name?.split(' ')[1] || '',
-            profilePhoto: getOtherMember(selectedConversation).profilePhoto
-          }}
-          audioOnly={callType === 'audio'}
-          onClose={() => setShowCall(false)}
-        />
+        selectedConversation.isGroup ? (
+          <div className="fixed inset-0 z-50 bg-black/85 p-3">
+            <div className="h-full w-full rounded-xl bg-white p-3 overflow-auto">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold">Group Video Call: {selectedConversation.name || 'Group'}</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCall(false)}
+                  className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+              <VideoCallRoom
+                roomId={`group-${selectedConversation.id}`}
+                userId={user?.id}
+                autoJoin
+                onClose={() => setShowCall(false)}
+              />
+            </div>
+          </div>
+        ) : (
+          <VideoCallSimple
+            targetUser={{
+              id: getOtherMember(selectedConversation).id || getOtherMember(selectedConversation)._id,
+              firstName: getOtherMember(selectedConversation).name?.split(' ')[0] || '',
+              lastName: getOtherMember(selectedConversation).name?.split(' ')[1] || '',
+              profilePhoto: getOtherMember(selectedConversation).profilePhoto
+            }}
+            audioOnly={callType === 'audio'}
+            onClose={() => setShowCall(false)}
+          />
+        )
       )}
       {/* Conversations List */}
       <div className="w-80 border-r bg-white dark:bg-gray-800 flex flex-col min-h-0">
         <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
-          <h2 className="text-xl font-bold dark:text-white mb-3">Mesazhet</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-xl font-bold dark:text-white">Mesazhet</h2>
+            <button
+              type="button"
+              onClick={() => setShowCreateGroup(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-blue-700"
+            >
+              <FiUsers className="w-4 h-4" />
+              New Group
+            </button>
+          </div>
           <div className="relative">
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -761,6 +849,64 @@ function Messaging() {
         )}
         </div>
       </div>
+
+      {showCreateGroup ? (
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-3">
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 max-h-[85vh] overflow-y-auto">
+            <h3 className="text-lg font-bold dark:text-white mb-3">Krijo Group Chat</h3>
+            <input
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder="Emri i grupit"
+              className="w-full mb-3 px-3 py-2 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white"
+            />
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Zgjidh anëtarët:</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+              {directContacts.map((m) => (
+                <label key={m.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={groupMembers.includes(m.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setGroupMembers((prev) => [...prev, m.id]);
+                      } else {
+                        setGroupMembers((prev) => prev.filter((id) => id !== m.id));
+                      }
+                    }}
+                  />
+                  <span className="text-sm dark:text-gray-100">{m.name}</span>
+                </label>
+              ))}
+              {directContacts.length === 0 ? (
+                <p className="text-sm text-gray-500">Nuk ka kontakte. Fillo biseda 1-1 fillimisht.</p>
+              ) : null}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateGroup(false);
+                  setGroupName('');
+                  setGroupMembers([]);
+                }}
+                className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={createGroupConversation}
+                disabled={creatingGroup}
+                className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+              >
+                {creatingGroup ? 'Creating...' : 'Create Group'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Messages Area */}
       {selectedConversation ? (
