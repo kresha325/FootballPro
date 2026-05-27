@@ -34,6 +34,7 @@ const getFullUrl = (url) => {
       ? url.replace('http//', 'http://')
       : url;
   if (/^https?:\/\//.test(normalized)) return normalized;
+  if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
   return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
 };
 
@@ -497,6 +498,12 @@ const Profile = () => {
       alert('Camera/Microphone permission is required.');
     }
   };
+
+  useEffect(() => {
+    if (!showLiveModal || !cameraStream || !livePreviewRef.current) return;
+    livePreviewRef.current.srcObject = cameraStream;
+    livePreviewRef.current.play?.().catch(() => {});
+  }, [showLiveModal, cameraStream]);
 
   useEffect(() => {
     if (!showLiveModal) {

@@ -436,7 +436,7 @@ export default function Tournaments() {
                                 ? (item.Match.homeUser.Profile.profilePhoto.startsWith('http')
                                     ? item.Match.homeUser.Profile.profilePhoto
                                     : `${import.meta.env.VITE_API_URL}${item.Match.homeUser.Profile.profilePhoto.startsWith('/') ? item.Match.homeUser.Profile.profilePhoto : '/' + item.Match.homeUser.Profile.profilePhoto}`)
-                                : '/default-avatar.png'}
+                                : '/default-avatar.svg'}
                               alt=""
                               className="w-8 h-8 rounded-full object-cover"
                             />
@@ -467,7 +467,7 @@ export default function Tournaments() {
                                 ? (item.Match.awayUser.Profile.profilePhoto.startsWith('http')
                                     ? item.Match.awayUser.Profile.profilePhoto
                                     : `${import.meta.env.VITE_API_URL}${item.Match.awayUser.Profile.profilePhoto.startsWith('/') ? item.Match.awayUser.Profile.profilePhoto : '/' + item.Match.awayUser.Profile.profilePhoto}`)
-                                : '/default-avatar.png'}
+                                : '/default-avatar.svg'}
                               alt=""
                               className="w-8 h-8 rounded-full object-cover"
                             />
@@ -785,7 +785,7 @@ export default function Tournaments() {
                             ? (participant.User.Profile.profilePhoto.startsWith('http')
                                 ? participant.User.Profile.profilePhoto
                                 : `${import.meta.env.VITE_API_URL}${participant.User.Profile.profilePhoto.startsWith('/') ? participant.User.Profile.profilePhoto : '/' + participant.User.Profile.profilePhoto}`)
-                            : '/default-avatar.png'}
+                            : '/default-avatar.svg'}
                           alt=""
                           className="w-8 h-8 rounded-full object-cover"
                         />
@@ -848,7 +848,7 @@ export default function Tournaments() {
                           ? (match.homeUser.Profile.profilePhoto.startsWith('http')
                               ? match.homeUser.Profile.profilePhoto
                               : `${import.meta.env.VITE_API_URL}${match.homeUser.Profile.profilePhoto.startsWith('/') ? match.homeUser.Profile.profilePhoto : '/' + match.homeUser.Profile.profilePhoto}`)
-                          : '/default-avatar.png'}
+                          : '/default-avatar.svg'}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -887,7 +887,7 @@ export default function Tournaments() {
                           ? (match.awayUser.Profile.profilePhoto.startsWith('http')
                               ? match.awayUser.Profile.profilePhoto
                               : `${import.meta.env.VITE_API_URL}${match.awayUser.Profile.profilePhoto.startsWith('/') ? match.awayUser.Profile.profilePhoto : '/' + match.awayUser.Profile.profilePhoto}`)
-                          : '/default-avatar.png'}
+                          : '/default-avatar.svg'}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />

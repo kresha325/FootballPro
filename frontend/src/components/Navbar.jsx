@@ -28,6 +28,7 @@ function Navbar() {
         ? url.replace('http//', 'http://')
         : url;
     if (/^https?:\/\//.test(normalized)) return normalized;
+    if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -230,6 +231,12 @@ function Navbar() {
       alert('Camera/Microphone permission is required.');
     }
   }, [cameraReady]);
+
+  useEffect(() => {
+    if (!showLiveModal || !cameraStream || !livePreviewRef.current) return;
+    livePreviewRef.current.srcObject = cameraStream;
+    livePreviewRef.current.play?.().catch(() => {});
+  }, [showLiveModal, cameraStream]);
 
   // Allow other components to open the Go Live modal via a window event
   useEffect(() => {

@@ -46,11 +46,25 @@ export default function IncomingCallModal({ caller, onAccept, onReject }) {
         begin();
       }
 
-      if (navigator.vibrate) {
+      const startVibration = () => {
+        if (!navigator.vibrate) return;
         navigator.vibrate([200, 100, 200]);
         ringtoneRef.current.vibrateId = setInterval(() => {
           navigator.vibrate([200, 100, 200]);
         }, 1500);
+      };
+
+      // Chrome blocks vibrate until the user has interacted with the page.
+      if (navigator.userActivation?.hasBeenActive) {
+        startVibration();
+      } else {
+        const resumeVibrate = () => {
+          startVibration();
+          window.removeEventListener('click', resumeVibrate);
+          window.removeEventListener('touchstart', resumeVibrate);
+        };
+        window.addEventListener('click', resumeVibrate, { once: true });
+        window.addEventListener('touchstart', resumeVibrate, { once: true });
       }
     };
 

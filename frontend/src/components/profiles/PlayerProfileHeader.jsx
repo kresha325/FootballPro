@@ -10,13 +10,14 @@ const PlayerProfileHeader = ({ profile = {} }) => {
         ? url.replace('http//', 'http://')
         : url;
     if (/^https?:\/\//.test(normalized)) return normalized;
+    if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 flex flex-col md:flex-row items-center gap-6 mb-6">
       <div className="flex flex-col items-center md:items-start gap-2">
         <img
-          src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
+          src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.svg'}
           alt={profile.firstName + ' ' + profile.lastName}
           className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg bg-gray-200"
         />

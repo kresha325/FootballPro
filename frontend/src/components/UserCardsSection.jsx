@@ -107,12 +107,12 @@ const UserCardsSection = () => {
           <div key={profile.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden relative flex flex-col min-w-[220px] snap-start">
             <div className="relative h-48 w-full overflow-hidden">
               <img
-                src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.png'}
+                src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.svg'}
                 alt={profile.firstName + ' ' + profile.lastName}
                 className={`object-cover w-full h-full border-4 transition-all duration-300 ${onlineStatus[profile.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                 loading="lazy"
                 decoding="async"
-                onError={e => { e.target.src = '/default-avatar.png'; }}
+                onError={e => { e.target.src = '/default-avatar.svg'; }}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                 <div className="text-xl font-bold text-white drop-shadow-lg flex items-center gap-2">

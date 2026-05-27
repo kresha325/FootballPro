@@ -7,7 +7,8 @@ const getFullUrl = (url) => {
     : url.startsWith('http//')
       ? url.replace('http//', 'http://')
       : url;
-  if (/^https?:\/\//.test(normalized)) return normalized;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
   return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
 };
 import { useState, useEffect } from 'react';

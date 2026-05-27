@@ -127,6 +127,7 @@ function Messaging() {
         ? url.replace('http//', 'http://')
         : url;
     if (/^https?:\/\//.test(normalized)) return normalized;
+    if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
     const base = (BACKEND_URL || '').replace(/\/$/, '');
     const path = normalized.startsWith('/') ? normalized : `/${normalized}`;
     return `${base}${path}`;

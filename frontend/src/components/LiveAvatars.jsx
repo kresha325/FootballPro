@@ -53,7 +53,7 @@ export default function LiveAvatars({ onOpenViewer }) {
           className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-2 shadow hover:scale-105 transition-transform"
           title={`Watch ${stream.title}`}
         >
-          <img src={stream.streamer.photoUrl || '/default-avatar.png'} alt={stream.streamer.firstName} className="w-12 h-12 rounded-full object-cover" />
+          <img src={stream.streamer.photoUrl || '/default-avatar.svg'} alt={stream.streamer.firstName} className="w-12 h-12 rounded-full object-cover" />
           <div className="text-left text-sm leading-4">
             <div className="font-semibold text-gray-900 dark:text-white">{stream.streamer.firstName}</div>
             <div className="text-xs text-red-600">LIVE</div>
