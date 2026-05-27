@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
-import { useAuth } from '../contexts/AuthContext';
 import LiveAvatars from './LiveAvatars';
 import LiveViewer from './LiveViewer';
 
@@ -16,8 +15,6 @@ const Streams = () => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const socketRef = useRef(null);
-  const { user } = useAuth();
-
   useEffect(() => {
     fetchStreams();
     socketRef.current = io(import.meta.env.VITE_API_URL.replace('/api',''));

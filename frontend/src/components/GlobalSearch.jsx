@@ -325,7 +325,7 @@ function UserResults({ users, getFullUrl, compact }) {
   );
 }
 
-function PostResults({ posts, getFullUrl, compact }) {
+function PostResults({ posts, compact }) {
   return (
     <section>
       {!compact ? <h2 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Postime</h2> : null}

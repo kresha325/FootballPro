@@ -222,7 +222,7 @@ export default function Tournaments() {
   const [bracket, setBracket] = useState({});
   const [matches, setMatches] = useState([]);
   const [showCreateMatchModal, setShowCreateMatchModal] = useState(false);
-  const [creatingMatch, setCreatingMatch] = useState(false);
+  const [, setCreatingMatch] = useState(false);
     // Create match handler
     const handleCreateMatch = async ({ homeUserId, awayUserId, matchDate, round }) => {
       setCreatingMatch(true);
@@ -960,6 +960,7 @@ export default function Tournaments() {
               )}
             </div>
           ))}
+        </div>
         </div>
       )}
       {renderScorersModal()}

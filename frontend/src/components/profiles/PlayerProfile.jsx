@@ -1,7 +1,7 @@
 import React from 'react';
 import PlayerProfileHeader from './PlayerProfileHeader';
 
-const PlayerProfile = ({ profile, stats, isOwner }) => {
+const PlayerProfile = ({ profile }) => {
   const playerStats = profile.stats || {};
   return (
     <div>

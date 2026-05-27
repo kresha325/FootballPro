@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { CalendarIcon, MapPinIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline';
 
@@ -19,36 +18,120 @@ const fetchParticipants = async (tournamentId) => {
 
 function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onSave }) {
   const [form, setForm] = useState({
-    tournamentId: match?.tournamentId || '',
-    homeUserId: match?.homeUserId || '',
-    awayUserId: match?.awayUserId || '',
-    matchDate: match?.matchDate ? match.matchDate.slice(0, 16) : '',
-    round: match?.round || 1,
+    tournamentId: '',
+    homeUserId: '',
+    awayUserId: '',
+    matchDate: '',
+    round: 1,
   });
-  const [error, setError] = useState('');
+
   useEffect(() => {
     if (isOpen && match) {
       setForm({
-        tournamentId: match.tournamentId,
-        homeUserId: match.homeUserId,
-        awayUserId: match.awayUserId,
-        matchDate: match.matchDate ? match.matchDate.slice(0, 16) : '',
+        tournamentId: match.tournamentId || '',
+        homeUserId: match.homeUserId || '',
+        awayUserId: match.awayUserId || '',
+        matchDate: match.matchDate ? String(match.matchDate).slice(0, 16) : '',
         round: match.round || 1,
       });
     }
   }, [isOpen, match]);
+
+  if (!isOpen || !match) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(match.id, form);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Ndrysho ndeshjen</h2>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Turneu *</label>
+            <select
+              required
+              value={form.tournamentId}
+              onChange={(e) => setForm({ ...form, tournamentId: e.target.value })}
+              className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+            >
+              <option value="">Zgjidh turneun</option>
+              {tournaments.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Vendas *</label>
+              <select
+                required
+                value={form.homeUserId}
+                onChange={(e) => setForm({ ...form, homeUserId: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+              >
+                <option value="">Zgjidh</option>
+                {participants.map((p) => (
+                  <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Mysafir *</label>
+              <select
+                required
+                value={form.awayUserId}
+                onChange={(e) => setForm({ ...form, awayUserId: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+              >
+                <option value="">Zgjidh</option>
+                {participants.map((p) => (
+                  <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Data & Ora *</label>
+              <input
+                type="datetime-local"
+                required
+                value={form.matchDate}
+                onChange={(e) => setForm({ ...form, matchDate: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Raundi</label>
+              <input
+                type="number"
+                min={1}
+                value={form.round}
+                onChange={(e) => setForm({ ...form, round: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 py-3 bg-gray-200 rounded-lg">Anulo</button>
+            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-lg">Ruaj</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function Matches() {
-    // Open edit modal for a match
-    const handleEditMatch = (match) => {
-      setEditMatch(match);
-      setEditModalOpen(true);
-    };
-  const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const activeTab = 'upcoming';
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [tournaments, setTournaments] = useState([]);
   const [participants, setParticipants] = useState([]);
@@ -69,7 +152,49 @@ function Matches() {
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editMatch, setEditMatch] = useState(null);
+  const [editParticipants, setEditParticipants] = useState([]);
   const [listSearch, setListSearch] = useState('');
+
+  const handleEditMatch = async (match) => {
+    setEditMatch(match);
+    setEditModalOpen(true);
+    if (match.tournamentId) {
+      const parts = await fetchParticipants(match.tournamentId);
+      setEditParticipants(parts);
+    } else {
+      setEditParticipants([]);
+    }
+  };
+
+  const fetchMatches = async () => {
+    try {
+      const response = await api.get('/matches');
+      setMatches(response.data || []);
+    } catch (err) {
+      console.error('Error fetching matches:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEditMatch = async (matchId, form) => {
+    try {
+      await api.put(`/matches/${matchId}`, {
+        tournamentId: form.tournamentId,
+        homeUserId: form.homeUserId,
+        awayUserId: form.awayUserId,
+        matchDate: form.matchDate,
+        round: form.round,
+      });
+      setEditModalOpen(false);
+      setEditMatch(null);
+      fetchMatches();
+      alert('Ndeshja u përditësua.');
+    } catch (err) {
+      console.error('Error updating match:', err);
+      alert('Dështoi përditësimi i ndeshjes.');
+    }
+  };
 
   const now = new Date();
   const upcomingMatches = useMemo(() => {
@@ -95,17 +220,6 @@ function Matches() {
       setParticipants([]);
     }
   }, [formData.tournamentId]);
-
-  const fetchMatches = async () => {
-    try {
-      const response = await api.get('/matches');
-      setMatches(response.data || []);
-    } catch (error) {
-      console.error('Error fetching matches:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateMatch = async (e) => {
     e.preventDefault();
@@ -168,7 +282,11 @@ function Matches() {
       {/* Upcoming Matches List */}
       {activeTab === 'upcoming' && (
         <div className="space-y-4">
-          {upcomingMatches.length === 0 ? (
+          {loading ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center text-gray-500">
+              Duke ngarkuar ndeshjet…
+            </div>
+          ) : upcomingMatches.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
               <CalendarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 text-lg">No upcoming matches scheduled</p>
@@ -244,6 +362,15 @@ function Matches() {
           )}
         </div>
       )}
+
+      <EditMatchModal
+        isOpen={editModalOpen}
+        onClose={() => { setEditModalOpen(false); setEditMatch(null); }}
+        match={editMatch}
+        tournaments={tournaments}
+        participants={editParticipants}
+        onSave={handleSaveEditMatch}
+      />
 
       {/* Create Match Modal */}
       {showCreateModal && (

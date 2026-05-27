@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import {
   PlayIcon,
@@ -17,7 +16,6 @@ import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 
 const VideoPlayer = () => {
   const { id } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const videoRef = useRef(null);
   

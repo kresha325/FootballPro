@@ -2,8 +2,6 @@ import React from 'react';
 
 const FederationProfile = ({ federation }) => {
   if (!federation) return <div>No Federation data available.</div>;
-  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
       {/* Profile Photo */}

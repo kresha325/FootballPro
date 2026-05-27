@@ -7,11 +7,25 @@ require('dotenv').config();
 let sequelize;
 // Respect PGSSLMODE if provided (avoid libpq warning about deprecated aliases)
 const pgSslMode = (process.env.PGSSLMODE || '').toLowerCase();
-const sslRequired = pgSslMode !== 'disable' && pgSslMode !== 'allow' && pgSslMode !== 'prefer' ? true : (pgSslMode === 'prefer' ? true : false);
+const sslRequired = pgSslMode !== 'disable' && pgSslMode !== 'allow' && pgSslMode !== 'prefer';
 // treat 'verify-full' and 'verify-ca' as strict (rejectUnauthorized = true)
 const rejectUnauthorized = ['verify-full', 'verify-ca'].includes(pgSslMode);
 
-if (process.env.NODE_ENV === 'production') {
+function createSequelizeFromDatabaseUrl() {
+  const dialectOptions = {};
+  if (sslRequired) {
+    dialectOptions.ssl = { require: true, rejectUnauthorized };
+  }
+  return new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions,
+  });
+}
+
+// Remote/prod DB from laptop: set DATABASE_URL (e.g. Render External Database URL).
+if (process.env.DATABASE_URL) {
+  sequelize = createSequelizeFromDatabaseUrl();
+} else if (process.env.NODE_ENV === 'production') {
   // If a DATABASE_URL contains sslmode param, libpq will still log a warning if it uses legacy aliases.
   // Best practice: set PGSSLMODE=verify-full in environment and provide CA certs.
   const dialectOptions = {};
@@ -19,10 +33,7 @@ if (process.env.NODE_ENV === 'production') {
     dialectOptions.ssl = { require: true, rejectUnauthorized };
   }
 
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    dialectOptions,
-  });
+  sequelize = createSequelizeFromDatabaseUrl();
 } else {
   const config = {
     username: process.env.DB_USER,

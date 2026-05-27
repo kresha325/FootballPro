@@ -77,7 +77,6 @@ export default function VideoCallSimple({
   const { socket, connected } = useSocket();
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [peerConnection, setPeerConnection] = useState(null);
   const [callStatus, setCallStatus] = useState('idle'); // idle, calling, ringing, connected, ended
   const [loading, setLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -581,7 +580,6 @@ export default function VideoCallSimple({
       }
     };
 
-    setPeerConnection(pc);
     return pc;
   };
 
@@ -718,7 +716,6 @@ export default function VideoCallSimple({
     }
     setLocalStream(null);
     setRemoteStream(null);
-    setPeerConnection(null);
     peerConnectionRef.current = null;
     setUsingLiveKit(false);
   };

@@ -49,22 +49,6 @@ export default function AdminDashboard() {
   const [joncoinPending, setJoncoinPending] = useState([]);
   const [joncoinLoading, setJoncoinLoading] = useState(false);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchAnalytics();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (activeTab === 'users') {
-      fetchUsers();
-    } else if (activeTab === 'content') {
-      fetchPosts();
-    } else if (activeTab === 'joncoin') {
-      fetchJoncoinPending();
-    }
-  }, [activeTab, searchTerm, filters, pagination.page]);
-
   const fetchAnalytics = async () => {
     try {
       const res = await api.get('/admin/analytics');
@@ -124,6 +108,22 @@ export default function AdminDashboard() {
       setJoncoinLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetchAnalytics();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers();
+    } else if (activeTab === 'content') {
+      fetchPosts();
+    } else if (activeTab === 'joncoin') {
+      fetchJoncoinPending();
+    }
+  }, [activeTab, searchTerm, filters, pagination.page]);
 
   const handleJoncoinDecision = async (txId, status) => {
     const label = status === 'completed' ? 'approve' : 'reject';
@@ -494,6 +494,9 @@ export default function AdminDashboard() {
 
           {/* Users Table */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
+            {loading && (
+              <div className="p-6 text-center text-gray-500 text-sm">Loading users…</div>
+            )}
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -628,6 +631,9 @@ export default function AdminDashboard() {
 
           {/* Posts Grid */}
           <div className="grid grid-cols-1 gap-4">
+            {loading && (
+              <div className="p-6 text-center text-gray-500 text-sm bg-white shadow rounded-lg">Loading posts…</div>
+            )}
             {posts.map((post) => (
               <div key={post.id} className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-start justify-between">

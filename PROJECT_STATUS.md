@@ -30,9 +30,15 @@ Public config: `GET /api/config/public`
 
 ## How to test
 
+### Frontend dev (API prod, no local DB)
+```bash
+cd frontend && cp .env.remote.example .env   # or: npm run dev:remote
+npm run dev
+```
+
 ### Backend smoke (no auth)
 ```bash
-cd backend && API_URL=https://footballpro.onrender.com npm run smoke:api
+cd backend && npm run smoke:api:prod
 ```
 
 ### Backend smoke (with auth)

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { API_URL } from '../config/api';
+import { API_URL, BACKEND_URL } from '../config/api';
 
 const API = axios.create({ baseURL: API_URL });
 API.interceptors.request.use((config) => {
@@ -11,9 +11,7 @@ API.interceptors.request.use((config) => {
 });
 
 const SOCKET_URL =
-  typeof process !== 'undefined' && process.env && process.env.REACT_APP_SOCKET_URL
-    ? process.env.REACT_APP_SOCKET_URL
-    : 'http://localhost:10000';
+  import.meta.env.VITE_SOCKET_URL || BACKEND_URL || 'http://localhost:10000';
 
 const VideoCallRoom = ({ roomId, userId }) => {
   const [remoteStreams, setRemoteStreams] = useState([]);

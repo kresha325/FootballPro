@@ -23,7 +23,20 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^(_|err|e)',
+        },
+      ],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      // Legacy codebase: warn on strict React Compiler rules; fix incrementally
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

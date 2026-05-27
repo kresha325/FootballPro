@@ -23,7 +23,7 @@ export default function LiveViewer({ streamId }) {
       setViewing(true);
       socketRef.current = socket;
       // Listen for streamEnded event
-      socket.on('streamEnded', ({ roomId }) => {
+      socket.on('streamEnded', () => {
         setEnded(true);
         setViewing(false);
         setError('Ky transmetim është mbyllur nga broadcaster-i.');

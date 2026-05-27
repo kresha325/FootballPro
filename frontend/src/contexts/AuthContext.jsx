@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const profileRes = await profileAPI.getProfile(userData.id);
           userData = { ...userData, ...profileRes.data };
-        } catch (profileErr) {
+        } catch {
           // If profile fetch fails, continue with base user
         }
         setUser(userData);
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const profileRes = await profileAPI.getProfile(userData.id);
         mergedUser = { ...mergedUser, ...profileRes.data };
-      } catch (profileErr) {
+      } catch {
         // If profile fetch fails, continue with base user
       }
       setUser(mergedUser);

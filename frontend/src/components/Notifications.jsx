@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
-import { useAuth } from '../contexts/AuthContext';
 import { notificationsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,7 +9,6 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [listSearch, setListSearch] = useState('');
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

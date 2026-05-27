@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { clubMembersAPI, clubStaffAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 
-const ClubProfile = ({ profile = {}, stats, isOwner }) => {
+const ClubProfile = ({ profile = {}, isOwner }) => {
   const clubData = (profile && profile.stats) ? profile.stats : {};
 
   // Helper for absolute/relative URL
@@ -300,6 +300,88 @@ const ClubProfile = ({ profile = {}, stats, isOwner }) => {
           </div>
         )}
       </div>
+
+      {/* Pending membership requests */}
+      {isOwner && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>⏳</span> Kërkesa në pritje
+          </h3>
+          {loadingPending ? (
+            <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+          ) : pendingMembers.length === 0 ? (
+            <div className="text-gray-500 dark:text-gray-400">Nuk ka kërkesa në pritje.</div>
+          ) : (
+            <div className="space-y-3">
+              {pendingMembers.map((member) => (
+                <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div>
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      {member.athlete?.firstName} {member.athlete?.lastName}
+                    </div>
+                    {member.position && (
+                      <div className="text-sm text-gray-500">{member.position}</div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleMembershipDecision(member.id, 'approved')}
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                    >
+                      Aprovo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMembershipDecision(member.id, 'rejected')}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                    >
+                      Refuzo
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Squad by group */}
+      {!loadingMembers && clubMembers.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <span>⚽</span> Skuadra
+          </h3>
+          <div className="space-y-6">
+            {Object.entries(groupedMembers).map(([group, members]) => (
+              <div key={group}>
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{group}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {members.map((member) => (
+                    <Link
+                      key={member.id}
+                      to={`/profile/${member.athlete?.id || member.userId}`}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                        {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {member.athlete?.firstName} {member.athlete?.lastName}
+                        </div>
+                        {member.jerseyNumber != null && (
+                          <div className="text-xs text-gray-500">#{member.jerseyNumber}</div>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Club Roster */}
       {isOwner && (

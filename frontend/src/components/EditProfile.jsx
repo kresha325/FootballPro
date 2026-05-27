@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { profileAPI, clubMembersAPI, ligaAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import EditAthleteProfile from './profiles/edit/EditAthleteProfile';
 import EditCoachProfile from './profiles/edit/EditCoachProfile';
 import EditLigaProfile from './profiles/edit/EditLigaProfile';
@@ -16,36 +15,15 @@ const EditProfile = ({ user, onClose }) => {
   const location = useLocation();
   const initialPath = useRef(location.pathname);
 
-  // Close modal when location changes
   useEffect(() => {
     if (location.pathname !== initialPath.current) {
       onClose();
     }
   }, [location.pathname, onClose]);
 
-  // Helper for ente roles
-  const ENTE_ROLES = ['business', 'federation', 'media', 'club'];
-  const isEnte = ENTE_ROLES.includes(user.role);
-
-  const [form, setForm] = useState({
-    firstName: user.firstName || '',
-    lastName: user.lastName || '',
-    dateOfBirth: user.dateOfBirth || '',
-    gender: user.gender || '',
-    bio: user.bio || '',
-  
-    employees: user.stats?.employees || '',
-    partnerships: user.stats?.partnerships || '',
-    countries: user.stats?.countries || '',
-  });
-  
-  const [profilePhoto, setProfilePhoto] = useState(null);
-  const [coverPhoto, setCoverPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-
-  // Role-based save handler
   const handleSave = async (form) => {
     setLoading(true);
     try {
@@ -53,7 +31,6 @@ const EditProfile = ({ user, onClose }) => {
         await ligaAPI.updateLiga(form);
       } else {
         await profileAPI.updateProfile(form);
-        // Shto kërkesë membership nëse është atlet dhe ka ndryshuar klubin
         if (user.role === 'athlete') {
           const oldClubId = user.clubId || user.club || '';
           const newClubId = form.get('clubId') || form.get('club') || '';
@@ -65,15 +42,15 @@ const EditProfile = ({ user, onClose }) => {
                 position: form.get('position') || undefined,
                 jerseyNumber: JSON.parse(form.get('stats') || '{}').jerseyNumber || undefined,
               });
-            } catch (err) {
-              // Mund të shtosh alert ose error handling këtu
+            } catch {
+              /* membership request may fail if already pending */
             }
           }
         }
       }
       setLoading(false);
       onClose();
-    } catch (err) {
+    } catch {
       setLoading(false);
       setErrors({ general: 'Gabim gjatë ruajtjes së profilit.' });
     }

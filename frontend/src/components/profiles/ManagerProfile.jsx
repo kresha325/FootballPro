@@ -1,10 +1,8 @@
 import React from 'react';
 
-const ManagerProfile = ({ profile = {}, stats, isOwner }) => {
+const ManagerProfile = ({ profile = {} }) => {
   const managerData = profile.stats || {};
 
-  const isAbsoluteUrl = url => /^https?:\/\//.test(url);
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   return (
     <div className="space-y-6">
       {/* Profile Photo */}

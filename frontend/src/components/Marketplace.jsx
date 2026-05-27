@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useAuth } from '../contexts/AuthContext';
-import { marketplaceAPI, ordersAPI } from '../services/api';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-
-//const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-
 const Marketplace = () => {
   const [items, setItems] = useState([]);
   const [jonCoinBalance, setJonCoinBalance] = useState(0);
   const [newItem, setNewItem] = useState({ title: '', description: '', price: '', category: '' });
-  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   // Mock data for demonstration

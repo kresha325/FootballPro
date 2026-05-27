@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
 import IncomingCallModal from './IncomingCallModal';
 import VideoCallSimple from './VideoCallSimple';
 import axios from 'axios';
@@ -15,7 +14,6 @@ API.interceptors.request.use((config) => {
 
 export default function VideoCallManager() {
   const { socket, connected } = useSocket();
-  const { user } = useAuth();
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
   const [showVideoCall, setShowVideoCall] = useState(false);
@@ -26,13 +24,6 @@ export default function VideoCallManager() {
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
-
-  const iceServers = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-    ],
-  };
 
   useEffect(() => {
     if (!socket || !connected) return;

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PlayerProfileHeader = ({ profile = {}, stats }) => {
+const PlayerProfileHeader = ({ profile = {} }) => {
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   const getFullUrl = (url) => {
     if (!url) return '';

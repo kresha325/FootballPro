@@ -42,7 +42,7 @@ const Gamification = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [gamifRes, achievementsRes, badgesRes, leaderboardRes] = await Promise.all([
+      const [gamifRes, , , leaderboardRes] = await Promise.all([
         gamificationAPI.getUserStatus(userId),
         isOwnProfile ? gamificationAPI.getAchievements() : Promise.resolve({ data: [] }),
         isOwnProfile ? gamificationAPI.getBadges() : Promise.resolve({ data: [] }),
@@ -92,15 +92,6 @@ const Gamification = () => {
       prevBadges.current = userBadges;
     }
   }, [gamificationData]);
-
-  const getRarityColor = (rarity) => {
-    switch (rarity) {
-      case 'legendary': return 'from-yellow-400 to-orange-500';
-      case 'epic': return 'from-purple-400 to-pink-500';
-      case 'rare': return 'from-blue-400 to-cyan-500';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
 
   const getRarityBorder = (rarity) => {
     switch (rarity) {

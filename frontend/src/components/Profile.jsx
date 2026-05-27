@@ -21,7 +21,6 @@ import LigaProfile from './profiles/LigaProfile';
 import FederationProfile from './profiles/FederationProfile';
 import ProfileSelector from './profiles/ProfileSelector';
 import { ClubBadge } from '../utils/clubLogos';
-import { isUserSponsored } from '../utils/sponsor';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 
@@ -289,6 +288,27 @@ const Profile = () => {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentInputs, setCommentInputs] = useState({});
+
+  const toggleComments = (postId) => {
+    const expanded = new Set(expandedComments);
+    if (expanded.has(postId)) {
+      expanded.delete(postId);
+    } else {
+      expanded.add(postId);
+      if (!postComments[postId]) {
+        fetchComments(postId);
+      }
+    }
+    setExpandedComments(expanded);
+  };
+
+  const handleComment = async (postId) => {
+    const content = commentInputs[postId];
+    if (!content?.trim()) return;
+    await addComment(postId, content);
+    setCommentInputs({ ...commentInputs, [postId]: '' });
+  };
+
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveTitle, setLiveTitle] = useState('');
@@ -400,7 +420,7 @@ const Profile = () => {
     try {
       const prof = await profileAPI.getMyProfile();
       youtubeChannelId = normalizeYoutubeChannelId(prof?.data?.youtubeChannelId);
-    } catch (_e) {
+    } catch {
       /* ignore */
     }
 
@@ -423,7 +443,7 @@ const Profile = () => {
       let res;
       try {
         res = await streamsAPI.createStream({ ...payload, isPremium: false, playbackSource: 'livekit' });
-      } catch (_streamErr) {
+      } catch {
         // Keep compatibility with deployments that still use /live-stream.
         res = await liveStreamAPI.start(payload);
       }
@@ -440,7 +460,7 @@ const Profile = () => {
 
       try {
         await streamsAPI.startStream(createdId);
-      } catch (_startErr) {
+      } catch {
         // Some deployments may already create live streams directly.
       }
 
@@ -588,7 +608,7 @@ const Profile = () => {
               tournaments: Array.isArray(tRes.data?.tournaments) ? tRes.data.tournaments : [],
               totals: tRes.data?.totals || null,
             });
-          } catch (_err) {
+          } catch {
             setTournamentSummary({ tournaments: [], totals: null });
           }
         } else {
@@ -673,20 +693,6 @@ const Profile = () => {
     if (!profile) return null;
     return <ProfileSelector user={profile.User ? profile.User : profile} profile={profile} isOwner={isOwner} />;
   };
-
-  // Helper functions for role logic
-  const ENTE_ROLES = ['business', 'federation', 'media', 'club'];
-  const INDIVID_ROLES = ['athlete', 'coach', 'scout', 'manager', 'referee'];
-
-  function isEnte(role) {
-    return ENTE_ROLES.includes(role);
-  }
-  function isIndivid(role) {
-    return INDIVID_ROLES.includes(role);
-  }
-  function isAdmin(role) {
-    return role === 'admin';
-  }
 
     // Handler for file input change (cover)
     const handleCoverFileChange = async (e) => {
@@ -1194,7 +1200,7 @@ const Profile = () => {
                               src={getFullUrl(item.imageUrl)}
                               alt={item.title || 'Gallery item'}
                               className="w-full h-full object-cover"
-                              onError={(e) => {
+                              onError={() => {
                                 console.error('❌ Profile Gallery - Image failed:', item.imageUrl);
                                 console.error('Full item:', item);
                               }}

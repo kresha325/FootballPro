@@ -95,7 +95,7 @@ function Navbar() {
     try {
       const prof = await profileAPI.getMyProfile();
       youtubeChannelId = normalizeYoutubeChannelId(prof?.data?.youtubeChannelId);
-    } catch (_e) {
+    } catch {
       /* ignore */
     }
 
@@ -118,7 +118,7 @@ function Navbar() {
       let res;
       try {
         res = await streamsAPI.createStream({ ...payload, isPremium: false, playbackSource: 'livekit' });
-      } catch (_streamErr) {
+      } catch {
         res = await liveStreamAPI.start(payload);
       }
 
@@ -134,7 +134,9 @@ function Navbar() {
 
       try {
         await streamsAPI.startStream(createdId);
-      } catch (_startErr) {}
+      } catch {
+        /* stream may already be live */
+      }
 
       const roomName = `stream-${createdId}`;
       const tokenRes = await livekitAPI.createToken({
@@ -190,7 +192,9 @@ function Navbar() {
         livekitTracksRef.current.forEach((track) => {
           try {
             track.stop();
-          } catch (_e) {}
+          } catch {
+            /* track may already be stopped */
+          }
         });
       }
       livekitTracksRef.current = [];
@@ -253,7 +257,9 @@ function Navbar() {
         livekitTracksRef.current.forEach((track) => {
           try {
             track.stop();
-          } catch (_e) {}
+          } catch {
+            /* track may already be stopped */
+          }
         });
         livekitTracksRef.current = [];
       }
@@ -296,7 +302,7 @@ function Navbar() {
             <button
               onClick={() => {
                 const newVal = true;
-                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch (e) {}
+                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch { /* private mode */ }
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
@@ -309,7 +315,7 @@ function Navbar() {
             <button
               onClick={() => {
                 const newVal = false;
-                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch (e) {}
+                try { localStorage.setItem('feed_followed_only', newVal ? 'true' : 'false'); } catch { /* private mode */ }
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}

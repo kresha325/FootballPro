@@ -19,7 +19,7 @@ const getBackendURL = () => {
       return 'http://localhost:10000';
     }
     return window.location.origin.replace(/\/api\/?$/i, '');
-  } catch (e) {
+  } catch {
     return '';
   }
 };

@@ -1,6 +1,5 @@
 import Modal from './Modal';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import {
   ChartBarIcon,
@@ -30,52 +29,11 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const Analytics = () => {
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    const normalized = url.startsWith('https//')
-      ? url.replace('https//', 'https://')
-      : url.startsWith('http//')
-        ? url.replace('http//', 'http://')
-        : url;
-    if (/^https?:\/\//.test(normalized)) return normalized;
-    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
-  };
-  const { user } = useAuth();
-  const [analytics, setAnalytics] = useState(null);
-  const [followerGrowth, setFollowerGrowth] = useState([]);
-  const [engagementRate, setEngagementRate] = useState([]);
-  const [period, setPeriod] = useState('30');
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
-
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      const [dashboardRes, growthRes, rateRes] = await Promise.all([
-        api.get(`/analytics/dashboard?period=${period}`),
-        api.get(`/analytics/follower-growth?period=${period}`),
-        api.get(`/analytics/engagement-rate?period=${period}`),
-      ]);
-      setAnalytics(dashboardRes.data);
-      setFollowerGrowth(growthRes.data);
-      setEngagementRate(rateRes.data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const StatCard = ({ icon: Icon, label, value, change, color }) => (
+function StatCard({ icon, label, value, change, color }) {
+  const Icon = icon;
+  return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -101,6 +59,49 @@ const Analytics = () => {
       </div>
     </div>
   );
+}
+
+const Analytics = () => {
+  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    const normalized = url.startsWith('https//')
+      ? url.replace('https//', 'https://')
+      : url.startsWith('http//')
+        ? url.replace('http//', 'http://')
+        : url;
+    if (/^https?:\/\//.test(normalized)) return normalized;
+    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
+  };
+  const [analytics, setAnalytics] = useState(null);
+  const [followerGrowth, setFollowerGrowth] = useState([]);
+  const [engagementRate, setEngagementRate] = useState([]);
+  const [period, setPeriod] = useState('30');
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPost] = useState(null);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const [dashboardRes, growthRes, rateRes] = await Promise.all([
+        api.get(`/analytics/dashboard?period=${period}`),
+        api.get(`/analytics/follower-growth?period=${period}`),
+        api.get(`/analytics/engagement-rate?period=${period}`),
+      ]);
+      setAnalytics(dashboardRes.data);
+      setFollowerGrowth(growthRes.data);
+      setEngagementRate(rateRes.data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [period]);
 
   if (loading) {
     return (

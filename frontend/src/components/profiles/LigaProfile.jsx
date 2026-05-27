@@ -5,7 +5,6 @@ const LigaProfile = ({ liga }) => {
   // Helper to check if url is absolute
   const isAbsoluteUrl = url => /^https?:\/\//.test(url);
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-  const stats = liga.stats || {};
   return (
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
       {/* Profile Photo */}

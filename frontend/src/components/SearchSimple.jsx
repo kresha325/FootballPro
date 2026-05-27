@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { searchAPI, profileAPI } from '../services/api';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
@@ -7,8 +7,7 @@ export default function SearchSimple() {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('users');
-  const navigate = useNavigate();
+  const activeTab = 'users';
 
   useEffect(() => {
     if (activeTab === 'users' && !query) {

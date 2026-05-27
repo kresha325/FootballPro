@@ -13,11 +13,9 @@ const getFullUrl = (url) => {
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import { ClubBadge } from '../utils/clubLogos';
 
 const BrowseProfiles = () => {
-  const { darkMode } = useAuth();
   const [profiles, setProfiles] = useState([]);
   const [filteredProfiles, setFilteredProfiles] = useState([]);
   const [loading, setLoading] = useState(true);

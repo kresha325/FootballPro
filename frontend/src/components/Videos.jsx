@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -17,11 +16,9 @@ import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import PropTypes from 'prop-types';
 
 const Videos = ({ userId, onlyUserVideos }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [trendingVideos, setTrendingVideos] = useState([]);
-  const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);

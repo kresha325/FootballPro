@@ -5,10 +5,6 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
     try {
       const response = await adminAPI.getAllUsers();
@@ -19,6 +15,10 @@ const UserManagement = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const updateUserRole = async (userId, newRole) => {
     try {

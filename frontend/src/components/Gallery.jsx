@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { galleryAPI, profileAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { PLACEHOLDER_IMAGE_DATA_URL } from '../constants/placeholderImage';
 
 const Gallery = () => {
     const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
@@ -231,7 +232,7 @@ const Gallery = () => {
                     onError={(e) => {
                       console.error('❌ Image failed to load:', item.imageUrl);
                       console.error('Full item:', item);
-                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\"%3E%3Crect fill=\"%23ddd\" width=\"200\" height=\"200\"/%3E%3Ctext fill=\"%23999\" x=\"50%25\" y=\"50%25\" text-anchor=\"middle\" dy=\".3em\"%3ENo Image%3C/text%3E%3C/svg%3E';
+                      e.target.src = PLACEHOLDER_IMAGE_DATA_URL;
                     }}
                     onLoad={() => console.log('✅ Image loaded:', item.imageUrl)}
                   />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { clubStaffAPI } from '../../services/api';
 
-const CoachProfile = ({ profile = {}, stats, isOwner }) => {
+const CoachProfile = ({ profile = {} }) => {
   const coachData = profile.stats || {};
   const [clubStaffAssignments, setClubStaffAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
