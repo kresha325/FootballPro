@@ -1,6 +1,7 @@
 const Profile = require('../models/Profile');
 const User = require('../models/User');
 const Gallery = require('../models/Gallery');
+const Post = require('../models/Post');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const { sendEmail } = require('../services/emailService');
@@ -475,6 +476,8 @@ exports.updateProfile = async (req, res) => {
     }
 
     let profile = await Profile.findOne({ where: { userId: req.user.id } });
+    const previousProfilePhoto = profile?.profilePhoto || null;
+    const previousCoverPhoto = profile?.coverPhoto || null;
 
     if (!profile) {
       profile = await Profile.create({
@@ -483,6 +486,29 @@ exports.updateProfile = async (req, res) => {
       });
     } else {
       await profile.update(updateData);
+    }
+
+    const currentProfilePhoto = profile?.profilePhoto || null;
+    const currentCoverPhoto = profile?.coverPhoto || null;
+    const profilePhotoChanged =
+      Boolean(currentProfilePhoto) && String(currentProfilePhoto) !== String(previousProfilePhoto || '');
+    const coverPhotoChanged =
+      Boolean(currentCoverPhoto) && String(currentCoverPhoto) !== String(previousCoverPhoto || '');
+
+    if (profilePhotoChanged) {
+      await Post.create({
+        userId: req.user.id,
+        content: 'Ndryshoi foton e profilit.',
+        imageUrl: currentProfilePhoto,
+      });
+    }
+
+    if (coverPhotoChanged) {
+      await Post.create({
+        userId: req.user.id,
+        content: 'Ndryshoi foton e cover-it.',
+        imageUrl: currentCoverPhoto,
+      });
     }
 
     // Update User fields (ENUM/date validation — free-text gender used to cause 500 from Sequelize)

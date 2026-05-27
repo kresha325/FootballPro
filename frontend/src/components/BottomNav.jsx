@@ -105,19 +105,19 @@ function BottomNav() {
       <NavLink
         to="/messaging"
         className={({ isActive }) =>
-          `flex flex-col items-center gap-0.5 px-2 py-1 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${elevated ? "rounded-full bg-white dark:bg-gray-900 shadow-md ring-2 ring-blue-500/30 -mt-3 mb-0.5" : ""}`
+          `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
         }
         aria-label="Chats"
       >
         <span className="relative inline-flex items-center justify-center">
-          <span className={`${elevated ? "text-3xl" : "text-2xl"}`}>💬</span>
+          <span className="text-2xl">💬</span>
           {messagesBadge ? (
             <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
               {messagesBadge}
             </span>
           ) : null}
         </span>
-        <span className="text-[10px] leading-none">Chats</span>
+        <span className="text-xs">Chats</span>
       </NavLink>
     );
   };

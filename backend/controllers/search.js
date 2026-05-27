@@ -7,6 +7,8 @@ const Stream = require('../models/Stream');
 const Video = require('../models/Video');
 const Match = require('../models/Match');
 const Follow = require('../models/Follow');
+const Like = require('../models/Like');
+const Comment = require('../models/Comment');
 
 const SEARCH_LIMIT = 20;
 
@@ -363,6 +365,7 @@ exports.getTrendingPosts = async (req, res) => {
       include: [
         {
           model: User,
+          as: 'author',
           attributes: ['id', 'firstName', 'lastName'],
           include: [
             {
@@ -372,13 +375,31 @@ exports.getTrendingPosts = async (req, res) => {
           ],
         },
       ],
-      limit: 10,
-      order: [
-        [sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "postId" = "Post"."id") + (SELECT COUNT(*) FROM "Comments" WHERE "postId" = "Post"."id")'), 'DESC'],
-      ],
+      limit: 60,
+      order: [['createdAt', 'DESC']],
     });
 
-    res.json(posts);
+    const scored = await Promise.all(
+      posts.map(async (post) => {
+        const [likesCount, commentsCount] = await Promise.all([
+          Like.count({ where: { postId: post.id } }),
+          Comment.count({ where: { postId: post.id } }),
+        ]);
+        return {
+          ...(post.toJSON ? post.toJSON() : post),
+          likesCount,
+          commentsCount,
+          trendingScore: likesCount + commentsCount,
+        };
+      })
+    );
+
+    scored.sort((a, b) => {
+      if (b.trendingScore !== a.trendingScore) return b.trendingScore - a.trendingScore;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    res.json(scored.slice(0, 10));
   } catch (err) {
     console.error('Get trending error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -391,23 +412,38 @@ exports.getTrendingUsers = async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const trendingRows = await Follow.findAll({
-      where: {
-        createdAt: {
-          [Op.gte]: thirtyDaysAgo,
+    let followRows = [];
+    try {
+      followRows = await Follow.findAll({
+        where: {
+          createdAt: { [Op.gte]: thirtyDaysAgo },
+          status: 'accepted',
         },
-        status: 'accepted',
-      },
-      attributes: [
-        'followingId',
-        [sequelize.fn('COUNT', sequelize.col('followingId')), 'followCount'],
-      ],
-      group: ['followingId'],
-      order: [[sequelize.literal('followCount'), 'DESC']],
-      limit: 10,
+        attributes: ['followingId'],
+      });
+    } catch (statusErr) {
+      // Fallback për deploy-e ku kolona status mungon ose ka mospërputhje skeme.
+      followRows = await Follow.findAll({
+        where: { createdAt: { [Op.gte]: thirtyDaysAgo } },
+        attributes: ['followingId'],
+      });
+    }
+
+    const followCountByUser = new Map();
+    followRows.forEach((row) => {
+      const key = Number(row.followingId);
+      if (!key) return;
+      followCountByUser.set(key, (followCountByUser.get(key) || 0) + 1);
     });
 
-    const userIds = trendingRows.map((u) => u.followingId).filter(Boolean);
+    const userIds = [...followCountByUser.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([id]) => id);
+
+    if (userIds.length === 0) {
+      return res.json([]);
+    }
 
     const users = await User.findAll({
       where: {
@@ -424,7 +460,14 @@ exports.getTrendingUsers = async (req, res) => {
       attributes: ['id', 'firstName', 'lastName'],
     });
 
-    res.json(users);
+    const ranked = users
+      .map((u) => {
+        const obj = u.toJSON ? u.toJSON() : u;
+        return { ...obj, followCount: followCountByUser.get(Number(obj.id)) || 0 };
+      })
+      .sort((a, b) => b.followCount - a.followCount);
+
+    res.json(ranked);
   } catch (err) {
     console.error('Get trending users error:', err);
     res.status(500).json({ msg: 'Server error' });
