@@ -12,6 +12,7 @@ import AdSlider from './AdSlider';
 import SponsorBanner from './SponsorBanner.jsx';
 import UserCardsSection from './UserCardsSection';
 import FeedLiveNow from './FeedLiveNow';
+import FeedScoutingReport from './FeedScoutingReport';
 import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import { API } from '../services/api';
 
@@ -359,6 +360,8 @@ const Feed = () => {
 
       {/* Player Cards Section */}
       <UserCardsSection />
+
+      <FeedScoutingReport />
 
       <FeedLiveNow />
 

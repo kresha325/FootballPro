@@ -268,6 +268,8 @@ export const ordersAPI = {
 ========================= */
 export const scoutingAPI = {
   getRecommendations: (params) => API.get('/scouting/recommendations', { params }),
+  getCandidates: (params) => API.get('/scouting/candidates', { params }),
+  comparePlayers: (params) => API.get('/scouting/compare', { params }),
 };
 
 /* =========================
