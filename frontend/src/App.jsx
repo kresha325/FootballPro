@@ -58,7 +58,7 @@ function App() {
     location.pathname.startsWith('/embed-') || /^\/live\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
-    document.title = 'FootballPro';
+    document.title = 'X Talenti';
   }, []);
 
   if (loading) {

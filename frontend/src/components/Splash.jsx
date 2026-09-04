@@ -14,10 +14,10 @@ export default function Splash() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-600 to-blue-700 text-white px-4">
       <div className="max-w-3xl w-full text-center">
         <div className="mb-6">
-          <div className="mx-auto w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold">FP</div>
+          <div className="mx-auto w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold">X</div>
         </div>
 
-        <h1 className="text-4xl font-extrabold mb-2">FootballPro</h1>
+        <h1 className="text-4xl font-extrabold mb-2">X Talenti</h1>
         <p className="text-lg mb-6 opacity-90">Platforma për lojtarë, klube dhe skautim — ide, features dhe bashkëpunim.</p>
 
         <div className="bg-white/10 rounded-lg p-6 mb-6 text-left">

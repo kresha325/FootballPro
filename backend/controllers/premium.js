@@ -6,13 +6,13 @@ const { stripeLiveReady } = require('../config/payments');
 
 const PLANS = {
   monthly: {
-    name: 'FootballPro Premium — Monthly',
+    name: 'X Talenti Premium — Monthly',
     amountCents: 999,
     days: 30,
     label: 'Monthly',
   },
   yearly: {
-    name: 'FootballPro Premium — Yearly',
+    name: 'X Talenti Premium — Yearly',
     amountCents: 9999,
     days: 365,
     label: 'Yearly',

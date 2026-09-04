@@ -63,7 +63,7 @@ function buildProfileContext(user, profile, hints = {}) {
 
 async function generateProfileBio(user, profile, hints = {}) {
   const lang = hints.language === 'en' ? 'English' : 'Albanian';
-  const system = `You write short football profile bios for FootballPro (talent platform).
+  const system = `You write short football profile bios for X Talenti (talent platform).
 Write in ${lang}. Max 2-3 sentences, max 480 characters. Professional, motivating, no hashtags, no emojis.
 Do not invent stats not provided. Output only the bio text.`;
 
@@ -75,7 +75,7 @@ Do not invent stats not provided. Output only the bio text.`;
 
 async function generateScoutSummary(targetUser, targetProfile, scoutUser) {
   const stats = targetProfile?.stats && typeof targetProfile.stats === 'object' ? targetProfile.stats : {};
-  const system = `You are a football scout assistant for FootballPro.
+  const system = `You are a football scout assistant for X Talenti.
 Write a concise scouting note in Albanian (3-5 bullet points as plain text, use • for bullets).
 Be factual based only on provided data. Mention strengths, fit, and one risk or unknown.
 Max 600 characters. No invented statistics.`;
@@ -100,7 +100,7 @@ Max 600 characters. No invented statistics.`;
 }
 
 async function suggestPostCaption(hints = {}) {
-  const system = `You suggest short social post captions for football players on FootballPro.
+  const system = `You suggest short social post captions for football players on X Talenti.
 Albanian, max 120 characters, optional 2-3 hashtags at end. Output caption only.`;
   const topic = hints.topic || hints.content || 'futboll';
   const parts = [
@@ -109,7 +109,7 @@ Albanian, max 120 characters, optional 2-3 hashtags at end. Output caption only.
     hints.location ? `Vendndodhja: ${hints.location}` : null,
     hints.role ? `Roli i autorit: ${hints.role}` : null,
   ].filter(Boolean);
-  const userPrompt = parts.join('\n') || 'Postim futbolli në FootballPro';
+  const userPrompt = parts.join('\n') || 'Postim futbolli në X Talenti';
   let caption = await chatCompletion(system, userPrompt, 120);
   if (caption.length > 200) caption = caption.slice(0, 197) + '…';
   return caption;

@@ -35,12 +35,12 @@ function getTransporter() {
 // Email templates
 const emailTemplates = {
   passwordReset: (firstName, resetUrl) => ({
-    subject: '🔐 Reset your FootballPro password',
+    subject: '🔐 Reset your X Talenti password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #2563eb;">Password reset</h1>
         <p>Hi ${firstName || 'there'},</p>
-        <p>We received a request to reset your FootballPro password. Click the button below to choose a new password. This link expires in one hour.</p>
+        <p>We received a request to reset your X Talenti password. Click the button below to choose a new password. This link expires in one hour.</p>
         <a href="${resetUrl}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Reset password
@@ -51,10 +51,10 @@ const emailTemplates = {
   }),
 
   welcome: (firstName) => ({
-    subject: '🏆 Welcome to FootballPro!',
+    subject: '🏆 Welcome to X Talenti!',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Welcome to FootballPro, ${firstName}!</h1>
+        <h1 style="color: #2563eb;">Welcome to X Talenti, ${firstName}!</h1>
         <p>Thank you for joining our global football community.</p>
         <p>Start building your profile, connect with players, scouts, and clubs worldwide.</p>
         <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}"
@@ -69,7 +69,7 @@ const emailTemplates = {
     subject: `🔔 ${followerName} started following you!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>${followerName} is now following you on FootballPro</h2>
+        <h2>${followerName} is now following you on X Talenti</h2>
         <p>Check out their profile and connect!</p>
         <a href="${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/profile/${userId}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
@@ -200,12 +200,12 @@ const emailTemplates = {
   parentVerification: (athleteName, token) => {
     const confirmUrl = buildParentConfirmUrl(token);
     return {
-      subject: `FootballPro — konfirmim prindi për ${athleteName}`,
+      subject: `X Talenti — konfirmim prindi për ${athleteName}`,
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
         <h2 style="color: #0f766e;">Konfirmim prindi / kujdestari</h2>
         <p>Përshëndetje,</p>
-        <p><strong>${athleteName}</strong> është regjistruar në <strong>FootballPro</strong> (platformë për futboll: profil, video, turne).</p>
+        <p><strong>${athleteName}</strong> është regjistruar në <strong>X Talenti</strong> (platformë për futboll: profil, video, turne).</p>
         <p>Për llogari të të miturve nën 18 vjeç, nevojitet miratimi juaj si prind ose kujdestar ligjor.</p>
         <p>Kliko butonin më poshtë për të konfirmuar (linku vlen <strong>7 ditë</strong>):</p>
         <a href="${confirmUrl}"
@@ -215,7 +215,7 @@ const emailTemplates = {
         <p style="color:#6b7280; font-size:13px;">Nëse butoni nuk funksionon, kopjo këtë link në shfletues:</p>
         <p style="word-break: break-all; font-size:12px; color:#475569;">${confirmUrl}</p>
         <p style="margin-top:20px; color:#9ca3af; font-size:12px;">Nëse nuk e prisje këtë email, injoroje — asgjë nuk ndryshohet.</p>
-        <p style="color:#9ca3af; font-size:12px;">— Ekipi FootballPro</p>
+        <p style="color:#9ca3af; font-size:12px;">— Ekipi X Talenti</p>
       </div>
     `,
     };
@@ -255,7 +255,7 @@ const sendEmail = async (to, templateName, ...params) => {
     const template = emailTemplates[templateName](...params);
 
     const mailOptions = {
-      from: `"FootballPro" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      from: `"X Talenti" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to,
       subject: template.subject,
       html: template.html,

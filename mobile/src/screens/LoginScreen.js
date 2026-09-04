@@ -178,7 +178,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
-        <Text style={styles.title}>FootballPro</Text>
+        <Text style={styles.title}>X Talenti</Text>
         <Text style={styles.subtitle}>
           {mode === 'login'
             ? 'Hyr për të vazhduar'
