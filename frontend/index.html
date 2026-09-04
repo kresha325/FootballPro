@@ -18,6 +18,23 @@
       content="black-translucent"
     />
     <title>X Talenti</title>
+    <script>
+      // GitHub Pages SPA fallback decoder: rikthen URL nga formati /?/feed
+      // (i krijuar nga 404.html) në formatin normal /feed, para se
+      // react-router-dom të marrë kontrollin. Referencë: rafgraph/spa-github-pages
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function (s) {
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(
+            null,
+            null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      })(window.location);
+    </script>
   </head>
   <body>
     <div id="root"></div>
