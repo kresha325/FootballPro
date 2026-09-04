@@ -113,7 +113,7 @@ app.use(mongoSanitize());
 // responses consistently return a valid Access-Control-Allow-Origin. In
 // development we allow requests from any origin; in production only configured
 // origins are accepted.
-const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com'; // set in .env for prod
+const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com,https://xtalenti.com,https://www.xtalenti.com'; // set in .env for prod
 const allowedOrigins = allowedOrigin === '*'
   ? ['*']
   : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
