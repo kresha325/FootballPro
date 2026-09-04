@@ -35,25 +35,27 @@ function checkSecret(req, res) {
 }
 
 router.get('/status', async (req, res) => {
-  if (!checkSecret(req, res)) return;
-  try {
-    const [[{ count }]] = await sequelize.query('SELECT COUNT(*)::int AS count FROM "Users";');
-    res.json({ userCount: count, msg: 'Dry-run: asgjë s\'u fshi.' });
-  } catch (err) {
-    console.error('Wipe status error:', err);
-    res.status(500).json({ msg: 'Gabim gjatë numërimit.', error: err.message });
-  }
+  return res.status(403).json({ msg: 'Endpoint i çaktivizuar përkohësisht për siguri.' });
 });
 
 router.post('/run', async (req, res) => {
+  return res.status(403).json({ msg: 'Endpoint i çaktivizuar përkohësisht për siguri.' });
+});
+
+// eslint-disable-next-line no-unused-vars
+async function disabledRun(req, res) {
   if (!checkSecret(req, res)) return;
 
   const wipeMedia = req.query.wipeMedia === 'true' || req.body?.wipeMedia === true;
+  const wipeUsers = req.query.wipeUsers === 'true' || req.body?.wipeUsers === true;
 
   try {
-    const [[{ count }]] = await sequelize.query('SELECT COUNT(*)::int AS count FROM "Users";');
-
-    await sequelize.query('TRUNCATE TABLE "Users" RESTART IDENTITY CASCADE;');
+    let usersDeleted = 0;
+    if (wipeUsers) {
+      const [[{ count }]] = await sequelize.query('SELECT COUNT(*)::int AS count FROM "Users";');
+      await sequelize.query('TRUNCATE TABLE "Users" RESTART IDENTITY CASCADE;');
+      usersDeleted = count;
+    }
 
     let mediaResult = null;
     if (wipeMedia) {
@@ -61,8 +63,8 @@ router.post('/run', async (req, res) => {
     }
 
     res.json({
-      msg: 'Platforma është tani bosh.',
-      usersDeleted: count,
+      msg: 'U krye.',
+      usersDeleted,
       mediaResult,
     });
   } catch (err) {
