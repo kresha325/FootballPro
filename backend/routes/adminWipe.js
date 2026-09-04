@@ -67,7 +67,10 @@ router.post('/run', async (req, res) => {
     });
   } catch (err) {
     console.error('Wipe run error:', err);
-    const detail = err?.error?.message || err?.message || String(err);
+    let detail = err?.error?.message || err?.message || String(err);
+    try {
+      detail += ' | raw: ' + JSON.stringify(err);
+    } catch (_) {}
     res.status(500).json({ msg: 'Gabim gjatë fshirjes.', error: detail });
   }
 });
