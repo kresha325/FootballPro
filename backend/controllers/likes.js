@@ -22,7 +22,9 @@ exports.likePost = async (req, res) => {
   try {
     const existingLike = await Like.findOne({ where: { userId: req.user.id, postId } });
     if (existingLike) {
-      return res.status(400).json({ msg: 'Already liked' });
+      // Idempotent: nëse tashmë është pëlqyer, kthe sukses në vend të gabimit,
+      // për të shmangur 400 errors nga double-click ose gjendje e pasinkronizuar në frontend.
+      return res.json(existingLike);
     }
 
     // Only core columns — prod DB may not have migrated `emoji` yet.
@@ -101,7 +103,8 @@ exports.unlikePost = async (req, res) => {
   try {
     const like = await Like.findOne({ where: { userId: req.user.id, postId } });
     if (!like) {
-      return res.status(404).json({ msg: 'Like not found' });
+      // Idempotent: nëse tashmë s'ka like, konsideroje sukses (rezultati përfundimtar është i njëjtë).
+      return res.json({ msg: 'Unliked' });
     }
     await like.destroy();
     return res.json({ msg: 'Unliked' });
