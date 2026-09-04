@@ -98,9 +98,14 @@ async function wipeCloudinaryMedia() {
 
       const publicIds = result.resources.map((r) => r.public_id);
 
-      if (publicIds.length > 0) {
-        await cloudinary.api.delete_resources(publicIds, { resource_type: resourceType });
-        totalDeleted += publicIds.length;
+      // Cloudinary's delete_resources lejon max 100 public_ids për thirrje.
+      const chunkSize = 100;
+      for (let i = 0; i < publicIds.length; i += chunkSize) {
+        const chunk = publicIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+          await cloudinary.api.delete_resources(chunk, { resource_type: resourceType });
+          totalDeleted += chunk.length;
+        }
       }
 
       nextCursor = result.next_cursor;
