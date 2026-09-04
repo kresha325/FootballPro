@@ -190,19 +190,22 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    // In production, send email with reset link
-    // For now, return the token in response (only for development)
-    const resetUrl = `https://192.168.100.57:5174/reset-password/${resetToken}`;
+    // Create reset URL with token
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://192.168.100.57:5174'}/reset-password/${resetToken}`;
     
-    console.log('Password reset URL:', resetUrl);
-    
-    // TODO: Send email with resetUrl
-    // await sendEmail({ to: email, subject: 'Password Reset', html: `Click here: ${resetUrl}` });
+    // Send password reset email
+    try {
+      await sendEmail(user.email, 'passwordReset', resetUrl);
+      console.log('✅ Password reset email sent to:', user.email);
+    } catch (emailError) {
+      console.error('⚠️ Failed to send password reset email:', emailError);
+      // Still return success even if email fails, but log the error
+    }
 
     res.json({ 
-      msg: 'If that email exists, a reset link has been sent.',
+      msg: 'If that email exists, a password reset link has been sent.',
       // Remove this in production:
-      resetUrl // Only for development
+      resetUrl // Only for development debugging
     });
   } catch (err) {
     console.error('Forgot password error:', err);

@@ -190,6 +190,23 @@ const emailTemplates = {
         </a>
       </div>
     `
+  }),
+
+  passwordReset: (resetUrl) => ({
+    subject: '🔐 Reset Your FootballPro Password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>You requested a password reset for your FootballPro account.</p>
+        <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+        <a href="${resetUrl}"
+           style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
+          Reset Password
+        </a>
+        <p style="margin-top: 20px; color: #6b7280; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        <p style="color: #6b7280; font-size: 12px;">Or copy this link into your browser: ${resetUrl}</p>
+      </div>
+    `
   })
 };
 

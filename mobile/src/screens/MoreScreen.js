@@ -27,6 +27,7 @@ export default function MoreScreen({ navigation }) {
       </View>
 
       <MenuButton title="Wallet" subtitle="JonCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
+      <MenuButton title="🏆 Achievements & Badges" subtitle="Track your gamification progress" onPress={() => navigation.navigate('Gamification')} />
       {canUseInsights ? <MenuButton title="Insights" subtitle="Analytics and gamification" onPress={() => navigation.navigate('Insights')} /> : null}
       <MenuButton title="Tournaments" subtitle="Trending and join flow" onPress={() => navigation.navigate('Tournaments')} />
       {canUseScouting ? <MenuButton title="Scouting" subtitle="Recommendations and filters" onPress={() => navigation.navigate('Scouting')} /> : null}

@@ -28,10 +28,32 @@ const Settings = () => {
     }
   };
 
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    // TODO: Implement profile update API call
-    console.log('Updating profile:', profile);
+    try {
+      const response = await fetch('/api/profiles/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: profile.name,
+          email: profile.email,
+          bio: profile.bio
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const data = await response.json();
+      console.log('Profile updated successfully:', data);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile: ' + error.message);
+    }
   };
 
   return (

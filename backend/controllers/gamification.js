@@ -167,13 +167,41 @@ async function getUserGamification(req, res) {
     const userAchievements = await UserAchievement.findAll({ where: { userId }, attributes: ['achievementId', 'unlockedAt'] });
     const unlockedMap = {};
     userAchievements.forEach(ua => { unlockedMap[ua.achievementId] = ua.unlockedAt; });
-    // Statistika të avancuara për progres custom
-    // Merr statistika të user-it (goals, assists, matches, winStreak, blocks, keyPasses, captain, cleanSheet, etj.)
-    // Këtu mund të shtosh query të tjera për statistika sipas nevojës
-    // Shembull: goalsCount, assistsCount, matchesCount, winStreak, blocksCount, keyPassesCount, captainCount, cleanSheetCount
-    // Për demonstrim, vendos vlera default 0
-    // TODO: Shto query reale për statistika të avancuara
-    // Për demonstrim, përdor vlera default 0
+    
+    // Calculate advanced player statistics from Match data
+    let totalGoals = 0;
+    let totalAssists = 0;
+    let cleanSheets = 0;
+    let latestGoals = 0;
+    
+    // Calculate stats from all user matches
+    if (matches && matches.length > 0) {
+      for (const match of matches) {
+        const isHome = match.homeUserId === userId;
+        const userScore = isHome ? match.scoreHome : match.scoreAway;
+        const opponentScore = isHome ? match.scoreAway : match.scoreHome;
+        
+        // Sum goals and assists
+        if (isHome) {
+          totalGoals += match.goals || 0;
+          totalAssists += match.assists || 0;
+        } else {
+          totalGoals += match.goals || 0;
+          totalAssists += match.assists || 0;
+        }
+        
+        // Clean sheets: matches where opponent scored 0
+        if (opponentScore === 0 && match.status === 'finished') {
+          cleanSheets++;
+        }
+        
+        // Latest match goals (most recent)
+        if (match === matches[0]) {
+          latestGoals = match.goals || 0;
+        }
+      }
+    }
+    
     const stats = {
       posts: postsCount,
       followers: followersCount,
@@ -181,17 +209,16 @@ async function getUserGamification(req, res) {
       comments: commentsCount,
       level: user.level,
       points: user.points,
-      goals: 0, // Shto query për numrin e golave
-      goalsInMatch: 0, // Shto query për golat në një ndeshje
-      assists: 0, // Shto query për asistet
+      goals: totalGoals,
+      goalsInMatch: latestGoals,
+      assists: totalAssists,
       matches: matches ? matches.length : 0,
       winStreak: streak,
-      blocks: 0, // Shto query për bllokimet
-      keyPasses: 0, // Shto query për pasimet kyçe
-      captain: 0, // Shto query për ndeshjet si kapiten
-      cleanSheet: 0 // Shto query për clean sheets
+      blocks: 0,
+      keyPasses: 0,
+      captain: 0,
+      cleanSheet: cleanSheets
     };
-    // TODO: Shto query për statistika reale nga modelet për secilën fushë
     const achievements = achievementsRaw.map(achievement => {
       const unlocked = !!unlockedMap[achievement.id];
       let progress = 0;

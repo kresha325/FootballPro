@@ -12,6 +12,7 @@ import MarketplaceScreen from '../screens/MarketplaceScreen';
 import WalletScreen from '../screens/WalletScreen';
 import VideosScreen from '../screens/VideosScreen';
 import InsightsScreen from '../screens/InsightsScreen';
+import GamificationScreen from '../screens/GamificationScreen';
 import TournamentsScreen from '../screens/TournamentsScreen';
 import ScoutingScreen from '../screens/ScoutingScreen';
 import MoreScreen from '../screens/MoreScreen';
@@ -99,6 +100,7 @@ function MoreNavigator() {
   return (
     <MoreStack.Navigator screenOptions={{ headerTitle: 'Jon Sport', headerTitleAlign: 'center' }}>
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: 'Jon Sport' }} />
+      <MoreStack.Screen name="Gamification" component={GamificationScreen} options={{ title: 'Achievements & Badges' }} />
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Jon Sport' }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: 'Jon Sport' }} />
