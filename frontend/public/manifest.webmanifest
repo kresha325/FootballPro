@@ -1,10 +1,10 @@
 {
-  "name": "FootballPro",
-  "short_name": "FootballPro",
+  "name": "X Talenti",
+  "short_name": "X Talenti",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "FootballPro web app",
+  "description": "X Talenti web app",
   "icons": [
     {
       "src": "/footballpro-icon-192.png",
