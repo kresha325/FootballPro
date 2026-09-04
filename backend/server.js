@@ -290,9 +290,6 @@ app.use('/api/streams', require('./routes/streams'));
 // JonCoin API
 app.use('/api/joncoin', require('./routes/joncoin'));
 
-// Route i përkohshëm për wipe platformë (i mbrojtur me WIPE_SECRET, s'kërkon Render Shell)
-app.use('/api/admin-wipe', require('./routes/adminWipe'));
-
 
 // Endpoint për të kontrolluar nëse një user është online
 app.get('/api/users/:userId/online', (req, res) => {
