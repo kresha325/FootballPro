@@ -1,4 +1,4 @@
-# FootballPro Mobile (Expo)
+# X Talenti Mobile (Expo)
 
 Current status:
 

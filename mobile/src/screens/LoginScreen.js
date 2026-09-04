@@ -91,7 +91,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>FootballPro Mobile</Text>
+      <Text style={styles.title}>X Talenti</Text>
       <Text style={styles.subtitle}>
         {mode === 'login' ? 'Sign in to continue' : mode === 'register' ? 'Create your account' : 'Recover your password'}
       </Text>
