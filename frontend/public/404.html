@@ -1,0 +1,26 @@
+﻿<!doctype html>
+<html lang="sq">
+  <head>
+    <meta charset="UTF-8" />
+    <title>X Talenti</title>
+    <!--
+      GitHub Pages SPA fallback: kur nuk gjendet një path (p.sh. refresh
+      në /profile), ridrejtojmë te index.html duke ruajtur path-in origjinal
+      në query string, që react-router-dom ta rikthejë me script-in më poshtë.
+      Referencë: https://github.com/rafgraph/spa-github-pages
+    -->
+    <script>
+      var pathSegmentsToKeep = 0;
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

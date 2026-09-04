@@ -114,7 +114,7 @@ const UserCardsSection = () => {
               className={`object-cover w-full h-full transition-transform duration-500 group-hover:scale-105 ${onlineStatus[profile.id] === true ? 'ring-2 ring-green-500/70' : 'ring-2 ring-white/20'}`}
               loading="lazy"
               decoding="async"
-              onError={e => { e.target.src = '/default-avatar.svg'; }}
+              onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.svg'; }}
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-black/45" />
