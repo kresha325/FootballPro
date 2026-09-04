@@ -9,7 +9,11 @@ const auth = (req, res, next) => {
   }
   
   try {
-    const secret = process.env.JWT_SECRET || 'dev_jwt_secret';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('AUTH: JWT_SECRET is not configured');
+      return res.status(500).json({ msg: 'Authentication is not configured' });
+    }
     const decoded = jwt.verify(token, secret);
     console.log('✅ AUTH: Token decoded:', decoded);
     req.user = decoded.user;

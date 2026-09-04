@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react';
+
+const profilePhotoUrl = (photo) => {
+  if (!photo) return '/default-avatar.png';
+  return photo.startsWith('http')
+    ? photo
+    : `${import.meta.env.VITE_API_URL}${photo.startsWith('/') ? photo : `/${photo}`}`;
+};
 // Modal for creating a new match
 function CreateMatchModal({ isOpen, onClose, onCreate, participants }) {
   const [homeUserId, setHomeUserId] = useState('');
@@ -816,7 +823,7 @@ export default function Tournaments() {
 
       {view === 'bracket' && renderBracket()}
 
-      {view === 'matches' && (
+      {view === 'matches' && <>
         <div>
           {/* Only admin/creator can create matches */}
           {isCreator(selectedTournament) && (
@@ -829,6 +836,7 @@ export default function Tournaments() {
               </button>
             </div>
           )}
+
           <CreateMatchModal
             isOpen={showCreateMatchModal}
             onClose={() => setShowCreateMatchModal(false)}
@@ -844,11 +852,7 @@ export default function Tournaments() {
                   <div className="flex items-center justify-end gap-2">
                     {match.homeUser?.Profile?.profilePhoto ? (
                       <img
-                        src={match.homeUser.Profile.profilePhoto
-                          ? (match.homeUser.Profile.profilePhoto.startsWith('http')
-                              ? match.homeUser.Profile.profilePhoto
-                              : `${import.meta.env.VITE_API_URL}${match.homeUser.Profile.profilePhoto.startsWith('/') ? match.homeUser.Profile.profilePhoto : '/' + match.homeUser.Profile.profilePhoto}`)
-                          : '/default-avatar.png'}
+                        src={profilePhotoUrl(match.homeUser.Profile.profilePhoto)}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -883,11 +887,7 @@ export default function Tournaments() {
                     </span>
                     {match.awayUser?.Profile?.profilePhoto ? (
                       <img
-                        src={match.awayUser.Profile.profilePhoto
-                          ? (match.awayUser.Profile.profilePhoto.startsWith('http')
-                              ? match.awayUser.Profile.profilePhoto
-                              : `${import.meta.env.VITE_API_URL}${match.awayUser.Profile.profilePhoto.startsWith('/') ? match.awayUser.Profile.profilePhoto : '/' + match.awayUser.Profile.profilePhoto}`)
-                          : '/default-avatar.png'}
+                        src={profilePhotoUrl(match.awayUser.Profile.profilePhoto)}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -960,8 +960,9 @@ export default function Tournaments() {
               )}
             </div>
           ))}
+          </div>
         </div>
-      )}
+      </>}
       {renderScorersModal()}
     </div>
   );

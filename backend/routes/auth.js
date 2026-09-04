@@ -38,6 +38,9 @@ router.get('/verify', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.json({ valid: false });
   try {
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ valid: false, msg: 'Authentication is not configured' });
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     res.json({ valid: true, user: decoded.user });
   } catch (err) {

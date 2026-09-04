@@ -12,6 +12,7 @@ package-lock.json
 .env.production
 backend/.env
 frontend/.env
+backend/certs/*.key
 
 # Build outputs
 dist/

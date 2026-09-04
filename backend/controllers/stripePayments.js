@@ -1,5 +1,5 @@
-const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
-const stripe = require('stripe')(stripeKey);
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? require('stripe')(stripeKey) : null;
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
@@ -8,6 +8,9 @@ const User = require('../models/User');
 // Create Stripe Checkout Session
 exports.createCheckoutSession = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(503).json({ msg: 'Payments are not configured' });
+    }
     const { productId, quantity = 1 } = req.body;
 
     const product = await Product.findByPk(productId);
@@ -59,8 +62,11 @@ exports.stripeWebhook = async (req, res) => {
   let event;
 
   try {
+    if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(503).send('Payments are not configured');
+    }
     event = stripe.webhooks.constructEvent(
-      req.body,
+      req.rawBody || req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
@@ -94,6 +100,13 @@ exports.stripeWebhook = async (req, res) => {
 async function handleSuccessfulPayment(session) {
   try {
     const { userId, productId, quantity } = session.metadata;
+    if (!userId || !productId || !quantity) {
+      throw new Error('Stripe session metadata is incomplete');
+    }
+    const existingPayment = await Payment.findOne({
+      where: { stripePaymentIntentId: session.payment_intent },
+    });
+    if (existingPayment) return;
 
     const product = await Product.findByPk(productId);
     if (!product) {
@@ -101,24 +114,23 @@ async function handleSuccessfulPayment(session) {
       return;
     }
 
-    // Create order
-    const order = await Order.create({
-      userId: parseInt(userId),
-      productId: parseInt(productId),
-      quantity: parseInt(quantity),
-      totalPrice: session.amount_total / 100, // Convert from cents
-      status: 'completed',
-    });
-
     // Create payment record
-    await Payment.create({
+    const payment = await Payment.create({
       userId: parseInt(userId),
-      orderId: order.id,
       amount: session.amount_total / 100,
       currency: session.currency,
-      stripePaymentId: session.payment_intent,
-      status: 'succeeded',
+      stripePaymentIntentId: session.payment_intent,
+      status: 'completed',
       description: `Payment for ${product.name}`,
+    });
+
+    // Link the order to the payment so ownership and confirmation checks remain consistent.
+    const order = await Order.create({
+      userId: parseInt(userId, 10),
+      products: [{ productId: parseInt(productId, 10), quantity: parseInt(quantity, 10), price: session.amount_total / 100 }],
+      totalAmount: session.amount_total / 100,
+      status: 'paid',
+      paymentId: payment.id,
     });
 
     // Update product stock
@@ -154,8 +166,14 @@ exports.getPayments = async (req, res) => {
 // Verify payment session
 exports.verifySession = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(503).json({ msg: 'Payments are not configured' });
+    }
     const { sessionId } = req.params;
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (String(session.metadata?.userId) !== String(req.user.id)) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
     
     if (session.payment_status === 'paid') {
       res.json({ success: true, session });

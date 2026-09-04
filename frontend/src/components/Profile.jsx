@@ -302,6 +302,26 @@ const Profile = () => {
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const livePreviewRef = useRef(null);
 
+  const toggleComments = (postId) => {
+    setExpandedComments((previous) => {
+      const next = new Set(previous);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+        fetchComments(postId);
+      }
+      return next;
+    });
+  };
+
+  const handleComment = async (postId) => {
+    const content = commentInputs[postId]?.trim();
+    if (!content) return;
+    await addComment(postId, content);
+    setCommentInputs((previous) => ({ ...previous, [postId]: '' }));
+  };
+
   // Set gallery image as profile or cover photo
 
   const setAsProfilePhoto = async (imageUrl, type) => {

@@ -56,7 +56,7 @@ exports.createProduct = async (req, res) => {
       category,
       imageUrl,
       stock,
-      sellerId: req.user ? req.user.id : req.body.sellerId // nëse ka auth middleware
+      sellerId: req.user.id
     });
     res.json(product);
   } catch (err) {
@@ -70,6 +70,9 @@ exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ msg: 'Product not found' });
+    if (product.sellerId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
     // Nëse imageUrl fillon me /uploads/products/, zëvendëso me /uploads/
     if (imageUrl && imageUrl.startsWith('/uploads/products/')) {
       imageUrl = '/uploads/' + imageUrl.split('/').pop();
@@ -92,6 +95,9 @@ exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ msg: 'Product not found' });
+    if (product.sellerId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
     await product.destroy();
     res.json({ msg: 'Product deleted' });
   } catch (err) {

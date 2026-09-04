@@ -1,7 +1,7 @@
 # [Jan 2026] Deployment update: removed duplicate migration for publicId in Video table.
 # Stripe API Key Development Note
 
-Aktualisht, backend-i është i konfiguruar që të përdorë një çelës dummy për Stripe (`sk_test_dummy`) nëse variabla e ambientit `STRIPE_SECRET_KEY` nuk është e vendosur. Kjo lejon që serveri të startojë edhe pa një çelës të vërtetë Stripe, por funksionalitetet që lidhen me pagesat nuk do të funksionojnë realisht pa një çelës valid.
+Stripe duhet të konfigurohet me `STRIPE_SECRET_KEY` për pagesat. Në mungesë të tij, endpoint-et e pagesave kthejnë gabim të qartë konfigurimi; production refuzon nisjen.
 
 Për prodhim, sigurohuni të vendosni `STRIPE_SECRET_KEY` në ambientin tuaj.
 # FootballPro (JonSport)
@@ -34,7 +34,7 @@ FootballPro është një platformë globale që lidh të gjithë aktorët e futb
 
 - Role-based access control (7 roles)
 - Secure password hashing
-Aktualisht, backend-i është i konfiguruar që të përdorë një çelës dummy për Stripe (`sk_test_dummy`) nëse variabla e ambientit `STRIPE_SECRET_KEY` nuk është e vendosur. Kjo lejon që serveri të startojë edhe pa një çelës të vërtetë Stripe, por funksionalitetet që lidhen me pagesat nuk do të funksionojnë realisht pa një çelës valid.
+Stripe duhet të konfigurohet me `STRIPE_SECRET_KEY` për pagesat. Në mungesë të tij, endpoint-et e pagesave kthejnë gabim të qartë konfigurimi; production refuzon nisjen.
 
 - Premium membership system
 

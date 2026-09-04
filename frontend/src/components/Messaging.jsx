@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useLocation } from 'react-router-dom';
+import axios from 'axios';
 import api from '../services/api';
 import { FiPhone, FiVideo } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';

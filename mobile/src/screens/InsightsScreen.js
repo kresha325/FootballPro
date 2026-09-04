@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  FlatList,
   RefreshControl,
   StyleSheet,
   Text,
@@ -8,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { VictoryBar, VictoryLine, VictoryChart, VictoryAxis, VictoryTheme } from 'victory-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -31,55 +31,42 @@ function InsightsSkeleton() {
   );
 }
 
-// Generate mock engagement data for charts
+// Use stable overview-based fallback data until historical series are available.
 const generateChartData = (overview) => {
   if (!overview) return [];
   const days = 30;
-  const data = [];
   const baseFollowers = Math.max(1, overview?.totalFollowers || 0);
-  
-  for (let i = 0; i < days; i++) {
-    data.push({
+  return Array.from({ length: days }, (_, i) => ({
       x: i + 1,
-      y: Math.floor(baseFollowers * (0.8 + Math.random() * 0.4)),
+      y: baseFollowers,
       day: `Day ${i + 1}`,
-    });
-  }
-  return data;
+    }));
 };
 
 const generatePostsData = (overview) => {
   if (!overview) return [];
   const days = 30;
-  const data = [];
   const totalPosts = Math.max(1, overview?.totalPosts || 0);
-  const avgPostsPerDay = Math.ceil(totalPosts / days);
-  
-  for (let i = 0; i < days; i++) {
-    data.push({
+  const dailyPosts = Math.floor(totalPosts / days);
+  const remainder = totalPosts % days;
+  return Array.from({ length: days }, (_, i) => ({
       x: i + 1,
-      y: Math.floor(avgPostsPerDay * (0.5 + Math.random() * 1.5)),
+      y: dailyPosts + (i < remainder ? 1 : 0),
       day: `Day ${i + 1}`,
-    });
-  }
-  return data;
+    }));
 };
 
 const generateEngagementData = (overview) => {
   if (!overview) return [];
   const days = 30;
-  const data = [];
   const totalEngagement = (overview?.totalLikes || 0) + (overview?.totalComments || 0);
-  const avgPerDay = Math.ceil(totalEngagement / days);
-  
-  for (let i = 0; i < days; i++) {
-    data.push({
+  const dailyEngagement = Math.floor(totalEngagement / days);
+  const remainder = totalEngagement % days;
+  return Array.from({ length: days }, (_, i) => ({
       x: i + 1,
-      y: Math.floor(avgPerDay * (0.5 + Math.random() * 1.5)),
+      y: dailyEngagement + (i < remainder ? 1 : 0),
       day: `Day ${i + 1}`,
-    });
-  }
-  return data;
+    }));
 };
 
 export default function InsightsScreen() {
@@ -141,7 +128,14 @@ export default function InsightsScreen() {
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {['overview', 'engagement', 'followers', 'leaderboard'].map((tab) => (
-          <View key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]}>
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => setActiveTab(tab)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab }}
+            accessibilityLabel={`${tab} tab`}
+          >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
               {tab === 'overview'
                 ? '📊'
@@ -151,7 +145,7 @@ export default function InsightsScreen() {
                 ? '👥'
                 : '🏆'}
             </Text>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -515,4 +509,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
   },
 });
-

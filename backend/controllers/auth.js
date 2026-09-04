@@ -72,7 +72,10 @@ exports.register = async (req, res) => {
 
     // 5. Check age and JWT
     const payload = { user: { id: user.id } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ msg: 'Authentication is not configured' });
+    }
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: '7d',
     });
 
@@ -148,7 +151,10 @@ exports.login = async (req, res) => {
       }
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ msg: 'Authentication is not configured' });
+    }
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: '7d',
     });
     console.log('BACKEND: Login successful, sending token');

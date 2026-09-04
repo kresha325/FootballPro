@@ -14,6 +14,14 @@ const morgan = require('morgan');
 
 dotenv.config();
 
+if (process.env.NODE_ENV === 'production') {
+  const requiredProductionEnv = ['JWT_SECRET', 'DATABASE_URL', 'STRIPE_SECRET_KEY'];
+  const missingProductionEnv = requiredProductionEnv.filter((name) => !process.env[name]);
+  if (missingProductionEnv.length > 0) {
+    throw new Error(`Missing required production environment variables: ${missingProductionEnv.join(', ')}`);
+  }
+}
+
 // Simple socket event logger
 function logSocketEvent(socket, event, details) {
   try {
@@ -149,7 +157,14 @@ try {
 } catch (e) {
   console.warn('Could not set io in utils/socket:', e && e.message);
 }
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, res, buffer) => {
+    if (req.originalUrl === '/api/payments/webhook') {
+      req.rawBody = buffer;
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
 

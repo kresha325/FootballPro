@@ -1,2 +1,3 @@
 describe('applyBackgroundStyle', () => {
-// Testet për applyBackgroundStyle janë fshirë.
+  // Tests for applyBackgroundStyle were removed.
+});

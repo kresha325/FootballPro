@@ -16,15 +16,20 @@ const sequelize = new Sequelize(
 
 (async () => {
   try {
+    const email = process.env.RESET_EMAIL;
+    const newPassword = process.env.RESET_PASSWORD;
+    if (!email || !newPassword) {
+      throw new Error('Set RESET_EMAIL and RESET_PASSWORD in the environment before running this script');
+    }
     const [results] = await sequelize.query(
       'SELECT id, email, "firstName", "lastName", role FROM "Users" WHERE LOWER(email) = LOWER(:email)',
-      { replacements: { email: 'kreshnik.sh.gashi@hotmail.com' } }
+      { replacements: { email } }
     );
 
     if (results.length > 0) {
       console.log('✅ User found:', results[0]);
       
-      const hashedPassword = await bcrypt.hash('Kreshnik123', 10);
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
       await sequelize.query(
         'UPDATE "Users" SET password = :password WHERE id = :id',
         { replacements: { password: hashedPassword, id: results[0].id } }
@@ -32,7 +37,6 @@ const sequelize = new Sequelize(
       
       console.log('\n✅ Password updated successfully!');
       console.log('📧 Email:', results[0].email);
-      console.log('🔑 Password: Kreshnik123');
     } else {
       console.log('❌ No user found with that email');
     }
