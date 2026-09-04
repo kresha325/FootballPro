@@ -67,7 +67,8 @@ router.post('/run', async (req, res) => {
     });
   } catch (err) {
     console.error('Wipe run error:', err);
-    res.status(500).json({ msg: 'Gabim gjatë fshirjes.', error: err.message });
+    const detail = err?.error?.message || err?.message || String(err);
+    res.status(500).json({ msg: 'Gabim gjatë fshirjes.', error: detail });
   }
 });
 
