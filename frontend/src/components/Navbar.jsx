@@ -233,8 +233,9 @@ function Navbar() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
 
         {/* LOGO */}
-        <Link to="/feed" className="text-2xl font-bold text-primary">
-          {APP_BRAND_NAME}
+        <Link to="/feed" className="text-2xl font-extrabold uppercase tracking-wide flex items-baseline gap-0.5">
+          <span className="text-amber-500 dark:text-amber-400">X</span>
+          <span className="text-slate-900 dark:text-white">{APP_BRAND_NAME.replace(/^x/i, '').trim()}</span>
         </Link>
 
         {/* RIGHT SECTION: Search + Dark Mode + Burger Menu */}
