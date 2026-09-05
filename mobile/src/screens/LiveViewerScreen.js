@@ -19,6 +19,7 @@ export default function LiveViewerScreen({ route, navigation }) {
   const [error, setError] = useState('');
   const [youtubeChannelId, setYoutubeChannelId] = useState(null);
   const [streamTitle, setStreamTitle] = useState('');
+  const [viewers, setViewers] = useState(0);
 
   const injectedBefore = useMemo(() => {
     const t = token ? JSON.stringify(token) : '""';
@@ -57,6 +58,7 @@ export default function LiveViewerScreen({ route, navigation }) {
 
         setStreamTitle(data?.title || 'Live');
         setYoutubeChannelId(data?.youtubeChannelId || null);
+        setViewers(Math.max(0, Number(data?.viewers) || 0));
 
         if (!data?.isLive) {
           const rec = absoluteBackendUrl(data?.videoUrl) || data?.videoUrl;
@@ -71,7 +73,9 @@ export default function LiveViewerScreen({ route, navigation }) {
         }
 
         try {
-          await joinStreamRequest(streamId);
+          const joinRes = await joinStreamRequest(streamId);
+          const v = joinRes?.data?.viewers;
+          if (v != null && !cancelled) setViewers(Math.max(0, Number(v) || 0));
         } catch (_joinErr) {
           /* viewer count best-effort */
         }
@@ -96,6 +100,20 @@ export default function LiveViewerScreen({ route, navigation }) {
       }
     };
   }, [streamId, openWebFallback]);
+
+  useEffect(() => {
+    if (!streamId || mode === 'loading' || mode === 'error' || mode === 'recording') return undefined;
+    const poll = () => {
+      getStreamRequest(streamId)
+        .then((res) => {
+          const v = res?.data?.viewers;
+          if (v != null) setViewers(Math.max(0, Number(v) || 0));
+        })
+        .catch(() => {});
+    };
+    const interval = setInterval(poll, 12_000);
+    return () => clearInterval(interval);
+  }, [streamId, mode]);
 
   if (!streamId) {
     return (
@@ -168,7 +186,7 @@ export default function LiveViewerScreen({ route, navigation }) {
             <Text style={styles.titleText} numberOfLines={1}>
               {streamTitle}
             </Text>
-            <Text style={styles.nativeBadge}>LiveKit</Text>
+            <Text style={styles.viewerBadge}>{viewers} shikues</Text>
           </View>
         ) : null}
         <NativeLiveViewer
@@ -275,11 +293,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
   titleText: { color: '#e2e8f0', fontWeight: '600', flex: 1, marginRight: 8 },
-  nativeBadge: {
-    color: '#5eead4',
-    fontSize: 11,
+  viewerBadge: {
+    color: '#FCD34D',
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.4,
   },
   ytLink: {
     padding: 10,

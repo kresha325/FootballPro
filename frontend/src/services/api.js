@@ -232,7 +232,7 @@ export const streamsAPI = {
   getStream: (streamId) => API.get(`/streams/${streamId}`),
   createStream: (data) => API.post('/streams', data),
   startStream: (streamId) => API.put(`/streams/${streamId}/start`),
-  heartbeatStream: (streamId) => API.put(`/streams/${streamId}/heartbeat`),
+  heartbeatStream: (streamId, data = {}) => API.put(`/streams/${streamId}/heartbeat`, data),
   endStream: (streamId) => API.put(`/streams/${streamId}/end`),
   joinStream: (streamId) => API.post(`/streams/${streamId}/join`),
   leaveStream: (streamId) => API.post(`/streams/${streamId}/leave`),

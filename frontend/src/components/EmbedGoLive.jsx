@@ -41,11 +41,13 @@ export default function EmbedGoLive() {
   const [replaySaved, setReplaySaved] = useState(false);
   const [switchingCamera, setSwitchingCamera] = useState(false);
   const [cameraFacing, setCameraFacing] = useState('environment');
+  const [liveViewers, setLiveViewers] = useState(0);
 
   const videoRef = useRef(null);
   const roomRef = useRef(null);
   const tracksRef = useRef([]);
   const facingRef = useRef('environment');
+  const liveViewersRef = useRef(0);
 
   const title = params.get('title')?.trim() || 'Live Stream';
   const description = params.get('description')?.trim() || '';
@@ -102,11 +104,23 @@ export default function EmbedGoLive() {
       const room = new Room();
       roomRef.current = room;
 
+      const syncViewers = () => {
+        const n = room.remoteParticipants?.size ?? 0;
+        liveViewersRef.current = n;
+        setLiveViewers(n);
+        setStream((prev) => (prev ? { ...prev, viewers: n } : prev));
+        if (id) {
+          streamsAPI.heartbeatStream(id, { viewers: n }).catch(() => {});
+        }
+      };
+      room.on(RoomEvent.ParticipantConnected, syncViewers);
+      room.on(RoomEvent.ParticipantDisconnected, syncViewers);
       room.on(RoomEvent.Disconnected, () => {
         stopTracks();
       });
 
       await room.connect(wsUrl, token, { autoSubscribe: true });
+      syncViewers();
       const localTracks = await createLocalTracks({
         audio: true,
         video: getLiveVideoCaptureOptions(),
@@ -281,10 +295,33 @@ export default function EmbedGoLive() {
   useEffect(() => {
     if (!streamId || !['livekit', 'youtube'].includes(phase)) return undefined;
     const tick = () => {
-      streamsAPI.heartbeatStream(streamId).catch(() => {});
+      const viewers =
+        phase === 'livekit' ? liveViewersRef.current : Math.max(0, Number(stream?.viewers) || 0);
+      streamsAPI.heartbeatStream(streamId, { viewers }).catch(() => {});
     };
     tick();
-    const interval = setInterval(tick, 30_000);
+    const interval = setInterval(tick, 15_000);
+    return () => clearInterval(interval);
+  }, [streamId, phase, stream?.viewers]);
+
+  // YouTube mode: refresh join-based viewer count from API
+  useEffect(() => {
+    if (!streamId || phase !== 'youtube') return undefined;
+    const poll = () => {
+      streamsAPI
+        .getStream(streamId)
+        .then((res) => {
+          const v = res?.data?.viewers;
+          if (v != null) {
+            const n = Math.max(0, Number(v) || 0);
+            setLiveViewers(n);
+            setStream((prev) => (prev ? { ...prev, viewers: n } : prev));
+          }
+        })
+        .catch(() => {});
+    };
+    poll();
+    const interval = setInterval(poll, 10_000);
     return () => clearInterval(interval);
   }, [streamId, phase]);
 
@@ -464,7 +501,7 @@ export default function EmbedGoLive() {
             }`}
           />
           <p className="absolute bottom-4 left-4 text-xs bg-black/60 px-2 py-1 rounded">
-            Shikuesit: {stream?.viewers ?? 0}
+            Shikuesit: {liveViewers ?? stream?.viewers ?? 0}
           </p>
         </div>
       ) : (

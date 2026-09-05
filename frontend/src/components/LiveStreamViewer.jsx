@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Room, RoomEvent } from 'livekit-client';
 import { livekitAPI, streamsAPI } from '../services/api';
+import { useSocket } from '../contexts/SocketContext';
 import { isMobileWeb } from '../utils/device';
 import {
   buildYoutubeChannelLiveEmbedUrl,
@@ -45,6 +46,7 @@ function waitForRemoteVideo(room, timeoutMs = 12000) {
 
 export default function LiveStreamViewer() {
   const { streamId } = useParams();
+  const { socket } = useSocket() || {};
   const [stream, setStream] = useState(null);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(true);
@@ -140,7 +142,12 @@ export default function LiveStreamViewer() {
           return;
         }
 
-        await streamsAPI.joinStream(streamId);
+        await streamsAPI.joinStream(streamId).then((joinRes) => {
+          const v = joinRes?.data?.viewers;
+          if (v != null && mounted) {
+            setStream((prev) => (prev ? { ...prev, viewers: v } : prev));
+          }
+        });
 
         let liveKitOk = false;
         try {
@@ -189,6 +196,36 @@ export default function LiveStreamViewer() {
       detachRoom();
     };
   }, [streamId]);
+
+  useEffect(() => {
+    if (!socket || !streamId) return undefined;
+    const onViewers = (payload) => {
+      if (!payload || String(payload.id) !== String(streamId)) return;
+      const v = payload.viewers;
+      if (v == null) return;
+      setStream((prev) => (prev ? { ...prev, viewers: Math.max(0, Number(v) || 0) } : prev));
+    };
+    const onUpdated = (payload) => {
+      if (!payload || String(payload.id) !== String(streamId)) return;
+      streamsAPI
+        .getStream(streamId)
+        .then((res) => {
+          const v = res?.data?.viewers;
+          if (v != null) {
+            setStream((prev) => (prev ? { ...prev, viewers: Math.max(0, Number(v) || 0) } : prev));
+          }
+        })
+        .catch(() => {});
+    };
+    socket.emit('subscribe:stream', streamId);
+    socket.on('stream:viewers', onViewers);
+    socket.on('stream:updated', onUpdated);
+    return () => {
+      socket.emit('unsubscribe:stream', streamId);
+      socket.off('stream:viewers', onViewers);
+      socket.off('stream:updated', onUpdated);
+    };
+  }, [socket, streamId]);
 
   const mobileLayout = isMobileWeb();
 

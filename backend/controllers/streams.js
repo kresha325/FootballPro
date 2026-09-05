@@ -513,9 +513,33 @@ exports.heartbeatStream = async (req, res) => {
       return res.status(400).json({ error: 'Stream is not live' });
     }
 
+    const rawViewers = req.body?.viewers;
+    if (rawViewers !== undefined && rawViewers !== null && rawViewers !== '') {
+      const viewers = Math.max(0, Math.floor(Number(rawViewers)));
+      if (Number.isFinite(viewers)) {
+        stream.viewers = viewers;
+      }
+    }
+
+    // Touch updatedAt so isStreamStale does not expire an active LiveKit session
+    stream.set('updatedAt', new Date());
     await stream.save();
 
-    res.json({ ok: true, id: stream.id });
+    try {
+      const io = socketUtil.getIo();
+      if (io) {
+        io.emit('stream:updated', { id: stream.id });
+        io.to('streams').emit('stream:updated', { id: stream.id });
+        io.to(`stream:${stream.id}`).emit('stream:viewers', {
+          id: stream.id,
+          viewers: stream.viewers,
+        });
+      }
+    } catch (_e) {
+      /* ignore */
+    }
+
+    res.json({ ok: true, id: stream.id, viewers: stream.viewers });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -664,7 +688,7 @@ exports.joinStream = async (req, res) => {
       return res.status(403).json({ error: 'Transmetimi premium kërkon abonim' });
     }
 
-    stream.viewers += 1;
+    stream.viewers = (Number(stream.viewers) || 0) + 1;
     await stream.save();
     try {
       const io = socketUtil.getIo();
@@ -674,7 +698,7 @@ exports.joinStream = async (req, res) => {
         io.to(`stream:${stream.id}`).emit('stream:viewers', { id: stream.id, viewers: stream.viewers });
       }
     } catch (e) {}
-    res.json({ message: 'Joined stream' });
+    res.json({ message: 'Joined stream', viewers: stream.viewers });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -686,8 +710,9 @@ exports.leaveStream = async (req, res) => {
     const stream = await Stream.findByPk(id);
     if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
 
-    if (stream.viewers > 0) {
-      stream.viewers -= 1;
+    const current = Number(stream.viewers) || 0;
+    if (current > 0) {
+      stream.viewers = current - 1;
       await stream.save();
       try {
         const io = socketUtil.getIo();
@@ -698,7 +723,7 @@ exports.leaveStream = async (req, res) => {
         }
       } catch (e) {}
     }
-    res.json({ message: 'Left stream' });
+    res.json({ message: 'Left stream', viewers: stream.viewers });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

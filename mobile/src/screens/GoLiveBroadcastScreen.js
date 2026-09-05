@@ -1,13 +1,16 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';
 import { buildQueryString } from '../utils/queryString';
+import { ensureLiveKitNative } from '../livekit/register';
+import NativeGoLiveBroadcaster from '../livekit/NativeGoLiveBroadcaster';
 
 export default function GoLiveBroadcastScreen({ route, navigation }) {
   const { streamId, title = '', description = '', confirmed = false } = route.params || {};
   const { token } = useAuth();
+  const [mode, setMode] = useState(() => (ensureLiveKitNative() ? 'native' : 'web'));
 
   const uri = useMemo(() => {
     if (!WEB_APP_URL || !streamId) return '';
@@ -17,6 +20,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       title: title || 'Live',
       description: description || '',
       ...(confirmed ? { confirmed: '1' } : {}),
+      livekit: '1',
     });
     return `${base}/embed-go-live?${q}`;
   }, [streamId, title, description, confirmed]);
@@ -26,7 +30,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       const desc = event?.nativeEvent?.description || 'load failed';
       Alert.alert(
         'Gabim',
-        `Nuk u ngarkua transmetimi.\n\nURL: ${uri}\n\n${desc}\n\nDev: nis \`cd frontend && npm run dev\` (port 5174). Prod: deploy frontend dhe vendos WEB_APP_URL.`
+        `Nuk u ngarkua transmetimi.\n\nURL: ${uri}\n\n${desc}\n\nKontrollo që xtalenti.com është online.`
       );
     },
     [uri]
@@ -35,10 +39,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
   const onHttpError = useCallback(
     (event) => {
       const status = event?.nativeEvent?.statusCode;
-      Alert.alert(
-        'Gabim HTTP',
-        `Status ${status || '?'}\n${uri}\n\nKontrollo që frontend-i (xtalenti.com) është online.`
-      );
+      Alert.alert('Gabim HTTP', `Status ${status || '?'}\n${uri}`);
     },
     [uri]
   );
@@ -71,13 +72,18 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
     [navigation]
   );
 
-  if (!WEB_APP_URL) {
+  const openWebFallback = useCallback(() => {
+    if (!WEB_APP_URL) {
+      Alert.alert('Go Live', 'WEB_APP_URL mungon — nuk mund të hapet WebView fallback.');
+      return;
+    }
+    setMode('web');
+  }, []);
+
+  if (!streamId) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.title}>Go Live</Text>
-        <Text style={styles.body}>
-          Vendos WEB_APP_URL në app.json (frontend, p.sh. https://xtalenti.com).
-        </Text>
+        <Text style={styles.error}>Mungon stream id.</Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
           <Text style={styles.btnText}>Kthehu</Text>
         </TouchableOpacity>
@@ -85,10 +91,25 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
     );
   }
 
-  if (!streamId) {
+  if (mode === 'native') {
+    return (
+      <NativeGoLiveBroadcaster
+        streamId={streamId}
+        title={title}
+        onNativeUnavailable={openWebFallback}
+        onFatalError={(msg) => Alert.alert('Go Live', msg)}
+        onEnded={() => navigation.goBack()}
+      />
+    );
+  }
+
+  if (!WEB_APP_URL) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.error}>Mungon stream id.</Text>
+        <Text style={styles.title}>Go Live</Text>
+        <Text style={styles.body}>
+          Vendos WEB_APP_URL në app.json (frontend, p.sh. https://xtalenti.com).
+        </Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
           <Text style={styles.btnText}>Kthehu</Text>
         </TouchableOpacity>
@@ -108,6 +129,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       mediaPlaybackRequiresUserAction={false}
       allowsFullscreenVideo
       mixedContentMode="always"
+      originWhitelist={['*']}
       onMessage={onWebMessage}
       onError={onWebError}
       onHttpError={onHttpError}

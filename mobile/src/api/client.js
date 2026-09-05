@@ -133,6 +133,8 @@ export const createGalleryItemRequest = (payload = {}) => {
 export const deleteGalleryItemRequest = (itemId) => api.delete(`/api/gallery/${itemId}`);
 export const createStreamRequest = (payload) => api.post('/api/streams', payload);
 export const startStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/start`);
+export const heartbeatStreamRequest = (streamId, payload = {}) =>
+  api.put(`/api/streams/${streamId}/heartbeat`, payload);
 export const endStreamRequest = (streamId) => api.put(`/api/streams/${streamId}/end`);
 export const streamsRequest = (params = {}) => api.get('/api/streams', { params });
 export const uploadStreamRecordingRequest = ({ video, title, description, streamId }) => {
