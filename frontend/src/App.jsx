@@ -47,7 +47,7 @@ import VideoCallManager from './components/VideoCallManager';
 import VideoCallRoom from './components/VideoCallRoom';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import Splash from './components/Splash';
+import LandingPage from './components/LandingPage';
 import AuthCallback from './components/AuthCallback';
 
 // Hiq importin e applyBackgroundStyle
@@ -155,8 +155,8 @@ function App() {
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
 
-            {/* ROOT - show splash first */}
-            <Route path="/" element={<Splash />} />
+            {/* ROOT - landing page e re, ose feed nëse je i loguar */}
+            <Route path="/" element={user ? <Navigate to="/feed" /> : <LandingPage />} />
 
             </Routes>
           </Suspense>
