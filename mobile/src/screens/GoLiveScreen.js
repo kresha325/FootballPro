@@ -304,7 +304,8 @@ export default function GoLiveScreen({ route, navigation }) {
     >
       <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Streams & Go Live</Text>
       <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>
-        Nis transmetimin me kamerë (LiveKit në web) ose YouTube; ngarko regjistrime video më poshtë.
+        Nis transmetimin me kamerë (LiveKit) ose YouTube; ngarko regjistrime video më poshtë.
+        Shikuesit në app përdorin LiveKit native kur është e disponueshme (EAS Dev Client).
       </Text>
       <Text style={[styles.hint, isDark && styles.textMutedDark]}>
         Kërkon WEB_APP_URL. YouTube Channel ID merret automatikisht nga Settings kur nis LIVE.

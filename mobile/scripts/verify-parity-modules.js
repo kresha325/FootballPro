@@ -8,7 +8,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const checks = [
-  { file: 'src/api/client.js', must: ['startTournamentRequest', 'premiumCheckoutRequest', 'uploadStreamRecordingRequest', 'updateTournamentMatchScoreRequest'] },
+  { file: 'src/api/client.js', must: ['startTournamentRequest', 'premiumCheckoutRequest', 'uploadStreamRecordingRequest', 'updateTournamentMatchScoreRequest', 'createLiveKitTokenRequest', '/api/livekit/token'] },
   { file: 'src/screens/TournamentDetailScreen.js', must: ['onStartTournament', 'onSaveMatchScore', 'Nis turneun'] },
   { file: 'src/components/IncomingCallListener.js', must: ['call:incoming', 'navigateRoot', 'IncomingCall'] },
   { file: 'src/screens/IncomingCallScreen.js', must: ['embed-incoming-call', 'fp_embed_incoming_call'] },
@@ -18,6 +18,8 @@ const checks = [
   { file: 'src/screens/PublicProfileScreen.js', must: ['goLiveBtn', 'onGoLive'] },
   { file: 'src/screens/GoLiveScreen.js', must: ['uploadStreamRecordingRequest', 'Ngarko regjistrim', 'GoLiveBroadcast'] },
   { file: 'src/screens/GoLiveBroadcastScreen.js', must: ['embed-go-live', 'react-native-webview'] },
+  { file: 'src/screens/LiveViewerScreen.js', must: ['NativeLiveViewer', 'ensureLiveKitNative'] },
+  { file: 'src/livekit/NativeLiveViewer.js', must: ['LiveKitRoom', 'stream-', 'canPublish: false'] },
   { file: 'src/navigation/AppNavigator.js', must: ['IncomingCall', 'GoLive', 'IncomingCallListener'] },
   { file: 'App.js', must: ['XPNotificationManager'] },
 ];

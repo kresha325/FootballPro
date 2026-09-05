@@ -7,6 +7,7 @@ const { Op, QueryTypes } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { requireConversationMember } = require('../utils/conversationAcl');
 
 /** Sender + Profile për avatar në chat */
 const SENDER_WITH_PROFILE = {
@@ -313,15 +314,12 @@ exports.getMessages = async (req, res) => {
     const offset = (page - 1) * limit;
 
     // Verify user is member of conversation
-    const membership = await ConversationMember.findOne({
-      where: {
-        conversationId,
-        userId: req.user.id,
-      },
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId,
+      userId: req.user.id,
     });
-
-    if (!membership) {
-      return res.status(403).json({ msg: 'Not authorized' });
+    if (!access.ok) {
+      return res.status(access.status).json({ msg: access.msg });
     }
 
     const messages = await Message.findAndCountAll({
@@ -369,15 +367,12 @@ exports.sendMessage = async (req, res) => {
     const { content, replyToId } = req.body;
 
     // Verify user is member of conversation
-    const membership = await ConversationMember.findOne({
-      where: {
-        conversationId,
-        userId: req.user.id,
-      },
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId,
+      userId: req.user.id,
     });
-
-    if (!membership) {
-      return res.status(403).json({ msg: 'Not authorized' });
+    if (!access.ok) {
+      return res.status(access.status).json({ msg: access.msg });
     }
 
     let messageData = {

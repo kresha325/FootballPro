@@ -149,6 +149,7 @@ export const uploadStreamRecordingRequest = ({ video, title, description, stream
 export const getStreamRequest = (streamId) => api.get(`/api/streams/${streamId}`);
 export const joinStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/join`);
 export const leaveStreamRequest = (streamId) => api.post(`/api/streams/${streamId}/leave`);
+export const createLiveKitTokenRequest = (payload) => api.post('/api/livekit/token', payload);
 export const startAudioCallRequest = (receiverId) => api.post('/api/video-calls/start', { receiverId });
 export const createVideoCallRequest = (participantId) => api.post('/api/video-calls/create', { participantId });
 

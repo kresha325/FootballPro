@@ -1,6 +1,7 @@
 const sequelize = require('../config/database');
 const { User, Product, Order, Payment, JonCoinTransaction } = require('../models');
 const { notifySellersOfMarketplaceOrder } = require('../services/marketplaceOrderChat');
+const { normalizeOrderCart } = require('../utils/orderCart');
 
 /** Balancë llogaritëse vetëm nga transaksionet e përfunduara (përdoret për blerje marketplace). */
 async function getCompletedJonCoinBalance(userId, { transaction } = {}) {
@@ -25,17 +26,17 @@ exports.getOrders = async (req, res) => {
     const orders = await Order.findAll({ where: { userId: req.user.id } });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
 exports.getOrder = async (req, res) => {
   try {
     const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
-    if (!order) return res.status(404).json({ msg: 'Order not found' });
+    if (!order) return res.status(404).json({ msg: 'Porosia nuk u gjet' });
     res.json(order);
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -48,26 +49,15 @@ exports.createOrder = async (req, res) => {
   const buyerId = req.user?.id;
 
   if (buyerId == null) {
-    return res.status(401).json({ msg: 'Not authenticated' });
+    return res.status(401).json({ msg: 'Nuk jeni i autentikuar' });
   }
 
-  if (!Array.isArray(products) || products.length === 0) {
-    return res.status(400).json({ msg: 'Cart is empty' });
+  const cart = normalizeOrderCart(products);
+  if (!cart.ok) {
+    return res.status(cart.status).json({ msg: cart.msg });
   }
 
-  const quantityByProductId = {};
-  for (const item of products) {
-    const pid = Number(item.productId);
-    const q = Math.max(1, parseInt(item.quantity, 10) || 1);
-    if (!Number.isFinite(pid) || pid <= 0) {
-      return res.status(400).json({ msg: 'Invalid product in cart' });
-    }
-    quantityByProductId[pid] = (quantityByProductId[pid] || 0) + q;
-  }
-
-  const sortedProductIds = Object.keys(quantityByProductId)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const { quantityByProductId, sortedProductIds } = cart;
 
   try {
     const { order: result, lockedProducts: lockedList } = await sequelize.transaction(async (t) => {

@@ -9,6 +9,7 @@
     "migrate": "npx sequelize-cli db:migrate",
     "test": "node --test tests/*.test.js",
     "test:phase1": "node --test tests/phase1-security.test.js",
+    "test:phase3": "node --test tests/phase3-smoke.test.js",
     "smoke:api": "node scripts/smoke-api.js",
     "smoke:api:prod": "API_URL=https://footballpro.onrender.com node scripts/smoke-api.js",
     "smoke:video-calls": "node scripts/smoke-video-calls.js",

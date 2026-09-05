@@ -1,8 +1,9 @@
 import { registerRootComponent } from 'expo';
+import { ensureLiveKitNative } from './src/livekit/register';
 
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
+// Best-effort: registers WebRTC globals when running in a Dev Client / EAS build.
+ensureLiveKitNative();
+
 registerRootComponent(App);

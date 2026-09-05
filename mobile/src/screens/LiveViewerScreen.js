@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import { WebView } from 'react-native-webview';
@@ -6,12 +6,14 @@ import { absoluteBackendUrl, WEB_APP_URL } from '../config/constants';
 import { extractErrorMessage, getStreamRequest, joinStreamRequest, leaveStreamRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { buildYoutubeChannelLiveWatchUrl } from '../utils/youtubeLiveEmbed';
+import NativeLiveViewer from '../livekit/NativeLiveViewer';
+import { ensureLiveKitNative } from '../livekit/register';
 
 export default function LiveViewerScreen({ route, navigation }) {
   const streamId = route?.params?.streamId;
   const fromBroadcast = !!route?.params?.fromBroadcast;
   const { token } = useAuth();
-  const [mode, setMode] = useState('loading'); // loading | web | recording | error
+  const [mode, setMode] = useState('loading'); // loading | native | web | recording | error
   const [webUri, setWebUri] = useState('');
   const [recordingUri, setRecordingUri] = useState(null);
   const [error, setError] = useState('');
@@ -23,11 +25,22 @@ export default function LiveViewerScreen({ route, navigation }) {
     return `(function(){try{localStorage.setItem('token',${t});}catch(e){}})();true;`;
   }, [token]);
 
+  const openWebFallback = useCallback(() => {
+    if (!WEB_APP_URL) {
+      setError('WEB_APP_URL nuk është konfiguruar në app.');
+      setMode('error');
+      return;
+    }
+    const base = WEB_APP_URL.replace(/\/$/, '');
+    setWebUri(`${base}/live/${streamId}`);
+    setMode('web');
+  }, [streamId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!streamId) {
-        setError('Missing stream id.');
+        setError('Mungon ID e stream-it.');
         setMode('error');
         return;
       }
@@ -63,18 +76,14 @@ export default function LiveViewerScreen({ route, navigation }) {
           /* viewer count best-effort */
         }
 
-        if (!WEB_APP_URL) {
-          setError('WEB_APP_URL nuk është konfiguruar në app.');
-          setMode('error');
-          return;
+        if (ensureLiveKitNative()) {
+          setMode('native');
+        } else {
+          openWebFallback();
         }
-
-        const base = WEB_APP_URL.replace(/\/$/, '');
-        setWebUri(`${base}/live/${streamId}`);
-        setMode('web');
       } catch (err) {
         if (!cancelled) {
-          setError(extractErrorMessage(err, 'Could not load stream'));
+          setError(extractErrorMessage(err, 'Nuk u ngarkua stream-i'));
           setMode('error');
         }
       }
@@ -86,12 +95,12 @@ export default function LiveViewerScreen({ route, navigation }) {
         leaveStreamRequest(streamId).catch(() => {});
       }
     };
-  }, [streamId]);
+  }, [streamId, openWebFallback]);
 
   if (!streamId) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Missing stream id.</Text>
+        <Text style={styles.errorText}>Mungon ID e stream-it.</Text>
       </View>
     );
   }
@@ -130,24 +139,65 @@ export default function LiveViewerScreen({ route, navigation }) {
     );
   }
 
+  const chrome = (
+    <>
+      {fromBroadcast ? (
+        <View style={styles.broadcastBanner}>
+          <Text style={styles.broadcastBannerText}>
+            Shikim si shikues — transmetimi vazhdon. Kthehu mbrapa për të vazhduar kamerën.
+          </Text>
+        </View>
+      ) : null}
+      {youtubeChannelId ? (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText} numberOfLines={3}>
+            Nëse videoja YouTube është bosh, streameri duhet të nisë LIVE edhe në YouTube Studio për kanalin{' '}
+            {youtubeChannelId}.
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
+
+  if (mode === 'native') {
+    return (
+      <View style={styles.container}>
+        {chrome}
+        {streamTitle ? (
+          <View style={styles.titleBar}>
+            <Text style={styles.titleText} numberOfLines={1}>
+              {streamTitle}
+            </Text>
+            <Text style={styles.nativeBadge}>LiveKit</Text>
+          </View>
+        ) : null}
+        <NativeLiveViewer
+          streamId={streamId}
+          onNativeUnavailable={openWebFallback}
+          onFatalError={(msg) => {
+            setError(msg);
+            openWebFallback();
+          }}
+        />
+        {youtubeChannelId ? (
+          <TouchableOpacity
+            style={styles.ytLink}
+            onPress={() => {
+              const url = buildYoutubeChannelLiveWatchUrl(youtubeChannelId);
+              if (url) Linking.openURL(url).catch(() => {});
+            }}
+          >
+            <Text style={styles.ytLinkText}>Hap në YouTube</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  }
+
   if (mode === 'web' && webUri) {
     return (
       <View style={styles.container}>
-        {fromBroadcast ? (
-          <View style={styles.broadcastBanner}>
-            <Text style={styles.broadcastBannerText}>
-              Shikim si shikues — transmetimi vazhdon. Kthehu mbrapa për të vazhduar kamerën.
-            </Text>
-          </View>
-        ) : null}
-        {youtubeChannelId ? (
-          <View style={styles.banner}>
-            <Text style={styles.bannerText} numberOfLines={3}>
-              Nëse videoja YouTube është bosh, streameri duhet të nisë LIVE edhe në YouTube Studio për kanalin{' '}
-              {youtubeChannelId}.
-            </Text>
-          </View>
-        ) : null}
+        {chrome}
         <WebView
           style={styles.webview}
           source={{ uri: webUri }}
@@ -187,7 +237,7 @@ export default function LiveViewerScreen({ route, navigation }) {
 
   return (
     <View style={styles.centered}>
-      <Text style={styles.errorText}>Could not open player.</Text>
+      <Text style={styles.errorText}>Nuk u hap player-i.</Text>
     </View>
   );
 }
@@ -216,6 +266,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#115e59',
   },
   broadcastBannerText: { color: '#ecfdf5', fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  titleBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#0f172a',
+  },
+  titleText: { color: '#e2e8f0', fontWeight: '600', flex: 1, marginRight: 8 },
+  nativeBadge: {
+    color: '#5eead4',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
   ytLink: {
     padding: 10,
     alignItems: 'center',

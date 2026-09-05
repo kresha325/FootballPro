@@ -67,24 +67,49 @@ const Scouting = () => {
       const res = await aiAPI.scoutSummary(playerId);
       setAiSummary({ playerId, text: res.data.summary, name: res.data.playerName });
     } catch (err) {
-      setAiError(err?.response?.data?.error || 'Përmbledhja AI dështoi');
+      setAiError(err?.response?.data?.msg || err?.response?.data?.error || 'Përmbledhja AI dështoi');
     } finally {
       setAiLoadingId(null);
     }
   };
 
   if (!user || user.role !== 'scout' || !user.premium) {
-    return <div className="p-4">Qasja u refuzua. Kjo është veçori premium për scout-at.</div>;
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <p className="text-lg font-semibold text-slate-800 dark:text-slate-100">Qasja u refuzua</p>
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
+          Scouting është veçori premium për llogaritë scout.
+        </p>
+      </div>
+    );
   }
 
-  if (loading) return <div className="p-4">Duke ngarkuar rekomandimet...</div>;
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center text-slate-500">
+        Duke ngarkuar rekomandimet…
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Rekomandime Scouting</h2>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Rekomandime Scouting
+        </h1>
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
+          Lojtarë të filtruar sipas pozitës dhe pikëve — hap profilin ose kërko përmbledhje AI.
+        </p>
+      </header>
 
-      <div className="mb-4 flex gap-4">
-        <select name="position" value={filters.position} onChange={handleFilterChange} className="p-2 border rounded">
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <select
+          name="position"
+          value={filters.position}
+          onChange={handleFilterChange}
+          className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+        >
           <option value="">Të gjitha pozicionet</option>
           <option value="Forward">Forward</option>
           <option value="Midfielder">Midfielder</option>
@@ -97,44 +122,69 @@ const Scouting = () => {
           value={filters.minScore}
           onChange={handleFilterChange}
           placeholder="Pikë minimale"
-          className="p-2 border rounded"
+          className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white sm:w-40"
         />
       </div>
 
-      <div className="space-y-4">
-        {aiError ? <p className="text-red-600 text-sm mb-2">{aiError}</p> : null}
-        {aiSummary ? (
-          <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded">
-            <p className="font-semibold text-teal-900 mb-1">Përmbledhje AI — {aiSummary.name}</p>
-            <p className="text-sm whitespace-pre-wrap">{aiSummary.text}</p>
-            <button type="button" className="text-xs mt-2 text-teal-700 underline" onClick={() => setAiSummary(null)}>
-              Mbyll
-            </button>
-          </div>
-        ) : null}
-        {filteredRecommendations.map(rec => (
-          <div key={rec.playerId} className="border p-4 rounded shadow">
-            <h3 className="text-lg font-semibold">
-              <Link to={`/profile/${rec.playerId}`} className="text-teal-700 hover:underline">
-                {rec.playerName}
-              </Link>
-            </h3>
-            <p>Pozita: {rec.position}</p>
-            <p>Pikët: {Number(rec.score || 0).toFixed(2)}</p>
-            <p>Arsyet: {Array.isArray(rec.reasons) ? rec.reasons.join(', ') : '-'}</p>
-            {canUseAi ? (
-              <button
-                type="button"
-                disabled={aiLoadingId === rec.playerId}
-                onClick={() => fetchAiSummary(rec.playerId)}
-                className="mt-2 text-sm px-3 py-1 border border-teal-600 text-teal-700 rounded hover:bg-teal-50 disabled:opacity-50"
-              >
-                {aiLoadingId === rec.playerId ? 'Duke gjeneruar…' : 'Përmbledhje AI'}
-              </button>
-            ) : null}
-          </div>
-        ))}
-      </div>
+      {aiError ? <p className="text-red-600 text-sm mb-4">{aiError}</p> : null}
+      {aiSummary ? (
+        <div className="mb-6 p-4 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800">
+          <p className="font-semibold text-teal-900 dark:text-teal-100 mb-1">
+            Përmbledhje AI — {aiSummary.name}
+          </p>
+          <p className="text-sm whitespace-pre-wrap text-teal-900/90 dark:text-teal-50/90">{aiSummary.text}</p>
+          <button
+            type="button"
+            className="text-xs mt-3 text-teal-700 dark:text-teal-300 underline"
+            onClick={() => setAiSummary(null)}
+          >
+            Mbyll
+          </button>
+        </div>
+      ) : null}
+
+      {filteredRecommendations.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 px-6 py-12 text-center text-slate-500">
+          Nuk ka rekomandime për këto filtra.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {filteredRecommendations.map((rec) => (
+            <li
+              key={rec.playerId}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-4 py-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    <Link to={`/profile/${rec.playerId}`} className="text-teal-700 dark:text-teal-300 hover:underline">
+                      {rec.playerName}
+                    </Link>
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {rec.position || 'Pozitë e panjohur'} · {Number(rec.score || 0).toFixed(2)} pikë
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    {Array.isArray(rec.reasons) && rec.reasons.length
+                      ? rec.reasons.join(' · ')
+                      : 'Nuk ka arsye të listuara'}
+                  </p>
+                </div>
+                {canUseAi ? (
+                  <button
+                    type="button"
+                    disabled={aiLoadingId === rec.playerId}
+                    onClick={() => fetchAiSummary(rec.playerId)}
+                    className="shrink-0 text-sm px-3 py-1.5 rounded-lg border border-teal-600 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50 disabled:opacity-50"
+                  >
+                    {aiLoadingId === rec.playerId ? 'Duke gjeneruar…' : 'Përmbledhje AI'}
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

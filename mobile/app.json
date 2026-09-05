@@ -16,17 +16,35 @@
       "android",
       "web"
     ],
+    "plugins": [
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "X Talenti ka nevojë për kamerën për live dhe video thirrje.",
+          "microphonePermission": "X Talenti ka nevojë për mikrofonin për live dhe thirrje."
+        }
+      ]
+    ],
     "android": {
       "package": "com.kresha325.footballpromobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET"
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.kresha325.footballpromobile",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "X Talenti ka nevojë për kamerën për live dhe video thirrje.",
+        "NSMicrophoneUsageDescription": "X Talenti ka nevojë për mikrofonin për live dhe thirrje."
       }
     },
     "web": {
