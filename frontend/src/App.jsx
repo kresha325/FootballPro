@@ -35,7 +35,6 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const ClubRoster = lazy(() => import('./components/ClubRoster'));
 const Videos = lazy(() => import('./components/Videos'));
 const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
-const YouTubeLiveTest = lazy(() => import('./components/YouTubeLiveTest'));
 const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
 const StreamsPage = lazy(() => import('./components/StreamsPage'));
 const EmbedOutboundCall = lazy(() => import('./components/EmbedOutboundCall'));
@@ -44,11 +43,11 @@ const EmbedGoLive = lazy(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
-import VideoCallRoom from './components/VideoCallRoom';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import LandingPage from './components/LandingPage';
 import AuthCallback from './components/AuthCallback';
+import { APP_BRAND_NAME } from './config/branding';
 
 // Hiq importin e applyBackgroundStyle
 function App() {
@@ -58,7 +57,7 @@ function App() {
     location.pathname.startsWith('/embed-') || /^\/live\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
-    document.title = 'X Talenti';
+    document.title = APP_BRAND_NAME;
   }, []);
 
   if (loading) {
@@ -149,7 +148,6 @@ function App() {
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
-            <Route path="/youtube-test" element={user ? <YouTubeLiveTest /> : <Navigate to="/login" />} />
             <Route path="/live/:streamId" element={user ? <LiveStreamViewer /> : <Navigate to="/login" />} />
 
             {/* WALLET PAGE */}

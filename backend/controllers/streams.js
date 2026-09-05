@@ -584,6 +584,7 @@ exports.endStream = async (req, res) => {
   }
 };
 
+/** @deprecated Internal callback for legacy mediasoup-server. Prefer LiveKit flows. */
 exports.updateViewersInternal = async (req, res) => {
   try {
     if (!isMediasoupInternalAuthorized(req)) {
@@ -622,6 +623,7 @@ exports.updateViewersInternal = async (req, res) => {
   }
 };
 
+/** @deprecated Internal callback for legacy mediasoup-server. Prefer LiveKit flows. */
 exports.endStreamInternal = async (req, res) => {
   try {
     if (!isMediasoupInternalAuthorized(req)) {

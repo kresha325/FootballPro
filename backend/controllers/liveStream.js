@@ -1,6 +1,9 @@
 const { LiveStream, User, Profile } = require('../models');
 const { Op } = require('sequelize');
 
+const serverError = (res, err) =>
+  res.status(500).json({ msg: 'Gabim në server', error: err?.message });
+
 // Start a live stream
 exports.startLiveStream = async (req, res) => {
   try {
@@ -20,7 +23,7 @@ exports.startLiveStream = async (req, res) => {
     });
     res.json({ liveStream });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -30,14 +33,14 @@ exports.endLiveStream = async (req, res) => {
     const { streamId } = req.params;
     const liveStream = await LiveStream.findByPk(streamId);
     if (!liveStream || liveStream.status !== 'live') {
-      return res.status(404).json({ error: 'Live stream not found or already ended' });
+      return res.status(404).json({ msg: 'Live stream nuk u gjet ose është mbyllur tashmë' });
     }
     liveStream.status = 'ended';
     liveStream.endedAt = new Date();
     await liveStream.save();
-    res.json({ msg: 'Live stream ended', liveStream });
+    res.json({ msg: 'Live stream u mbyll', liveStream });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -54,7 +57,7 @@ exports.getActiveLiveStreams = async (req, res) => {
     });
     res.json({ streams });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -65,10 +68,10 @@ exports.getLiveStreamDetails = async (req, res) => {
     const stream = await LiveStream.findByPk(streamId, {
       include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'profilePhoto'] }],
     });
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ msg: 'Stream-i nuk u gjet' });
     res.json({ stream });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -78,12 +81,12 @@ exports.updateViewersCount = async (req, res) => {
     const { streamId } = req.params;
     const { viewersCount } = req.body;
     const stream = await LiveStream.findByPk(streamId);
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ msg: 'Stream-i nuk u gjet' });
     stream.viewersCount = viewersCount;
     await stream.save();
     res.json({ stream });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -94,10 +97,10 @@ exports.saveLiveVideo = async (req, res) => {
     const { videoUrl, thumbnailUrl, duration } = req.body;
     const liveStream = await LiveStream.findByPk(streamId);
     if (!liveStream || liveStream.status !== 'ended') {
-      return res.status(404).json({ error: 'Live stream not found or not ended' });
+      return res.status(404).json({ msg: 'Live stream nuk u gjet ose nuk është mbyllur' });
     }
     const profile = await Profile.findOne({ where: { userId: liveStream.userId } });
-    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+    if (!profile) return res.status(404).json({ msg: 'Profili nuk u gjet' });
     const liveVideos = Array.isArray(profile.liveVideos) ? profile.liveVideos : [];
     liveVideos.push({
       url: videoUrl,
@@ -108,8 +111,8 @@ exports.saveLiveVideo = async (req, res) => {
     });
     profile.liveVideos = liveVideos;
     await profile.save();
-    res.json({ msg: 'Live video saved', liveVideos });
+    res.json({ msg: 'Video live u ruajt', liveVideos });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };

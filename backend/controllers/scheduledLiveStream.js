@@ -6,16 +6,19 @@ exports.scheduleStream = async (req, res) => {
     const stream = await ScheduledLiveStream.create({ userId, title, description, scheduledAt });
     res.status(201).json(stream);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to schedule stream' });
+    res.status(500).json({ msg: 'Planifikimi i stream-it dështoi' });
   }
 };
 
 exports.getScheduledStreams = async (req, res) => {
   try {
-    const streams = await ScheduledLiveStream.findAll({ where: { status: 'scheduled' }, order: [['scheduledAt', 'ASC']] });
+    const streams = await ScheduledLiveStream.findAll({
+      where: { status: 'scheduled' },
+      order: [['scheduledAt', 'ASC']],
+    });
     res.status(200).json(streams);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch scheduled streams' });
+    res.status(500).json({ msg: 'Ngarkimi i stream-eve të planifikuara dështoi' });
   }
 };
 
@@ -24,11 +27,11 @@ exports.updateStreamStatus = async (req, res) => {
     const { streamId } = req.params;
     const { status } = req.body;
     const stream = await ScheduledLiveStream.findByPk(streamId);
-    if (!stream) return res.status(404).json({ error: 'Stream not found' });
+    if (!stream) return res.status(404).json({ msg: 'Stream-i nuk u gjet' });
     stream.status = status;
     await stream.save();
     res.status(200).json(stream);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update stream status' });
+    res.status(500).json({ msg: 'Përditësimi i statusit të stream-it dështoi' });
   }
 };

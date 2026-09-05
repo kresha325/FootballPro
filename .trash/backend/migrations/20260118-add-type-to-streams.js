@@ -1,1 +1,0 @@
-Moved for stream/livestream code removal. Original: backend/migrations/20260118-add-type-to-streams.js

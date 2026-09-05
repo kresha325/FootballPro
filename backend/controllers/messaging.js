@@ -151,7 +151,7 @@ exports.getConversations = async (req, res) => {
   } catch (err) {
     console.error('❌ Get conversations error:', err);
     console.error('❌ Error stack:', err.stack);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -254,7 +254,7 @@ exports.getOrCreateConversation = async (req, res) => {
   } catch (err) {
     console.error('Get or create conversation error:', err);
     console.error(err.stack);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -301,7 +301,7 @@ exports.getConversationById = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Get conversation by id error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -357,7 +357,7 @@ exports.getMessages = async (req, res) => {
     });
   } catch (err) {
     console.error('Get messages error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -470,7 +470,7 @@ exports.sendMessage = async (req, res) => {
   } catch (err) {
     console.error('❌ Send message error:', err);
     console.error('❌ Error stack:', err.stack);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
 
@@ -509,7 +509,7 @@ exports.markAsRead = async (req, res) => {
     res.json({ msg: 'Marked as read', readAt: readAt.toISOString() });
   } catch (err) {
     console.error('Mark as read error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -562,7 +562,7 @@ exports.createGroup = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Create group error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -609,7 +609,7 @@ exports.editMessage = async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('Edit message error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -648,6 +648,6 @@ exports.deleteMessage = async (req, res) => {
     res.json({ msg: 'Message deleted' });
   } catch (err) {
     console.error('Delete message error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };

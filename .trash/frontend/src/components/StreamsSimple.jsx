@@ -1,1 +1,0 @@
-Moved for stream/livestream code removal. Original: frontend/src/components/StreamsSimple.jsx

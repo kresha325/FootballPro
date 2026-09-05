@@ -45,7 +45,7 @@ const maybeMeLimiter = (req, res, next) => {
 
 /**
  * ============================
- * VERIFY JWT TOKEN (for mediasoup-server)
+ * VERIFY JWT TOKEN (legacy mediasoup-server; LiveKit is primary)
  * GET /api/auth/verify
  * ============================
  */

@@ -21,7 +21,6 @@
     "i18next": "^25.7.3",
     "i18next-http-backend": "^3.0.2",
     "livekit-client": "^2.18.1",
-    "mediasoup-client": "^3.7.17",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-easy-crop": "^5.5.6",

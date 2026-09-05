@@ -1,7 +1,7 @@
 {
   "name": "footballpro-mediasoup-server",
   "version": "1.0.0",
-  "description": "MediaSoup server for FootballPro live streaming",
+  "description": "DEPRECATED — legacy MediaSoup SFU. Primary stack is LiveKit. See DEPRECATED.md.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1,4 +1,8 @@
-// MediaSoup server basic structure for FootballPro
+/**
+ * DEPRECATED — MediaSoup SFU (legacy).
+ * Primary live/call stack is LiveKit. See DEPRECATED.md.
+ * Kept for rollback reference only; do not deploy for new environments.
+ */
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');

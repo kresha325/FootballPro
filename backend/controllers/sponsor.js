@@ -2,6 +2,9 @@ const db = require('../models');
 const Sponsor = db.Sponsor;
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 
+const serverError = (res, err) =>
+  res.status(500).json({ msg: 'Gabim në server', error: err?.message });
+
 // GET all sponsors (public)
 exports.getAllSponsors = async (req, res) => {
   try {
@@ -17,9 +20,10 @@ exports.getAllSponsors = async (req, res) => {
     });
     res.json(normalized);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
+
 // GET all sponsors for a user
 exports.getSponsorsByUser = async (req, res) => {
   try {
@@ -37,7 +41,7 @@ exports.getSponsorsByUser = async (req, res) => {
     });
     res.json(normalized);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -45,12 +49,11 @@ exports.getSponsorsByUser = async (req, res) => {
 exports.createSponsor = async (req, res) => {
   try {
     const { userId, name, link, startDate, endDate, image } = req.body;
-    // image tani është URL cloudinary nëse është ngarkuar
     const sponsor = await Sponsor.create({ userId, name, link, image, startDate, endDate });
     res.status(201).json(sponsor);
   } catch (err) {
     console.error('SPONSOR CREATE ERROR:', err);
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -60,11 +63,11 @@ exports.updateSponsor = async (req, res) => {
     const { id } = req.params;
     const { name, link, image, startDate, endDate } = req.body;
     const sponsor = await Sponsor.findByPk(id);
-    if (!sponsor) return res.status(404).json({ error: 'Sponsor not found' });
+    if (!sponsor) return res.status(404).json({ msg: 'Sponsori nuk u gjet' });
     await sponsor.update({ name, link, image, startDate, endDate });
     res.json(sponsor);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
 
@@ -73,10 +76,10 @@ exports.deleteSponsor = async (req, res) => {
   try {
     const { id } = req.params;
     const sponsor = await Sponsor.findByPk(id);
-    if (!sponsor) return res.status(404).json({ error: 'Sponsor not found' });
+    if (!sponsor) return res.status(404).json({ msg: 'Sponsori nuk u gjet' });
     await sponsor.destroy();
-    res.json({ message: 'Sponsor deleted' });
+    res.json({ msg: 'Sponsori u fshi' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err);
   }
 };
