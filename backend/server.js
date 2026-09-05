@@ -576,6 +576,7 @@ io.on('connection', (socket) => {
             callerName,
             offer,
             callId: usedCallId,
+            audioOnly: !!(data && data.audioOnly),
           });
         } else {
           logSocketEvent(socket, 'call:offer-failed', { from, to, callId: usedCallId, reason: 'User not connected' });

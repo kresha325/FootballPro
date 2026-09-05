@@ -152,6 +152,8 @@ export const leaveStreamRequest = (streamId) => api.post(`/api/streams/${streamI
 export const createLiveKitTokenRequest = (payload) => api.post('/api/livekit/token', payload);
 export const startAudioCallRequest = (receiverId) => api.post('/api/video-calls/start', { receiverId });
 export const createVideoCallRequest = (participantId) => api.post('/api/video-calls/create', { participantId });
+export const startVideoCallRequest = (receiverId) => api.post('/api/video-calls/start', { receiverId });
+export const endVideoCallRequest = (callId) => api.put(`/api/video-calls/${callId}/end`);
 
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
 export const conversationDetailRequest = (conversationId) =>

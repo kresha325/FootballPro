@@ -727,6 +727,7 @@ export default function VideoCallSimple({
         callerName: `${user.firstName} ${user.lastName}`,
         offer: { type: 'livekit-invite' },
         callId: createdCallId,
+        audioOnly: !!audioOnly,
       });
 
       setCallStatus('ringing');
