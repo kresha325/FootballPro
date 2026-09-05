@@ -1,9 +1,11 @@
+import 'fast-text-encoding';
 import { registerRootComponent } from 'expo';
 import { ensureLiveKitNative } from './src/livekit/register';
 
-import App from './App';
-
-// Best-effort: registers WebRTC globals when running in a Dev Client / EAS build.
+// Must run before App (and livekit-client) loads — Hermes has no TextEncoder.
 ensureLiveKitNative();
+
+// eslint-disable-next-line global-require
+const App = require('./App').default;
 
 registerRootComponent(App);

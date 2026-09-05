@@ -6,13 +6,13 @@ const { stripeLiveReady } = require('../config/payments');
 
 const PLANS = {
   monthly: {
-    name: 'X Talenti Premium — Monthly',
+    name: 'XTalenti Premium — Monthly',
     amountCents: 999,
     days: 30,
     label: 'Monthly',
   },
   yearly: {
-    name: 'X Talenti Premium — Yearly',
+    name: 'XTalenti Premium — Yearly',
     amountCents: 9999,
     days: 365,
     label: 'Yearly',
@@ -24,7 +24,7 @@ function stripeConfigured() {
 }
 
 function frontendBase() {
-  return (process.env.FRONTEND_URL || 'https://footballpro.al').replace(/\/$/, '');
+  return (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
 }
 
 async function activatePremiumForUser(userId, plan, sessionId = null) {

@@ -99,7 +99,11 @@ export default function MoreScreen({ navigation }) {
       <Text style={[styles.sectionLabel, { marginTop: 8 }]}>Module</Text>
       <MenuButton title="Wallet" subtitle="JonCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
       {canUseInsights ? (
-        <MenuButton title="Insights" subtitle="Analytics and gamification" onPress={() => navigation.navigate('Insights')} />
+        <MenuButton
+          title="Insights"
+          subtitle="Analitika e profilit, XP dhe arritje"
+          onPress={() => navigation.navigate('Insights')}
+        />
       ) : null}
       <MenuButton title="Tournaments" subtitle="Trending and join flow" onPress={() => navigation.navigate('Tournaments')} />
       <MenuButton title="Videos" subtitle="Trending uploads and likes" onPress={() => navigation.navigate('Videos')} />

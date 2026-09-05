@@ -280,7 +280,7 @@ export default function ConversationScreen({ route, navigation }) {
       if (!WEB_APP_URL) {
         Alert.alert(
           'Thirrje',
-          'Konfiguro WEB_APP_URL në app.json (https://footballpro-1.onrender.com) për thirrje.'
+          'Konfiguro WEB_APP_URL në app.json (https://xtalenti.com) për thirrje.'
         );
         return;
       }

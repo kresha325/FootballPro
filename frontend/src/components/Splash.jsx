@@ -15,7 +15,7 @@ export default function Splash() {
       <div className="max-w-md w-full text-center">
         <img
           src="/splash-logo.jpeg"
-          alt="X Talenti"
+          alt="XTalenti"
           className="mx-auto w-64 h-64 md:w-80 md:h-80 object-contain mb-6"
         />
 

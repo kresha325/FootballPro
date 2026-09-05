@@ -457,14 +457,14 @@ const Analytics = () => {
                 <h3 className="text-lg font-semibold mb-2">Post i plotë</h3>
                 {selectedPost.imageUrl && !selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedPost.imageUrl}`}
+                    src={getFullUrl(selectedPost.imageUrl)}
                     alt="Post"
                     className="w-full h-auto object-cover rounded mb-4"
                   />
                 )}
                 {(selectedPost.videoUrl || (selectedPost.imageUrl && selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
                   <video
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${selectedPost.videoUrl || selectedPost.imageUrl}`}
+                    src={getFullUrl(selectedPost.videoUrl || selectedPost.imageUrl)}
                     controls
                     className="w-full h-auto object-cover rounded mb-4"
                   />

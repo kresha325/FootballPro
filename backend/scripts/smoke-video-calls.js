@@ -16,7 +16,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 const base = (process.env.API_URL || 'http://localhost:10000').replace(/\/$/, '');
-const frontend = (process.env.FRONTEND_URL || 'https://footballpro-1.onrender.com').replace(/\/$/, '');
+const frontend = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
 
 let failed = 0;
 let passed = 0;

@@ -4,6 +4,7 @@ import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import FeedScreen from '../screens/FeedScreen';
@@ -60,9 +61,15 @@ const MoreStack = createNativeStackNavigator();
 const MarketplaceStack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ['footballpro://', 'https://footballpro-1.onrender.com', 'https://footballpro.al', 'https://www.footballpro.al'],
+  prefixes: [
+    'footballpro://',
+    'xtalenti://',
+    'https://xtalenti.com',
+    'https://www.xtalenti.com',
+  ],
   config: {
     screens: {
+      Landing: '',
       ResetPassword: 'reset-password/:token',
       Login: 'login',
     },
@@ -276,7 +283,7 @@ function MoreNavigator() {
     >
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen
         name="TournamentDetail"
@@ -409,6 +416,7 @@ export default function AppNavigator() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!token ? (
             <>
+              <Stack.Screen name="Landing" component={LandingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen
                 name="ResetPassword"

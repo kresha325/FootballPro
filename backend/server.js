@@ -123,7 +123,9 @@ app.use(mongoSanitize());
 // responses consistently return a valid Access-Control-Allow-Origin. In
 // development we allow requests from any origin; in production only configured
 // origins are accepted.
-const allowedOrigin = process.env.CORS_ORIGIN || 'https://footballpro-1.onrender.com'; // set in .env for prod
+const allowedOrigin =
+  process.env.CORS_ORIGIN ||
+  'https://xtalenti.com,https://www.xtalenti.com'; // GitHub Pages custom domain; set CORS_ORIGIN on Render
 const allowedOrigins = allowedOrigin === '*'
   ? ['*']
   : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
@@ -199,7 +201,7 @@ app.use('/uploads', (req, res) => {
     'base64'
   );
   res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Access-Control-Allow-Origin', 'https://footballpro-1.onrender.com');
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] === '*' ? '*' : (allowedOrigins[0] || 'https://xtalenti.com'));
   res.status(200).send(placeholder);
 });
 

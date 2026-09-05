@@ -33,6 +33,7 @@ import {
 } from '../api/client';
 import FeedAdSlot from '../components/FeedAdSlot';
 import ListSearchBar from '../components/ListSearchBar';
+import { absoluteBackendUrl } from '../config/constants';
 import { filterBySearch } from '../utils/listSearch';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import PostSponsorStrip from '../components/PostSponsorStrip';
@@ -113,8 +114,9 @@ function PostCard({
   const sponsors = postSponsorsList(item);
   const hasSponsors = sponsors.length > 0;
 
-  const imageUrl = item?.imageUrl;
+  const imageUrl = absoluteBackendUrl(item?.imageUrl) || item?.imageUrl;
   const hasVideo = !!item?.videoUrl;
+  const videoUri = absoluteBackendUrl(item?.videoUrl) || item?.videoUrl;
   const imageIsVideo =
     imageUrl && typeof imageUrl === 'string' && /\.(mp4|mov|avi|webm)$/i.test(imageUrl);
   const hasImage = !!imageUrl && !imageIsVideo;
@@ -220,7 +222,7 @@ function PostCard({
       {hasVideo || imageIsVideo ? (
         <View style={[styles.videoWrap, isDark && styles.videoWrapDark]}>
           <Video
-            source={{ uri: hasVideo ? item.videoUrl : imageUrl }}
+            source={{ uri: hasVideo ? videoUri : imageUrl }}
             style={styles.videoPlayer}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}

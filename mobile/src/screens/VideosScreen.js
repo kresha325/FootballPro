@@ -5,7 +5,13 @@ import { filterBySearch } from '../utils/listSearch';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import { extractErrorMessage, likeVideoRequest, uploadVideoRequest, videosRequest } from '../api/client';
+import { absoluteBackendUrl } from '../config/constants';
+import {
+  extractErrorMessage,
+  likeVideoRequest,
+  uploadVideoRequest,
+  videosRequest,
+} from '../api/client';
 
 function VideosSkeleton() {
   return (
@@ -19,15 +25,16 @@ function VideosSkeleton() {
 
 function VideoCard({ item, onLike }) {
   const author = item?.User ? `${item.User.firstName || ''} ${item.User.lastName || ''}`.trim() : 'Unknown';
+  const videoUri = absoluteBackendUrl(item?.videoUrl) || item?.videoUrl;
 
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{item?.title || 'Untitled video'}</Text>
       {item?.description ? <Text style={styles.description}>{item.description}</Text> : null}
       <Text style={styles.author}>By: {author}</Text>
-      {item?.videoUrl ? (
+      {videoUri ? (
         <View style={styles.videoWrap}>
-          <Video source={{ uri: item.videoUrl }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+          <Video source={{ uri: videoUri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
         </View>
       ) : null}
       <View style={styles.rowBetween}>
@@ -111,7 +118,7 @@ export default function VideosScreen() {
       setDescription('');
       setSelectedVideo(null);
       await loadVideos({ silent: true });
-      Alert.alert('Uploaded', 'Video uploaded successfully.');
+      Alert.alert('U ngarkua', 'Video u shtua te Videot dhe te Lajmet (feed).');
     } catch (err) {
       Alert.alert('Upload failed', extractErrorMessage(err, 'Could not upload video'));
     } finally {

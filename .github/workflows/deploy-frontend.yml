@@ -39,6 +39,7 @@ jobs:
 
       - name: Build
         env:
+          VITE_APP_NAME: XTalenti
           VITE_API_URL: https://footballpro.onrender.com/api
         run: npm run build
 

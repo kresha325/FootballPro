@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "X Talenti",
+    "name": "XTalenti",
     "slug": "x-talenti",
     "scheme": "footballpro",
     "version": "1.0.0",
@@ -21,13 +21,13 @@
       [
         "@config-plugins/react-native-webrtc",
         {
-          "cameraPermission": "X Talenti ka nevojë për kamerën për live dhe video thirrje.",
-          "microphonePermission": "X Talenti ka nevojë për mikrofonin për live dhe thirrje."
+          "cameraPermission": "XTalenti ka nevoj\u00eb p\u00ebr kamer\u00ebn p\u00ebr live dhe video thirrje.",
+          "microphonePermission": "XTalenti ka nevoj\u00eb p\u00ebr mikrofonin p\u00ebr live dhe thirrje."
         }
       ]
     ],
     "android": {
-      "package": "com.kresha325.footballpromobile",
+      "package": "com.kresha325.xtalenti",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
@@ -40,19 +40,20 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.kresha325.footballpromobile",
+      "bundleIdentifier": "com.kresha325.xtalenti",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "X Talenti ka nevojë për kamerën për live dhe video thirrje.",
-        "NSMicrophoneUsageDescription": "X Talenti ka nevojë për mikrofonin për live dhe thirrje."
-      }
+        "NSCameraUsageDescription": "XTalenti ka nevoj\u00eb p\u00ebr kamer\u00ebn p\u00ebr live dhe video thirrje.",
+        "NSMicrophoneUsageDescription": "XTalenti ka nevoj\u00eb p\u00ebr mikrofonin p\u00ebr live dhe thirrje."
+      },
+      "appleTeamId": "AM7TN896MK"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "BACKEND_URL": "https://footballpro.onrender.com",
-      "WEB_APP_URL": "https://footballpro-1.onrender.com"
+      "WEB_APP_URL": "https://xtalenti.com"
     }
   }
 }

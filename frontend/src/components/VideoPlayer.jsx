@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { getFullUrl } from '../utils/mediaUrl';
 import {
   PlayIcon,
   PauseIcon,
@@ -146,7 +147,7 @@ const VideoPlayer = () => {
           <div className="relative max-w-5xl mx-auto">
             <video
               ref={videoRef}
-              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${video.videoUrl}`}
+              src={getFullUrl(video.videoUrl)}
               className="w-full aspect-video"
               onTimeUpdate={handleTimeUpdate}
               onEnded={() => setPlaying(false)}
@@ -249,9 +250,9 @@ const VideoPlayer = () => {
 
               {/* Creator Info */}
               <div className="flex items-center gap-4 pb-6 border-b border-gray-200">
-                {video.User?.Profile?.profilePicture ? (
+                {video.User?.Profile?.profilePhoto || video.User?.Profile?.profilePicture ? (
                   <img
-                    src={`${import.meta.env.VITE_API_URL.replace('/api','')}${video.User.Profile.profilePicture}`}
+                    src={getFullUrl(video.User.Profile.profilePhoto || video.User.Profile.profilePicture)}
                     alt={video.User.firstName}
                     className="w-12 h-12 rounded-full"
                   />
@@ -311,7 +312,7 @@ const VideoPlayer = () => {
                 <div className="w-40 aspect-video bg-gray-900 flex-shrink-0">
                   {relatedVideo.thumbnailUrl ? (
                     <img
-                      src={`${import.meta.env.VITE_API_URL.replace('/api','')}${relatedVideo.thumbnailUrl}`}
+                      src={getFullUrl(relatedVideo.thumbnailUrl)}
                       alt={relatedVideo.title}
                       className="w-full h-full object-cover"
                     />

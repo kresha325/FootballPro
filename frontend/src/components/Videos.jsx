@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { getFullUrl } from '../utils/mediaUrl';
 import {
   PlayIcon,
   EyeIcon,
@@ -97,7 +98,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
       <div className="relative aspect-video bg-gray-900">
         {video.thumbnailUrl ? (
           <img
-            src={`${import.meta.env.VITE_API_URL.replace('/api','')}${video.thumbnailUrl}`}
+            src={getFullUrl(video.thumbnailUrl)}
             alt={video.title}
             className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
           />
@@ -133,9 +134,9 @@ const Videos = ({ userId, onlyUserVideos }) => {
         
         {/* Author */}
         <div className="flex items-center gap-2 mb-2">
-          {video.User?.Profile?.profilePicture ? (
+          {video.User?.Profile?.profilePhoto || video.User?.Profile?.profilePicture ? (
             <img
-              src={`${import.meta.env.VITE_API_URL.replace('/api','')}${video.User.Profile.profilePicture}`}
+              src={getFullUrl(video.User.Profile.profilePhoto || video.User.Profile.profilePicture)}
               alt={video.User.firstName}
               className="w-8 h-8 rounded-full"
             />

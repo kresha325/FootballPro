@@ -1,6 +1,8 @@
 const Video = require('../models/Video');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const Post = require('../models/Post');
+const Gallery = require('../models/Gallery');
 const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
@@ -75,7 +77,35 @@ exports.uploadVideo = async (req, res) => {
       isProcessing: false,
       processingStatus: 'completed',
     });
-    res.status(201).json(video);
+
+    // Also publish to feed so Videos upload appears in Lajmet / Feed
+    const feedContent = [title, description].filter(Boolean).join('\n').trim() || 'Video e re';
+    let feedPost = null;
+    try {
+      feedPost = await Post.create({
+        userId: req.user.id,
+        content: feedContent,
+        videoUrl,
+      });
+      await Gallery.create({
+        userId: req.user.id,
+        videoUrl,
+        type: 'video',
+        title: (title || feedContent).substring(0, 100),
+      });
+      try {
+        const io = req.app?.get?.('io');
+        if (io && feedPost?.id) {
+          io.emit('post:created', { id: feedPost.id });
+        }
+      } catch (_emitErr) {
+        /* ignore socket errors */
+      }
+    } catch (feedErr) {
+      console.warn('Video uploaded but feed post failed:', feedErr?.message || feedErr);
+    }
+
+    res.status(201).json({ ...video.toJSON(), postId: feedPost?.id || null });
   } catch (error) {
     console.error('Upload video error:', error);
     res.status(500).json({ error: error.message });

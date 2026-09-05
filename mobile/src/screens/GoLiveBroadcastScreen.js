@@ -37,7 +37,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       const status = event?.nativeEvent?.statusCode;
       Alert.alert(
         'Gabim HTTP',
-        `Status ${status || '?'}\n${uri}\n\nKontrollo që frontend-i (footballpro-1.onrender.com) është online.`
+        `Status ${status || '?'}\n${uri}\n\nKontrollo që frontend-i (xtalenti.com) është online.`
       );
     },
     [uri]
@@ -76,7 +76,7 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
       <View style={styles.centered}>
         <Text style={styles.title}>Go Live</Text>
         <Text style={styles.body}>
-          Vendos WEB_APP_URL në app.json (frontend, p.sh. https://footballpro-1.onrender.com).
+          Vendos WEB_APP_URL në app.json (frontend, p.sh. https://xtalenti.com).
         </Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
           <Text style={styles.btnText}>Kthehu</Text>

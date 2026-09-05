@@ -78,6 +78,25 @@ target 'FootballProMobile' do
         end
       end
     end
+
+    # Xcode 16+/26: Yoga (RN 0.72) fails with -Werror=deprecated-literal-operator
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        deployment = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if deployment && deployment.to_f < 12.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+        end
+        if target.name == 'Yoga'
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          flags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || ['$(inherited)']
+          flags = [flags] if flags.is_a?(String)
+          %w[-Wno-deprecated-literal-operator -Wno-error=deprecated-literal-operator].each do |flag|
+            flags << flag unless flags.any? { |f| f.to_s.include?(flag) }
+          end
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = flags
+        end
+      end
+    end
   end
 
   post_integrate do |installer|

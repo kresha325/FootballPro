@@ -12,7 +12,7 @@ module.exports = ({ config }) => {
       ...staticExtra,
       BACKEND_URL: process.env.BACKEND_URL || staticExtra.BACKEND_URL || 'https://footballpro.onrender.com',
       WEB_APP_URL:
-        process.env.WEB_APP_URL || staticExtra.WEB_APP_URL || 'https://footballpro-1.onrender.com',
+        process.env.WEB_APP_URL || staticExtra.WEB_APP_URL || 'https://xtalenti.com',
       ...(process.env.EAS_PROJECT_ID
         ? { eas: { projectId: process.env.EAS_PROJECT_ID } }
         : {}),

@@ -152,14 +152,6 @@ export default function TournamentsScreen({ navigation }) {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
-      </View>
-    );
-  }
-
   const merged = useMemo(() => {
     const base = [...trending, ...allTournaments.filter((t) => !trending.some((tr) => tr.id === t.id))];
     return filterBySearch(base, listSearch, (t) => [
@@ -171,6 +163,14 @@ export default function TournamentsScreen({ navigation }) {
       formatTournamentTitle(t),
     ]);
   }, [trending, allTournaments, listSearch]);
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#0f766e" />
+      </View>
+    );
+  }
 
   return (
     <>

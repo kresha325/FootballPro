@@ -30,7 +30,8 @@ export default defineConfig({
     allowedHosts: [
       '.loca.lt',
       'small-trees-stare.loca.lt',
-      'footballpro-1.onrender.com'
+      'xtalenti.com',
+      'www.xtalenti.com',
     ],
     // https: {
     //   key: (() => {

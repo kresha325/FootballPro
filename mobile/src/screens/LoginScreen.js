@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   REGISTER_ROLE_OPTIONS,
@@ -22,6 +22,7 @@ import {
   registerRoleLabel,
 } from '../constants/registerRoles';
 import { useAuth } from '../context/AuthContext';
+import { APP_BRAND_NAME } from '../config/branding';
 
 function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
   return (
@@ -68,8 +69,17 @@ function buildIsoDate(y, m, d) {
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { login, register, forgotPassword, isSubmitting } = useAuth();
-  const [mode, setMode] = useState('login');
+  const initialMode = route.params?.mode === 'register' ? 'register' : route.params?.mode === 'forgot' ? 'forgot' : 'login';
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    const next = route.params?.mode;
+    if (next === 'login' || next === 'register' || next === 'forgot') {
+      setMode(next);
+    }
+  }, [route.params?.mode]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('athlete');
@@ -178,7 +188,16 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
-        <Text style={styles.title}>X Talenti</Text>
+        {navigation.canGoBack() ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <Ionicons name="chevron-back" size={20} color="#0F172A" />
+            <Text style={styles.backText}>Kthehu</Text>
+          </TouchableOpacity>
+        ) : null}
+        <Text style={styles.title}>
+          <Text style={styles.titleX}>X</Text>
+          <Text>{APP_BRAND_NAME.replace(/^x/i, '').trim()}</Text>
+        </Text>
         <Text style={styles.subtitle}>
           {mode === 'login'
             ? 'Hyr për të vazhduar'
@@ -310,7 +329,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#f0fdfa' },
   container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 },
-  title: { fontSize: 30, fontWeight: '800', color: '#0f766e' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 12 },
+  backText: { color: '#0F172A', fontWeight: '600', fontSize: 15 },
+  title: { fontSize: 30, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' },
+  titleX: { color: '#F59E0B' },
   subtitle: { marginTop: 6, marginBottom: 16, color: '#475569', lineHeight: 22 },
   segmentWrap: {
     flexDirection: 'row',

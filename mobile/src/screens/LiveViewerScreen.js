@@ -211,7 +211,7 @@ export default function LiveViewerScreen({ route, navigation }) {
           onError={() =>
             Alert.alert(
               'Gabim',
-              'Nuk u ngarkua player-i. Kontrollo internetin dhe frontend-in (footballpro-1.onrender.com).'
+              'Nuk u ngarkua player-i. Kontrollo internetin dhe frontend-in (xtalenti.com).'
             )
           }
           renderLoading={() => (

@@ -42,15 +42,15 @@ export function absoluteBackendUrl(maybePath) {
 /** Frontend Vite (embed-call, embed-go-live, /live). */
 function resolveWebAppUrl() {
   let configured = String(
-    appExtra.WEB_APP_URL || 'https://footballpro-1.onrender.com'
+    appExtra.WEB_APP_URL || 'https://xtalenti.com'
   ).replace(/\/$/, '');
   const devOverride = process.env.EXPO_PUBLIC_WEB_APP_URL || process.env.WEB_APP_URL;
   if (typeof __DEV__ !== 'undefined' && __DEV__ && devOverride) {
     configured = String(devOverride).replace(/\/$/, '');
   }
-  // footballpro.al nuk ka DNS — frontend prod është footballpro-1.onrender.com
-  if (/^(www\.)?footballpro\.al$/i.test(configured.replace(/^https?:\/\//, ''))) {
-    return 'https://footballpro-1.onrender.com';
+  // Legacy hostnames → canonical GitHub Pages domain
+  if (/^(www\.)?(footballpro\.al|footballpro-1\.onrender\.com)$/i.test(configured.replace(/^https?:\/\//, ''))) {
+    return 'https://xtalenti.com';
   }
   return configured;
 }
