@@ -1,20 +1,21 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { getJwtSecret } = require('../utils/jwtSecret');
 
 const auth = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
 
   if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
+    return res.status(401).json({ msg: 'Nuk ka token, autorizimi u refuzua' });
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'dev_jwt_secret';
+    const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret);
     const userId = decoded?.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ msg: 'Token is not valid' });
+      return res.status(401).json({ msg: 'Tokeni nuk është i vlefshëm' });
     }
 
     const dbUser = await User.findByPk(userId, {
@@ -22,14 +23,17 @@ const auth = async (req, res, next) => {
     });
 
     if (!dbUser) {
-      return res.status(401).json({ msg: 'User not found' });
+      return res.status(401).json({ msg: 'Përdoruesi nuk u gjet' });
     }
 
     req.user = dbUser.get({ plain: true });
     next();
   } catch (err) {
     console.error('AUTH token verification failed:', err.message);
-    res.status(401).json({ msg: 'Token is not valid' });
+    if (err?.message === 'JWT_SECRET is required in production') {
+      return res.status(500).json({ msg: 'Gabim konfigurimi i serverit' });
+    }
+    res.status(401).json({ msg: 'Tokeni nuk është i vlefshëm' });
   }
 };
 

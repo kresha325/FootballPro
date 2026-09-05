@@ -33,6 +33,7 @@ export const SocketProvider = ({ children }) => {
     // Use polling-first transport to improve reliability behind some proxies/load-balancers
     const newSocket = io(socketUrl, {
       auth: {
+        token: localStorage.getItem('token') || user.token || '',
         userId: user.id,
       },
       reconnection: true,
@@ -54,7 +55,8 @@ export const SocketProvider = ({ children }) => {
     newSocket.on('connect', () => {
       console.log('✅ Socket connected:', newSocket.id);
       setConnected(true);
-      newSocket.emit('join', user.id);
+      // Server joins the JWT identity room; client emit is ignored for spoofing
+      newSocket.emit('join');
     });
 
     newSocket.on('newMessage', bumpMessagingUnread);

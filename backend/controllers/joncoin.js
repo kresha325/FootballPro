@@ -27,50 +27,79 @@ async function getSpendableLedgerBalance(userId, opts) {
   return round2(ledger - pendingWd);
 }
 
-// Transfer JonCoin mes userave
+// Transfer JonCoin mes userave (atomic + row locks)
 exports.transfer = async (req, res) => {
   try {
-    const { toUserId, amount, description } = req.body;
-    if (!toUserId || !amount || amount <= 0) return res.status(400).json({ error: 'Të dhëna të pavlefshme' });
-    if (toUserId === req.user.id) return res.status(400).json({ error: 'Nuk mund t’i dërgosh vetes' });
+    const toUserId = Number(req.body?.toUserId);
+    const amount = round2(Number(req.body?.amount));
+    const description = req.body?.description;
 
-    const spendable = await getSpendableLedgerBalance(req.user.id);
-    if (spendable < amount) {
-      return res.status(400).json({
-        error: 'Nuk ke mjaftueshëm JonCoin të disponueshëm (përfshi tërheqjet në pritje)',
-      });
+    if (!Number.isFinite(toUserId) || toUserId <= 0 || !Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: 'Të dhëna të pavlefshme' });
+    }
+    if (toUserId === req.user.id) {
+      return res.status(400).json({ error: 'Nuk mund t’i dërgosh vetes' });
     }
 
-    const fromUser = await User.findByPk(req.user.id);
-    const toUser = await User.findByPk(toUserId);
-    if (!toUser) return res.status(404).json({ error: 'Marrësi nuk ekziston' });
+    const result = await sequelize.transaction(async (transaction) => {
+      const fromUser = await User.findByPk(req.user.id, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      const toUser = await User.findByPk(toUserId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!toUser) {
+        return { code: 404, error: 'Marrësi nuk ekziston' };
+      }
 
-    fromUser.joncoinBalance = round2(parseFloat(fromUser.joncoinBalance || 0) - parseFloat(amount));
-    await fromUser.save();
-    toUser.joncoinBalance = round2(parseFloat(toUser.joncoinBalance || 0) + parseFloat(amount));
-    await toUser.save();
+      const spendable = await getSpendableLedgerBalance(req.user.id, { transaction });
+      if (spendable < amount) {
+        return {
+          code: 400,
+          error: 'Nuk ke mjaftueshëm JonCoin të disponueshëm (përfshi tërheqjet në pritje)',
+        };
+      }
 
-    await JonCoinTransaction.create({
-      userId: req.user.id,
-      type: 'spend',
-      amount,
-      status: 'completed',
-      relatedEntityType: 'transfer',
-      relatedEntityId: toUserId,
-      description: description || `Transfer te userId ${toUserId}`,
+      fromUser.joncoinBalance = round2(parseFloat(fromUser.joncoinBalance || 0) - amount);
+      toUser.joncoinBalance = round2(parseFloat(toUser.joncoinBalance || 0) + amount);
+      await fromUser.save({ transaction });
+      await toUser.save({ transaction });
+
+      await JonCoinTransaction.create(
+        {
+          userId: req.user.id,
+          type: 'spend',
+          amount,
+          status: 'completed',
+          relatedEntityType: 'transfer',
+          relatedEntityId: toUserId,
+          description: description || `Transfer te userId ${toUserId}`,
+        },
+        { transaction }
+      );
+      await JonCoinTransaction.create(
+        {
+          userId: toUserId,
+          type: 'reward',
+          amount,
+          status: 'completed',
+          relatedEntityType: 'transfer',
+          relatedEntityId: req.user.id,
+          description: description || `Marrë nga userId ${req.user.id}`,
+        },
+        { transaction }
+      );
+
+      return { success: true };
     });
-    await JonCoinTransaction.create({
-      userId: toUserId,
-      type: 'reward',
-      amount,
-      status: 'completed',
-      relatedEntityType: 'transfer',
-      relatedEntityId: req.user.id,
-      description: description || `Marrë nga userId ${req.user.id}`,
-    });
+
+    if (result.code) return res.status(result.code).json({ error: result.error });
     return res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('JonCoin transfer error:', err);
+    res.status(500).json({ error: 'Gabim në server' });
   }
 };
 

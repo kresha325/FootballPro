@@ -14,6 +14,15 @@ const morgan = require('morgan');
 
 dotenv.config();
 
+// Fail fast in production if JWT secret is missing
+try {
+  const { getJwtSecret } = require('./utils/jwtSecret');
+  getJwtSecret();
+} catch (jwtErr) {
+  console.error(jwtErr.message);
+  process.exit(1);
+}
+
 // Simple socket event logger
 function logSocketEvent(socket, event, details) {
   try {
@@ -160,6 +169,10 @@ io = socketIo(server, {
   pingTimeout: 60000,
   pingInterval: 25000,
 });
+
+const socketAuth = require('./middleware/socketAuth');
+io.use(socketAuth);
+
 // Make io available to other modules
 try {
   const socketUtil = require('./utils/socket');
@@ -320,48 +333,69 @@ function isUserRealtimeOnline(userId) {
 const VideoCall = require('./models/VideoCall');
 
 io.on('connection', (socket) => {
-    // Multi-user call: join room and log call start
-    socket.on('call:join-room', async (data) => {
-      const { roomId, userId } = data;
-      socket.join(roomId);
+  // Identity comes only from verified JWT (socketAuth middleware)
+  const authenticatedUserId = String(socket.userId || '');
+  if (authenticatedUserId) {
+    socket.join(authenticatedUserId);
+    userSockets.set(authenticatedUserId, socket.id);
+  }
+  logSocketEvent(socket, 'connected', { userId: authenticatedUserId });
+
+  // Multi-user call: join room and log call start
+  socket.on('call:join-room', async (data) => {
+    const roomId = data?.roomId;
+    const userId = authenticatedUserId;
+    if (!roomId || !userId) return;
+
+    // group-{conversationId}: require membership
+    const groupMatch = /^group-(\d+)$/i.exec(String(roomId));
+    if (groupMatch) {
       try {
-        // Find or create call history for this room
-        let call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
-        if (!call) {
-          call = await VideoCallHistory.create({
-            roomId,
-            participants: [userId],
-            startedAt: new Date(),
-            status: 'completed',
-          });
-        } else {
-          // Add user to participants if not already present
-          const participants = Array.isArray(call.participants) ? call.participants : [];
-          if (!participants.includes(userId)) {
-            participants.push(userId);
-            call.participants = participants;
-            await call.save();
-          }
+        const member = await ConversationMember.findOne({
+          where: { conversationId: groupMatch[1], userId: Number(userId) },
+          attributes: ['id'],
+        });
+        if (!member) {
+          socket.emit('call:failed', { reason: 'Not a conversation member' });
+          return;
         }
       } catch (err) {
-        console.warn('⚠️ VideoCallHistory not available:', err.message);
+        console.warn('call:join-room membership check failed:', err.message);
+        return;
       }
-      io.to(roomId).emit('call:user-joined', { userId });
-    });
-  logSocketEvent(socket, 'connected', { userId: socket.handshake.auth.userId });
-
-  // Store user authentication from handshake
-  const userId = socket.handshake.auth.userId;
-  
-  // Join user's room for private messaging
-  socket.on('join', (uid) => {
-    const userIdToJoin = uid || userId;
-    if (userIdToJoin) {
-      socket.userId = userIdToJoin;
-      socket.join(String(userIdToJoin));
-      userSockets.set(String(userIdToJoin), socket.id);
-      logSocketEvent(socket, 'join', { userId: userIdToJoin, room: String(userIdToJoin) });
     }
+
+    socket.join(roomId);
+    try {
+      let call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
+      if (!call) {
+        call = await VideoCallHistory.create({
+          roomId,
+          participants: [userId],
+          startedAt: new Date(),
+          status: 'completed',
+        });
+      } else {
+        const participants = Array.isArray(call.participants) ? call.participants : [];
+        if (!participants.includes(userId) && !participants.includes(Number(userId))) {
+          participants.push(userId);
+          call.participants = participants;
+          await call.save();
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ VideoCallHistory not available:', err.message);
+    }
+    io.to(roomId).emit('call:user-joined', { userId });
+  });
+
+  // Join user's private room — ignore client-supplied uid; use JWT identity only
+  socket.on('join', (_uid) => {
+    if (!authenticatedUserId) return;
+    socket.userId = authenticatedUserId;
+    socket.join(authenticatedUserId);
+    userSockets.set(authenticatedUserId, socket.id);
+    logSocketEvent(socket, 'join', { userId: authenticatedUserId, room: authenticatedUserId });
   });
 
   // Subscribe to stream events (frontend uses this to receive live updates)
@@ -420,9 +454,26 @@ io.on('connection', (socket) => {
     io.to(`conversation-${conversationId}`).emit('newMessage', message);
   });
 
-  // Join conversation room
-  socket.on('joinConversation', (conversationId) => {
-    socket.join(`conversation-${conversationId}`);
+  // Join conversation room (membership required)
+  socket.on('joinConversation', async (conversationId) => {
+    if (!authenticatedUserId || !conversationId) return;
+    try {
+      const member = await ConversationMember.findOne({
+        where: {
+          conversationId: Number(conversationId),
+          userId: Number(authenticatedUserId),
+        },
+        attributes: ['id'],
+      });
+      if (!member) {
+        logSocketEvent(socket, 'joinConversation-denied', { conversationId, userId: authenticatedUserId });
+        return;
+      }
+      socket.join(`conversation-${conversationId}`);
+      logSocketEvent(socket, 'joinConversation', { conversationId, userId: authenticatedUserId });
+    } catch (err) {
+      console.warn('joinConversation error:', err.message);
+    }
   });
 
   // Leave conversation room
@@ -430,20 +481,32 @@ io.on('connection', (socket) => {
     socket.leave(`conversation-${conversationId}`);
   });
 
-  // Typing indicator
+  // Typing indicator — always attribute to authenticated user
   socket.on('typing', (data) => {
-    const { conversationId, userId, userName } = data;
-    socket.to(`conversation-${conversationId}`).emit('userTyping', { userId, userName });
+    const { conversationId, userName } = data || {};
+    if (!conversationId || !authenticatedUserId) return;
+    socket.to(`conversation-${conversationId}`).emit('userTyping', {
+      userId: authenticatedUserId,
+      userName,
+    });
   });
 
   socket.on('stopTyping', (data) => {
-    const { conversationId, userId } = data;
-    socket.to(`conversation-${conversationId}`).emit('userStoppedTyping', { userId });
+    const { conversationId } = data || {};
+    if (!conversationId || !authenticatedUserId) return;
+    socket.to(`conversation-${conversationId}`).emit('userStoppedTyping', {
+      userId: authenticatedUserId,
+    });
   });
 
   // WebRTC signaling for video calls
   socket.on('call:offer', (data) => {
-    const { to, offer, from, callerName, callId } = data;
+    if (!authenticatedUserId) {
+      socket.emit('call:failed', { reason: 'Unauthorized' });
+      return;
+    }
+    const { to, offer, callerName, callId } = data;
+    const from = authenticatedUserId;
     const receiverOnline = isUserRealtimeOnline(to);
     (async () => {
       let usedCallId = callId;

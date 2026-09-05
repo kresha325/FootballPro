@@ -9,6 +9,7 @@ const {
   parseDateOnly,
   ageFromDateOnly,
 } = require('../utils/registerValidation');
+const { getJwtSecret } = require('../utils/jwtSecret');
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase();
@@ -110,7 +111,7 @@ exports.register = async (req, res) => {
 
     // 5. Check age and JWT
     const payload = { user: { id: user.id } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
+    const token = jwt.sign(payload, getJwtSecret(), {
       expiresIn: '7d',
     });
 
@@ -201,7 +202,7 @@ exports.login = async (req, res) => {
       }
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev_jwt_secret', {
+    const token = jwt.sign(payload, getJwtSecret(), {
       expiresIn: '7d',
     });
     console.log('BACKEND: Login successful, sending token');

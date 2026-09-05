@@ -45,6 +45,9 @@ export default function FeedLiveNow() {
     const apiRoot = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/i, '') || window.location.origin;
     try {
       socketRef.current = io(apiRoot, {
+        auth: {
+          token: localStorage.getItem('token') || '',
+        },
         transports: ['polling', 'websocket'],
         reconnectionAttempts: 10,
       });

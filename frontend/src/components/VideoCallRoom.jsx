@@ -36,7 +36,10 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
   const localVideoRef = useRef();
 
   useEffect(() => {
-    socketRef.current = io(SOCKET_URL, { auth: { userId } });
+    const token = localStorage.getItem('token') || '';
+    socketRef.current = io(SOCKET_URL, {
+      auth: { token, userId },
+    });
     return () => {
       socketRef.current.disconnect();
     };

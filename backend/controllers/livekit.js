@@ -1,4 +1,5 @@
 const { AccessToken } = require('livekit-server-sdk');
+const { authorizeLiveKitRoom } = require('../utils/livekitAcl');
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 2;
 
@@ -10,7 +11,7 @@ exports.createToken = async (req, res) => {
 
     if (!apiKey || !apiSecret || !wsUrl) {
       return res.status(500).json({
-        msg: 'LiveKit is not configured. Missing LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET',
+        msg: 'LiveKit nuk është i konfiguruar. Mungojnë LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET',
       });
     }
 
@@ -24,11 +25,26 @@ exports.createToken = async (req, res) => {
     } = req.body || {};
 
     if (!roomName || typeof roomName !== 'string') {
-      return res.status(400).json({ msg: 'roomName is required' });
+      return res.status(400).json({ msg: 'roomName është i detyrueshëm' });
     }
 
-    const identity = String(req.user?.id || req.user?.userId || participantName || 'guest');
-    const displayName = participantName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || identity;
+    const userId = req.user?.id || req.user?.userId;
+    const access = await authorizeLiveKitRoom(userId, roomName, {
+      canPublish: !!canPublish,
+    });
+    if (!access.ok) {
+      return res.status(access.status).json({ msg: access.msg });
+    }
+
+    // Viewers must not publish; owners/call participants keep requested publish flag.
+    const publishAllowed =
+      access.role === 'viewer' ? false : !!canPublish;
+
+    const identity = String(userId);
+    const displayName =
+      participantName ||
+      `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() ||
+      identity;
 
     const token = new AccessToken(apiKey, apiSecret, {
       identity,
@@ -40,9 +56,9 @@ exports.createToken = async (req, res) => {
     token.addGrant({
       roomJoin: true,
       room: roomName,
-      canPublish,
-      canSubscribe,
-      canPublishData,
+      canPublish: publishAllowed,
+      canSubscribe: !!canSubscribe,
+      canPublishData: publishAllowed ? !!canPublishData : false,
     });
 
     return res.json({
@@ -51,9 +67,10 @@ exports.createToken = async (req, res) => {
       roomName,
       identity,
       participantName: displayName,
+      role: access.role,
     });
   } catch (error) {
     console.error('LiveKit token generation error:', error);
-    return res.status(500).json({ msg: 'Failed to create LiveKit token' });
+    return res.status(500).json({ msg: 'Nuk u arrit krijimi i tokenit LiveKit' });
   }
 };

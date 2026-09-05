@@ -53,8 +53,7 @@ export const AuthProvider = ({ children }) => {
 
     socket.on('connect', () => {
       setSocketConnected(true);
-      const room = userData?.id ? String(userData.id) : `mobile-${socket.id}`;
-      socket.emit('join', room);
+      socket.emit('join');
     });
 
     socket.on('disconnect', () => {
@@ -271,7 +270,7 @@ export const AuthProvider = ({ children }) => {
       if (!socket.connected) {
         socket.connect();
       } else {
-        socket.emit('join', String(user.id));
+        socket.emit('join');
       }
     };
 
