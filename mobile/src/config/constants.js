@@ -56,3 +56,9 @@ function resolveWebAppUrl() {
 }
 
 export const WEB_APP_URL = resolveWebAppUrl();
+
+/**
+ * Digital goods (Premium Stripe / JonCoin buy) — off for store builds until IAP.
+ * Set app.json extra.ALLOW_MOBILE_DIGITAL_PURCHASES=true only for internal testing.
+ */
+export const ALLOW_MOBILE_DIGITAL_PURCHASES = appExtra.ALLOW_MOBILE_DIGITAL_PURCHASES === true;

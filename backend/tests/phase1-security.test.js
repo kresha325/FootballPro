@@ -92,7 +92,7 @@ describe('LiveKit room pattern ACL (mocked models)', () => {
       exports: {
         findByPk: async (id) =>
           String(id) === '42'
-            ? { id: 42, callerId: 10, receiverId: 20 }
+            ? { id: 42, callerId: 10, receiverId: 20, status: 'ringing' }
             : null,
       },
     };
@@ -139,7 +139,7 @@ describe('LiveKit room pattern ACL (mocked models)', () => {
       loaded: true,
       exports: {
         findByPk: async (id) =>
-          String(id) === '7' ? { id: 7, streamerId: 5 } : null,
+          String(id) === '7' ? { id: 7, streamerId: 5, isLive: true, isPremium: false } : null,
       },
     };
     require.cache[conversationPath] = {

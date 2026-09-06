@@ -778,18 +778,19 @@ exports.getAllProfiles = async (req, res) => {
 };
 
 exports.registerPushToken = async (req, res) => {
-  const { token, type } = req.body; // type: 'mobile' or 'web'
+  const { token, type } = req.body; // type: 'mobile' or 'web'; token null clears
   try {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
 
+    const cleared = token == null || token === '';
     if (type === 'mobile') {
-      user.pushTokenMobile = token;
+      user.pushTokenMobile = cleared ? null : token;
     } else if (type === 'web') {
-      user.pushTokenWeb = token; // token is the subscription object
+      user.pushTokenWeb = cleared ? null : token; // token is the subscription object
     }
     await user.save();
-    res.json({ msg: 'Push token registered' });
+    res.json({ msg: cleared ? 'Push token cleared' : 'Push token registered' });
   } catch (err) {
     res.status(500).json({ msg: 'Gabim në server' });
   }
@@ -828,19 +829,13 @@ exports.followUser = async (req, res) => {
       status: 'accepted' // For now, auto-accept all follows
     });
 
-    // Create notification
-    const follower = await User.findByPk(followerId);
-    await Notification.create({
-      userId: followingId,
-      actorId: followerId,
-      type: 'follow',
-      title: 'New Follower',
-      message: `${follower.firstName} ${follower.lastName} started following you`,
-      link: `/profile/${followerId}`
-    });
+    // In-app + push via notifyFollow
+    const { notifyFollow } = require('./notifications');
+    await notifyFollow(followingId, followerId);
 
     // Send email notification
     try {
+      const follower = await User.findByPk(followerId);
       const followerName = `${follower.firstName} ${follower.lastName}`;
       await sendEmail(userToFollow.email, 'newFollower', followerName, followerId);
     } catch (emailError) {

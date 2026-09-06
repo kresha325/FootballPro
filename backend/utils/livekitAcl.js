@@ -1,5 +1,6 @@
 const VideoCall = require('../models/VideoCall');
 const Stream = require('../models/Stream');
+const User = require('../models/User');
 const { ConversationMember } = require('../models/Conversation');
 
 const CALL_ROOM = /^call-(\d+)$/i;
@@ -30,6 +31,10 @@ async function authorizeLiveKitRoom(userId, roomName, { canPublish = false } = {
     if (!allowed) {
       return { ok: false, status: 403, msg: 'Nuk je pjesëmarrës i kësaj thirrjeje' };
     }
+    const status = String(call.status || '').toLowerCase();
+    if (!['ringing', 'connected'].includes(status)) {
+      return { ok: false, status: 403, msg: 'Thirrja nuk është aktive' };
+    }
     return { ok: true, role: Number(call.callerId) === uid ? 'caller' : 'receiver' };
   }
 
@@ -43,6 +48,15 @@ async function authorizeLiveKitRoom(userId, roomName, { canPublish = false } = {
     if (canPublish && !isOwner) {
       return { ok: false, status: 403, msg: 'Vetëm streamer-i mund të publikoje në këtë dhomë' };
     }
+    if (!isOwner && !stream.isLive) {
+      return { ok: false, status: 403, msg: 'Transmetimi nuk është live' };
+    }
+    if (!isOwner && stream.isPremium) {
+      const viewer = await User.findByPk(uid, { attributes: ['id', 'premium'] });
+      if (!viewer?.premium) {
+        return { ok: false, status: 403, msg: 'Transmetimi premium kërkon abonim' };
+      }
+    }
     return { ok: true, role: isOwner ? 'streamer' : 'viewer' };
   }
 
@@ -55,6 +69,7 @@ async function authorizeLiveKitRoom(userId, roomName, { canPublish = false } = {
     if (!member) {
       return { ok: false, status: 403, msg: 'Nuk je anëtar i kësaj bisede' };
     }
+    // Group calls: members may subscribe; publishing is client-requested but OK for 1:1-style group AV
     return { ok: true, role: 'member' };
   }
 

@@ -28,8 +28,12 @@
       }
     },
     "production": {
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
       },
       "env": {
         "BACKEND_URL": "https://footballpro.onrender.com",

@@ -3,7 +3,7 @@ import { BACKEND_URL } from '../config/constants';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 15000,
+  timeout: 20000,
 });
 
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
@@ -11,12 +11,25 @@ const MAX_GET_RETRIES = 2;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+let onUnauthorized = null;
+export const setUnauthorizedHandler = (fn) => {
+  onUnauthorized = typeof fn === 'function' ? fn : null;
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const status = error?.response?.status;
+    if (status === 401 && onUnauthorized) {
+      try {
+        await onUnauthorized(error);
+      } catch {
+        /* ignore */
+      }
+    }
+
     const config = error?.config;
     const method = String(config?.method || '').toLowerCase();
-    const status = error?.response?.status;
     const isNetworkError = !error?.response;
 
     if (!config || method !== 'get') {
@@ -305,7 +318,7 @@ export const rejectTournamentParticipantRequest = (tournamentId, userId) =>
 export const publicConfigRequest = () => api.get('/api/config/public');
 
 export const registerPushTokenRequest = (token, type = 'mobile') =>
-  api.post('/api/profiles/me/push-token', { token, type });
+  api.post('/api/profiles/me/push-token', { token: token || null, type });
 
 export const premiumCheckoutRequest = (plan) => api.post('/api/premium/checkout', { plan });
 export const premiumVerifySessionRequest = (sessionId) => api.get(`/api/premium/verify-session/${sessionId}`);
@@ -394,5 +407,12 @@ export const createAdRequest = (payload = {}) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const createReportRequest = (payload) => api.post('/api/moderation/reports', payload);
+export const blockUserRequest = (userId) => api.post(`/api/moderation/blocks/${userId}`);
+export const unblockUserRequest = (userId) => api.delete(`/api/moderation/blocks/${userId}`);
+export const blockStatusRequest = (userId) => api.get(`/api/moderation/blocks/${userId}/status`);
+export const myBlocksRequest = () => api.get('/api/moderation/blocks');
+export const deleteMyAccountRequest = (payload) => api.delete('/api/moderation/account', { data: payload });
 
 export default api;

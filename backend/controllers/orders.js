@@ -239,10 +239,30 @@ exports.confirmOrder = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const status = String(req.body?.status || '').toLowerCase();
+  const allowed = new Set(['pending', 'paid', 'shipped', 'delivered', 'cancelled']);
+  if (!allowed.has(status)) {
+    return res.status(400).json({ msg: 'Status i pavlefshëm' });
+  }
+
   try {
-    const order = await Order.findOne({ where: { id, userId: req.user.id } });
+    const order = await Order.findByPk(id);
     if (!order) return res.status(404).json({ msg: 'Order not found' });
+
+    const isAdmin = req.user.role === 'admin';
+    const isBuyer = Number(order.userId) === Number(req.user.id);
+
+    if (!isAdmin && !isBuyer) {
+      return res.status(403).json({ msg: 'Nuk ke leje për këtë porosi' });
+    }
+
+    // Buyers may only cancel their own pending orders
+    if (!isAdmin) {
+      if (status !== 'cancelled' || order.status !== 'pending') {
+        return res.status(403).json({ msg: 'Mund të anulosh vetëm porosi në pritje' });
+      }
+    }
+
     await order.update({ status });
     res.json(order);
   } catch (err) {

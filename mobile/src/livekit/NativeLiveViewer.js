@@ -46,8 +46,8 @@ export default function NativeLiveViewer({ streamId, onNativeUnavailable, onFata
   const roomName = useMemo(() => `stream-${streamId}`, [streamId]);
 
   const handleDisconnected = useCallback(() => {
-    /* room teardown handled by LiveKitRoom unmount */
-  }, []);
+    onFatalError?.('Lidhja live u ndërpre');
+  }, [onFatalError]);
 
   useEffect(() => {
     let cancelled = false;

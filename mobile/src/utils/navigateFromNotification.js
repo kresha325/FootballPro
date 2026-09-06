@@ -50,6 +50,15 @@ export async function navigateFromNotification(notification, navigation) {
   const link = String(notification?.link || '');
 
   if (type === 'message' || link.includes('/messaging')) {
+    const existingConversationId = notification?.conversationId;
+    if (existingConversationId != null) {
+      tabs.navigate('Messages', {
+        screen: 'Conversation',
+        params: { conversationId: existingConversationId },
+      });
+      return true;
+    }
+
     const peerId = notification?.actorId ?? notification?.entityId;
     tabs.navigate('Messages', { screen: 'MessagingHome' });
     if (peerId != null) {

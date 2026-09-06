@@ -14,6 +14,7 @@ import {
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
+import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
@@ -80,10 +81,7 @@ export default function GoLiveScreen({ route, navigation }) {
   };
 
   const openCameraCheck = async () => {
-    const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
-    const micPerm = ImagePicker.requestMicrophonePermissionsAsync
-      ? await ImagePicker.requestMicrophonePermissionsAsync()
-      : { granted: true };
+    const { camera: cameraPerm, microphone: micPerm } = await requestCameraAndMicrophonePermissions();
 
     if (!cameraPerm.granted || !micPerm.granted) {
       throw new Error('Camera and microphone permissions are required.');

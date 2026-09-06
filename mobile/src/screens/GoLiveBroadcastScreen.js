@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
@@ -6,11 +6,22 @@ import { WEB_APP_URL } from '../config/constants';
 import { buildQueryString } from '../utils/queryString';
 import { ensureLiveKitNative } from '../livekit/register';
 import NativeGoLiveBroadcaster from '../livekit/NativeGoLiveBroadcaster';
+import { endStreamRequest } from '../api/client';
 
 export default function GoLiveBroadcastScreen({ route, navigation }) {
   const { streamId, title = '', description = '', confirmed = false } = route.params || {};
   const { token } = useAuth();
   const [mode, setMode] = useState(() => (ensureLiveKitNative() ? 'native' : 'web'));
+  const endedRef = React.useRef(false);
+
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', () => {
+      if (endedRef.current || !streamId) return;
+      endedRef.current = true;
+      endStreamRequest(streamId).catch(() => {});
+    });
+    return unsub;
+  }, [navigation, streamId]);
 
   const uri = useMemo(() => {
     if (!WEB_APP_URL || !streamId) return '';
@@ -98,7 +109,10 @@ export default function GoLiveBroadcastScreen({ route, navigation }) {
         title={title}
         onNativeUnavailable={openWebFallback}
         onFatalError={(msg) => Alert.alert('Go Live', msg)}
-        onEnded={() => navigation.goBack()}
+        onEnded={() => {
+          endedRef.current = true;
+          navigation.goBack();
+        }}
       />
     );
   }

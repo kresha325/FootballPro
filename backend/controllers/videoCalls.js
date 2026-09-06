@@ -138,6 +138,11 @@ exports.endCall = async (req, res) => {
   const { callId } = req.params;
   try {
     const call = await VideoCall.findByPk(callId);
+    if (!call) return res.status(404).json({ msg: 'Call not found' });
+    const uid = Number(req.user.id);
+    if (uid !== Number(call.callerId) && uid !== Number(call.receiverId)) {
+      return res.status(403).json({ msg: 'Nuk je pjesëmarrës i kësaj thirrjeje' });
+    }
     if (call) {
       const callerUser = await User.findByPk(req.user.id);
       const callerName = callerUser
@@ -190,6 +195,7 @@ exports.endCall = async (req, res) => {
           entityType: 'call',
           entityId: call.id,
           metadata: { type: 'missed_call', callId: call.id },
+          skipPush: true,
         });
         await sendNotification(
           call.receiverId,
@@ -240,6 +246,10 @@ exports.updateCallStatus = async (req, res) => {
     if (!videoCall) {
       return res.status(404).json({ msg: 'Call not found' });
     }
+    const uid = Number(req.user.id);
+    if (uid !== Number(videoCall.callerId) && uid !== Number(videoCall.receiverId)) {
+      return res.status(403).json({ msg: 'Nuk je pjesëmarrës i kësaj thirrjeje' });
+    }
 
     const callerUser = await User.findByPk(req.user.id);
     const callerName = callerUser
@@ -265,6 +275,7 @@ exports.updateCallStatus = async (req, res) => {
         entityType: 'call',
         entityId: videoCall.id,
         metadata: { type: 'missed_call', callId: videoCall.id },
+        skipPush: true,
       });
       await sendNotification(
         videoCall.receiverId,

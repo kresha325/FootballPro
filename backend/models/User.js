@@ -105,6 +105,22 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  bannedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  banReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  deletedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  deletionRequestedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

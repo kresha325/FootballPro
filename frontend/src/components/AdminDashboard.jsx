@@ -48,6 +48,8 @@ export default function AdminDashboard() {
   const [newPassword, setNewPassword] = useState('');
   const [joncoinPending, setJoncoinPending] = useState([]);
   const [joncoinLoading, setJoncoinLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
 
   const fetchAnalytics = async () => {
     try {
@@ -109,6 +111,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchReports = async () => {
+    setReportsLoading(true);
+    try {
+      const res = await api.get('/moderation/admin/reports', { params: { status: 'pending' } });
+      setReports(res.data?.reports || []);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      setReports([]);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handleReviewReport = async (reportId, status) => {
+    try {
+      await api.put(`/moderation/admin/reports/${reportId}`, { status });
+      await fetchReports();
+    } catch (error) {
+      console.error('Error reviewing report:', error);
+      window.alert(error.response?.data?.msg || 'Update failed');
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'admin') {
       fetchAnalytics();
@@ -122,6 +147,8 @@ export default function AdminDashboard() {
       fetchPosts();
     } else if (activeTab === 'joncoin') {
       fetchJoncoinPending();
+    } else if (activeTab === 'reports') {
+      fetchReports();
     }
   }, [activeTab, searchTerm, filters, pagination.page]);
 
@@ -274,6 +301,17 @@ export default function AdminDashboard() {
         >
           <BanknotesIcon className="w-5 h-5 inline mr-2" />
           JonCoin
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'reports'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <ShieldCheckIcon className="w-5 h-5 inline mr-2" />
+          Reports
         </button>
       </div>
 
@@ -766,9 +804,83 @@ export default function AdminDashboard() {
           )}
         </div>
       )}
-    </div>
 
-    {/* Reset Password Modal */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4">
+          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">Pending user reports (UGC moderation).</p>
+            <button
+              type="button"
+              onClick={() => fetchReports()}
+              className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+            >
+              Refresh
+            </button>
+          </div>
+          {reportsLoading ? (
+            <div className="text-gray-500 text-sm">Loading…</div>
+          ) : reports.length === 0 ? (
+            <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500 text-sm">
+              No pending reports.
+            </div>
+          ) : (
+            <div className="bg-white shadow rounded-lg overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">ID</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Reporter</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Target</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Reason</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Details</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Created</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reports.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-4 py-2">{r.id}</td>
+                      <td className="px-4 py-2">
+                        {r.reporter
+                          ? `${r.reporter.firstName || ''} ${r.reporter.lastName || ''}`.trim() || r.reporter.email
+                          : r.reporterId}
+                      </td>
+                      <td className="px-4 py-2">
+                        {r.targetType} #{r.targetId}
+                      </td>
+                      <td className="px-4 py-2">{r.reason}</td>
+                      <td className="px-4 py-2 max-w-xs truncate" title={r.details || ''}>
+                        {r.details || '—'}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleReviewReport(r.id, 'actioned')}
+                          className="inline-flex items-center px-2 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700"
+                        >
+                          Actioned
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReviewReport(r.id, 'dismissed')}
+                          className="inline-flex items-center px-2 py-1 rounded bg-gray-200 text-gray-800 text-xs hover:bg-gray-300"
+                        >
+                          Dismiss
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
     {resetPasswordModal.show && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">

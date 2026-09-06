@@ -19,11 +19,28 @@ const auth = async (req, res, next) => {
     }
 
     const dbUser = await User.findByPk(userId, {
-      attributes: ['id', 'role', 'firstName', 'lastName', 'email', 'premium', 'verified'],
+      attributes: [
+        'id',
+        'role',
+        'firstName',
+        'lastName',
+        'email',
+        'premium',
+        'verified',
+        'bannedAt',
+        'deletedAt',
+      ],
     });
 
     if (!dbUser) {
       return res.status(401).json({ msg: 'Përdoruesi nuk u gjet' });
+    }
+
+    if (dbUser.deletedAt) {
+      return res.status(403).json({ msg: 'Llogaria është e fshirë' });
+    }
+    if (dbUser.bannedAt) {
+      return res.status(403).json({ msg: 'Llogaria është e pezulluar' });
     }
 
     req.user = dbUser.get({ plain: true });

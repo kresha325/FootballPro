@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { profileAPI, youtubeAPI } from '../services/api';
+import api from '../services/api';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
 
 const Settings = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [profile, setProfile] = useState({
@@ -17,6 +18,8 @@ const Settings = () => {
     youtubeChannelId: '',
   });
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
   const [resolvingYoutube, setResolvingYoutube] = useState(false);
   const [resolveError, setResolveError] = useState('');
@@ -320,15 +323,66 @@ const Settings = () => {
           Privatësia dhe siguria
         </h2>
         <div className="space-y-2">
-          <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-            Ndrysho fjalëkalimin
-          </button>
-          <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-            Cilësimet e privatësisë
-          </button>
-          <button className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-red-600">
-            Fshi llogarinë
-          </button>
+          <a
+            href="/community-guidelines"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Udhëzuesit e komunitetit
+          </a>
+          <a
+            href="/privacy"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Politika e privatësisë
+          </a>
+          <a
+            href="/terms"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Kushtet e përdorimit
+          </a>
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
+            <p className="text-sm text-red-700 dark:text-red-300 font-semibold">Fshi llogarinë</p>
+            <p className="text-xs text-red-600/80 dark:text-red-300/80">
+              Anonimizohen të dhënat personale. Ky veprim nuk kthehet.
+            </p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Fjalëkalimi yt"
+              className="w-full px-3 py-2 rounded border border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 text-sm"
+            />
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deletePassword) {
+                  setSaveMessage({ type: 'error', text: 'Vendos fjalëkalimin për të fshirë llogarinë.' });
+                  return;
+                }
+                if (!window.confirm('Je i sigurt që do ta fshish llogarinë?')) return;
+                setDeleting(true);
+                try {
+                  await api.delete('/moderation/account', {
+                    data: { password: deletePassword, confirm: 'DELETE' },
+                  });
+                  logout();
+                  window.location.href = '/';
+                } catch (err) {
+                  setSaveMessage({
+                    type: 'error',
+                    text: err?.response?.data?.msg || 'Nuk u fshi llogaria',
+                  });
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              className="w-full text-left p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {deleting ? 'Duke fshirë…' : 'Fshi llogarinë time'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

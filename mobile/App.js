@@ -4,6 +4,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import XPNotificationManager from './src/components/XPNotificationManager';
+import PushNotificationManager from './src/components/PushNotificationManager';
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
         <CartProvider>
           <AppNavigator />
           <XPNotificationManager />
+          <PushNotificationManager />
         </CartProvider>
       </AuthProvider>
     </SafeAreaProvider>

@@ -32,6 +32,12 @@ exports.getPosts = async (req, res) => {
     const Sponsor = require('../models/Sponsor');
     const PostSponsor = require('../models/PostSponsor');
     const Follow = require('../models/Follow');
+    const { Op } = require('sequelize');
+    const { getBlockedPeerIds } = require('../utils/blocks');
+
+    const blockedIds = req.user?.id ? await getBlockedPeerIds(req.user.id) : [];
+    const notBlockedWhere =
+      blockedIds.length > 0 ? { userId: { [Op.notIn]: blockedIds } } : {};
 
     const wantFollowed = req.query && (req.query.followed === 'true' || req.query.followed === '1' || req.query.followed === true);
     let posts;
@@ -41,7 +47,11 @@ exports.getPosts = async (req, res) => {
       }
       // Get list of following user IDs
       const follows = await Follow.findAll({ where: { followerId: req.user.id, status: 'accepted' } });
-      const followingIds = follows.map(f => f.followingId);
+      let followingIds = follows.map(f => f.followingId);
+      if (blockedIds.length) {
+        const blocked = new Set(blockedIds.map(Number));
+        followingIds = followingIds.filter((id) => !blocked.has(Number(id)));
+      }
       if (followingIds.length === 0) {
         posts = [];
       } else {
@@ -56,6 +66,7 @@ exports.getPosts = async (req, res) => {
       }
     } else {
       posts = await Post.findAll({
+        where: notBlockedWhere,
         include: [
           { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
           { model: Sponsor, through: { attributes: [] } }

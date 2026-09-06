@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Xcode 26 / newer Clang compatibility patches for Expo 49 + RN 0.72.
- * Safe to re-run; no-ops when already applied.
+ * Xcode 26 / newer Clang compatibility patches for Expo + React Native.
+ * Safe to re-run; no-ops when already applied or when sources already match.
  */
 const fs = require('fs');
 const path = require('path');

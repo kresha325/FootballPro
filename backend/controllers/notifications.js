@@ -137,10 +137,11 @@ exports.deleteNotification = async (req, res) => {
   }
 };
 
-// Create notification (internal use)
+// Create notification (internal use) + optional push
 exports.createNotification = async (data) => {
   try {
-    const notification = await Notification.create(data);
+    const { skipPush, ...persist } = data || {};
+    const notification = await Notification.create(persist);
     
     // Get notification with actor info
     const fullNotification = await Notification.findByPk(notification.id, {
@@ -152,6 +153,26 @@ exports.createNotification = async (data) => {
         },
       ],
     });
+
+    // Push to mobile/web when token exists (skip if caller will send separately)
+    if (!skipPush && persist.userId) {
+      try {
+        let body = persist.message || '';
+        if (persist.type === 'message') {
+          body = 'Ke një mesazh të ri';
+        }
+        await exports.sendNotification(persist.userId, persist.title || 'XTalenti', body, {
+          type: persist.type,
+          link: persist.link,
+          entityType: persist.entityType,
+          entityId: persist.entityId,
+          actorId: persist.actorId,
+          ...(persist.metadata && typeof persist.metadata === 'object' ? { metadata: persist.metadata } : {}),
+        });
+      } catch (pushErr) {
+        console.warn('Push after createNotification failed:', pushErr?.message || pushErr);
+      }
+    }
 
     return fullNotification;
   } catch (err) {
@@ -240,13 +261,16 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
     const user = await User.findByPk(userId);
     if (!user) return;
 
+    const type = String(data?.type || '').toLowerCase();
+    const safeBody = type === 'message' ? 'Ke një mesazh të ri' : body;
+
     // Send to mobile
     if (user.pushTokenMobile && Expo.isExpoPushToken(user.pushTokenMobile)) {
       const message = {
         to: user.pushTokenMobile,
         sound: 'default',
         title,
-        body,
+        body: safeBody,
         data,
       };
       await expo.sendPushNotificationsAsync([message]);
@@ -257,7 +281,7 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
       const subscription = user.pushTokenWeb;
       const payload = JSON.stringify({
         title,
-        body,
+        body: safeBody,
         icon: '/icon.png', // Add icon
         data,
       });

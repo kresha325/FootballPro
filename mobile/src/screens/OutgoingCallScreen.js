@@ -124,8 +124,35 @@ export default function OutgoingCallScreen({ route, navigation }) {
 
     return () => {
       cancelled = true;
+      if (endingRef.current) return;
+      endingRef.current = true;
+      try {
+        const socket = getSocket?.();
+        if (socket && targetUserId) {
+          socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
+        }
+        // callId may still be in closure from latest render via ref pattern — use state getter carefully
+      } catch {
+        /* ignore */
+      }
     };
   }, [useNative, targetUserId, getSocket, socketConnected, user, audioOnly]);
+
+  // Ensure hang-up if user leaves screen while ringing/connected
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', () => {
+      if (endingRef.current) return;
+      endingRef.current = true;
+      const socket = getSocket?.();
+      if (socket && targetUserId) {
+        socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
+      }
+      if (callId) {
+        endVideoCallRequest(callId).catch(() => {});
+      }
+    });
+    return unsub;
+  }, [navigation, callId, getSocket, targetUserId]);
 
   useEffect(() => {
     if (!useNative || !callId) return undefined;

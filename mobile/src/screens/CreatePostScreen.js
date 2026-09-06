@@ -49,6 +49,17 @@ export default function CreatePostScreen({ navigation }) {
     if (!result.canceled && result.assets && result.assets[0]) {
       const asset = result.assets[0];
       const isVideo = asset.type === 'video' || String(asset.mimeType || '').startsWith('video/');
+      const fileSize = Number(asset.fileSize || asset.filesize || 0);
+      const maxBytes = isVideo ? 80 * 1024 * 1024 : 12 * 1024 * 1024;
+      if (fileSize > 0 && fileSize > maxBytes) {
+        Alert.alert(
+          'Skedar i madh',
+          isVideo
+            ? 'Video max ~80MB. Kompreso ose zgjidh një video më të shkurtër.'
+            : 'Foto max ~12MB. Zgjidh një imazh më të vogël.'
+        );
+        return;
+      }
       const extension = isVideo ? 'mp4' : 'jpg';
       setMedia({
         uri: asset.uri,

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Track } from 'livekit-client';
 import { createLiveKitTokenRequest, extractErrorMessage } from '../api/client';
+import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 import { ensureLiveKitNative } from './register';
 
 function CallStage({ audioOnly, muted, videoOff, peerLabel }) {
@@ -86,6 +87,11 @@ export default function NativeCallRoom({
       }
 
       try {
+        const { camera: cam, microphone: mic } = await requestCameraAndMicrophonePermissions();
+        if (!cam.granted || !mic.granted) {
+          throw new Error('Lejo kamerën dhe mikrofonin në Settings për thirrje.');
+        }
+
         // eslint-disable-next-line global-require
         const { LiveKitRoom } = require('@livekit/react-native');
         if (cancelled) return;

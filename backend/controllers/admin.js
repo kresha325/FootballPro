@@ -302,7 +302,15 @@ exports.banUser = async (req, res) => {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
+    user.bannedAt = new Date();
+    user.banReason = reason ? String(reason).slice(0, 1000) : 'Banned by admin';
     user.verified = false;
+    if (duration) {
+      // duration in days stored in reason note only for now
+      user.banReason = `${user.banReason} (durationDays=${duration})`;
+    }
+    user.pushTokenMobile = null;
+    user.pushTokenWeb = null;
     await user.save();
 
     res.json({ msg: 'User banned successfully' });

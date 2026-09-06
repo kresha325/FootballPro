@@ -10,6 +10,7 @@ import {
   meRequest,
   registerRequest,
   setAuthToken,
+  setUnauthorizedHandler,
 } from '../api/client';
 import { showXpNotification } from '../utils/xpNotifications';
 
@@ -75,6 +76,13 @@ export const AuthProvider = ({ children }) => {
   const getSocket = useCallback(() => socketRef.current, []);
 
   const logout = async () => {
+    try {
+      const { clearPushTokenFromBackend } = await import('../notifications/push');
+      await clearPushTokenFromBackend();
+    } catch (error) {
+      console.warn('Push token clear on logout failed:', error?.message || error);
+    }
+
     setToken(null);
     setUser(null);
     setAuthToken(null);
@@ -90,6 +98,13 @@ export const AuthProvider = ({ children }) => {
     setPendingOnboarding(false);
     setRequiresParentVerification(false);
   };
+
+  useEffect(() => {
+    setUnauthorizedHandler(async () => {
+      await logout();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const login = async ({ email, password }) => {
     setIsSubmitting(true);

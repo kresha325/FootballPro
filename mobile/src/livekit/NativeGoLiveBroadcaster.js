@@ -7,13 +7,13 @@ import {
   View,
 } from 'react-native';
 import { Track } from 'livekit-client';
-import * as ImagePicker from 'expo-image-picker';
 import {
   createLiveKitTokenRequest,
   endStreamRequest,
   extractErrorMessage,
   heartbeatStreamRequest,
 } from '../api/client';
+import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 import { ensureLiveKitNative } from './register';
 
 function BroadcastStage({ muted, videoOff }) {
@@ -105,10 +105,7 @@ export default function NativeGoLiveBroadcaster({
       }
 
       try {
-        const cam = await ImagePicker.requestCameraPermissionsAsync();
-        const mic = ImagePicker.requestMicrophonePermissionsAsync
-          ? await ImagePicker.requestMicrophonePermissionsAsync()
-          : { granted: true };
+        const { camera: cam, microphone: mic } = await requestCameraAndMicrophonePermissions();
         if (!cam.granted || !mic.granted) {
           throw new Error('Lejo kamerën dhe mikrofonin në Settings për Go Live.');
         }
@@ -199,6 +196,11 @@ export default function NativeGoLiveBroadcaster({
         connect
         audio
         video
+        onDisconnected={() => {
+          if (!ending) {
+            endLive();
+          }
+        }}
         style={styles.flex}
       >
         <ViewerSync streamId={streamId} onViewersChange={onViewersChange} />

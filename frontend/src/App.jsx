@@ -38,6 +38,7 @@ const VideoPlayer = lazy(() => import('./components/VideoPlayer'));
 const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
 const StreamsPage = lazy(() => import('./components/StreamsPage'));
 const EmbedOutboundCall = lazy(() => import('./components/EmbedOutboundCall'));
+const LegalPage = lazy(() => import('./components/LegalPage'));
 const EmbedIncomingCall = lazy(() => import('./components/EmbedIncomingCall'));
 const EmbedGoLive = lazy(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
@@ -152,6 +153,9 @@ function App() {
 
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
+            <Route path="/community-guidelines" element={<LegalPage kind="community-guidelines" />} />
+            <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+            <Route path="/terms" element={<LegalPage kind="terms" />} />
 
             {/* ROOT - landing page e re, ose feed nëse je i loguar */}
             <Route path="/" element={user ? <Navigate to="/feed" /> : <LandingPage />} />

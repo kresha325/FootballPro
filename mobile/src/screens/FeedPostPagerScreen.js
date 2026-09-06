@@ -27,6 +27,7 @@ import {
   postCommentsRequest,
   unlikePostRequest,
 } from '../api/client';
+import ReportSheet from '../components/ReportSheet';
 import PostSponsorStrip, { SponsoredLabel } from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { absoluteBackendUrl } from '../config/constants';
@@ -75,6 +76,7 @@ function FeedPagerPage({
   currentUserId,
   onDeletePost,
   onDeleteComment,
+  onReportPost,
   deletingPostId,
   deletingCommentId,
   shareOpen,
@@ -189,6 +191,15 @@ function FeedPagerPage({
             accessibilityLabel="Delete post"
           >
             <Ionicons name="trash-outline" size={24} color="#fca5a5" />
+          </TouchableOpacity>
+        ) : !isOwnPost && onReportPost ? (
+          <TouchableOpacity
+            onPress={() => onReportPost(item)}
+            style={styles.deleteBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="Report post"
+          >
+            <Ionicons name="flag-outline" size={24} color="#fde68a" />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -356,6 +367,7 @@ export default function FeedPostPagerScreen() {
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
   const [bannerError, setBannerError] = useState('');
   const [deletingPostId, setDeletingPostId] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   const [deletingCommentId, setDeletingCommentId] = useState(null);
   const [sharingPostId, setSharingPostId] = useState(null);
 
@@ -496,10 +508,10 @@ export default function FeedPostPagerScreen() {
   const onDeletePost = useCallback(
     (post) => {
       if (!post?.id || deletingPostId) return;
-      Alert.alert('Delete post', 'Are you sure you want to delete this post?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert('Fshi postimin', 'Je i sigurt?', [
+        { text: 'Anulo', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Fshi',
           style: 'destructive',
           onPress: async () => {
             setDeletingPostId(post.id);
@@ -524,6 +536,11 @@ export default function FeedPostPagerScreen() {
     },
     [deletingPostId, navigation, notifyParent]
   );
+
+  const onReportPost = useCallback((post) => {
+    if (!post?.id) return;
+    setReportTarget(post.id);
+  }, []);
 
   const onDeleteComment = useCallback(
     (comment, postId) => {
@@ -618,6 +635,7 @@ export default function FeedPostPagerScreen() {
         currentUserId={user?.id}
         onDeletePost={onDeletePost}
         onDeleteComment={onDeleteComment}
+        onReportPost={onReportPost}
         deletingPostId={deletingPostId}
         deletingCommentId={deletingCommentId}
         shareOpen={sharingPostId === item.id}
@@ -635,6 +653,7 @@ export default function FeedPostPagerScreen() {
       isDark,
       onDeleteComment,
       onDeletePost,
+      onReportPost,
       user?.id,
       navigation,
       onAddComment,
@@ -687,6 +706,13 @@ export default function FeedPostPagerScreen() {
         viewabilityConfig={viewabilityConfig}
         keyboardShouldPersistTaps="handled"
         extraData={`${viewport.h}-${viewport.w}`}
+      />
+      <ReportSheet
+        visible={reportTarget != null}
+        onClose={() => setReportTarget(null)}
+        targetType="post"
+        targetId={reportTarget}
+        title="Raporto postimin"
       />
     </View>
   );

@@ -145,7 +145,6 @@ exports.register = async (req, res) => {
 
 
 exports.login = async (req, res) => {
-  console.log('BACKEND: LOGIN REQUEST:', req.body);
   const { email: rawEmail, password } = req.body;
   const email = normalizeEmail(rawEmail);
 
@@ -160,9 +159,19 @@ exports.login = async (req, res) => {
         email
       ),
     });
-    console.log('BACKEND: User found:', user ? user.id : 'not found');
     if (!user) {
       return res.status(400).json({ msg: 'Kredencialet janë të pasakta' });
+    }
+
+    if (user.deletedAt) {
+      return res.status(403).json({ msg: 'Kjo llogari është e fshirë' });
+    }
+    if (user.bannedAt) {
+      return res.status(403).json({
+        msg: user.banReason
+          ? `Llogaria është e pezulluar: ${user.banReason}`
+          : 'Llogaria është e pezulluar',
+      });
     }
 
     if (!user.password || !String(user.password).startsWith('$2')) {
@@ -189,7 +198,6 @@ exports.login = async (req, res) => {
     if (!existingProfile) {
       try {
         await Profile.create({ userId: user.id }, { fields: ['userId'] });
-        console.log('BACKEND: Profile created automatically for user:', user.id);
       } catch (profileErr) {
         console.warn('BACKEND: Failed to auto-create profile for user (non-fatal):', profileErr && profileErr.message);
       }
@@ -205,7 +213,6 @@ exports.login = async (req, res) => {
     const token = jwt.sign(payload, getJwtSecret(), {
       expiresIn: '7d',
     });
-    console.log('BACKEND: Login successful, sending token');
     res.json({
       token,
       user: {
@@ -249,7 +256,7 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:5174').replace(/\/$/, '');
+    const baseUrl = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
     const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
 
     let emailSent = false;

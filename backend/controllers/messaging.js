@@ -168,6 +168,15 @@ exports.getOrCreateConversation = async (req, res) => {
     
     console.log('🔵 Current user ID:', req.user.id);
     console.log('🔵 Target user ID:', targetUserId);
+
+    try {
+      const { isEitherBlocked } = require('./moderation');
+      if (await isEitherBlocked(req.user.id, targetUserId)) {
+        return res.status(403).json({ msg: 'Nuk mund të hapësh bisedë me këtë përdorues (bllokuar)' });
+      }
+    } catch (_e) {
+      /* Blocks table may be missing before migrate */
+    }
     
     // Verify target user exists
     const targetUser = await User.findByPk(targetUserId);
@@ -373,6 +382,21 @@ exports.sendMessage = async (req, res) => {
     });
     if (!access.ok) {
       return res.status(access.status).json({ msg: access.msg });
+    }
+
+    // Block check between conversation members (DM)
+    try {
+      const { isEitherBlocked } = require('./moderation');
+      const members = await ConversationMember.findAll({
+        where: { conversationId },
+        attributes: ['userId'],
+      });
+      const other = members.map((m) => m.userId).find((id) => Number(id) !== Number(req.user.id));
+      if (other && (await isEitherBlocked(req.user.id, other))) {
+        return res.status(403).json({ msg: 'Mesazhet nuk lejohen me këtë përdorues (bllokuar)' });
+      }
+    } catch (_e) {
+      /* non-fatal if Blocks table missing before migrate */
     }
 
     let messageData = {

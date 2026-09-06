@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Linking, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   extractErrorMessage,
   joncoinBalanceRequest,
@@ -9,6 +9,7 @@ import {
   joncoinWithdrawRequest,
   myOrdersRequest,
 } from '../api/client';
+import { ALLOW_MOBILE_DIGITAL_PURCHASES, WEB_APP_URL } from '../config/constants';
 
 function WalletSkeleton() {
   return (
@@ -59,6 +60,17 @@ export default function WalletScreen() {
   }, [loadData]);
 
   const purchase = async () => {
+    if (!ALLOW_MOBILE_DIGITAL_PURCHASES) {
+      Alert.alert(
+        'JonCoin',
+        'Blerja e JonCoin me para reale në app kërkon IAP (App Store / Play). Për tani përdor web ose transfer nga një balancë ekzistuese.',
+        [
+          { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/wallet`).catch(() => {}) },
+          { text: 'OK', style: 'cancel' },
+        ]
+      );
+      return;
+    }
     const amount = Number(buyAmount);
     if (!amount || amount <= 0) return;
     try {

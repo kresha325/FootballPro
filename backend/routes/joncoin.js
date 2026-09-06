@@ -12,7 +12,7 @@ router.get('/balance', joncoin.getBalance);
 router.get('/transactions', joncoin.getTransactions);
 router.post('/purchase', joncoin.purchase);
 router.post('/spend', joncoin.spend);
-router.post('/reward', joncoin.reward); // admin ose sistem
+router.post('/reward', admin, joncoin.reward); // admin only — never mint for any authed user
 router.post('/withdraw', joncoin.withdraw);
 router.patch('/transaction/:id', admin, joncoin.updateTransactionStatus); // admin
 router.post('/transfer', joncoin.transfer); // user-to-user transfer

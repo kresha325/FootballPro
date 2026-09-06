@@ -15,11 +15,22 @@ import {
   extractErrorMessage,
   updateMyProfileRequest,
   youtubeResolveChannelRequest,
+  deleteMyAccountRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  getNotificationPermissionGranted,
+  getPushPreference,
+} from '../notifications/push';
+import { WEB_APP_URL } from '../config/constants';
 
 const YOUTUBE_STUDIO_HELP = 'https://www.youtube.com/account_advanced';
+const COMMUNITY_GUIDELINES_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/community-guidelines`;
+const PRIVACY_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/privacy`;
+const TERMS_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/terms`;
 
 function profileFromUser(user) {
   return {
@@ -33,10 +44,13 @@ function profileFromUser(user) {
 }
 
 export default function SettingsScreen() {
-  const { user, refreshMe } = useAuth();
+  const { user, refreshMe, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [pushBusy, setPushBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [resolvingYoutube, setResolvingYoutube] = useState(false);
   const [resolveError, setResolveError] = useState('');
   const resolveSkipRef = useRef(false);
@@ -45,6 +59,46 @@ export default function SettingsScreen() {
   useEffect(() => {
     setProfile(profileFromUser(user));
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pref = await getPushPreference();
+        const granted = await getNotificationPermissionGranted();
+        if (!cancelled) setNotificationsEnabled(Boolean(pref && granted));
+      } catch {
+        /* keep default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleNotificationsToggle = async (next) => {
+    setPushBusy(true);
+    setNotificationsEnabled(next);
+    try {
+      if (next) {
+        const token = await enablePushNotifications();
+        if (!token) {
+          setNotificationsEnabled(false);
+          Alert.alert(
+            'Njoftimet',
+            'Lejo njoftimet nga Settings e telefonit, pastaj provo përsëri. Në simulator push nuk funksionon.'
+          );
+        }
+      } else {
+        await disablePushNotifications();
+      }
+    } catch (err) {
+      setNotificationsEnabled(!next);
+      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësuan njoftimet'));
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const normalizedYoutube = useMemo(
     () => normalizeYoutubeChannelId(profile.youtubeChannelId),
@@ -155,6 +209,43 @@ export default function SettingsScreen() {
     Linking.openURL(YOUTUBE_STUDIO_HELP).catch(() => {});
   };
 
+  const openExternal = (url) => {
+    Linking.openURL(url).catch(() => Alert.alert('Gabim', 'Nuk u hap lidhja'));
+  };
+
+  const runDeleteAccount = async () => {
+    if (!deletePassword) {
+      Alert.alert('Fjalëkalimi', 'Vendos fjalëkalimin për të fshirë llogarinë.');
+      return;
+    }
+    Alert.alert(
+      'Fshi llogarinë?',
+      'Të dhënat personale anonimizohen. Kjo nuk kthehet.',
+      [
+        { text: 'Anulo', style: 'cancel' },
+        {
+          text: 'Fshi',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteMyAccountRequest({
+                password: deletePassword,
+                confirm: 'DELETE',
+              });
+              Alert.alert('Llogaria u fshi', 'Mirupafshim.');
+              await logout();
+            } catch (err) {
+              Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u fshi llogaria'));
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.card}>
@@ -170,9 +261,15 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Notifications</Text>
         <View style={styles.rowBetween}>
           <Text style={styles.label}>Enable notifications</Text>
-          <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} />
+          <Switch
+            value={notificationsEnabled}
+            onValueChange={handleNotificationsToggle}
+            disabled={pushBusy}
+          />
         </View>
-        <Text style={styles.hint}>Njoftimet push kërkojnë build me expo-notifications.</Text>
+        <Text style={styles.hint}>
+          Njoftime push për like, komente, ndjekje, thirrje. Kërkon build me njoftime (jo Expo Go).
+        </Text>
       </View>
 
       <View style={[styles.card, styles.youtubeCard]}>
@@ -289,6 +386,42 @@ export default function SettingsScreen() {
           <Text style={styles.saveButtonText}>{saving ? 'Duke ruajtur…' : 'Ruaj cilësimet'}</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.card}>
+        <Text style={styles.title}>Ligjore & komuniteti</Text>
+        <TouchableOpacity onPress={() => openExternal(COMMUNITY_GUIDELINES_URL)} style={styles.linkBtn}>
+          <Text style={styles.linkBtnText}>Udhëzuesit e komunitetit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openExternal(PRIVACY_URL)} style={styles.linkBtn}>
+          <Text style={styles.linkBtnText}>Politika e privatësisë</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openExternal(TERMS_URL)} style={styles.linkBtn}>
+          <Text style={styles.linkBtnText}>Kushtet e përdorimit</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.card, styles.dangerCard]}>
+        <Text style={styles.title}>Fshi llogarinë</Text>
+        <Text style={styles.hint}>
+          Anonimizohen të dhënat personale. Transaksionet financiare ruhen sipas ligjit. Ky veprim nuk kthehet.
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={deletePassword}
+          onChangeText={setDeletePassword}
+          placeholder="Fjalëkalimi yt"
+          placeholderTextColor="#94a3b8"
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          style={styles.dangerButton}
+          onPress={runDeleteAccount}
+          disabled={deleting}
+        >
+          <Text style={styles.dangerButtonText}>{deleting ? 'Duke fshirë…' : 'Fshi llogarinë time'}</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -305,6 +438,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   youtubeCard: { borderColor: '#fecaca', backgroundColor: '#fffbfb' },
+  dangerCard: { borderColor: '#fecaca', backgroundColor: '#fff7f7' },
   youtubeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   youtubeLead: { color: '#475569', fontSize: 14, lineHeight: 20, marginBottom: 10 },
   title: { color: '#0f172a', fontWeight: '800', fontSize: 16, marginBottom: 4 },
@@ -343,6 +477,14 @@ const styles = StyleSheet.create({
   },
   resolveBtnDisabled: { opacity: 0.6 },
   resolveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  dangerButton: {
+    marginTop: 8,
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  dangerButtonText: { color: '#fff', fontWeight: '800' },
   saveButton: {
     marginTop: 6,
     backgroundColor: '#0f766e',

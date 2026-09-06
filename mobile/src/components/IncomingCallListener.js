@@ -89,10 +89,20 @@ export default function IncomingCallListener() {
     };
 
     socket.on('call:incoming', onIncoming);
+    const onRemoteEnd = () => {
+      setIncoming(null);
+      stopVibrate();
+    };
+    socket.on('call:end', onRemoteEnd);
+    socket.on('call:ended', onRemoteEnd);
+    socket.on('call:rejected', onRemoteEnd);
     return () => {
       socket.off('call:incoming', onIncoming);
+      socket.off('call:end', onRemoteEnd);
+      socket.off('call:ended', onRemoteEnd);
+      socket.off('call:rejected', onRemoteEnd);
     };
-  }, [getSocket, socketConnected, user?.id]);
+  }, [getSocket, socketConnected, user?.id, stopVibrate]);
 
   const reject = useCallback(() => {
     const socket = getSocket();

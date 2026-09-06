@@ -1,4 +1,5 @@
 import 'fast-text-encoding';
+import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 import { ensureLiveKitNative } from './src/livekit/register';
 

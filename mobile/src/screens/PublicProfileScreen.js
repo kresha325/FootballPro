@@ -40,7 +40,11 @@ import {
   userGalleryRequest,
   userPostsRequest,
   userVideosRequest,
+  blockUserRequest,
+  unblockUserRequest,
+  blockStatusRequest,
 } from '../api/client';
+import ReportSheet from '../components/ReportSheet';
 import PublicProfileTournamentsTab from '../components/publicProfile/PublicProfileTournamentsTab';
 import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
@@ -78,6 +82,8 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [gallery, setGallery] = useState([]);
   const [videos, setVideos] = useState([]);
   const [transfers, setTransfers] = useState([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [iBlocked, setIBlocked] = useState(false);
   const [staffAssignments, setStaffAssignments] = useState([]);
   const [clubMembers, setClubMembers] = useState([]);
   const [clubStaff, setClubStaff] = useState([]);
@@ -146,8 +152,51 @@ export default function PublicProfileScreen({ route, navigation }) {
     navigation.setOptions({
       title: ownProfileRoot && !profile ? 'Profili im' : displayName,
       headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
+      headerRight: !isSelf && userId
+        ? () => (
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(displayName || 'Profili', undefined, [
+                  {
+                    text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
+                    style: iBlocked ? 'default' : 'destructive',
+                    onPress: async () => {
+                      try {
+                        if (iBlocked) {
+                          await unblockUserRequest(userId);
+                          setIBlocked(false);
+                        } else {
+                          await blockUserRequest(userId);
+                          setIBlocked(true);
+                          Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
+                        }
+                      } catch (err) {
+                        Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
+                      }
+                    },
+                  },
+                  { text: 'Raporto', onPress: () => setReportOpen(true) },
+                  { text: 'Anulo', style: 'cancel' },
+                ]);
+              }}
+              style={{ paddingHorizontal: 12 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
+            </TouchableOpacity>
+          )
+        : undefined,
     });
-  }, [navigation, displayName, ownProfileRoot, profile]);
+  }, [navigation, displayName, ownProfileRoot, profile, isSelf, userId, iBlocked]);
+
+  useEffect(() => {
+    if (!userId || isSelf) {
+      setIBlocked(false);
+      return;
+    }
+    blockStatusRequest(userId)
+      .then((res) => setIBlocked(!!res.data?.iBlocked))
+      .catch(() => setIBlocked(false));
+  }, [userId, isSelf]);
 
   const loadProfile = useCallback(
     async ({ silent } = { silent: false }) => {
@@ -843,6 +892,14 @@ export default function PublicProfileScreen({ route, navigation }) {
         </View>
       </View>
     </Modal>
+
+    <ReportSheet
+      visible={reportOpen}
+      onClose={() => setReportOpen(false)}
+      targetType="profile"
+      targetId={userId}
+      title="Raporto profilin"
+    />
     </>
   );
 }
