@@ -170,32 +170,32 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
     data.socialLinks && typeof data.socialLinks === 'object' ? Object.entries(data.socialLinks) : [];
 
   return (
-    <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="flex items-center">
+    <div className="w-full max-w-2xl mx-auto bg-white shadow rounded p-4 sm:p-6 mt-4 sm:mt-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           {logo ? (
-            <img src={logo} alt={data.name || 'Liga'} className="w-20 h-20 rounded-full mr-4 object-cover" />
+            <img src={logo} alt={data.name || 'Liga'} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover shrink-0" />
           ) : (
-            <div className="w-20 h-20 rounded-full mr-4 bg-slate-200 flex items-center justify-center text-slate-500 text-xl font-bold">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xl font-bold shrink-0">
               {String(data.name || 'L').slice(0, 1).toUpperCase()}
             </div>
           )}
-          <div>
-            <h2 className="text-2xl font-bold">{data.name || 'Liga'}</h2>
-            <p className="text-gray-600">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold break-words">{data.name || 'Liga'}</h2>
+            <p className="text-gray-600 text-sm sm:text-base">
               {[data.country, data.level].filter(Boolean).join(' • ') || '—'}
             </p>
-            {data.foundedYear ? <p className="text-gray-500">Founded: {data.foundedYear}</p> : null}
+            {data.foundedYear ? <p className="text-gray-500 text-sm">Founded: {data.foundedYear}</p> : null}
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 shrink-0">
+        <div className="flex flex-row flex-wrap gap-2 sm:flex-col w-full sm:w-auto shrink-0">
           {isOwner && (
             <>
               <button
                 type="button"
                 onClick={() => onEdit?.()}
-                className="px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-center"
+                className="flex-1 sm:flex-none min-h-10 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-center"
               >
                 Edito
               </button>
@@ -203,7 +203,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleDeleteLiga}
-                className="px-3 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 sm:flex-none min-h-10 px-3 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
               >
                 Fshi ligën
               </button>
@@ -215,7 +215,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleLeave}
-                className="px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+                className="flex-1 sm:flex-none min-h-10 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
               >
                 Largohu
               </button>
@@ -224,7 +224,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
                 type="button"
                 disabled={actionLoading}
                 onClick={handleJoin}
-                className="px-3 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                className="flex-1 sm:flex-none min-h-10 px-3 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 Bashkohu
               </button>
@@ -234,13 +234,13 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
       </div>
 
       {user?.role === 'club' && isClubMember && (
-        <p className="mb-4 text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
+        <p className="mb-4 text-xs sm:text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
           Klubi juaj është anëtar i kësaj lige. Lojtarët e aprovuar sinkronizohen në turneun e ligës.
         </p>
       )}
 
       {data.description ? (
-        <p className="mb-4 whitespace-pre-wrap text-gray-800">{data.description}</p>
+        <p className="mb-4 whitespace-pre-wrap break-words text-gray-800">{data.description}</p>
       ) : null}
       {data.website ? (
         <a
@@ -267,15 +267,15 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
               return (
                 <li
                   key={`${cid}-${idx}`}
-                  className="flex items-center justify-between text-sm text-gray-700 bg-slate-50 rounded-lg px-3 py-2"
+                  className="flex items-center justify-between gap-2 text-sm text-gray-700 bg-slate-50 rounded-lg px-3 py-2"
                 >
-                  <span>{label}</span>
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
                   {isOwner && cid ? (
                     <button
                       type="button"
                       disabled={actionLoading}
                       onClick={() => handleRemoveClub(cid)}
-                      className="text-red-600 hover:underline text-xs font-semibold"
+                      className="shrink-0 text-red-600 hover:underline text-xs font-semibold"
                     >
                       Hiq
                     </button>

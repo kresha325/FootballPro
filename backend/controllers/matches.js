@@ -190,38 +190,68 @@ exports.updateMatchScore = async (req, res) => {
     match.status = 'finished';
     await match.save();
 
-    // Update participant stats
-    const homeParticipant = await TournamentParticipant.findOne({ where: { tournamentId: match.tournamentId, userId: match.homeUserId } });
-    const awayParticipant = await TournamentParticipant.findOne({ where: { tournamentId: match.tournamentId, userId: match.awayUserId } });
-
-    if (homeParticipant) {
-      homeParticipant.goalsFor += scoreHome;
-      homeParticipant.goalsAgainst += scoreAway;
-      if (scoreHome > scoreAway) {
-        homeParticipant.wins += 1;
-        homeParticipant.points += 3;
-      } else if (scoreHome === scoreAway) {
-        homeParticipant.draws += 1;
-        homeParticipant.points += 1;
-      } else {
-        homeParticipant.losses += 1;
+    // Rebuild standings from finished matches (do not increment again)
+    if (match.tournamentId) {
+      const participants = await TournamentParticipant.findAll({
+        where: { tournamentId: match.tournamentId },
+      });
+      const stats = {};
+      for (const p of participants) {
+        stats[p.userId] = {
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          points: 0,
+        };
       }
-      await homeParticipant.save();
-    }
-
-    if (awayParticipant) {
-      awayParticipant.goalsFor += scoreAway;
-      awayParticipant.goalsAgainst += scoreHome;
-      if (scoreAway > scoreHome) {
-        awayParticipant.wins += 1;
-        awayParticipant.points += 3;
-      } else if (scoreAway === scoreHome) {
-        awayParticipant.draws += 1;
-        awayParticipant.points += 1;
-      } else {
-        awayParticipant.losses += 1;
+      const finished = await Match.findAll({
+        where: { tournamentId: match.tournamentId, status: 'finished' },
+        attributes: ['homeUserId', 'awayUserId', 'scoreHome', 'scoreAway'],
+      });
+      for (const m of finished) {
+        const h = m.homeUserId;
+        const a = m.awayUserId;
+        if (!stats[h] || !stats[a]) continue;
+        const sh = Number(m.scoreHome) || 0;
+        const sa = Number(m.scoreAway) || 0;
+        stats[h].goalsFor += sh;
+        stats[h].goalsAgainst += sa;
+        stats[a].goalsFor += sa;
+        stats[a].goalsAgainst += sh;
+        if (sh > sa) {
+          stats[h].wins += 1;
+          stats[h].points += 3;
+          stats[a].losses += 1;
+        } else if (sa > sh) {
+          stats[a].wins += 1;
+          stats[a].points += 3;
+          stats[h].losses += 1;
+        } else {
+          stats[h].draws += 1;
+          stats[a].draws += 1;
+          stats[h].points += 1;
+          stats[a].points += 1;
+        }
       }
-      await awayParticipant.save();
+      for (const p of participants) {
+        const s = stats[p.userId] || {
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          points: 0,
+        };
+        p.wins = s.wins;
+        p.draws = s.draws;
+        p.losses = s.losses;
+        p.goalsFor = s.goalsFor;
+        p.goalsAgainst = s.goalsAgainst;
+        p.points = s.points;
+        await p.save();
+      }
     }
 
     res.json(match);

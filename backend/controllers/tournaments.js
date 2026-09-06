@@ -241,6 +241,29 @@ exports.getTournament = async (req, res) => {
       ],
     });
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+
+    // Auto-accept stuck pending joins (no approval gate in UI for open tournaments)
+    const [acceptedCount] = await TournamentParticipant.update(
+      { status: 'accepted' },
+      { where: { tournamentId: tournament.id, status: 'pending' } }
+    );
+    if (acceptedCount > 0) {
+      const refreshed = await Tournament.findByPk(req.params.id, {
+        include: [
+          { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
+          {
+            model: User,
+            as: 'participants',
+            attributes: ['id', 'firstName', 'lastName', 'role'],
+            through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status'] },
+            include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
+          },
+          { model: Match, include: [{ model: User, as: 'homeUser' }, { model: User, as: 'awayUser' }] },
+        ],
+      });
+      return res.json(serializeTournament(refreshed));
+    }
+
     res.json(serializeTournament(tournament));
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
@@ -276,7 +299,11 @@ exports.joinTournament = async (req, res) => {
     const already = participants.some((p) => p.userId === req.user.id);
     if (already) return res.status(400).json({ msg: 'Already joined this tournament' });
 
-    await TournamentParticipant.create({ tournamentId: req.params.id, userId: req.user.id });
+    await TournamentParticipant.create({
+      tournamentId: req.params.id,
+      userId: req.user.id,
+      status: 'accepted',
+    });
     res.json({ msg: 'Joined tournament' });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
@@ -563,17 +590,22 @@ exports.updateMatchScore = async (req, res) => {
     const authz = canFillMatchStats(match.Tournament, req.user, match);
     if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
+    const previousStatus = match.status;
+
     await match.update({ scoreHome, scoreAway, status });
 
-  if (Array.isArray(goalEvents) || Array.isArray(scorers)) {
+    if (Array.isArray(goalEvents) || Array.isArray(scorers)) {
       await saveMatchGoalEvents(match.id, goalEvents || scorers, match);
     }
 
-    // If match finished, update standings
-    if (status === 'finished') {
-      await updateStandings(match);
+    // Recompute standings from finished matches (idempotent — no double-counting on re-save)
+    if (status === 'finished' || previousStatus === 'finished') {
+      await recomputeTournamentStandings(match.tournamentId);
 
-      if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
+      if (
+        status === 'finished' &&
+        (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup')
+      ) {
         await tryAdvanceKnockoutRound(match);
       }
     }
@@ -585,43 +617,43 @@ exports.updateMatchScore = async (req, res) => {
   }
 };
 
-// Helper: Update standings after match
-async function updateStandings(match) {
-  const { tournamentId, homeUserId, awayUserId, scoreHome, scoreAway } = match;
+/**
+ * Rebuild participant W/D/L/GF/GA/points from finished matches only.
+ * Prevents double-counting when a result is edited and saved again.
+ */
+async function recomputeTournamentStandings(tournamentId) {
+  const participants = await TournamentParticipant.findAll({ where: { tournamentId } });
+  if (!participants.length) return;
 
-  const homeParticipant = await TournamentParticipant.findOne({
-    where: { tournamentId, userId: homeUserId },
-  });
-  const awayParticipant = await TournamentParticipant.findOne({
-    where: { tournamentId, userId: awayUserId },
-  });
+  const computed = await standingsFromFinishedMatches(
+    tournamentId,
+    participants.map((p) => p.userId)
+  );
+  const byUser = Object.fromEntries(computed.map((r) => [Number(r.userId), r]));
 
-  if (!homeParticipant || !awayParticipant) return;
-
-  // Update goals
-  homeParticipant.goalsFor += scoreHome;
-  homeParticipant.goalsAgainst += scoreAway;
-  awayParticipant.goalsFor += scoreAway;
-  awayParticipant.goalsAgainst += scoreHome;
-
-  // Update points and W/D/L
-  if (scoreHome > scoreAway) {
-    homeParticipant.wins += 1;
-    homeParticipant.points += 3;
-    awayParticipant.losses += 1;
-  } else if (scoreHome < scoreAway) {
-    awayParticipant.wins += 1;
-    awayParticipant.points += 3;
-    homeParticipant.losses += 1;
-  } else {
-    homeParticipant.draws += 1;
-    homeParticipant.points += 1;
-    awayParticipant.draws += 1;
-    awayParticipant.points += 1;
+  for (const p of participants) {
+    const s = byUser[Number(p.userId)] || {
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      points: 0,
+    };
+    p.wins = s.wins || 0;
+    p.draws = s.draws || 0;
+    p.losses = s.losses || 0;
+    p.goalsFor = s.goalsFor || 0;
+    p.goalsAgainst = s.goalsAgainst || 0;
+    p.points = s.points || 0;
+    await p.save();
   }
+}
 
-  await homeParticipant.save();
-  await awayParticipant.save();
+/** @deprecated Prefer recomputeTournamentStandings — kept for any legacy callers */
+async function updateStandings(match) {
+  if (!match?.tournamentId) return;
+  await recomputeTournamentStandings(match.tournamentId);
 }
 
 /** When an entire knockout round is finished, pair winners into the next round (or end the tournament). */
@@ -1104,46 +1136,9 @@ exports.updateMatchResultForTournament = async (req, res) => {
     match.status = 'finished';
     await match.save();
 
-    // Update tournament participant stats (for league type)
-    if (match.Tournament.type === 'league') {
-      const homeParticipant = await TournamentParticipant.findOne({
-        where: { tournamentId: match.tournamentId, userId: match.homeUserId }
-      });
-
-      const awayParticipant = await TournamentParticipant.findOne({
-        where: { tournamentId: match.tournamentId, userId: match.awayUserId }
-      });
-
-      if (homeParticipant && awayParticipant) {
-        // Update goals
-        homeParticipant.goalsFor += scoreHome;
-        homeParticipant.goalsAgainst += scoreAway;
-        awayParticipant.goalsFor += scoreAway;
-        awayParticipant.goalsAgainst += scoreHome;
-
-        // Update wins/draws/losses and points
-        if (scoreHome > scoreAway) {
-          homeParticipant.wins += 1;
-          homeParticipant.points += 3;
-          awayParticipant.losses += 1;
-        } else if (scoreAway > scoreHome) {
-          awayParticipant.wins += 1;
-          awayParticipant.points += 3;
-          homeParticipant.losses += 1;
-        } else {
-          homeParticipant.draws += 1;
-          homeParticipant.points += 1;
-          awayParticipant.draws += 1;
-          awayParticipant.points += 1;
-        }
-
-        await homeParticipant.save();
-        await awayParticipant.save();
-      }
-    }
+    await recomputeTournamentStandings(match.tournamentId);
 
     if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
-      await updateStandings(match);
       await tryAdvanceKnockoutRound(match);
     }
 

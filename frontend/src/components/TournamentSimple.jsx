@@ -98,9 +98,9 @@ function MatchBroadcastModal({
   const hasScore = sh != null && sa != null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm" onClick={onClose} role="presentation">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto" onClick={onClose} role="presentation">
       <div
-        className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white shadow-2xl ring-1 ring-white/10"
+        className="w-full max-w-2xl max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white shadow-2xl ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -108,9 +108,9 @@ function MatchBroadcastModal({
         <div className="relative overflow-hidden border-b border-white/10 px-4 py-3 sm:px-6">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/40 via-transparent to-transparent" />
           <div className="relative flex items-start justify-between gap-2">
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400/90">Ndeshje zyrtare</p>
-              <p className="text-sm text-slate-300">{tName}</p>
+              <p className="text-sm text-slate-300 break-words">{tName}</p>
               <p className="mt-1 text-xs text-slate-400">
                 {m?.matchDate ? new Date(m.matchDate).toLocaleString() : '—'} · Raundi {m?.round ?? '—'}
               </p>
@@ -118,7 +118,7 @@ function MatchBroadcastModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20"
+              className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20"
             >
               Mbyll
             </button>
@@ -139,23 +139,23 @@ function MatchBroadcastModal({
           <>
             <div className="px-4 py-6 sm:px-8">
               <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-1 flex-col items-center gap-2 text-center sm:items-end sm:text-right">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-1 flex-col items-center gap-2 text-center sm:items-end sm:text-right min-w-0">
+                  <div className="flex w-full items-center justify-center gap-3 sm:justify-end">
                     {avatarUrl(home?.Profile?.profilePhoto) ? (
-                      <img src={avatarUrl(home.Profile.profilePhoto)} alt="" className="h-14 w-14 rounded-full border-2 border-white/20 object-cover" />
+                      <img src={avatarUrl(home.Profile.profilePhoto)} alt="" className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full border-2 border-white/20 object-cover" />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700 text-lg font-bold text-emerald-300">
+                      <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-slate-700 text-lg font-bold text-emerald-300">
                         {(home?.firstName?.[0] || '?').toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <p className="text-lg font-bold leading-tight sm:text-xl">{participantLabel(home, participantType)}</p>
+                    <div className="min-w-0">
+                      <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(home, participantType)}</p>
                       {home?.Profile?.position && <p className="text-xs text-slate-400">{home.Profile.position}</p>}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-center justify-center px-4">
+                <div className="flex shrink-0 flex-col items-center justify-center px-2 sm:px-4">
                   <span
                     className={`mb-2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                       m.status === 'finished'
@@ -167,7 +167,7 @@ function MatchBroadcastModal({
                   >
                     {m.status === 'finished' ? 'Përfunduar' : m.status === 'ongoing' ? 'Live' : 'Në program'}
                   </span>
-                  <div className="flex items-baseline gap-2 font-mono text-5xl font-black tabular-nums tracking-tight sm:text-6xl">
+                  <div className="flex items-baseline gap-2 font-mono text-4xl font-black tabular-nums tracking-tight sm:text-6xl">
                     <span className="text-white">{hasScore ? sh : '—'}</span>
                     <span className="text-slate-500">:</span>
                     <span className="text-white">{hasScore ? sa : '—'}</span>
@@ -175,16 +175,16 @@ function MatchBroadcastModal({
                   {m.minutesPlayed && <p className="mt-1 text-xs text-slate-400">Minuta: {m.minutesPlayed}</p>}
                 </div>
 
-                <div className="flex flex-1 flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-start sm:gap-4 sm:text-left">
+                <div className="flex flex-1 flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-start sm:gap-4 sm:text-left min-w-0">
                   {avatarUrl(away?.Profile?.profilePhoto) ? (
-                    <img src={avatarUrl(away.Profile.profilePhoto)} alt="" className="h-14 w-14 shrink-0 rounded-full border-2 border-white/20 object-cover" />
+                    <img src={avatarUrl(away.Profile.profilePhoto)} alt="" className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full border-2 border-white/20 object-cover" />
                   ) : (
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-700 text-lg font-bold text-cyan-300">
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-slate-700 text-lg font-bold text-cyan-300">
                       {(away?.firstName?.[0] || '?').toUpperCase()}
                     </div>
                   )}
-                  <div>
-                    <p className="text-lg font-bold leading-tight sm:text-xl">{participantLabel(away, participantType)}</p>
+                  <div className="min-w-0">
+                    <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(away, participantType)}</p>
                     {away?.Profile?.position && <p className="text-xs text-slate-400">{away.Profile.position}</p>}
                   </div>
                 </div>
@@ -199,9 +199,9 @@ function MatchBroadcastModal({
                 ) : (
                   <ul className="space-y-2">
                     {scH.map((row) => (
-                      <li key={row.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="font-medium text-slate-100">{scorerLine(row)}</span>
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300">{row.goals ?? 1}</span>
+                      <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
+                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="shrink-0 rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300">{row.goals ?? 1}</span>
                       </li>
                     ))}
                   </ul>
@@ -214,9 +214,9 @@ function MatchBroadcastModal({
                 ) : (
                   <ul className="space-y-2">
                     {scA.map((row) => (
-                      <li key={row.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="font-medium text-slate-100">{scorerLine(row)}</span>
-                        <span className="rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-cyan-200">{row.goals ?? 1}</span>
+                      <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
+                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="shrink-0 rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-cyan-200">{row.goals ?? 1}</span>
                       </li>
                     ))}
                   </ul>
@@ -650,14 +650,14 @@ export default function TournamentSimple() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20">
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="relative mb-10 overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-emerald-900/20">
+      <div className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-500/20 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-5 sm:p-8 shadow-2xl shadow-emerald-900/20">
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-400/90">FootballPro · Competitions</p>
-            <h1 className="mt-2 text-3xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
-            <p className="mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
+            <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
+            <p className="mt-2 sm:mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
               Ligë, cup dhe knockout — tabela live, raport golash, minuta dhe asiste direkt në profilin e atletit.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -706,7 +706,7 @@ export default function TournamentSimple() {
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">{getTypeIcon(tournament.type)}</span>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{formatTournamentTitle(tournament)}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white min-w-0 break-words">{formatTournamentTitle(tournament)}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       by {tournament.creator?.firstName} {tournament.creator?.lastName}
                     </p>
@@ -872,9 +872,9 @@ export default function TournamentSimple() {
       )}
 
       {showCreateModal && canCreateTournament && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Krijo Turne të Ri</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">Krijo Turne të Ri</h2>
 
             <form onSubmit={createTournament} className="space-y-4">
               <div>
@@ -1006,9 +1006,9 @@ export default function TournamentSimple() {
       )}
 
       {editTournament && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Edito turneun</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4">Edito turneun</h2>
             <form onSubmit={saveEditTournament} className="space-y-3">
               {!(editTournament.ligaId || editTournament.sourceRole === 'liga') ? (
                 <div>
@@ -1076,12 +1076,12 @@ export default function TournamentSimple() {
       )}
 
       {selectedTournament && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{formatTournamentTitle(selectedTournament)}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-3xl w-full p-4 sm:p-6 max-h-[92dvh] overflow-y-auto overscroll-contain">
+            <div className="flex justify-between items-start gap-3 mb-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{formatTournamentTitle(selectedTournament)}</h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words">
                   {selectedTournament.creator?.firstName} {selectedTournament.creator?.lastName} ·{' '}
                   <span className="capitalize">{selectedTournament.type}</span>
                   {selectedTournament.season ? ` · ${selectedTournament.season}` : ''} ·{' '}
@@ -1100,7 +1100,7 @@ export default function TournamentSimple() {
                   setSelectedTournament(null);
                   setDetailExtras({ standings: null, matches: [], stats: null });
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none"
+                className="shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none p-2 -mr-1"
               >
                 ✕
               </button>
@@ -1118,7 +1118,7 @@ export default function TournamentSimple() {
 
             {!detailLoading && (
               <nav
-                className="mb-4 flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60"
+                className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60 sm:grid-cols-4"
                 aria-label="Seksione turneu"
               >
                 {[
@@ -1131,7 +1131,7 @@ export default function TournamentSimple() {
                     key={id}
                     type="button"
                     onClick={() => setDetailTab(id)}
-                    className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-xs font-semibold transition sm:px-3 sm:text-sm ${
+                    className={`min-h-10 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition sm:text-sm ${
                       detailTab === id
                         ? 'bg-white text-blue-700 shadow-sm dark:bg-gray-800 dark:text-blue-300'
                         : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
@@ -1223,7 +1223,7 @@ export default function TournamentSimple() {
                 )}
                 {detailExtras.standings?.rows?.length > 0 ? (
                   <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600">
-                    <table className="min-w-full text-sm">
+                    <table className="min-w-[640px] w-full text-xs sm:text-sm">
                       <thead className="bg-gray-100 dark:bg-gray-700">
                         <tr>
                           <th className="px-3 py-2 text-left">#</th>
@@ -1284,29 +1284,51 @@ export default function TournamentSimple() {
                 <h3 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">Të gjitha ndeshjet</h3>
                 <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Kliko një rresht për statistika të plota si ndeshje profesionale.</p>
                 <ul className="space-y-2">
-                  {detailExtras.matches.map((m) => (
+                  {detailExtras.matches.map((m) => {
+                    const when = m.matchDate ? new Date(m.matchDate) : null;
+                    const dateLabel =
+                      when && !Number.isNaN(when.getTime())
+                        ? when.toLocaleString('sq-AL', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : null;
+                    return (
                     <li key={m.id}>
                       <button
                         type="button"
                         onClick={() => openMatchDetail(m.id)}
-                        className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-3 text-left text-sm transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-gray-700/80"
+                        className="flex w-full flex-col gap-2 rounded-lg border border-gray-200 px-3 py-3 text-left text-sm transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-gray-700/80"
                       >
-                        <span className="text-gray-500">R{m.round ?? '—'}</span>
-                        <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
-                          {participantLabel(m.homeUser, selectedTournament.participantType || 'individual')}
-                        </span>
-                        <span className="shrink-0 font-mono text-base font-bold text-gray-900 dark:text-white">
-                          {m.scoreHome ?? '—'} : {m.scoreAway ?? '—'}
-                        </span>
-                        <span className="min-w-0 flex-1 text-right font-medium text-gray-900 dark:text-white">
-                          {participantLabel(m.awayUser, selectedTournament.participantType || 'individual')}
-                        </span>
-                        <span className="w-full text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 sm:w-auto sm:text-left">
-                          {m.status}
-                        </span>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="font-semibold shrink-0">R{m.round ?? '—'}</span>
+                          {dateLabel ? (
+                            <span className="min-w-0 truncate">{dateLabel}</span>
+                          ) : (
+                            <span className="italic">Pa datë/orë</span>
+                          )}
+                          <span className="text-[10px] font-semibold uppercase tracking-wide">{m.status}</span>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gray-900 dark:text-white">
+                            <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={participantLabel(m.homeUser, selectedTournament.participantType || 'individual')} />
+                            <span className="truncate">{participantLabel(m.homeUser, selectedTournament.participantType || 'individual')}</span>
+                          </span>
+                          <span className="shrink-0 self-center font-mono text-base font-bold text-gray-900 dark:text-white">
+                            {m.scoreHome ?? '—'} : {m.scoreAway ?? '—'}
+                          </span>
+                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gray-900 dark:text-white sm:justify-end">
+                            <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={participantLabel(m.awayUser, selectedTournament.participantType || 'individual')} />
+                            <span className="truncate">{participantLabel(m.awayUser, selectedTournament.participantType || 'individual')}</span>
+                          </span>
+                        </div>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -1352,6 +1374,11 @@ export default function TournamentSimple() {
                               )}
                             {participant.participantStatus && participant.participantStatus !== 'accepted' ? (
                               <p className="text-xs capitalize text-amber-600">{participant.participantStatus}</p>
+                            ) : (
+                              <p className="text-xs text-emerald-600">Accepted</p>
+                            )}
+                            {uid ? (
+                              <p className="text-[10px] text-gray-400">ID #{uid}</p>
                             ) : null}
                           </div>
                         </div>

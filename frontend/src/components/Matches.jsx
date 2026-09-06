@@ -46,11 +46,11 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Ndrysho ndeshjen</h2>
-          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg max-w-2xl w-full p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Ndrysho ndeshjen</h2>
+          <button type="button" onClick={onClose} className="shrink-0 text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -59,7 +59,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
               required
               value={form.tournamentId}
               onChange={(e) => setForm({ ...form, tournamentId: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+              className="w-full min-w-0 max-w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
             >
               <option value="">Zgjidh turneun</option>
               {tournaments.map((t) => (
@@ -105,7 +105,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
                 required
                 value={form.matchDate}
                 onChange={(e) => setForm({ ...form, matchDate: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+                className="w-full min-w-0 max-w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
               />
             </div>
             <div>
@@ -328,25 +328,25 @@ function Matches() {
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   {/* Teams */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex-1 text-right">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                    <div className="flex-1 text-center sm:text-right min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
                         {match.homeTeam}
                       </h3>
                       <span className="text-sm text-gray-500">Vendas</span>
                     </div>
-                    <div className="text-3xl font-bold text-gray-400">VS</div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-2xl sm:text-3xl font-bold text-gray-400 text-center shrink-0">VS</div>
+                    <div className="flex-1 text-center sm:text-left min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
                         {match.awayTeam}
                       </h3>
                       <span className="text-sm text-gray-500">Mysafir</span>
                     </div>
                   </div>
                   {/* Match Info */}
-                  <div className="flex flex-col gap-2 md:w-64">
+                  <div className="flex flex-col gap-2 w-full md:w-64">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <CalendarIcon className="h-5 w-5" />
+                      <CalendarIcon className="h-5 w-5 shrink-0" />
                       <span className="text-sm">
                         {new Date(match.scheduledAt).toLocaleDateString('en-US', {
                           weekday: 'short',
@@ -356,7 +356,7 @@ function Matches() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <ClockIcon className="h-5 w-5" />
+                      <ClockIcon className="h-5 w-5 shrink-0" />
                       <span className="text-sm">
                         {new Date(match.scheduledAt).toLocaleTimeString('en-US', {
                           hour: '2-digit',
@@ -366,22 +366,22 @@ function Matches() {
                     </div>
                     {match.location && (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <MapPinIcon className="h-5 w-5" />
-                        <span className="text-sm">{match.location}</span>
+                        <MapPinIcon className="h-5 w-5 shrink-0" />
+                        <span className="text-sm break-words">{match.location}</span>
                       </div>
                     )}
                   </div>
                   {/* Status Badge */}
-                  <div>
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <span className="inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium">
                       {match.status || 'E planifikuar'}
                     </span>
+                    {canEditThisMatch(match) && (
+                      <button className="px-3 py-2 bg-yellow-400 text-white rounded hover:bg-yellow-500 text-sm font-medium" onClick={() => handleEditMatch(match)}>
+                        Ndrysho
+                      </button>
+                    )}
                   </div>
-                  {canEditThisMatch(match) && (
-                    <button className="ml-4 px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500" onClick={() => handleEditMatch(match)}>
-                      Ndrysho
-                    </button>
-                  )}
                 </div>
                 {match.description && (
                   <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm">
@@ -405,15 +405,15 @@ function Matches() {
 
       {/* Create Match Modal */}
       {showCreateModal && canCreateMatch && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg max-w-2xl w-full p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Krijo Ndeshje
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
+                className="shrink-0 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
               >
                 ×
               </button>
@@ -474,7 +474,7 @@ function Matches() {
                     required
                     value={formData.matchDate}
                     onChange={e => setFormData({ ...formData, matchDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full min-w-0 max-w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
