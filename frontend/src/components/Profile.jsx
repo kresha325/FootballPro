@@ -470,10 +470,19 @@ const Profile = () => {
     }
   };
 
+  const isOwner = user != null && profile != null && Number(user.id) === Number(profile.id);
+
   // Role-based profile component renderer
   const renderProfileContent = () => {
     if (!profile) return null;
-    return <ProfileSelector user={profile.User ? profile.User : profile} profile={profile} isOwner={isOwner} />;
+    return (
+      <ProfileSelector
+        user={profile.User ? profile.User : profile}
+        profile={profile}
+        isOwner={isOwner}
+        onEdit={() => setEditOpen(true)}
+      />
+    );
   };
 
     // Handler for file input change (cover)
@@ -507,7 +516,6 @@ const Profile = () => {
     </div>
   );
 
-  const isOwner = user != null && profile != null && Number(user.id) === Number(profile.id);
   const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
   const isSponsoredProfile = sponsorList.length > 0;
   const tabs = [

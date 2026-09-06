@@ -117,11 +117,73 @@ exports.createTournament = async (req, res) => {
   }
 };
 
+exports.updateTournament = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    if (Number(tournament.creatorId) !== Number(req.user.id) && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Vetëm krijuesi mund të ndryshojë turneun.' });
+    }
+    if (
+      (tournament.ligaId || tournament.sourceRole === 'liga') &&
+      req.user.role !== 'liga' &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ msg: 'Vetëm liga mund të ndryshojë këtë turne.' });
+    }
+
+    const { description, type, startDate, endDate, maxParticipants, participantType, season, status, category } =
+      req.body;
+
+    // Liga tournaments keep the liga name
+    if (!(tournament.ligaId || tournament.sourceRole === 'liga')) {
+      if (req.body.name != null && String(req.body.name).trim()) {
+        tournament.name = String(req.body.name).trim();
+      }
+    } else if (req.user.role === 'liga') {
+      const liga = await Liga.findOne({ where: { userId: req.user.id } });
+      if (liga?.name) tournament.name = liga.name;
+    }
+
+    if (description !== undefined) tournament.description = description;
+    if (type) tournament.type = type;
+    if (startDate !== undefined) tournament.startDate = startDate || null;
+    if (endDate !== undefined) tournament.endDate = endDate || null;
+    if (maxParticipants !== undefined) tournament.maxParticipants = maxParticipants;
+    if (status && ['open', 'ongoing', 'finished'].includes(status)) tournament.status = status;
+    if (category !== undefined) tournament.category = normalizeCategory(category);
+
+    if (!(tournament.ligaId || tournament.sourceRole === 'liga') && participantType) {
+      if (['individual', 'club', 'mixed'].includes(participantType)) {
+        tournament.participantType = participantType;
+      }
+    }
+
+    if (season !== undefined || type || startDate !== undefined) {
+      try {
+        tournament.season = resolveTournamentSeason({
+          type: tournament.type,
+          startDate: tournament.startDate,
+          season: season !== undefined ? season : tournament.season,
+        });
+      } catch (seasonErr) {
+        return res.status(400).json({ msg: seasonErr.message });
+      }
+    }
+
+    await tournament.save();
+    res.json(tournament);
+  } catch (err) {
+    console.error('updateTournament:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 exports.getTournaments = async (req, res) => {
   try {
     const tournaments = await Tournament.findAll({
       include: [
-        { model: User, as: 'creator', attributes: ['firstName', 'lastName'] },
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
         { model: User, as: 'participants', attributes: ['id', 'firstName', 'lastName', 'role'], through: { attributes: [] } },
       ],
     });
@@ -167,7 +229,7 @@ exports.getTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id, {
       include: [
-        { model: User, as: 'creator', attributes: ['firstName', 'lastName'] },
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
         {
           model: User,
           as: 'participants',
@@ -693,7 +755,7 @@ exports.getTournamentMatchDetail = async (req, res) => {
       include: [
         {
           model: Tournament,
-          attributes: ['id', 'name', 'type', 'status', 'participantType'],
+          attributes: ['id', 'name', 'type', 'status', 'participantType', 'creatorId', 'ligaId', 'sourceRole'],
         },
         {
           model: User,

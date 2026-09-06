@@ -27,6 +27,10 @@ export const ligaAPI = {
   updateLiga: (data) => API.put('/ligas/me', data, {
     headers: { 'Content-Type': 'application/json' }
   }),
+  deleteLiga: () => API.delete('/ligas/me'),
+  joinLiga: (ligaUserId) => API.post(`/ligas/${ligaUserId}/join`),
+  leaveLiga: (ligaUserId) => API.delete(`/ligas/${ligaUserId}/leave`),
+  removeClub: (clubId) => API.delete(`/ligas/clubs/${clubId}`),
 };
 import axios from 'axios';
 

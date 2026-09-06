@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const { Tournament } = require('../models/Tournament');
 const {
   createTournament,
+  updateTournament,
   getTournaments,
   getTrendingTournaments,
   getTournament,
@@ -27,6 +28,7 @@ const {
 
 // Tournament CRUD
 router.post('/', auth, createTournament);
+router.put('/:id', auth, updateTournament);
 router.get('/', auth, getTournaments);
 // Trending (auth required)
 router.get('/trending', auth, getTrendingTournaments);

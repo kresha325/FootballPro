@@ -328,11 +328,12 @@ export default function TournamentDetailScreen({ route, navigation }) {
   };
 
   const canEditMatchScore = (match) => {
-    if (!match || !user?.id) return false;
-    const uid = String(user?.id);
-    if (isCreator) return true;
-    if (match.status === 'finished') return false;
-    return String(match.homeUserId) === uid || String(match.awayUserId) === uid;
+    if (!user?.id) return false;
+    if (user.role === 'admin') return true;
+    const creatorId =
+      tournament?.creatorId ?? tournament?.creator?.id ?? match?.Tournament?.creatorId;
+    if (creatorId == null) return false;
+    return Number(creatorId) === Number(user.id);
   };
 
   const addGoalEvent = () => {
@@ -785,6 +786,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                 ) : (
                   <Text style={styles.row}>
                     Rezultati: {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
+                    {'\n'}Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
                   </Text>
                 )}
               </ScrollView>

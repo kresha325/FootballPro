@@ -169,11 +169,82 @@ async function syncClubMemberToLigaTournaments(membership) {
   return { synced };
 }
 
+async function syncClubAthletesToLiga(liga, clubId) {
+  const ClubMember = require('../models/ClubMember');
+  const members = await ClubMember.findAll({
+    where: { clubId, status: 'approved' },
+  });
+  let synced = 0;
+  for (const m of members) {
+    const r = await syncClubMemberToLigaTournaments(m);
+    synced += r.synced || 0;
+  }
+  return { synced, members: members.length };
+}
+
+async function removeClubAthletesFromLiga(liga, clubId) {
+  if (!liga?.id) return { removed: 0 };
+  const ClubMember = require('../models/ClubMember');
+  const members = await ClubMember.findAll({
+    where: { clubId, status: 'approved' },
+  });
+  const athleteIds = members.map((m) => m.athleteId);
+  if (!athleteIds.length) return { removed: 0 };
+
+  const tournaments = await Tournament.findAll({
+    where: { ligaId: liga.id },
+    attributes: ['id'],
+  });
+  const tournamentIds = tournaments.map((t) => t.id);
+  if (!tournamentIds.length) return { removed: 0 };
+
+  const removed = await TournamentParticipant.destroy({
+    where: {
+      tournamentId: { [Op.in]: tournamentIds },
+      userId: { [Op.in]: athleteIds },
+    },
+  });
+  return { removed };
+}
+
+function normalizeClubsArray(clubs) {
+  if (!Array.isArray(clubs)) return [];
+  return clubs.map((c) => {
+    if (c == null) return null;
+    if (typeof c === 'number' || typeof c === 'string') return Number(c) || c;
+    return Number(c.id || c.userId || c.clubId) || c;
+  }).filter((c) => c != null && c !== '');
+}
+
+function addClubToList(clubs, clubId) {
+  const list = normalizeClubsArray(clubs);
+  const id = Number(clubId);
+  if (list.some((c) => String(c) === String(id) || String(c?.id || c?.userId || '') === String(id))) {
+    return { list, added: false };
+  }
+  list.push(id);
+  return { list, added: true };
+}
+
+function removeClubFromList(clubs, clubId) {
+  const id = String(clubId);
+  const list = normalizeClubsArray(clubs).filter((c) => {
+    if (typeof c === 'number' || typeof c === 'string') return String(c) !== id;
+    return String(c?.id || c?.userId || c?.clubId || '') !== id;
+  });
+  return list;
+}
+
 module.exports = {
   ALLOWED_CREATOR_ROLES,
   CATEGORY_OPTIONS,
   normalizeCategory,
   ensureLigaTournament,
   syncClubMemberToLigaTournaments,
+  syncClubAthletesToLiga,
+  removeClubAthletesFromLiga,
   ligaIncludesClub,
+  normalizeClubsArray,
+  addClubToList,
+  removeClubFromList,
 };

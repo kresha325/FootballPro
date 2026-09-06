@@ -32,33 +32,21 @@ function canManageTournamentMatches(tournament, user) {
   return { ok: true };
 }
 
-/** Score/stats: liga tournaments → liga only; others → creator (or admin). */
-function canFillMatchStats(tournament, user, match) {
+/**
+ * Score/stats: only the tournament/match creator (by creatorId), or admin.
+ * Being the creator is enough — do not require role === 'liga' again.
+ */
+function canFillMatchStats(tournament, user, _match) {
   if (!tournament || !user?.id) {
     return { ok: false, status: 403, msg: 'Nuk jeni të autorizuar.' };
   }
   if (user.role === 'admin') return { ok: true };
-
-  if (isLigaTournament(tournament)) {
-    if (Number(tournament.creatorId) !== Number(user.id) || user.role !== 'liga') {
-      return {
-        ok: false,
-        status: 403,
-        msg: 'Vetëm liga mund të plotësojë statistikat e ndeshjes.',
-      };
-    }
-    return { ok: true };
-  }
-
-  const isCreator = Number(tournament.creatorId) === Number(user.id);
-  const isParticipant =
-    match &&
-    (Number(match.homeUserId) === Number(user.id) || Number(match.awayUserId) === Number(user.id));
-
-  if (!isCreator && !isParticipant) {
-    return { ok: false, status: 403, msg: 'Nuk jeni të autorizuar të ndryshoni rezultatin.' };
-  }
-  return { ok: true };
+  if (Number(tournament.creatorId) === Number(user.id)) return { ok: true };
+  return {
+    ok: false,
+    status: 403,
+    msg: 'Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.',
+  };
 }
 
 module.exports = {

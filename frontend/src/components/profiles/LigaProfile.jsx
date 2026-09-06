@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ligaAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { getFullUrl } from '../../utils/mediaUrl';
 
 function mapProfileToLiga(profile) {
@@ -16,17 +17,34 @@ function mapProfileToLiga(profile) {
     competitions: profile.competitions || [],
     contact: profile.contact || {},
     socialLinks: profile.socialLinks || {},
+    userId: profile.userId || profile.User?.id,
   };
 }
 
-const LigaProfile = ({ liga, profile, userId }) => {
+function clubIdOf(entry) {
+  if (entry == null) return null;
+  if (typeof entry === 'number' || typeof entry === 'string') return String(entry);
+  return String(entry.id || entry.userId || entry.clubId || '');
+}
+
+const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
+  const { user } = useAuth();
   const [data, setData] = useState(liga || mapProfileToLiga(profile));
   const [loading, setLoading] = useState(!liga);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const ligaUserId = userId || data?.userId || data?.User?.id || profile?.userId || profile?.User?.id;
+
+  const refresh = async () => {
+    if (!ligaUserId) return;
+    const res = await ligaAPI.getLiga(ligaUserId);
+    setData(res.data);
+  };
 
   useEffect(() => {
     let cancelled = false;
-    const uid = userId || profile?.userId || profile?.User?.id;
+    const uid = ligaUserId;
 
     if (liga) {
       setData(liga);
@@ -63,7 +81,68 @@ const LigaProfile = ({ liga, profile, userId }) => {
     return () => {
       cancelled = true;
     };
-  }, [liga, profile, userId]);
+  }, [liga, profile, userId, ligaUserId]);
+
+  const clubs = useMemo(() => (Array.isArray(data?.clubs) ? data.clubs : []), [data]);
+  const isClubMember = useMemo(() => {
+    if (!user?.id || user.role !== 'club') return false;
+    return clubs.some((c) => clubIdOf(c) === String(user.id));
+  }, [clubs, user]);
+
+  const handleJoin = async () => {
+    if (!ligaUserId) return;
+    setActionLoading(true);
+    try {
+      const res = await ligaAPI.joinLiga(ligaUserId);
+      setData(res.data.liga || res.data);
+      alert(res.data.msg || 'U bashkuat në ligë.');
+    } catch (e) {
+      alert(e.response?.data?.msg || 'Nuk u bashkuat dot në ligë.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!ligaUserId) return;
+    if (!window.confirm('Doni të largoheni nga kjo ligë?')) return;
+    setActionLoading(true);
+    try {
+      const res = await ligaAPI.leaveLiga(ligaUserId);
+      setData(res.data.liga || res.data);
+      alert(res.data.msg || 'U larguat nga liga.');
+    } catch (e) {
+      alert(e.response?.data?.msg || 'Nuk u larguat dot.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveClub = async (clubId) => {
+    if (!window.confirm('Heq këtë klub nga liga?')) return;
+    setActionLoading(true);
+    try {
+      const res = await ligaAPI.removeClub(clubId);
+      setData(res.data.liga || res.data);
+    } catch (e) {
+      alert(e.response?.data?.msg || 'Nuk u hoq klubi.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteLiga = async () => {
+    if (!window.confirm('Fshi ligën dhe turnetë e lidhura? Ky veprim nuk kthehet.')) return;
+    setActionLoading(true);
+    try {
+      await ligaAPI.deleteLiga();
+      alert('Liga u fshi.');
+      window.location.href = '/';
+    } catch (e) {
+      alert(e.response?.data?.msg || 'Nuk u fshi liga.');
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -82,7 +161,6 @@ const LigaProfile = ({ liga, profile, userId }) => {
   }
 
   const logo = getFullUrl(data.logo || data.profilePhoto);
-  const clubs = Array.isArray(data.clubs) ? data.clubs : [];
   const competitions = Array.isArray(data.competitions) ? data.competitions : [];
   const contact =
     data.contact && typeof data.contact === 'object' && Object.keys(data.contact).length
@@ -93,22 +171,74 @@ const LigaProfile = ({ liga, profile, userId }) => {
 
   return (
     <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 mt-6">
-      <div className="flex items-center mb-4">
-        {logo ? (
-          <img src={logo} alt={data.name || 'Liga'} className="w-20 h-20 rounded-full mr-4 object-cover" />
-        ) : (
-          <div className="w-20 h-20 rounded-full mr-4 bg-slate-200 flex items-center justify-center text-slate-500 text-xl font-bold">
-            {String(data.name || 'L').slice(0, 1).toUpperCase()}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-center">
+          {logo ? (
+            <img src={logo} alt={data.name || 'Liga'} className="w-20 h-20 rounded-full mr-4 object-cover" />
+          ) : (
+            <div className="w-20 h-20 rounded-full mr-4 bg-slate-200 flex items-center justify-center text-slate-500 text-xl font-bold">
+              {String(data.name || 'L').slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold">{data.name || 'Liga'}</h2>
+            <p className="text-gray-600">
+              {[data.country, data.level].filter(Boolean).join(' • ') || '—'}
+            </p>
+            {data.foundedYear ? <p className="text-gray-500">Founded: {data.foundedYear}</p> : null}
           </div>
-        )}
-        <div>
-          <h2 className="text-2xl font-bold">{data.name || 'Liga'}</h2>
-          <p className="text-gray-600">
-            {[data.country, data.level].filter(Boolean).join(' • ') || '—'}
-          </p>
-          {data.foundedYear ? <p className="text-gray-500">Founded: {data.foundedYear}</p> : null}
+        </div>
+
+        <div className="flex flex-col gap-2 shrink-0">
+          {isOwner && (
+            <>
+              <button
+                type="button"
+                onClick={() => onEdit?.()}
+                className="px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-center"
+              >
+                Edito
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleDeleteLiga}
+                className="px-3 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Fshi ligën
+              </button>
+            </>
+          )}
+          {user?.role === 'club' && !isOwner && (
+            isClubMember ? (
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleLeave}
+                className="px-3 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                Largohu
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleJoin}
+                className="px-3 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                Bashkohu
+              </button>
+            )
+          )}
         </div>
       </div>
+
+      {user?.role === 'club' && isClubMember && (
+        <p className="mb-4 text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
+          Klubi juaj është anëtar i kësaj lige. Lojtarët e aprovuar sinkronizohen në turneun e ligës.
+        </p>
+      )}
+
       {data.description ? (
         <p className="mb-4 whitespace-pre-wrap text-gray-800">{data.description}</p>
       ) : null}
@@ -122,16 +252,40 @@ const LigaProfile = ({ liga, profile, userId }) => {
           Website
         </a>
       ) : null}
-      {clubs.length > 0 ? (
-        <div className="mb-4">
-          <h3 className="font-semibold mb-1">Clubs</h3>
-          <ul className="list-disc ml-6 text-sm text-gray-700">
-            {clubs.map((club, idx) => (
-              <li key={`${club}-${idx}`}>{typeof club === 'string' ? club : club?.name || JSON.stringify(club)}</li>
-            ))}
+      <div className="mb-4">
+        <h3 className="font-semibold mb-1">Clubs ({clubs.length})</h3>
+        {clubs.length === 0 ? (
+          <p className="text-sm text-gray-500">Nuk ka klube të bashkuara ende.</p>
+        ) : (
+          <ul className="space-y-2">
+            {clubs.map((club, idx) => {
+              const cid = clubIdOf(club);
+              const label =
+                typeof club === 'string' || typeof club === 'number'
+                  ? `Klub #${club}`
+                  : club?.name || `Klub #${cid}`;
+              return (
+                <li
+                  key={`${cid}-${idx}`}
+                  className="flex items-center justify-between text-sm text-gray-700 bg-slate-50 rounded-lg px-3 py-2"
+                >
+                  <span>{label}</span>
+                  {isOwner && cid ? (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleRemoveClub(cid)}
+                      className="text-red-600 hover:underline text-xs font-semibold"
+                    >
+                      Hiq
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
-        </div>
-      ) : null}
+        )}
+      </div>
       {competitions.length > 0 ? (
         <div className="mb-4">
           <h3 className="font-semibold mb-1">Competitions</h3>

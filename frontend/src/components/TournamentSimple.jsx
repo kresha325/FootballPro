@@ -312,7 +312,11 @@ function MatchBroadcastModal({
                   {saving ? 'Duke ruajtur…' : 'Ruaj rezultatin & golat'}
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <p className="border-t border-white/10 px-4 py-4 text-center text-sm text-slate-400 sm:px-6">
+                Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
+              </p>
+            )}
           </>
         )}
       </div>
@@ -327,6 +331,15 @@ export default function TournamentSimple() {
   const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editTournament, setEditTournament] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    type: 'knockout',
+    maxParticipants: 8,
+    category: 'open',
+    status: 'open',
+  });
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailExtras, setDetailExtras] = useState({
@@ -440,12 +453,12 @@ export default function TournamentSimple() {
   };
 
   const canEditMatch = (match) => {
-    if (!match || !user?.id) return false;
+    if (!user?.id) return false;
     if (user.role === 'admin') return true;
-    const t = selectedTournament;
-    if (!t || Number(t.creatorId) !== Number(user.id)) return false;
-    if ((t.ligaId || t.sourceRole === 'liga') && user.role !== 'liga') return false;
-    return true;
+    const t = selectedTournament || match?.Tournament;
+    const creatorId = t?.creatorId ?? t?.creator?.id ?? match?.Tournament?.creatorId;
+    if (creatorId == null) return false;
+    return Number(creatorId) === Number(user.id);
   };
 
   const saveMatchReport = async (payload) => {
@@ -520,6 +533,67 @@ export default function TournamentSimple() {
     } catch (error) {
       console.error('Error joining tournament:', error);
       alert(error.response?.data?.msg || 'Failed to join tournament');
+    }
+  };
+
+  const leaveTournament = async (tournamentId) => {
+    if (!window.confirm('Doni të largoheni nga ky turne?')) return;
+    try {
+      await API.delete(`/tournaments/${tournamentId}/leave`);
+      alert('U larguat nga turneu.');
+      fetchTournaments();
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(null);
+      }
+    } catch (error) {
+      alert(error.response?.data?.msg || 'Nuk u larguat dot nga turneu.');
+    }
+  };
+
+  const deleteTournament = async (tournamentId) => {
+    if (!window.confirm('Fshi këtë turne?')) return;
+    try {
+      await API.delete(`/tournaments/${tournamentId}`);
+      alert('Turneu u fshi.');
+      if (selectedTournament?.id === tournamentId) setSelectedTournament(null);
+      setEditTournament(null);
+      fetchTournaments();
+    } catch (error) {
+      alert(error.response?.data?.msg || error.response?.data?.error || 'Nuk u fshi turneu.');
+    }
+  };
+
+  const openEditTournament = (tournament) => {
+    setEditTournament(tournament);
+    setEditForm({
+      name: tournament.name || '',
+      description: tournament.description || '',
+      type: tournament.type || 'knockout',
+      maxParticipants: tournament.maxParticipants || 8,
+      category: tournament.category || 'open',
+      status: tournament.status || 'open',
+    });
+  };
+
+  const saveEditTournament = async (e) => {
+    e.preventDefault();
+    if (!editTournament?.id) return;
+    try {
+      const isLigaT = !!(editTournament.ligaId || editTournament.sourceRole === 'liga');
+      const payload = {
+        description: editForm.description,
+        type: editForm.type,
+        maxParticipants: editForm.maxParticipants,
+        category: editForm.category,
+        status: editForm.status,
+      };
+      if (!isLigaT) payload.name = editForm.name;
+      await API.put(`/tournaments/${editTournament.id}`, payload);
+      setEditTournament(null);
+      fetchTournaments();
+      alert('Turneu u përditësua.');
+    } catch (error) {
+      alert(error.response?.data?.msg || 'Nuk u përditësua turneu.');
     }
   };
 
@@ -711,7 +785,9 @@ export default function TournamentSimple() {
                 )}
                 {joinBlocked && tournament.status === 'open' && (
                   <p className="text-xs text-center text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg py-2 px-2">
-                    {pt === 'club'
+                    {tournament.ligaId || tournament.sourceRole === 'liga'
+                      ? 'Për turnet e ligës, klubi bashkohet nga profili i ligës (Bashkohu). Lojtarët hyjnë automatikisht.'
+                      : pt === 'club'
                       ? 'Vetëm llogaria e klubit mund të regjistrohet.'
                       : pt === 'mixed'
                         ? 'Vetëm llogaritë «club» ose «athlete» mund të bashkohen.'
@@ -719,8 +795,37 @@ export default function TournamentSimple() {
                   </p>
                 )}
                 {isJoined && (
-                  <div className="w-full py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
-                    ✓ Në turne
+                  <div className="space-y-2">
+                    <div className="w-full py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
+                      ✓ Në turne
+                    </div>
+                    {tournament.status === 'open' && (
+                      <button
+                        type="button"
+                        onClick={() => leaveTournament(tournament.id)}
+                        className="w-full py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+                      >
+                        Largohu
+                      </button>
+                    )}
+                  </div>
+                )}
+                {isCreator && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditTournament(tournament)}
+                      className="py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 text-sm font-medium"
+                    >
+                      Edito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteTournament(tournament.id)}
+                      className="py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                    >
+                      Fshi
+                    </button>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2">
@@ -893,6 +998,76 @@ export default function TournamentSimple() {
                 </button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                   Krijo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editTournament && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Edito turneun</h2>
+            <form onSubmit={saveEditTournament} className="space-y-3">
+              {!(editTournament.ligaId || editTournament.sourceRole === 'liga') ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Emri</label>
+                  <input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Emri i turneut të ligës mbetet emri i ligës.
+                </p>
+              )}
+              <div>
+                <label className="block text-sm font-medium mb-1">Përshkrimi</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kategoria</label>
+                <select
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                >
+                  {['open', 'senior', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u10', 'u9'].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Statusi</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                >
+                  <option value="open">open</option>
+                  <option value="ongoing">ongoing</option>
+                  <option value="finished">finished</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditTournament(null)}
+                  className="flex-1 py-2 border rounded-lg"
+                >
+                  Anulo
+                </button>
+                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg">
+                  Ruaj
                 </button>
               </div>
             </form>

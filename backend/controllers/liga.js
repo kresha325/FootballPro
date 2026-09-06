@@ -1,6 +1,15 @@
 const Liga = require('../models/Liga');
 const User = require('../models/User');
-const { ensureLigaTournament, normalizeCategory } = require('../utils/ligaTournaments');
+const { Tournament } = require('../models/Tournament');
+const {
+  ensureLigaTournament,
+  normalizeCategory,
+  ligaIncludesClub,
+  addClubToList,
+  removeClubFromList,
+  syncClubAthletesToLiga,
+  removeClubAthletesFromLiga,
+} = require('../utils/ligaTournaments');
 
 // Create Liga profile
 exports.createLiga = async (req, res) => {
@@ -133,6 +142,117 @@ exports.updateLiga = async (req, res) => {
     }
     res.json(liga);
   } catch (err) {
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/** Club joins a liga (adds club userId to liga.clubs and syncs athletes). */
+exports.joinLiga = async (req, res) => {
+  try {
+    if (req.user.role !== 'club') {
+      return res.status(403).json({ msg: 'Vetëm klubet mund të bashkohen në ligë.' });
+    }
+    const liga = await Liga.findOne({ where: { userId: req.params.id } });
+    if (!liga) return res.status(404).json({ msg: 'Liga nuk u gjet.' });
+
+    if (ligaIncludesClub(liga, req.user.id)) {
+      return res.status(200).json({ msg: 'Jeni tashmë në këtë ligë.', liga, alreadyJoined: true });
+    }
+
+    const { list } = addClubToList(liga.clubs, req.user.id);
+    liga.clubs = list;
+    liga.changed('clubs', true);
+    await liga.save();
+
+    try {
+      await syncClubAthletesToLiga(liga, req.user.id);
+    } catch (syncErr) {
+      console.error('syncClubAthletesToLiga on join:', syncErr);
+    }
+
+    res.json({ msg: 'U bashkuat në ligë.', liga });
+  } catch (err) {
+    console.error('joinLiga:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/** Club leaves a liga. */
+exports.leaveLiga = async (req, res) => {
+  try {
+    if (req.user.role !== 'club') {
+      return res.status(403).json({ msg: 'Vetëm klubet mund të largohen nga liga.' });
+    }
+    const liga = await Liga.findOne({ where: { userId: req.params.id } });
+    if (!liga) return res.status(404).json({ msg: 'Liga nuk u gjet.' });
+
+    if (!ligaIncludesClub(liga, req.user.id)) {
+      return res.status(400).json({ msg: 'Nuk jeni anëtar i kësaj lige.' });
+    }
+
+    try {
+      await removeClubAthletesFromLiga(liga, req.user.id);
+    } catch (syncErr) {
+      console.error('removeClubAthletesFromLiga on leave:', syncErr);
+    }
+
+    liga.clubs = removeClubFromList(liga.clubs, req.user.id);
+    liga.changed('clubs', true);
+    await liga.save();
+
+    res.json({ msg: 'U larguat nga liga.', liga });
+  } catch (err) {
+    console.error('leaveLiga:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/** Liga owner removes a club from the liga. */
+exports.removeClubFromLiga = async (req, res) => {
+  try {
+    if (req.user.role !== 'liga') {
+      return res.status(403).json({ msg: 'Vetëm liga mund të heqë klube.' });
+    }
+    const liga = await Liga.findOne({ where: { userId: req.user.id } });
+    if (!liga) return res.status(404).json({ msg: 'Liga nuk u gjet.' });
+
+    const clubId = req.params.clubId;
+    if (!ligaIncludesClub(liga, clubId)) {
+      return res.status(404).json({ msg: 'Klubi nuk është në këtë ligë.' });
+    }
+
+    try {
+      await removeClubAthletesFromLiga(liga, clubId);
+    } catch (syncErr) {
+      console.error('removeClubAthletesFromLiga on remove:', syncErr);
+    }
+
+    liga.clubs = removeClubFromList(liga.clubs, clubId);
+    liga.changed('clubs', true);
+    await liga.save();
+
+    res.json({ msg: 'Klubi u hoq nga liga.', liga });
+  } catch (err) {
+    console.error('removeClubFromLiga:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/** Liga owner deletes their liga profile (and linked liga tournaments). */
+exports.deleteLiga = async (req, res) => {
+  try {
+    if (req.user.role !== 'liga') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+    const liga = await Liga.findOne({ where: { userId: req.user.id } });
+    if (!liga) return res.status(404).json({ msg: 'Liga nuk u gjet.' });
+
+    await Tournament.destroy({ where: { ligaId: liga.id } });
+    await liga.destroy();
+
+    res.json({ msg: 'Liga u fshi.', success: true });
+  } catch (err) {
+    console.error('deleteLiga:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
