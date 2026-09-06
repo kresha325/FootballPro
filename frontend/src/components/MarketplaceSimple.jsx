@@ -44,6 +44,12 @@ export default function MarketplaceSimple() {
   const [category, setCategory] = useState('all');
   const [cartChecking, setCartChecking] = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const [checkoutForm, setCheckoutForm] = useState({
+    deliveryMethod: 'meetup',
+    deliveryAddress: '',
+    buyerContact: '',
+    deliveryNotes: '',
+  });
   const [orderQty, setOrderQty] = useState({}); // productId -> sasi
   const [showEditModal, setShowEditModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -210,14 +216,40 @@ export default function MarketplaceSimple() {
       alert('Nuk ke mjaftueshëm JonCoin për këtë porosi.');
       return;
     }
-    if (!window.confirm(`Paguaj ${total} JonCoin për ${totalPieces} copë?`)) return;
+    if (!String(checkoutForm.buyerContact || '').trim()) {
+      alert('Vendos kontaktin (telefon ose email) që shitësi të të kontaktojë.');
+      return;
+    }
+    if (checkoutForm.deliveryMethod === 'shipping' && !String(checkoutForm.deliveryAddress || '').trim()) {
+      alert('Vendos adresën e dërgesës.');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Dërgo porosinë (${total} JonCoin)? Coinat transferohen vetëm kur shitësi e pranon.`
+      )
+    ) {
+      return;
+    }
 
     setCartChecking(true);
     try {
-      await API.post('/orders', { products: orderPayload });
-      alert('✅ Porosia u krye me JonCoin. Shitësit morën njoftime në chat.');
+      await API.post('/orders', {
+        products: orderPayload,
+        deliveryMethod: checkoutForm.deliveryMethod,
+        deliveryAddress: checkoutForm.deliveryAddress,
+        buyerContact: checkoutForm.buyerContact,
+        deliveryNotes: checkoutForm.deliveryNotes,
+      });
+      alert('✅ Porosia u dërgua (pending). Shitësi e sheh te Wallet → Shitjet e mia. JonCoin transferohen kur e pranon.');
       clearCart();
       setShowCartDrawer(false);
+      setCheckoutForm({
+        deliveryMethod: 'meetup',
+        deliveryAddress: '',
+        buyerContact: '',
+        deliveryNotes: '',
+      });
       await fetchProducts();
       const { balance: bal } = await getJonCoinBalance();
       setJonCoinBalance(Number(bal) || 0);
@@ -784,17 +816,69 @@ export default function MarketplaceSimple() {
               )}
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <div className="space-y-2 text-sm">
+                <label className="block font-medium text-gray-800 dark:text-gray-200">Si e merr / dërgon? *</label>
+                <select
+                  value={checkoutForm.deliveryMethod}
+                  onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryMethod: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <option value="meetup">Takim</option>
+                  <option value="pickup">Marrje personale</option>
+                  <option value="shipping">Dërgesë</option>
+                </select>
+                <label className="block font-medium text-gray-800 dark:text-gray-200">Kontakt (tel / email) *</label>
+                <input
+                  type="text"
+                  value={checkoutForm.buyerContact}
+                  onChange={(e) => setCheckoutForm({ ...checkoutForm, buyerContact: e.target.value })}
+                  placeholder="+383… ose email"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                />
+                {checkoutForm.deliveryMethod === 'shipping' ? (
+                  <>
+                    <label className="block font-medium text-gray-800 dark:text-gray-200">Adresa e dërgesës *</label>
+                    <textarea
+                      value={checkoutForm.deliveryAddress}
+                      onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="block font-medium text-gray-800 dark:text-gray-200">Vendtakimi / adresa (opsionale)</label>
+                    <input
+                      type="text"
+                      value={checkoutForm.deliveryAddress}
+                      onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    />
+                  </>
+                )}
+                <label className="block font-medium text-gray-800 dark:text-gray-200">Shënim</label>
+                <input
+                  type="text"
+                  value={checkoutForm.deliveryNotes}
+                  onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryNotes: e.target.value })}
+                  placeholder="p.sh. pas orës 18:00"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
               <div className="flex justify-between text-gray-900 dark:text-white font-bold">
                 <span>Total</span>
                 <span>{subtotalJonCoin} JonCoin</span>
               </div>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Porosia mbetet pending. JonCoin transferohen vetëm kur shitësi e pranon.
+              </p>
               <button
                 type="button"
                 onClick={checkoutCart}
                 disabled={cartChecking || items.length === 0}
                 className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
               >
-                {cartChecking ? '…' : 'Paguaj me JonCoin'}
+                {cartChecking ? '…' : 'Dërgo porosinë'}
               </button>
             </div>
           </div>

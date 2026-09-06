@@ -16,8 +16,18 @@ const Order = sequelize.define('Order', {
       key: 'id',
     },
   },
+  /** Shitësi i kësaj porosie (një porosi = një shitës). */
+  sellerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: User,
+      key: 'id',
+    },
+  },
   products: {
-    type: DataTypes.JSON, // Array of { productId, quantity, price }
+    // [{ productId, quantity, price, name, sellerId }]
+    type: DataTypes.JSON,
     allowNull: false,
   },
   totalAmount: {
@@ -35,6 +45,28 @@ const Order = sequelize.define('Order', {
       key: 'id',
     },
   },
+  /** pickup | shipping | meetup */
+  deliveryMethod: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    defaultValue: 'meetup',
+  },
+  deliveryAddress: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  buyerContact: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  deliveryNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  confirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
@@ -45,8 +77,10 @@ const Order = sequelize.define('Order', {
   },
 });
 
-Order.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(Order, { foreignKey: 'userId' });
+Order.belongsTo(User, { foreignKey: 'userId', as: 'buyer' });
+Order.belongsTo(User, { foreignKey: 'sellerId', as: 'seller' });
+User.hasMany(Order, { foreignKey: 'userId', as: 'purchases' });
+User.hasMany(Order, { foreignKey: 'sellerId', as: 'sales' });
 Order.belongsTo(Payment, { foreignKey: 'paymentId' });
 Payment.hasMany(Order, { foreignKey: 'paymentId' });
 

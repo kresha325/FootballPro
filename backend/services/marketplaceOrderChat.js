@@ -39,11 +39,21 @@ async function getOrCreateDirectConversationId(sequelize, userA, userB) {
   }
 }
 
+function deliveryLabel(method) {
+  const m = String(method || '').toLowerCase();
+  if (m === 'pickup') return 'Marrje personale';
+  if (m === 'shipping') return 'Dërgesë';
+  if (m === 'meetup') return 'Takim';
+  return method || '—';
+}
+
 /**
- * Dërgo mesazh te shitësi pasi porosia (JonCoin) u krye me sukses.
- * Nuk hedh gabim lart (vetëm log) që të mos dështojë përgjigjja e porosisë.
+ * Dërgo mesazh te shitësi për porosi (pending ose të paguar).
  */
-async function sendPurchaseNoticeToSeller(sequelize, { buyerId, sellerId, orderId, lines, sellerTotal }) {
+async function sendPurchaseNoticeToSeller(
+  sequelize,
+  { buyerId, sellerId, orderId, lines, sellerTotal, pending, delivery }
+) {
   const convId = await getOrCreateDirectConversationId(sequelize, buyerId, sellerId);
   if (!convId) return;
 
@@ -53,14 +63,29 @@ async function sendPurchaseNoticeToSeller(sequelize, { buyerId, sellerId, orderI
   const lineParts = (lines || []).map(
     (l) => `• ${l.name} × ${l.quantity} = ${l.lineTotal} JonCoin`
   );
+
+  const deliveryLines = [];
+  if (delivery) {
+    deliveryLines.push(`Mënyra: ${deliveryLabel(delivery.method)}`);
+    if (delivery.contact) deliveryLines.push(`Kontakt: ${delivery.contact}`);
+    if (delivery.address) deliveryLines.push(`Adresa: ${delivery.address}`);
+    if (delivery.notes) deliveryLines.push(`Shënim: ${delivery.notes}`);
+  }
+
   const text = [
-    `Blerje e re — Porosi #${orderId}`,
-    `Blerësi: ${buyerName}`,
+    pending ? `Porosi e re në PRITJE — #${orderId}` : `Blerje e re — Porosi #${orderId}`,
+    `Blerësi: ${buyerName} (ID ${buyerId})`,
     '',
     lineParts.join('\n'),
     '',
     `Nëntotali (për ty): ${sellerTotal} JonCoin`,
-  ].join('\n');
+    deliveryLines.length ? `\nDërgesa / pranimi:\n${deliveryLines.join('\n')}` : '',
+    pending
+      ? '\n⚠️ JonCoin NUK janë transferuar ende. Pranoje porosinë te Wallet → Shitjet e mia (Prano porosinë).'
+      : '',
+  ]
+    .filter((x) => x !== '')
+    .join('\n');
 
   await Message.create({
     conversationId: convId,
@@ -73,9 +98,11 @@ async function sendPurchaseNoticeToSeller(sequelize, { buyerId, sellerId, orderI
 
 /**
  * Grupon linjat sipas shitësit dhe dërgon një mesazh për shitës.
- * `lockedProducts` = [{ product: Sequelize instance, quantity }]
  */
-async function notifySellersOfMarketplaceOrder(sequelize, { buyerId, orderId, lockedProducts }) {
+async function notifySellersOfMarketplaceOrder(
+  sequelize,
+  { buyerId, orderId, lockedProducts, pending = false, delivery = null }
+) {
   if (!Array.isArray(lockedProducts) || lockedProducts.length === 0) return;
 
   const bySeller = new Map();
@@ -106,6 +133,8 @@ async function notifySellersOfMarketplaceOrder(sequelize, { buyerId, orderId, lo
         orderId,
         lines,
         sellerTotal: total,
+        pending,
+        delivery,
       });
     } catch (e) {
       console.error('notifySellersOfMarketplaceOrder:', e && e.message, e);

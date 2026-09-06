@@ -5,6 +5,7 @@ import { filterBySearch } from '../utils/listSearch';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { CalendarIcon, MapPinIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline';
+import ParticipantPickGrid from './ParticipantPickGrid';
 
 // Helper: fetch tournaments and participants
 const fetchTournaments = async () => {
@@ -42,6 +43,14 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!form.homeUserId || !form.awayUserId) {
+      alert('Zgjidh vendasin dhe mysafirin');
+      return;
+    }
+    if (String(form.homeUserId) === String(form.awayUserId)) {
+      alert('Vendas dhe mysafir nuk mund të jenë i njëjti');
+      return;
+    }
     onSave(match.id, form);
   };
 
@@ -67,34 +76,23 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
               ))}
             </select>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Vendas *</label>
-              <select
-                required
+              <label className="block text-sm font-medium mb-1">Vendas *</label>
+              <p className="text-xs text-gray-500 mb-1">Zgjidh me avatar — emrat e njëjtë dallohen nga foto/ID</p>
+              <ParticipantPickGrid
+                options={participants}
                 value={form.homeUserId}
-                onChange={(e) => setForm({ ...form, homeUserId: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
-              >
-                <option value="">Zgjidh</option>
-                {participants.map((p) => (
-                  <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                ))}
-              </select>
+                onSelect={(homeUserId) => setForm({ ...form, homeUserId })}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Mysafir *</label>
-              <select
-                required
+              <label className="block text-sm font-medium mb-1">Mysafir *</label>
+              <ParticipantPickGrid
+                options={participants}
                 value={form.awayUserId}
-                onChange={(e) => setForm({ ...form, awayUserId: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
-              >
-                <option value="">Zgjidh</option>
-                {participants.map((p) => (
-                  <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                ))}
-              </select>
+                onSelect={(awayUserId) => setForm({ ...form, awayUserId })}
+              />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -436,34 +434,23 @@ function Matches() {
                   Në turne të ligës vetëm liga krijon ndeshje; në të tjerat vetëm krijuesi i turneut.
                 </p>
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lojtari vendas *</label>
-                  <select
-                    required
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lojtari vendas *</label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Zgjidh me avatar — emrat e njëjtë dallohen nga foto/ID</p>
+                  <ParticipantPickGrid
+                    options={participants}
                     value={formData.homeUserId}
-                    onChange={e => setFormData({ ...formData, homeUserId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Zgjidh lojtarin vendas</option>
-                    {participants.map(p => (
-                      <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                    ))}
-                  </select>
+                    onSelect={(homeUserId) => setFormData({ ...formData, homeUserId })}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lojtari mysafir *</label>
-                  <select
-                    required
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lojtari mysafir *</label>
+                  <ParticipantPickGrid
+                    options={participants}
                     value={formData.awayUserId}
-                    onChange={e => setFormData({ ...formData, awayUserId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Zgjidh lojtarin mysafir</option>
-                    {participants.map(p => (
-                      <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-                    ))}
-                  </select>
+                    onSelect={(awayUserId) => setFormData({ ...formData, awayUserId })}
+                  />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">

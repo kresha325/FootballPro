@@ -242,8 +242,13 @@ export const updateProductRequest = (productId, payload = {}) => {
 
 export const deleteProductRequest = (productId) => api.delete(`/api/products/${productId}`);
 
-export const createOrderRequest = (products) => api.post('/api/orders', { products });
+export const createOrderRequest = (payload) =>
+  api.post('/api/orders', Array.isArray(payload) ? { products: payload } : payload);
 export const myOrdersRequest = () => api.get('/api/orders');
+export const sellerOrdersRequest = () => api.get('/api/orders/selling');
+export const acceptOrderRequest = (id) => api.post(`/api/orders/${id}/accept`);
+export const rejectOrderRequest = (id) => api.post(`/api/orders/${id}/reject`);
+export const cancelOrderRequest = (id) => api.put(`/api/orders/${id}/status`, { status: 'cancelled' });
 
 export const joncoinBalanceRequest = () => api.get('/api/joncoin/balance');
 export const joncoinTransactionsRequest = () => api.get('/api/joncoin/transactions');

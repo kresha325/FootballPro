@@ -7,6 +7,10 @@ import {
   joncoinTransferRequest,
   joncoinWithdrawRequest,
   myOrdersRequest,
+  sellerOrdersRequest,
+  acceptOrderRequest,
+  rejectOrderRequest,
+  cancelOrderRequest,
 } from '../api/client';
 import { ALLOW_MOBILE_DIGITAL_PURCHASES, WEB_APP_URL } from '../config/constants';
 import { JONCOIN_PACKS } from '../iap/products';
@@ -26,6 +30,8 @@ export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [sellerOrders, setSellerOrders] = useState([]);
+  const [orderBusyId, setOrderBusyId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [buyingSku, setBuyingSku] = useState(null);
@@ -37,10 +43,11 @@ export default function WalletScreen() {
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
     try {
-      const [balanceRes, txRes, ordersRes] = await Promise.all([
+      const [balanceRes, txRes, ordersRes, salesRes] = await Promise.all([
         joncoinBalanceRequest(),
         joncoinTransactionsRequest(),
         myOrdersRequest(),
+        sellerOrdersRequest(),
       ]);
       setBalance(Number(balanceRes?.data?.balance || 0));
       const pct = balanceRes?.data?.withdrawCommissionPercent;
@@ -48,6 +55,8 @@ export default function WalletScreen() {
       setTransactions(Array.isArray(txRes.data) ? txRes.data : []);
       const ord = ordersRes?.data;
       setOrders(Array.isArray(ord) ? ord.slice(0, 15) : []);
+      const sales = salesRes?.data;
+      setSellerOrders(Array.isArray(sales) ? sales.slice(0, 15) : []);
     } catch (err) {
       Alert.alert('Wallet error', extractErrorMessage(err, 'Could not load wallet data'));
     } finally {
@@ -119,6 +128,69 @@ export default function WalletScreen() {
     } catch (err) {
       Alert.alert('Transfer failed', extractErrorMessage(err, 'Could not transfer JonCoin'));
     }
+  };
+
+  const acceptSale = (id) => {
+    Alert.alert('Prano', 'JonCoin transferohen tani. Vazhdo?', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Prano',
+        onPress: async () => {
+          setOrderBusyId(id);
+          try {
+            await acceptOrderRequest(id);
+            await loadData({ silent: true });
+            Alert.alert('OK', 'Porosia u pranua. JonCoin u transferuan.');
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Pranimi dështoi'));
+          } finally {
+            setOrderBusyId(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const rejectSale = (id) => {
+    Alert.alert('Refuzo', 'Porosia anulohet pa transfer JonCoin.', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Refuzo',
+        style: 'destructive',
+        onPress: async () => {
+          setOrderBusyId(id);
+          try {
+            await rejectOrderRequest(id);
+            await loadData({ silent: true });
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Refuzimi dështoi'));
+          } finally {
+            setOrderBusyId(null);
+          }
+        },
+      },
+    ]);
+  };
+
+  const cancelPurchase = (id) => {
+    Alert.alert('Anulo', 'Anulo porosinë në pritje?', [
+      { text: 'Jo', style: 'cancel' },
+      {
+        text: 'Po',
+        style: 'destructive',
+        onPress: async () => {
+          setOrderBusyId(id);
+          try {
+            await cancelOrderRequest(id);
+            await loadData({ silent: true });
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Anulimi dështoi'));
+          } finally {
+            setOrderBusyId(null);
+          }
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -195,15 +267,66 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Recent orders (marketplace)</Text>
+          <Text style={styles.sectionTitle}>Shitjet e mia (prano)</Text>
+          {sellerOrders.length === 0 ? (
+            <Text style={styles.emptyInline}>Nuk ke shitje ende.</Text>
+          ) : (
+            sellerOrders.map((o) => (
+              <View key={`sale-${o.id}`} style={styles.orderRow}>
+                <Text style={styles.orderText}>
+                  #{o.id} · {o.totalAmount} JC · {o.status || '—'}
+                </Text>
+                <Text style={styles.orderMeta}>
+                  Nga: {o.buyerName || `#${o.userId}`} · {(o.products || []).map((p) => p.name).filter(Boolean).join(', ') || '—'}
+                </Text>
+                <Text style={styles.orderMeta}>
+                  {o.deliveryMethod || '—'}
+                  {o.buyerContact ? ` · ${o.buyerContact}` : ''}
+                </Text>
+                {o.deliveryAddress ? <Text style={styles.orderMeta}>Adresa: {o.deliveryAddress}</Text> : null}
+                {o.status === 'pending' ? (
+                  <View style={styles.orderActions}>
+                    <TouchableOpacity
+                      style={styles.acceptBtn}
+                      disabled={orderBusyId === o.id}
+                      onPress={() => acceptSale(o.id)}
+                    >
+                      <Text style={styles.primaryBtnText}>Prano</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.rejectBtn}
+                      disabled={orderBusyId === o.id}
+                      onPress={() => rejectSale(o.id)}
+                    >
+                      <Text style={styles.primaryBtnText}>Refuzo</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+            ))
+          )}
+
+          <Text style={styles.sectionTitle}>Blerjet e mia</Text>
           {orders.length === 0 ? (
-            <Text style={styles.emptyInline}>No orders yet.</Text>
+            <Text style={styles.emptyInline}>Nuk ka porosi ende.</Text>
           ) : (
             orders.map((o) => (
               <View key={String(o.id)} style={styles.orderRow}>
                 <Text style={styles.orderText}>
                   #{o.id} · {o.totalAmount} JC · {o.status || '—'}
                 </Text>
+                <Text style={styles.orderMeta}>
+                  Shitësi: {o.sellerName || `#${o.sellerId}`} · {(o.products || []).map((p) => p.name).filter(Boolean).join(', ') || '—'}
+                </Text>
+                {o.status === 'pending' ? (
+                  <TouchableOpacity
+                    style={styles.rejectBtn}
+                    disabled={orderBusyId === o.id}
+                    onPress={() => cancelPurchase(o.id)}
+                  >
+                    <Text style={styles.primaryBtnText}>Anulo</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ))
           )}
@@ -284,5 +407,22 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 6,
   },
-  orderText: { color: '#334155', fontSize: 13 },
+  orderText: { color: '#334155', fontSize: 13, fontWeight: '700' },
+  orderMeta: { color: '#64748b', fontSize: 12, marginTop: 4 },
+  orderActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  acceptBtn: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    borderRadius: 8,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  rejectBtn: {
+    flex: 1,
+    backgroundColor: '#dc2626',
+    borderRadius: 8,
+    paddingVertical: 9,
+    alignItems: 'center',
+    marginTop: 6,
+  },
 });

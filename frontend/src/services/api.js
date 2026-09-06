@@ -272,6 +272,10 @@ export const marketplaceAPI = {
 export const ordersAPI = {
   createOrder: (data) => API.post('/orders', data),
   getMyOrders: () => API.get('/orders'),
+  getSellerOrders: () => API.get('/orders/selling'),
+  acceptOrder: (id) => API.post(`/orders/${id}/accept`),
+  rejectOrder: (id) => API.post(`/orders/${id}/reject`),
+  cancelOrder: (id) => API.put(`/orders/${id}/status`, { status: 'cancelled' }),
 };
 
 /* =========================
