@@ -29,26 +29,44 @@ exports.getAllUsers = async (req, res) => {
     }
 
     if (role) whereClause.role = role;
-    if (verified !== undefined) whereClause.verified = verified === 'true';
+    if (verified === 'true' || verified === 'false') {
+      whereClause.verified = verified === 'true';
+    }
 
     const users = await User.findAndCountAll({
       where: whereClause,
       attributes: { exclude: ['password'] },
-      include: [{ model: Profile, attributes: ['profilePicture', 'position', 'club'] }],
+      include: [
+        {
+          model: Profile,
+          attributes: ['profilePhoto', 'position', 'club'],
+          required: false,
+        },
+      ],
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
+      limit: parseInt(limit, 10) || 20,
+      offset: ((parseInt(page, 10) || 1) - 1) * (parseInt(limit, 10) || 20),
+      distinct: true,
+    });
+
+    const rows = users.rows.map((u) => {
+      const json = u.toJSON();
+      if (json.Profile) {
+        // Back-compat for admin UI that historically read profilePicture
+        json.Profile.profilePicture = json.Profile.profilePhoto || null;
+      }
+      return json;
     });
 
     res.json({
-      users: users.rows,
+      users: rows,
       total: users.count,
-      pages: Math.ceil(users.count / parseInt(limit)),
-      currentPage: parseInt(page),
+      pages: Math.ceil(users.count / (parseInt(limit, 10) || 20)),
+      currentPage: parseInt(page, 10) || 1,
     });
   } catch (error) {
     console.error('Get all users error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Server error', error: error.message });
   }
 };
 
@@ -107,24 +125,44 @@ exports.getAllPosts = async (req, res) => {
       include: [
         {
           model: User,
+          as: 'author',
           attributes: ['id', 'firstName', 'lastName', 'email'],
-          include: [{ model: Profile, attributes: ['profilePicture'] }],
+          required: false,
+          include: [
+            {
+              model: Profile,
+              attributes: ['profilePhoto'],
+              required: false,
+            },
+          ],
         },
       ],
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
+      limit: parseInt(limit, 10) || 20,
+      offset: ((parseInt(page, 10) || 1) - 1) * (parseInt(limit, 10) || 20),
+      distinct: true,
+    });
+
+    const rows = posts.rows.map((p) => {
+      const json = p.toJSON();
+      // Admin UI expects `User` (not only `author`)
+      const author = json.author || null;
+      if (author?.Profile) {
+        author.Profile.profilePicture = author.Profile.profilePhoto || null;
+      }
+      json.User = author;
+      return json;
     });
 
     res.json({
-      posts: posts.rows,
+      posts: rows,
       total: posts.count,
-      pages: Math.ceil(posts.count / parseInt(limit)),
-      currentPage: parseInt(page),
+      pages: Math.ceil(posts.count / (parseInt(limit, 10) || 20)),
+      currentPage: parseInt(page, 10) || 1,
     });
   } catch (error) {
     console.error('Get all posts error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Server error', error: error.message });
   }
 };
 

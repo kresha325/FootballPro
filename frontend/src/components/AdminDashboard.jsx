@@ -697,7 +697,7 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <img
-                          src={getFullUrl(u.Profile?.profilePicture) || `https://ui-avatars.com/api/?name=${encodeURIComponent(`${u.firstName || ''}+${u.lastName || ''}`)}`}
+                          src={getFullUrl(u.Profile?.profilePhoto || u.Profile?.profilePicture) || `https://ui-avatars.com/api/?name=${encodeURIComponent(`${u.firstName || ''}+${u.lastName || ''}`)}`}
                           alt={`${u.firstName} ${u.lastName}`}
                           className="w-10 h-10 rounded-full mr-3 object-cover"
                         />
@@ -849,7 +849,10 @@ export default function AdminDashboard() {
               <div className="p-8 text-center text-gray-500 text-sm bg-white shadow rounded-lg">No posts found.</div>
             )}
             {posts.map((post) => {
-              const avatar = getFullUrl(post.User?.Profile?.profilePicture);
+              const postUser = post.User || post.author;
+              const avatar = getFullUrl(
+                postUser?.Profile?.profilePhoto || postUser?.Profile?.profilePicture
+              );
               const imageSrc = getFullUrl(post.imageUrl || post.image);
               const videoSrc = getFullUrl(post.videoUrl);
               return (
@@ -860,17 +863,17 @@ export default function AdminDashboard() {
                       src={
                         avatar ||
                         `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          `${post.User?.firstName || ''}+${post.User?.lastName || ''}`
+                          `${postUser?.firstName || ''}+${postUser?.lastName || ''}`
                         )}`
                       }
-                      alt={`${post.User?.firstName || ''} ${post.User?.lastName || ''}`}
+                      alt={`${postUser?.firstName || ''} ${postUser?.lastName || ''}`}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">
-                        {post.User?.firstName} {post.User?.lastName}
+                        {postUser?.firstName} {postUser?.lastName}
                       </div>
-                      <div className="text-sm text-gray-500">{post.User?.email}</div>
+                      <div className="text-sm text-gray-500">{postUser?.email}</div>
                       <div className="text-sm text-gray-500">
                         {new Date(post.createdAt).toLocaleString()}
                       </div>
