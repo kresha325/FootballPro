@@ -32,6 +32,8 @@ function ClubRoster() {
   const [showTeamSelectModal, setShowTeamSelectModal] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState(null);
   const [selectedTeamType, setSelectedTeamType] = useState('first_team');
+  const [selectedCompetitionCategory, setSelectedCompetitionCategory] = useState('open');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const teamTypes = [
     { id: 'all', label: 'All Teams', icon: '👥' },
@@ -46,7 +48,22 @@ function ClubRoster() {
     { id: 'u15', label: 'U15', icon: '🎯' },
     { id: 'u13', label: 'U13', icon: '🎯' },
     { id: 'u11', label: 'U11', icon: '🎯' },
+    { id: 'u10', label: 'U10', icon: '🎯' },
     { id: 'u9', label: 'U9', icon: '🎯' },
+  ];
+
+  const competitionCategories = [
+    { id: 'open', label: 'Open' },
+    { id: 'senior', label: 'Senior' },
+    { id: 'u23', label: 'U23' },
+    { id: 'u21', label: 'U21' },
+    { id: 'u19', label: 'U19' },
+    { id: 'u17', label: 'U17' },
+    { id: 'u15', label: 'U15' },
+    { id: 'u13', label: 'U13' },
+    { id: 'u11', label: 'U11' },
+    { id: 'u10', label: 'U10' },
+    { id: 'u9', label: 'U9' },
   ];
 
   const staffRoleOptions = [
@@ -184,19 +201,45 @@ function ClubRoster() {
 
   const confirmApprove = async () => {
     try {
-      // Update membership with team type
       await clubMembersAPI.updateMembershipStatus(selectedMembership.id, 'approved');
-      // Update team type
-      await clubMembersAPI.updateMember(selectedMembership.id, { teamType: selectedTeamType });
+      await clubMembersAPI.updateMember(selectedMembership.id, {
+        teamType: selectedTeamType,
+        competitionCategory: selectedCompetitionCategory,
+      });
       
       setShowTeamSelectModal(false);
       setSelectedMembership(null);
       setSelectedTeamType('first_team');
+      setSelectedCompetitionCategory('open');
       fetchMembers();
       alert('Athlete approved successfully!');
     } catch (error) {
       console.error('Error approving member:', error);
       alert('Failed to approve athlete');
+    }
+  };
+
+  const openCategoryModal = (membership) => {
+    setSelectedMembership(membership);
+    const fallback =
+      membership.competitionCategory ||
+      (membership.teamType === 'first_team' ? 'senior' : membership.teamType) ||
+      'open';
+    setSelectedCompetitionCategory(fallback);
+    setShowCategoryModal(true);
+  };
+
+  const confirmCategoryChange = async () => {
+    try {
+      await clubMembersAPI.updateMember(selectedMembership.id, {
+        competitionCategory: selectedCompetitionCategory,
+      });
+      setShowCategoryModal(false);
+      setSelectedMembership(null);
+      fetchMembers();
+    } catch (error) {
+      console.error('Error updating competition category:', error);
+      alert('Nuk u përditësua kategoria e ligës');
     }
   };
 
@@ -392,6 +435,12 @@ function ClubRoster() {
                           {teamTypes.find(t => t.id === membership.teamType)?.icon || '⚽'} {teamTypes.find(t => t.id === membership.teamType)?.label || membership.teamType}
                         </span>
                       )}
+                      <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
+                        Ligë:{' '}
+                        {competitionCategories.find(
+                          (c) => c.id === (membership.competitionCategory || 'open')
+                        )?.label || membership.competitionCategory || 'Open'}
+                      </span>
                       {membership.position && (
                         <span className="flex items-center gap-1">
                           ⚽ {membership.position}
@@ -416,13 +465,22 @@ function ClubRoster() {
                   </div>
 
                   {/* Actions */}
-                  <button
-                    onClick={() => handleRemove(membership.id)}
-                    className="p-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-                    title="Remove from club"
-                  >
-                    <TrashIcon className="h-6 w-6" />
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => openCategoryModal(membership)}
+                      className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg transition"
+                      title="Ndrysho kategorinë e ligës për këtë edicion"
+                    >
+                      Kategoria ligë
+                    </button>
+                    <button
+                      onClick={() => handleRemove(membership.id)}
+                      className="p-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                      title="Remove from club"
+                    >
+                      <TrashIcon className="h-6 w-6" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -666,10 +724,11 @@ function ClubRoster() {
             </p>
 
             {/* Team Type Selection */}
-            <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
-              {teamTypes.filter(t => t.id !== 'all').map((team) => (
+            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+              {teamTypes.filter(t => t.id !== 'all' && t.id !== 'u10').map((team) => (
                 <button
                   key={team.id}
+                  type="button"
                   onClick={() => setSelectedTeamType(team.id)}
                   className={`w-full flex items-center gap-3 p-4 rounded-lg border-2 transition ${
                     selectedTeamType === team.id
@@ -692,6 +751,26 @@ function ClubRoster() {
               ))}
             </div>
 
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+              Kategoria e ligës për këtë edicion (p.sh. U10 mund të luajë U11)
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {competitionCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCompetitionCategory(cat.id)}
+                  className={`px-2 py-2 rounded-lg border text-sm font-medium transition ${
+                    selectedCompetitionCategory === cat.id
+                      ? 'border-blue-600 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-3">
               <button
@@ -699,6 +778,7 @@ function ClubRoster() {
                   setShowTeamSelectModal(false);
                   setSelectedMembership(null);
                   setSelectedTeamType('first_team');
+                  setSelectedCompetitionCategory('open');
                 }}
                 className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
               >
@@ -709,6 +789,58 @@ function ClubRoster() {
                 className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-medium"
               >
                 Approve & Assign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCategoryModal && selectedMembership && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Kategoria e ligës
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+              Vendos në cilën kategori do të luajë{' '}
+              <strong>
+                {selectedMembership.athlete?.firstName} {selectedMembership.athlete?.lastName}
+              </strong>{' '}
+              për këtë edicion (pjesëmarrës në turneun e ligës për gola/asiste).
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {competitionCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCompetitionCategory(cat.id)}
+                  className={`px-2 py-2 rounded-lg border text-sm font-medium transition ${
+                    selectedCompetitionCategory === cat.id
+                      ? 'border-blue-600 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setSelectedMembership(null);
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg font-medium"
+              >
+                Anulo
+              </button>
+              <button
+                type="button"
+                onClick={confirmCategoryChange}
+                className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+              >
+                Ruaj
               </button>
             </div>
           </div>

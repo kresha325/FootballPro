@@ -78,7 +78,11 @@ export default function TournamentsScreen({ navigation }) {
     startDate: todayDateInputValue(),
     maxParticipants: 8,
     participantType: 'individual',
+    category: 'open',
   });
+
+  const canCreateTournament = ['liga', 'club', 'scout'].includes(user?.role);
+  const isLigaCreator = user?.role === 'liga';
 
   const seasonPreview = previewTournamentSeason(form.type, form.startDate);
 
@@ -117,19 +121,26 @@ export default function TournamentsScreen({ navigation }) {
   };
 
   const onCreate = async () => {
-    if (!form.name.trim()) {
+    if (!canCreateTournament) {
+      Alert.alert('Permission', 'Only liga, club, or scout can create tournaments.');
+      return;
+    }
+    if (!isLigaCreator && !form.name.trim()) {
       Alert.alert('Validation', 'Tournament name is required.');
       return;
     }
     setCreating(true);
     try {
       const payload = {
-        name: form.name.trim(),
         description: form.description.trim(),
         type: form.type,
         maxParticipants: Number(form.maxParticipants) || 8,
-        participantType: form.participantType,
+        participantType: isLigaCreator ? 'individual' : form.participantType,
+        category: form.category || 'open',
       };
+      if (!isLigaCreator) {
+        payload.name = form.name.trim();
+      }
       if (form.startDate.trim()) {
         payload.startDate = form.startDate.trim();
       }
@@ -142,6 +153,7 @@ export default function TournamentsScreen({ navigation }) {
         startDate: todayDateInputValue(),
         maxParticipants: 8,
         participantType: 'individual',
+        category: 'open',
       });
       await loadData({ silent: true });
       Alert.alert('Created', 'Tournament created successfully.');
@@ -192,11 +204,17 @@ export default function TournamentsScreen({ navigation }) {
           <View>
             <View style={styles.headerCard}>
               <Text style={styles.headerTitle}>Tournaments</Text>
-              <Text style={styles.headerSub}>Browse, join, or create a tournament.</Text>
+              <Text style={styles.headerSub}>
+                {canCreateTournament
+                  ? 'Browse, join, or create a tournament.'
+                  : 'Browse and join tournaments. Only liga, club, or scout can create.'}
+              </Text>
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              <TouchableOpacity style={styles.createHeaderBtn} onPress={() => setShowCreate(true)}>
-                <Text style={styles.createHeaderBtnText}>+ Create tournament</Text>
-              </TouchableOpacity>
+              {canCreateTournament ? (
+                <TouchableOpacity style={styles.createHeaderBtn} onPress={() => setShowCreate(true)}>
+                  <Text style={styles.createHeaderBtnText}>+ Create tournament</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             <ListSearchBar
               value={listSearch}
@@ -219,18 +237,24 @@ export default function TournamentsScreen({ navigation }) {
         ListEmptyComponent={<Text style={styles.empty}>No tournaments available.</Text>}
       />
 
-      <Modal visible={showCreate} animationType="slide" transparent onRequestClose={() => setShowCreate(false)}>
+      <Modal visible={showCreate && canCreateTournament} animationType="slide" transparent onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalBackdrop}>
           <ScrollView contentContainerStyle={styles.modalScroll}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Create tournament</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Name"
-                placeholderTextColor="#94a3b8"
-                value={form.name}
-                onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
-              />
+              {isLigaCreator ? (
+                <Text style={styles.seasonPreview}>
+                  Liga tournaments use your liga name automatically.
+                </Text>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Name"
+                  placeholderTextColor="#94a3b8"
+                  value={form.name}
+                  onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
+                />
+              )}
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Description"
@@ -239,6 +263,18 @@ export default function TournamentsScreen({ navigation }) {
                 onChangeText={(v) => setForm((f) => ({ ...f, description: v }))}
                 multiline
               />
+              <Text style={styles.label}>Category: {form.category}</Text>
+              <View style={styles.chipRow}>
+                {['open', 'senior', 'u11', 'u10', 'u9', 'u13', 'u15', 'u17', 'u19'].map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.chip, form.category === c && styles.chipActive]}
+                    onPress={() => setForm((f) => ({ ...f, category: c }))}
+                  >
+                    <Text style={[styles.chipText, form.category === c && styles.chipTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="Start date (YYYY-MM-DD)"

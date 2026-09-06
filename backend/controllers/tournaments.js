@@ -3,11 +3,17 @@ const Match = require('../models/Match');
 const Bracket = require('../models/Bracket');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const Liga = require('../models/Liga');
 const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
 const { notifyMessage, notifyTournament } = require('./notifications');
 const { resolveTournamentSeason } = require('../utils/footballSeason');
 const { saveMatchGoalEvents, sumGoalsForSide } = require('../utils/matchGoalEvents');
+const {
+  ALLOWED_CREATOR_ROLES,
+  normalizeCategory,
+} = require('../utils/ligaTournaments');
+const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
 
 /** Siguron që çdo pjesëmarrës ka userId/id të user-it (jo id të rreshtit në TournamentParticipant). */
 function serializeTournamentParticipants(participants) {
@@ -48,10 +54,40 @@ function serializeTournament(tournament) {
 
 exports.createTournament = async (req, res) => {
   try {
-    const { name, description, type, startDate, endDate, maxParticipants, participantType, season } = req.body;
+    const role = req.user?.role;
+    if (!ALLOWED_CREATOR_ROLES.has(role)) {
+      return res.status(403).json({
+        msg: 'Vetëm liga, klubi ose scout mund të krijojnë turne. Lojtarët nuk mund të krijojnë turne.',
+      });
+    }
+
+    const { description, type, startDate, endDate, maxParticipants, participantType, season } = req.body;
+    let name = String(req.body.name || '').trim();
+    const category = normalizeCategory(req.body.category);
+    let ligaId = null;
     let pt = 'individual';
     if (participantType === 'club') pt = 'club';
     else if (participantType === 'mixed') pt = 'mixed';
+
+    if (role === 'liga') {
+      const liga = await Liga.findOne({ where: { userId: req.user.id } });
+      if (!liga) {
+        return res.status(400).json({ msg: 'Krijoni profilin e ligës së pari.' });
+      }
+      name = liga.name;
+      ligaId = liga.id;
+      // Liga tournaments register athletes for goals/assists, not clubs as entities
+      pt = 'individual';
+
+      const existing = await Tournament.findOne({
+        where: { ligaId: liga.id, category },
+      });
+      if (existing) {
+        return res.status(200).json(existing);
+      }
+    } else if (!name) {
+      return res.status(400).json({ msg: 'Emri i turneut është i detyrueshëm.' });
+    }
 
     let resolvedSeason;
     try {
@@ -70,6 +106,9 @@ exports.createTournament = async (req, res) => {
       maxParticipants,
       participantType: pt,
       creatorId: req.user.id,
+      ligaId,
+      sourceRole: role,
+      category,
     });
     res.status(201).json(tournament);
   } catch (err) {
@@ -459,14 +498,8 @@ exports.updateMatchScore = async (req, res) => {
 
     if (!match) return res.status(404).json({ msg: 'Match not found' });
 
-    // Only creator or participants can update
-    if (
-      match.Tournament.creatorId !== req.user.id &&
-      match.homeUserId !== req.user.id &&
-      match.awayUserId !== req.user.id
-    ) {
-      return res.status(403).json({ msg: 'Not authorized' });
-    }
+    const authz = canFillMatchStats(match.Tournament, req.user, match);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
     await match.update({ scoreHome, scoreAway, status });
 
@@ -734,9 +767,8 @@ exports.scheduleMatch = async (req, res) => {
     });
 
     if (!match) return res.status(404).json({ msg: 'Match not found' });
-    if (match.Tournament.creatorId !== req.user.id) {
-      return res.status(403).json({ msg: 'Only creator can schedule matches' });
-    }
+    const authz = canManageTournamentMatches(match.Tournament, req.user);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
     await match.update({ matchDate });
 
@@ -884,6 +916,9 @@ exports.startTournamentAndGenerateMatches = async (req, res) => {
       return res.status(403).json({ msg: 'Only tournament creator can start it' });
     }
 
+    const startAuth = canManageTournamentMatches(tournament, req.user);
+    if (!startAuth.ok) return res.status(startAuth.status).json({ msg: startAuth.msg });
+
     if (tournament.status !== 'open') {
       return res.status(400).json({ msg: 'Tournament already started or finished' });
     }
@@ -997,6 +1032,9 @@ exports.updateMatchResultForTournament = async (req, res) => {
     if (!match.Tournament) {
       return res.status(400).json({ msg: 'Match not part of a tournament' });
     }
+
+    const resultAuth = canFillMatchStats(match.Tournament, req.user, match);
+    if (!resultAuth.ok) return res.status(resultAuth.status).json({ msg: resultAuth.msg });
 
     // Update match scores and status
     match.scoreHome = scoreHome;

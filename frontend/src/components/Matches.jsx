@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { CalendarIcon, MapPinIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline';
 
 // Helper: fetch tournaments and participants
@@ -129,6 +130,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
 }
 
 function Matches() {
+  const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const activeTab = 'upcoming';
@@ -154,6 +156,31 @@ function Matches() {
   const [editMatch, setEditMatch] = useState(null);
   const [editParticipants, setEditParticipants] = useState([]);
   const [listSearch, setListSearch] = useState('');
+
+  const manageableTournaments = useMemo(() => {
+    if (!user?.id) return [];
+    return (tournaments || []).filter((t) => {
+      if (Number(t.creatorId) !== Number(user.id) && user.role !== 'admin') return false;
+      if ((t.ligaId || t.sourceRole === 'liga') && user.role !== 'liga' && user.role !== 'admin') {
+        return false;
+      }
+      return true;
+    });
+  }, [tournaments, user]);
+
+  const canCreateMatch = manageableTournaments.length > 0;
+
+  const canEditThisMatch = (match) => {
+    if (!user?.id || !match) return false;
+    if (user.role === 'admin') return true;
+    const t =
+      tournaments.find((x) => Number(x.id) === Number(match.tournamentId)) ||
+      match.Tournament;
+    if (!t) return Number(match.creatorId) === Number(user.id);
+    if (Number(t.creatorId) !== Number(user.id)) return false;
+    if ((t.ligaId || t.sourceRole === 'liga') && user.role !== 'liga') return false;
+    return true;
+  };
 
   const handleEditMatch = async (match) => {
     setEditMatch(match);
@@ -259,7 +286,7 @@ function Matches() {
       fetchMatches();
     } catch (error) {
       console.error('Error creating match:', error);
-      alert('Nuk u arrit planifikimi i ndeshjes');
+      alert(error.response?.data?.msg || 'Nuk u arrit planifikimi i ndeshjes');
     }
   };
 
@@ -271,12 +298,14 @@ function Matches() {
       {/* Create Match Button (visible for all, or add role check if needed) */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <ListSearchBar value={listSearch} onChange={setListSearch} placeholder="Kërko ndeshje, ekip, vend…" className="mb-0 flex-1" />
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow shrink-0"
-        >
-          Krijo Ndeshje
-        </button>
+        {canCreateMatch && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow shrink-0"
+          >
+            Krijo Ndeshje
+          </button>
+        )}
       </div>
 
       {/* Upcoming Matches List */}
@@ -348,9 +377,11 @@ function Matches() {
                       {match.status || 'E planifikuar'}
                     </span>
                   </div>
-                  <button className="ml-4 px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500" onClick={() => handleEditMatch(match)}>
-                    Ndrysho
-                  </button>
+                  {canEditThisMatch(match) && (
+                    <button className="ml-4 px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500" onClick={() => handleEditMatch(match)}>
+                      Ndrysho
+                    </button>
+                  )}
                 </div>
                 {match.description && (
                   <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm">
@@ -367,13 +398,13 @@ function Matches() {
         isOpen={editModalOpen}
         onClose={() => { setEditModalOpen(false); setEditMatch(null); }}
         match={editMatch}
-        tournaments={tournaments}
+        tournaments={manageableTournaments}
         participants={editParticipants}
         onSave={handleSaveEditMatch}
       />
 
       {/* Create Match Modal */}
-      {showCreateModal && (
+      {showCreateModal && canCreateMatch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
@@ -397,10 +428,13 @@ function Matches() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Zgjidh turneun</option>
-                  {tournaments.map(t => (
+                  {manageableTournaments.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Në turne të ligës vetëm liga krijon ndeshje; në të tjerat vetëm krijuesi i turneut.
+                </p>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>

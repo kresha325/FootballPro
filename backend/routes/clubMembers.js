@@ -311,6 +311,11 @@ router.put('/:membershipId/status', protect, async (req, res) => {
     membership.status = status;
     if (status === 'approved') {
       membership.joinedAt = new Date();
+      if (req.body.competitionCategory) {
+        membership.competitionCategory = String(req.body.competitionCategory).trim().toLowerCase();
+      } else if (req.body.teamType && !membership.competitionCategory) {
+        membership.competitionCategory = req.body.teamType === 'first_team' ? 'senior' : req.body.teamType;
+      }
       const clubProfile = await Profile.findOne({ where: { userId: membership.clubId } });
       const athleteProfile = await Profile.findOne({ where: { userId: membership.athleteId } });
       if (athleteProfile && clubProfile) {
@@ -320,6 +325,15 @@ router.put('/:membershipId/status', protect, async (req, res) => {
       }
     }
     await membership.save();
+
+    if (status === 'approved') {
+      try {
+        const { syncClubMemberToLigaTournaments } = require('../utils/ligaTournaments');
+        await syncClubMemberToLigaTournaments(membership);
+      } catch (syncErr) {
+        console.error('syncClubMemberToLigaTournaments:', syncErr);
+      }
+    }
 
     const updatedMembership = await ClubMember.findByPk(membershipId, {
       include: [
@@ -344,7 +358,7 @@ router.put('/:membershipId/status', protect, async (req, res) => {
 router.patch('/:membershipId', protect, async (req, res) => {
   try {
     const { membershipId } = req.params;
-    const { teamType, position, jerseyNumber } = req.body;
+    const { teamType, position, jerseyNumber, competitionCategory } = req.body;
 
     const membership = await ClubMember.findByPk(membershipId);
     if (!membership) {
@@ -357,10 +371,24 @@ router.patch('/:membershipId', protect, async (req, res) => {
     }
 
     if (teamType) membership.teamType = teamType;
+    if (competitionCategory !== undefined) {
+      membership.competitionCategory = competitionCategory
+        ? String(competitionCategory).trim().toLowerCase()
+        : null;
+    }
     if (position) membership.position = position;
     if (jerseyNumber !== undefined) membership.jerseyNumber = jerseyNumber;
     
     await membership.save();
+
+    if (membership.status === 'approved' && (teamType || competitionCategory !== undefined)) {
+      try {
+        const { syncClubMemberToLigaTournaments } = require('../utils/ligaTournaments');
+        await syncClubMemberToLigaTournaments(membership);
+      } catch (syncErr) {
+        console.error('syncClubMemberToLigaTournaments on patch:', syncErr);
+      }
+    }
 
     const updatedMembership = await ClubMember.findByPk(membershipId, {
       include: [

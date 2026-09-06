@@ -1,5 +1,6 @@
 const Liga = require('../models/Liga');
 const User = require('../models/User');
+const { ensureLigaTournament, normalizeCategory } = require('../utils/ligaTournaments');
 
 // Create Liga profile
 exports.createLiga = async (req, res) => {
@@ -25,6 +26,13 @@ exports.createLiga = async (req, res) => {
       contact: req.body.contact,
       socialLinks: req.body.socialLinks,
     });
+    try {
+      await ensureLigaTournament(liga, {
+        category: normalizeCategory(req.body.category || req.body.competitionCategory || 'open'),
+      });
+    } catch (tourErr) {
+      console.error('ensureLigaTournament on create:', tourErr);
+    }
     res.status(201).json(liga);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -80,6 +88,8 @@ exports.updateLiga = async (req, res) => {
       }
     });
 
+    const category = normalizeCategory(req.body.category || req.body.competitionCategory || 'open');
+
     if (!liga) {
       liga = await Liga.create({
         userId: req.user.id,
@@ -95,6 +105,11 @@ exports.updateLiga = async (req, res) => {
         contact: fields.contact || {},
         socialLinks: fields.socialLinks || {},
       });
+      try {
+        await ensureLigaTournament(liga, { category });
+      } catch (tourErr) {
+        console.error('ensureLigaTournament on upsert:', tourErr);
+      }
       return res.json(liga);
     }
 
@@ -111,6 +126,11 @@ exports.updateLiga = async (req, res) => {
       contact: fields.contact || liga.contact,
       socialLinks: fields.socialLinks || liga.socialLinks,
     });
+    try {
+      await ensureLigaTournament(liga, { category });
+    } catch (tourErr) {
+      console.error('ensureLigaTournament on update:', tourErr);
+    }
     res.json(liga);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });

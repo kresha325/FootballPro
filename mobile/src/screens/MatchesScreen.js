@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import ListSearchBar from '../components/ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 
-const CREATOR_ROLES = new Set(['admin', 'coach', 'manager', 'club', 'federation']);
+const CREATOR_ROLES = new Set(['liga', 'club', 'scout', 'admin']);
 
 export default function MatchesScreen() {
   const navigation = useNavigation();
@@ -36,7 +36,18 @@ export default function MatchesScreen() {
   const [scoreForm, setScoreForm] = useState({ matchId: '', scoreHome: '', scoreAway: '' });
   const [listSearch, setListSearch] = useState('');
 
-  const canCreate = CREATOR_ROLES.has(user?.role);
+  const manageableTournaments = useMemo(() => {
+    if (!user?.id) return [];
+    return (tournaments || []).filter((t) => {
+      if (Number(t.creatorId) !== Number(user.id) && user.role !== 'admin') return false;
+      if ((t.ligaId || t.sourceRole === 'liga') && user.role !== 'liga' && user.role !== 'admin') {
+        return false;
+      }
+      return true;
+    });
+  }, [tournaments, user]);
+
+  const canCreate = CREATOR_ROLES.has(user?.role) && manageableTournaments.length > 0;
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -194,7 +205,7 @@ export default function MatchesScreen() {
               <TextInput
                 value={form.tournamentId}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, tournamentId: v, homeUserId: '', awayUserId: '' }))}
-                placeholder={`Tournament ID (${tournaments.length} available)`}
+                placeholder={`Tournament ID (${manageableTournaments.length} you manage)`}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}

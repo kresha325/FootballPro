@@ -32,6 +32,11 @@ const ClubMember = sequelize.define('ClubMember', {
     type: DataTypes.ENUM('first_team', 'youth', 'women', 'men', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u9'),
     defaultValue: 'first_team',
   },
+  /** Kategoria e ligës/edicionit ku klubi e vendos lojtarin (p.sh. u10 → u11). */
+  competitionCategory: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+  },
   position: {
     type: DataTypes.STRING,
     allowNull: true,

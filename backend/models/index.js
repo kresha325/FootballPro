@@ -76,6 +76,10 @@ Profile.belongsTo(User, { foreignKey: 'userId' });
 // User/Liga
 User.hasOne(Liga, { foreignKey: 'userId' });
 Liga.belongsTo(User, { foreignKey: 'userId' });
+if (Tournament && Liga) {
+  Tournament.belongsTo(Liga, { foreignKey: 'ligaId', as: 'liga' });
+  Liga.hasMany(Tournament, { foreignKey: 'ligaId', as: 'tournaments' });
+}
 // User/Achievement
 User.hasMany(UserAchievement, { foreignKey: 'userId' });
 UserAchievement.belongsTo(User, { foreignKey: 'userId' });

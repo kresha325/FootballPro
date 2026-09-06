@@ -43,6 +43,22 @@ const Tournament = sequelize.define('Tournament', {
       key: 'id',
     },
   },
+  /** Linked liga when tournament was created for / by a liga profile. */
+  ligaId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  /** Who created it: liga | club | scout */
+  sourceRole: {
+    type: DataTypes.STRING(16),
+    allowNull: true,
+  },
+  /** Age/competition band for this edition (open, u11, u10, …). */
+  category: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    defaultValue: 'open',
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

@@ -350,7 +350,11 @@ export default function TournamentSimple() {
     startDate: todayDateInputValue(),
     maxParticipants: 8,
     participantType: 'individual',
+    category: 'open',
   });
+
+  const canCreateTournament = ['liga', 'club', 'scout'].includes(user?.role);
+  const isLigaCreator = user?.role === 'liga';
 
   const createSeasonPreview = previewTournamentSeason(newTournament.type, newTournament.startDate);
 
@@ -437,12 +441,11 @@ export default function TournamentSimple() {
 
   const canEditMatch = (match) => {
     if (!match || !user?.id) return false;
-    const uid = user.id;
-    return (
-      selectedTournament?.creatorId === uid ||
-      match.homeUserId === uid ||
-      match.awayUserId === uid
-    );
+    if (user.role === 'admin') return true;
+    const t = selectedTournament;
+    if (!t || Number(t.creatorId) !== Number(user.id)) return false;
+    if ((t.ligaId || t.sourceRole === 'liga') && user.role !== 'liga') return false;
+    return true;
   };
 
   const saveMatchReport = async (payload) => {
@@ -482,8 +485,16 @@ export default function TournamentSimple() {
 
   const createTournament = async (e) => {
     e.preventDefault();
+    if (!canCreateTournament) {
+      alert('Vetëm liga, klubi ose scout mund të krijojnë turne.');
+      return;
+    }
     try {
-      await API.post('/tournaments', newTournament);
+      const payload = {
+        ...newTournament,
+        name: isLigaCreator ? undefined : newTournament.name,
+      };
+      await API.post('/tournaments', payload);
       setShowCreateModal(false);
       setNewTournament({
         name: '',
@@ -492,11 +503,12 @@ export default function TournamentSimple() {
         startDate: todayDateInputValue(),
         maxParticipants: 8,
         participantType: 'individual',
+        category: 'open',
       });
       fetchTournaments();
     } catch (error) {
       console.error('Error creating tournament:', error);
-      alert('Failed to create tournament');
+      alert(error.response?.data?.msg || 'Failed to create tournament');
     }
   };
 
@@ -580,13 +592,15 @@ export default function TournamentSimple() {
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-white/10">Stats Pro</span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:scale-[1.02] hover:brightness-110"
-          >
-            + Krijo turne
-          </button>
+          {canCreateTournament && (
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:scale-[1.02] hover:brightness-110"
+            >
+              + Krijo turne
+            </button>
+          )}
         </div>
       </div>
 
@@ -735,18 +749,24 @@ export default function TournamentSimple() {
         <div className="text-center py-20">
           <div className="text-6xl mb-4">🏆</div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Nuk ka turne</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">Bëhu i pari që krijon një turne!</p>
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
-          >
-            Krijo Turne
-          </button>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {canCreateTournament
+              ? 'Bëhu i pari që krijon një turne!'
+              : 'Turnetë krijohen nga ligat, klubet ose scoutët.'}
+          </p>
+          {canCreateTournament && (
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+            >
+              Krijo Turne
+            </button>
+          )}
         </div>
       )}
 
-      {showCreateModal && (
+      {showCreateModal && canCreateTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Krijo Turne të Ri</h2>
@@ -754,14 +774,20 @@ export default function TournamentSimple() {
             <form onSubmit={createTournament} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Emri</label>
-                <input
-                  type="text"
-                  value={newTournament.name}
-                  onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={`p.sh. Kupa ${APP_BRAND_NAME} U15`}
-                />
+                {isLigaCreator ? (
+                  <p className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
+                    Turneu i ligës merr automatikisht emrin e ligës suaj.
+                  </p>
+                ) : (
+                  <input
+                    type="text"
+                    value={newTournament.name}
+                    onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`p.sh. Kupa ${APP_BRAND_NAME} U15`}
+                  />
+                )}
               </div>
 
               <div>
@@ -774,6 +800,28 @@ export default function TournamentSimple() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategoria (edicion)</label>
+                <select
+                  value={newTournament.category}
+                  onChange={(e) => setNewTournament({ ...newTournament, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="open">Open</option>
+                  <option value="senior">Senior</option>
+                  <option value="u23">U23</option>
+                  <option value="u21">U21</option>
+                  <option value="u19">U19</option>
+                  <option value="u17">U17</option>
+                  <option value="u15">U15</option>
+                  <option value="u13">U13</option>
+                  <option value="u11">U11</option>
+                  <option value="u10">U10</option>
+                  <option value="u9">U9</option>
+                </select>
+              </div>
+
+              {!isLigaCreator && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kush merr pjesë</label>
                 <select
@@ -789,6 +837,7 @@ export default function TournamentSimple() {
                   Në «klub + athletë», një turne mund të ketë njëkohësisht klube dhe lojtarë të regjistruar si pjesëmarrës (p.sh. kupa me skuadra dhe individë).
                 </p>
               </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lloji i turneut</label>
@@ -814,6 +863,7 @@ export default function TournamentSimple() {
                   <option value={8}>8</option>
                   <option value={16}>16</option>
                   <option value={32}>32</option>
+                  {isLigaCreator && <option value={500}>500 (liga)</option>}
                 </select>
               </div>
 

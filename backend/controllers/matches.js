@@ -1,3 +1,12 @@
+const db = require('../models');
+const Match = db.Match;
+const Tournament = db.Tournament;
+const { TournamentParticipant } = require('../models/Tournament');
+const User = db.User;
+const MatchScorer = db.MatchScorer;
+const { saveMatchGoalEvents } = require('../utils/matchGoalEvents');
+const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
+
 // Update match details (edit)
 exports.updateMatch = async (req, res) => {
   try {
@@ -10,9 +19,21 @@ exports.updateMatch = async (req, res) => {
     if (homeUserId === awayUserId) {
       return res.status(400).json({ msg: 'Nuk mund të zgjedhësh të njëjtin lojtar për të dy ekipet.' });
     }
-    // Optionally: check if tournamentId exists
     const tournament = await Tournament.findByPk(tournamentId);
     if (!tournament) return res.status(400).json({ msg: 'Turneu nuk ekziston.' });
+
+    const authz = canManageTournamentMatches(tournament, req.user);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
+
+    // If moving between tournaments, also must own the original
+    if (Number(match.tournamentId) !== Number(tournamentId)) {
+      const previous = await Tournament.findByPk(match.tournamentId);
+      if (previous) {
+        const prevAuth = canManageTournamentMatches(previous, req.user);
+        if (!prevAuth.ok) return res.status(prevAuth.status).json({ msg: prevAuth.msg });
+      }
+    }
+
     match.tournamentId = tournamentId;
     match.homeUserId = homeUserId;
     match.awayUserId = awayUserId;
@@ -66,13 +87,6 @@ exports.getUserMatches = async (req, res) => {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
-const db = require('../models');
-const Match = db.Match;
-const Tournament = db.Tournament;
-const { TournamentParticipant } = require('../models/Tournament');
-const User = db.User;
-const MatchScorer = db.MatchScorer;
-const { saveMatchGoalEvents } = require('../utils/matchGoalEvents');
 
 // Ruaj golashënuesit për një ndeshje
 exports.saveMatchScorers = async (req, res) => {
@@ -82,8 +96,11 @@ exports.saveMatchScorers = async (req, res) => {
     const events = goalEvents || scorers;
     if (!Array.isArray(events)) return res.status(400).json({ msg: 'Invalid scorers' });
 
-    const match = await Match.findByPk(matchId);
+    const match = await Match.findByPk(matchId, { include: [{ model: Tournament }] });
     if (!match) return res.status(404).json({ msg: 'Match not found' });
+
+    const authz = canFillMatchStats(match.Tournament, req.user, match);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
     await saveMatchGoalEvents(matchId, events, match);
 
@@ -100,12 +117,22 @@ exports.createMatch = async (req, res) => {
     if (!tournamentId || !homeUserId || !awayUserId || !matchDate) {
       return res.status(400).json({ msg: 'Të gjitha fushat janë të detyrueshme: tournamentId, homeUserId, awayUserId, matchDate.' });
     }
+    if (Number(homeUserId) === Number(awayUserId)) {
+      return res.status(400).json({ msg: 'Nuk mund të zgjedhësh të njëjtin lojtar për të dy ekipet.' });
+    }
+    const tournament = await Tournament.findByPk(tournamentId);
+    if (!tournament) return res.status(400).json({ msg: 'Turneu nuk ekziston.' });
+
+    const authz = canManageTournamentMatches(tournament, req.user);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
+
     const match = await Match.create({
       tournamentId,
       homeUserId,
       awayUserId,
       matchDate,
       round,
+      status: 'scheduled',
     });
     res.status(201).json(match);
   } catch (err) {
@@ -152,8 +179,11 @@ exports.getMatches = async (req, res) => {
 exports.updateMatchScore = async (req, res) => {
   try {
     const { scoreHome, scoreAway } = req.body;
-    const match = await Match.findByPk(req.params.id);
+    const match = await Match.findByPk(req.params.id, { include: [{ model: Tournament }] });
     if (!match) return res.status(404).json({ msg: 'Match not found' });
+
+    const authz = canFillMatchStats(match.Tournament, req.user, match);
+    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
     match.scoreHome = scoreHome;
     match.scoreAway = scoreAway;
