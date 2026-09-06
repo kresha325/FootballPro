@@ -16,10 +16,10 @@
 
 ## 🟡 WARNING
 
-- Premium/JonCoin IAP not implemented — mobile digital buys gated (`ALLOW_MOBILE_DIGITAL_PURCHASES=false`)
+- IAP code shipped (`expo-iap` + `/api/iap/verify`) but store products + sandbox QA + Google Play API verify still incomplete
 - Physical device LiveKit matrix NOT VERIFIED
 - Push requires new native build + APNs/FCM credentials
-- Migration `20260906190000-ugc-moderation-account-deletion.js` must run on production
+- Migrations `…ugc-moderation…` and `…create-iap-purchases…` must run on production
 - Community guidelines pages are minimal starter copy — legal review recommended
 - Camera flip on native Go Live still missing vs web
 
@@ -27,7 +27,7 @@
 
 1. **EAS production builds + TestFlight / Play internal testing** — not run in this environment for final sign-off
 2. **Crash-free critical path testing on physical iOS + Android** — NOT VERIFIED here
-3. **IAP** still needed before enabling paid digital goods in the store binary (currently gated off)
+3. **Create IAP products in ASC/Play + sandbox purchase proof** before store submit
 ## CHANGED FILES (this multi-phase pass — summary)
 
 Backend: moderation + accountDeletion + migration + User fields + auth/ban + livekitAcl + videoCalls ACL + messaging block gate + notifications push (prior)  
@@ -38,11 +38,13 @@ Frontend: LegalPage + routes
 
 - `backend/migrations/20260906190000-ugc-moderation-account-deletion.js`  
   Adds `Users.bannedAt|banReason|deletedAt|deletionRequestedAt`, tables `Reports`, `Blocks`
+- `backend/migrations/20260906193000-create-iap-purchases.js` — table `IapPurchases`
 
 ## DEPENDENCY UPDATES
 
 - Phase 1 (earlier): Expo 53 matrix  
 - Phase 4: `expo-notifications`, `expo-device`
+- IAP: `expo-iap@3.0.2`
 
 ## BUILD STATUS
 
@@ -57,14 +59,14 @@ iOS: NOT VERIFIED for this multi-phase pass (prior Debug install existed)
 
 ## STORE REQUIREMENTS
 
-Apple: **NOT READY** (IAP + TestFlight + device QA)  
-Google Play: **NOT READY** (Billing + AAB + device QA)
+Apple: **NOT READY** (store products + TestFlight + device QA)  
+Google Play: **NOT READY** (Billing products + AAB + device QA)
 
 ## REMAINING MANUAL ACTIONS
 
-1. Run migration on production Postgres  
-2. Redeploy backend  
-3. `eas build` iOS + Android production; configure APNs/FCM  
-4. Decide Premium/JonCoin IAP strategy and implement before store submit  
+1. Run both migrations on production Postgres  
+2. Redeploy backend; set `APPLE_IAP_SHARED_SECRET` (and Play service account when ready)  
+3. Create IAP SKUs in ASC / Play (see `PAYMENTS_AUDIT.md`)  
+4. `eas build` iOS + Android production; configure APNs/FCM  
 5. Fill ASC / Play Console privacy & data safety  
-6. Physical device QA checklist (auth, feed, live, call, report, delete account)
+6. Physical device QA (auth, feed, live, call, report, delete, IAP sandbox)

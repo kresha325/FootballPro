@@ -18,6 +18,8 @@ import {
 } from '../api/client';
 import { WEB_APP_URL, ALLOW_MOBILE_DIGITAL_PURCHASES } from '../config/constants';
 import { useAuth } from '../context/AuthContext';
+import { purchaseAndFulfill, loadIapProducts } from '../iap/purchase';
+import { premiumSkuForPlan } from '../iap/products';
 
 const PENDING_SESSION_KEY = 'premium_checkout_session_id';
 
@@ -43,11 +45,26 @@ export default function PremiumScreen() {
   const [loading, setLoading] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState(null);
   const [paymentsLive, setPaymentsLive] = useState(false);
+  const [storePrices, setStorePrices] = useState({});
 
   useEffect(() => {
     publicConfigRequest()
       .then((res) => setPaymentsLive(!!res.data?.paymentsEnabled && res.data?.premiumMode === 'stripe'))
       .catch(() => setPaymentsLive(false));
+  }, []);
+
+  useEffect(() => {
+    if (!ALLOW_MOBILE_DIGITAL_PURCHASES) return;
+    loadIapProducts()
+      .then(({ subscriptions }) => {
+        const map = {};
+        (subscriptions || []).forEach((p) => {
+          const id = p?.id || p?.productId;
+          if (id) map[id] = p.displayPrice || p.localizedPrice || p.price;
+        });
+        setStorePrices(map);
+      })
+      .catch(() => {});
   }, []);
 
   React.useEffect(() => {
@@ -59,71 +76,49 @@ export default function PremiumScreen() {
   const onSubscribe = useCallback(async () => {
     if (user?.premium) return;
 
-    if (!ALLOW_MOBILE_DIGITAL_PURCHASES) {
-      // Store-safe: no Stripe/IAP charge path in the binary until IAP ships
-      Alert.alert(
-        'Premium',
-        'Blerja e Premium në app do të vijë me IAP (App Store / Play). Tani mund ta aktivizosh demo nëse pagesat janë fikur, ose nga web.',
-        [
-          { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/premium`).catch(() => {}) },
-          {
-            text: 'Provo demo',
-            onPress: async () => {
-              setLoading(true);
-              try {
-                const { data } = await premiumCheckoutRequest(selectedPlan);
-                if (data.mode === 'demo' && data.success) {
-                  await refreshMe();
-                  Alert.alert('Premium aktiv', data.message || 'Llogaria jote është Premium (demo).');
-                } else {
-                  Alert.alert(
-                    'Jo e disponueshme',
-                    'Pagesat digjitale në mobile janë të çaktivizuara deri sa të jetë gati IAP.'
-                  );
-                }
-              } catch (err) {
-                Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u aktivizua Premium'));
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-          { text: 'Anulo', style: 'cancel' },
-        ]
-      );
+    if (ALLOW_MOBILE_DIGITAL_PURCHASES) {
+      setLoading(true);
+      try {
+        const sku = premiumSkuForPlan(selectedPlan);
+        await purchaseAndFulfill(sku, { type: 'subs' });
+        await refreshMe();
+        Alert.alert('Premium aktiv', 'Abonimi u aktivizua përmes App Store / Play.');
+      } catch (err) {
+        if (err?.cancelled) return;
+        Alert.alert('Gabim', extractErrorMessage(err, err?.message || 'Blerja IAP dështoi'));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
-    try {
-      const { data } = await premiumCheckoutRequest(selectedPlan);
-
-      if (data.mode === 'demo' && data.success) {
-        await refreshMe();
-        Alert.alert('Premium aktiv', data.message || 'Llogaria jote është Premium.');
-        return;
-      }
-
-      if (data.mode === 'stripe' && data.url) {
-        if (data.sessionId) {
-          await AsyncStorage.setItem(PENDING_SESSION_KEY, data.sessionId);
-          setPendingSessionId(data.sessionId);
-        }
-        const canOpen = await Linking.canOpenURL(data.url);
-        if (!canOpen) {
-          Alert.alert('Gabim', 'Nuk u hap lidhja e pagesës.');
-          return;
-        }
-        await Linking.openURL(data.url);
-        return;
-      }
-
-      Alert.alert('Gabim', data?.msg || 'Nuk u nis pagesa');
-    } catch (err) {
-      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u nis Premium'));
-    } finally {
-      setLoading(false);
-    }
+    Alert.alert(
+      'Premium',
+      'Blerja e Premium në app kërkon IAP. Mund ta aktivizosh demo nëse pagesat janë fikur, ose nga web.',
+      [
+        { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/premium`).catch(() => {}) },
+        {
+          text: 'Provo demo',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const { data } = await premiumCheckoutRequest(selectedPlan);
+              if (data.mode === 'demo' && data.success) {
+                await refreshMe();
+                Alert.alert('Premium aktiv', data.message || 'Llogaria jote është Premium (demo).');
+              } else {
+                Alert.alert('Jo e disponueshme', 'Pagesat digjitale në mobile janë të çaktivizuara.');
+              }
+            } catch (err) {
+              Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u aktivizua Premium'));
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+        { text: 'Anulo', style: 'cancel' },
+      ]
+    );
   }, [user?.premium, selectedPlan, refreshMe]);
 
   const onVerifyPayment = useCallback(async () => {
@@ -154,6 +149,8 @@ export default function PremiumScreen() {
   }, [pendingSessionId, refreshMe]);
 
   const isPremium = !!user?.premium;
+  const selectedSku = premiumSkuForPlan(selectedPlan);
+  const displayPrice = storePrices[selectedSku];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -162,18 +159,25 @@ export default function PremiumScreen() {
         <Text style={styles.heroSub}>Zhblloko mjetet premium për karrierën tënde.</Text>
       </View>
 
-      {!paymentsLive ? (
+      {ALLOW_MOBILE_DIGITAL_PURCHASES ? (
+        <View style={styles.demoBanner}>
+          <Text style={styles.demoBannerTitle}>In-App Purchase</Text>
+          <Text style={styles.demoBannerText}>
+            Pagesa bëhet përmes App Store / Google Play. Kërkon build me expo-iap (jo Expo Go).
+          </Text>
+        </View>
+      ) : !paymentsLive ? (
         <View style={styles.demoBanner}>
           <Text style={styles.demoBannerTitle}>Pagesat jo aktive</Text>
           <Text style={styles.demoBannerText}>
-            Premium aktivizohet në mënyrë demo (pa kartë). Për App Store / Play, digjitale brenda app kërkon IAP (shiko PAYMENTS_AUDIT.md).
+            Premium aktivizohet në mënyrë demo (pa kartë) ose nga web.
           </Text>
         </View>
       ) : (
         <View style={styles.demoBanner}>
           <Text style={styles.demoBannerTitle}>Stripe (web)</Text>
           <Text style={styles.demoBannerText}>
-            Pagesa hapet në shfletues. Apple/Google mund të kërkojnë StoreKit / Play Billing për Premium digjital.
+            Pagesa hapet në shfletues kur IAP nuk është i aktivizuar.
           </Text>
         </View>
       )}
@@ -206,7 +210,7 @@ export default function PremiumScreen() {
         .map((plan) => (
           <View key={plan.key} style={styles.planCard}>
             <Text style={styles.planTitle}>{plan.title}</Text>
-            <Text style={styles.planPrice}>{plan.price}</Text>
+            <Text style={styles.planPrice}>{displayPrice || plan.price}</Text>
             {plan.badge ? (
               <View style={styles.planBadgeWrap}>
                 <Text style={styles.planBadgeText}>{plan.badge}</Text>
@@ -229,19 +233,27 @@ export default function PremiumScreen() {
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.buttonText}>
-            {isPremium ? 'Tashmë Premium' : paymentsLive ? 'Upgrade tani' : 'Aktivizo Premium (demo)'}
+            {isPremium
+              ? 'Tashmë Premium'
+              : ALLOW_MOBILE_DIGITAL_PURCHASES
+                ? 'Bli me App Store / Play'
+                : paymentsLive
+                  ? 'Upgrade tani'
+                  : 'Aktivizo Premium (demo)'}
           </Text>
         )}
       </TouchableOpacity>
 
-      {paymentsLive && pendingSessionId && !isPremium ? (
+      {!ALLOW_MOBILE_DIGITAL_PURCHASES && paymentsLive && pendingSessionId && !isPremium ? (
         <TouchableOpacity style={styles.verifyBtn} onPress={onVerifyPayment} disabled={loading}>
           <Text style={styles.verifyBtnText}>Kam përfunduar pagesën</Text>
         </TouchableOpacity>
       ) : null}
 
       <Text style={styles.footer}>
-        Pagesa me Stripe kur është konfiguruar në server. Pa Stripe, aktivizohet automatikisht (demo).
+        {ALLOW_MOBILE_DIGITAL_PURCHASES
+          ? 'Abonimi menaxhohet nga Apple/Google. Anulo nga Settings të pajisjes.'
+          : 'Pagesa me Stripe kur është konfiguruar në server. Pa Stripe, aktivizohet automatikisht (demo).'}
       </Text>
     </ScrollView>
   );

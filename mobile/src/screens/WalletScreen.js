@@ -3,13 +3,14 @@ import { Alert, FlatList, Linking, RefreshControl, StyleSheet, Text, TextInput, 
 import {
   extractErrorMessage,
   joncoinBalanceRequest,
-  joncoinPurchaseRequest,
   joncoinTransactionsRequest,
   joncoinTransferRequest,
   joncoinWithdrawRequest,
   myOrdersRequest,
 } from '../api/client';
 import { ALLOW_MOBILE_DIGITAL_PURCHASES, WEB_APP_URL } from '../config/constants';
+import { JONCOIN_PACKS } from '../iap/products';
+import { purchaseAndFulfill } from '../iap/purchase';
 
 function WalletSkeleton() {
   return (
@@ -27,7 +28,7 @@ export default function WalletScreen() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [buyAmount, setBuyAmount] = useState('');
+  const [buyingSku, setBuyingSku] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawFeePct, setWithdrawFeePct] = useState(5);
   const [toUserId, setToUserId] = useState('');
@@ -59,7 +60,7 @@ export default function WalletScreen() {
     loadData();
   }, [loadData]);
 
-  const purchase = async () => {
+  const purchasePack = async (pack) => {
     if (!ALLOW_MOBILE_DIGITAL_PURCHASES) {
       Alert.alert(
         'JonCoin',
@@ -71,20 +72,20 @@ export default function WalletScreen() {
       );
       return;
     }
-    const amount = Number(buyAmount);
-    if (!amount || amount <= 0) return;
+    setBuyingSku(pack.sku);
     try {
-      const res = await joncoinPurchaseRequest(amount);
-      const auto = res?.data?.autoCompleted;
-      if (auto) {
-        Alert.alert('JonCoin', 'Blerja u krye; balanca u përditësua.');
-      } else {
-        Alert.alert('JonCoin', 'Kërkesa u regjistrua (në pritje të konfirmimit).');
-      }
-      setBuyAmount('');
+      const data = await purchaseAndFulfill(pack.sku, { type: 'inapp' });
+      const bal = data?.fulfillment?.joncoinBalance;
+      Alert.alert(
+        'JonCoin',
+        bal != null ? `U shtuan ${pack.amount} JC. Balanca: ${bal}` : `${pack.label} u blenë me sukses.`
+      );
       await loadData({ silent: true });
     } catch (err) {
-      Alert.alert('Purchase failed', extractErrorMessage(err, 'Could not purchase JonCoin'));
+      if (err?.cancelled) return;
+      Alert.alert('Purchase failed', extractErrorMessage(err, err?.message || 'Could not purchase JonCoin'));
+    } finally {
+      setBuyingSku(null);
     }
   };
 
@@ -147,11 +148,33 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Buy JonCoin</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={buyAmount} onChangeText={setBuyAmount} placeholder="Amount" />
-            <TouchableOpacity style={styles.primaryBtn} onPress={purchase}>
-              <Text style={styles.primaryBtnText}>Buy</Text>
-            </TouchableOpacity>
+            <Text style={styles.cardTitle}>Buy JonCoin (IAP)</Text>
+            {ALLOW_MOBILE_DIGITAL_PURCHASES ? (
+              JONCOIN_PACKS.map((pack) => (
+                <TouchableOpacity
+                  key={pack.sku}
+                  style={[styles.primaryBtn, styles.packBtn, buyingSku && styles.btnDisabled]}
+                  onPress={() => purchasePack(pack)}
+                  disabled={!!buyingSku}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {buyingSku === pack.sku ? 'Duke blerë…' : pack.label}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() =>
+                  Alert.alert('JonCoin', 'IAP nuk është aktiv. Hap web për blerje.', [
+                    { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/wallet`).catch(() => {}) },
+                    { text: 'OK', style: 'cancel' },
+                  ])
+                }
+              >
+                <Text style={styles.primaryBtnText}>Bli në web</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.card}>
@@ -233,6 +256,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   primaryBtn: { backgroundColor: '#16a34a', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
+  packBtn: { marginBottom: 8 },
+  btnDisabled: { opacity: 0.6 },
   warningBtn: { backgroundColor: '#ca8a04', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   infoBtn: { backgroundColor: '#2563eb', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   primaryBtnText: { color: '#fff', fontWeight: '700' },

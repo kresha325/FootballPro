@@ -24,4 +24,10 @@ Dev-client LAN Metro (`http://192.168.x.x:8081`) is runtime-only and not bundled
 
 ## Manual
 
-Confirm Render env has production LiveKit, Cloudinary, Stripe, JWT_SECRET, VAPID, Expo push credentials.
+Confirm Render env has production LiveKit, Cloudinary, Stripe, JWT_SECRET, VAPID, Expo push credentials, plus IAP:
+
+| Key | Notes |
+|-----|--------|
+| `APPLE_IAP_SHARED_SECRET` | App Store Connect shared secret |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Optional until full Play verify |
+| `IAP_ALLOW_UNVERIFIED` | Staging only — never production |

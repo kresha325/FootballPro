@@ -76,6 +76,7 @@ async function activatePremiumFromStripeSession(session) {
 }
 
 exports.PLANS = PLANS;
+exports.activatePremiumForUser = activatePremiumForUser;
 
 exports.createPremiumCheckout = async (req, res) => {
   try {

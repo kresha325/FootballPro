@@ -17,7 +17,7 @@
 | 5 | LiveKit validation | DONE (code harden; device NOT VERIFIED) |
 | 6 | UGC report/block/moderation | DONE (repo; migrate prod) |
 | 7 | Account deletion | DONE (repo; migrate prod) |
-| 8 | Payments | AUDIT DONE — IAP still blocker |
+| 8 | Payments | IAP wired (`expo-iap` + verify) — store SKUs/QA remain |
 | 9 | Security | PARTIAL (ban/login, no login body logs, 401 logout) |
 | 10 | API reliability | DONE (timeout/retry/401) |
 | 11 | Media | PARTIAL (existing uploads; no full rewrite) |
@@ -30,7 +30,7 @@
 
 ## Remaining store blockers
 
-1. IAP / payment policy for Premium & JonCoin  
+1. Create store IAP products + sandbox QA (code path exists)  
 2. EAS production builds + store consoles  
 3. Physical device QA  
 

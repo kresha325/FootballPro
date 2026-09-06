@@ -323,6 +323,9 @@ export const registerPushTokenRequest = (token, type = 'mobile') =>
 export const premiumCheckoutRequest = (plan) => api.post('/api/premium/checkout', { plan });
 export const premiumVerifySessionRequest = (sessionId) => api.get(`/api/premium/verify-session/${sessionId}`);
 
+export const iapCatalogRequest = () => api.get('/api/iap/catalog');
+export const verifyIapPurchaseRequest = (payload) => api.post('/api/iap/verify', payload);
+
 export const scoutingRecommendationsRequest = (params = {}) =>
   api.get('/api/scouting/recommendations', { params });
 

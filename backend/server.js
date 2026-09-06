@@ -305,6 +305,7 @@ app.use('/api/streams', require('./routes/streams'));
 // JonCoin API
 app.use('/api/joncoin', require('./routes/joncoin'));
 app.use('/api/moderation', require('./routes/moderation'));
+app.use('/api/iap', require('./routes/iap'));
 
 
 // Endpoint për të kontrolluar nëse një user është online

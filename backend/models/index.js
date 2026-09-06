@@ -89,12 +89,15 @@ Like.belongsTo(Post, { foreignKey: 'postId' });
 
 const Report = require('./Report');
 const Block = require('./Block');
+const IapPurchase = require('./IapPurchase');
 Report.belongsTo(User, { as: 'reporter', foreignKey: 'reporterId' });
 User.hasMany(Report, { as: 'reportsFiled', foreignKey: 'reporterId' });
 Block.belongsTo(User, { as: 'blocker', foreignKey: 'blockerId' });
 Block.belongsTo(User, { as: 'blockedUser', foreignKey: 'blockedId' });
 User.hasMany(Block, { as: 'blocksCreated', foreignKey: 'blockerId' });
 User.hasMany(Block, { as: 'blocksReceived', foreignKey: 'blockedId' });
+User.hasMany(IapPurchase, { foreignKey: 'userId' });
+IapPurchase.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = {
   User,
@@ -129,6 +132,7 @@ module.exports = {
   LiveStream,
   Report,
   Block,
+  IapPurchase,
 };
 
 
