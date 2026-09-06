@@ -241,8 +241,12 @@ exports.verifyAndFulfill = async (req, res) => {
     }
 
     let fulfillment = null;
+    let joncoinTx = null;
     if (catalog.kind === 'premium') {
-      fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${transactionId}`);
+      fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${transactionId}`, {
+        source: 'iap',
+        productId,
+      });
       if (!fulfillment) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     } else if (catalog.kind === 'joncoin') {
       const user = await User.findByPk(req.user.id);
@@ -250,14 +254,14 @@ exports.verifyAndFulfill = async (req, res) => {
       const amount = Number(catalog.amount);
       user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + amount);
       await user.save();
-      const tx = await JonCoinTransaction.create({
+      joncoinTx = await JonCoinTransaction.create({
         userId: req.user.id,
         type: 'purchase',
         amount,
         status: 'completed',
         description: `IAP ${productId}`,
       });
-      fulfillment = { joncoinBalance: user.joncoinBalance, transaction: tx };
+      fulfillment = { joncoinBalance: user.joncoinBalance, transaction: joncoinTx };
     }
 
     const purchase = await IapPurchase.create({
@@ -274,6 +278,36 @@ exports.verifyAndFulfill = async (req, res) => {
         hasReceipt: !!transactionReceipt,
       },
     });
+
+    if (catalog.kind === 'joncoin' && joncoinTx) {
+      try {
+        const { createInvoiceIfNeeded } = require('../utils/invoices');
+        await createInvoiceIfNeeded({
+          userId: req.user.id,
+          kind: 'joncoin',
+          source: 'iap',
+          amount: Number(catalog.amount),
+          currency: 'JC',
+          description: `JonCoin pack ${catalog.amount}`,
+          productId,
+          joncoinAmount: Number(catalog.amount),
+          externalId: `iap:${transactionId}`,
+          iapPurchaseId: purchase.id,
+          joncoinTransactionId: joncoinTx.id,
+          rawPayload: { platform, productId, transactionId },
+        });
+      } catch (invErr) {
+        console.warn('IAP JonCoin invoice skipped:', invErr?.message || invErr);
+      }
+    } else if (catalog.kind === 'premium' && fulfillment?.invoice && purchase?.id) {
+      try {
+        fulfillment.invoice.iapPurchaseId = purchase.id;
+        fulfillment.invoice.productId = productId;
+        await fulfillment.invoice.save();
+      } catch {
+        /* ignore */
+      }
+    }
 
     res.json({
       success: true,

@@ -528,3 +528,179 @@ exports.getPendingJonCoinTransactions = async (req, res) => {
   }
 };
 
+function buildInvoiceWhere(query = {}) {
+  const { kind, source, search, from, to } = query;
+  const where = {};
+  if (kind) where.kind = kind;
+  if (source) where.source = source;
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt[Op.gte] = new Date(from);
+    if (to) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt[Op.lte] = end;
+    }
+  }
+  return { where, search: search ? String(search).trim() : '' };
+}
+
+/** List invoices for admin */
+exports.listInvoices = async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const { where, search } = buildInvoiceWhere(req.query);
+
+    const and = [where];
+    if (search) {
+      and.push({
+        [Op.or]: [
+          { invoiceNumber: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+          { externalId: { [Op.iLike]: `%${search}%` } },
+          { '$User.email$': { [Op.iLike]: `%${search}%` } },
+          { '$User.firstName$': { [Op.iLike]: `%${search}%` } },
+          { '$User.lastName$': { [Op.iLike]: `%${search}%` } },
+        ],
+      });
+    }
+
+    const result = await Invoice.findAndCountAll({
+      where: { [Op.and]: and },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'email', 'firstName', 'lastName'],
+          required: false,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
+      distinct: true,
+      subQuery: false,
+    });
+
+    res.json({
+      invoices: result.rows,
+      total: result.count,
+      pages: Math.ceil(result.count / limit) || 1,
+      currentPage: page,
+    });
+  } catch (error) {
+    console.error('listInvoices:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+exports.getInvoice = async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const invoice = await Invoice.findByPk(req.params.id, {
+      include: [{ model: User, attributes: ['id', 'email', 'firstName', 'lastName'] }],
+    });
+    if (!invoice) return res.status(404).json({ msg: 'Invoice not found' });
+    res.json({ invoice });
+  } catch (error) {
+    console.error('getInvoice:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+exports.exportInvoicesCsv = async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const { where, search } = buildInvoiceWhere(req.query);
+
+    const invoices = await Invoice.findAll({
+      where,
+      include: [{ model: User, attributes: ['id', 'email', 'firstName', 'lastName'], required: false }],
+      order: [['createdAt', 'DESC']],
+      limit: 5000,
+    });
+
+    let rows = invoices;
+    if (search) {
+      const q = search.toLowerCase();
+      rows = invoices.filter((inv) => {
+        const u = inv.User;
+        const hay = [
+          inv.invoiceNumber,
+          inv.description,
+          inv.externalId,
+          u?.email,
+          u?.firstName,
+          u?.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    const esc = (v) => {
+      const s = v == null ? '' : String(v);
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const header = [
+      'invoiceNumber',
+      'createdAt',
+      'userId',
+      'userEmail',
+      'userName',
+      'kind',
+      'source',
+      'status',
+      'amount',
+      'currency',
+      'plan',
+      'productId',
+      'joncoinAmount',
+      'externalId',
+      'description',
+    ];
+
+    const lines = [header.join(',')];
+    for (const inv of rows) {
+      const u = inv.User;
+      lines.push(
+        [
+          inv.invoiceNumber,
+          inv.createdAt ? new Date(inv.createdAt).toISOString() : '',
+          inv.userId,
+          u?.email || '',
+          `${u?.firstName || ''} ${u?.lastName || ''}`.trim(),
+          inv.kind,
+          inv.source,
+          inv.status,
+          inv.amount,
+          inv.currency,
+          inv.plan || '',
+          inv.productId || '',
+          inv.joncoinAmount || '',
+          inv.externalId || '',
+          inv.description || '',
+        ]
+          .map(esc)
+          .join(',')
+      );
+    }
+
+    const csv = lines.join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="xtalenti-invoices-${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    res.send(csv);
+  } catch (error) {
+    console.error('exportInvoicesCsv:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+

@@ -99,6 +99,10 @@ User.hasMany(Block, { as: 'blocksReceived', foreignKey: 'blockedId' });
 User.hasMany(IapPurchase, { foreignKey: 'userId' });
 IapPurchase.belongsTo(User, { foreignKey: 'userId' });
 
+const Invoice = require('./Invoice');
+User.hasMany(Invoice, { foreignKey: 'userId' });
+Invoice.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = {
   User,
   Product,
@@ -133,6 +137,7 @@ module.exports = {
   Report,
   Block,
   IapPurchase,
+  Invoice,
 };
 
 

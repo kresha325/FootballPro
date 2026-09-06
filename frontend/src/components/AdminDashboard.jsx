@@ -65,6 +65,10 @@ export default function AdminDashboard() {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsStatus, setReportsStatus] = useState('pending');
   const [actionBusy, setActionBusy] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoiceFilters, setInvoiceFilters] = useState({ kind: '', source: '', search: '' });
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   const fetchAnalytics = async () => {
     setAnalyticsLoading(true);
@@ -161,6 +165,65 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchInvoices = useCallback(async () => {
+    setInvoicesLoading(true);
+    try {
+      const res = await api.get('/admin/invoices', {
+        params: {
+          page: pagination.page,
+          limit: pagination.limit,
+          kind: invoiceFilters.kind || undefined,
+          source: invoiceFilters.source || undefined,
+          search: invoiceFilters.search || undefined,
+        },
+      });
+      setInvoices(res.data?.invoices || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: res.data?.total,
+        pages: res.data?.pages,
+      }));
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      window.alert(apiError(error, 'Nuk u ngarkuan invoices'));
+      setInvoices([]);
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, [pagination.page, pagination.limit, invoiceFilters.kind, invoiceFilters.source, invoiceFilters.search]);
+
+  const openInvoice = async (id) => {
+    try {
+      const res = await api.get(`/admin/invoices/${id}`);
+      setSelectedInvoice(res.data?.invoice || null);
+    } catch (error) {
+      window.alert(apiError(error, 'Nuk u hap fatura'));
+    }
+  };
+
+  const exportInvoicesCsv = async () => {
+    try {
+      const res = await api.get('/admin/invoices/export.csv', {
+        params: {
+          kind: invoiceFilters.kind || undefined,
+          source: invoiceFilters.source || undefined,
+          search: invoiceFilters.search || undefined,
+        },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `xtalenti-invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(apiError(error, 'Export dështoi'));
+    }
+  };
+
   const handleReviewReport = async (reportId, status) => {
     setActionBusy(true);
     try {
@@ -189,8 +252,10 @@ export default function AdminDashboard() {
       fetchJoncoinPending();
     } else if (activeTab === 'reports') {
       fetchReports();
+    } else if (activeTab === 'invoices') {
+      fetchInvoices();
     }
-  }, [activeTab, searchTerm, filters, pagination.page, fetchUsers, fetchPosts, reportsStatus]);
+  }, [activeTab, searchTerm, filters, pagination.page, fetchUsers, fetchPosts, reportsStatus, fetchInvoices]);
 
   const handleJoncoinDecision = async (txId, status) => {
     const label = status === 'completed' ? 'approve' : 'reject';
@@ -397,6 +462,17 @@ export default function AdminDashboard() {
         >
           <BanknotesIcon className="w-5 h-5 inline mr-2" />
           JonCoin
+        </button>
+        <button
+          onClick={() => switchTab('invoices')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'invoices'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <DocumentTextIcon className="w-5 h-5 inline mr-2" />
+          Invoices
         </button>
         <button
           onClick={() => switchTab('reports')}
@@ -1001,6 +1077,126 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {activeTab === 'invoices' && (
+        <div className="space-y-4">
+          <div className="bg-white shadow rounded-lg p-4 flex flex-wrap items-center gap-3 justify-between">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Search invoice / email…"
+                value={invoiceFilters.search}
+                onChange={(e) => {
+                  setInvoiceFilters({ ...invoiceFilters, search: e.target.value });
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg min-w-[200px]"
+              />
+              <select
+                value={invoiceFilters.kind}
+                onChange={(e) => {
+                  setInvoiceFilters({ ...invoiceFilters, kind: e.target.value });
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+              >
+                <option value="">All kinds</option>
+                <option value="premium">Premium</option>
+                <option value="joncoin">JonCoin</option>
+              </select>
+              <select
+                value={invoiceFilters.source}
+                onChange={(e) => {
+                  setInvoiceFilters({ ...invoiceFilters, source: e.target.value });
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+              >
+                <option value="">All sources</option>
+                <option value="stripe">Stripe</option>
+                <option value="iap">IAP</option>
+                <option value="demo">Demo</option>
+                <option value="auto">Auto</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fetchInvoices()}
+                className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+              >
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={exportInvoicesCsv}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+              >
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          {invoicesLoading ? (
+            <div className="text-gray-500 text-sm">Loading invoices…</div>
+          ) : invoices.length === 0 ? (
+            <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500 text-sm">
+              No invoices yet. They are created automatically on Premium / JonCoin payments.
+            </div>
+          ) : (
+            <div className="bg-white shadow rounded-lg overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Number</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Date</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">User</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Kind</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Source</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-700">Amount</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {invoices.map((inv) => {
+                    const u = inv.User;
+                    return (
+                      <tr key={inv.id}>
+                        <td className="px-4 py-2 font-mono text-xs">{inv.invoiceNumber}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {inv.createdAt ? new Date(inv.createdAt).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-2">
+                          <div>{u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email : inv.userId}</div>
+                          {u?.email && <div className="text-xs text-gray-500">{u.email}</div>}
+                        </td>
+                        <td className="px-4 py-2">{inv.kind}</td>
+                        <td className="px-4 py-2">{inv.source}</td>
+                        <td className="px-4 py-2 text-right font-mono">
+                          {inv.amount} {inv.currency}
+                        </td>
+                        <td className="px-4 py-2">{inv.status}</td>
+                        <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => openInvoice(inv.id)}
+                            className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                          >
+                            View / Print
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Pagination pagination={pagination} setPagination={setPagination} />
+        </div>
+      )}
+
       {activeTab === 'reports' && (
         <div className="space-y-4">
           <div className="bg-white shadow rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
@@ -1135,6 +1331,108 @@ export default function AdminDashboard() {
       </div>
     )}
 
+    {selectedInvoice && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-white print:static">
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
+            #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          }
+        `}</style>
+        <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto print:shadow-none print:max-w-none print:m-0 print:max-h-none">
+          <div className="print:hidden flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">Invoice</h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm"
+              >
+                Print
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedInvoice(null)}
+                className="px-3 py-1.5 bg-gray-200 rounded-lg text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <div id="invoice-print-area" className="text-sm text-gray-900 space-y-3">
+            <div className="border-b pb-3">
+              <div className="text-2xl font-bold tracking-tight">XTalenti</div>
+              <div className="text-gray-500">xtalenti.com</div>
+            </div>
+            <div className="flex justify-between gap-4">
+              <div>
+                <div className="text-xs text-gray-500 uppercase">Invoice</div>
+                <div className="font-mono font-semibold">{selectedInvoice.invoiceNumber}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-500 uppercase">Date</div>
+                <div>
+                  {selectedInvoice.createdAt
+                    ? new Date(selectedInvoice.createdAt).toLocaleString()
+                    : '—'}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase">Bill to</div>
+              <div className="font-medium">
+                {selectedInvoice.User
+                  ? `${selectedInvoice.User.firstName || ''} ${selectedInvoice.User.lastName || ''}`.trim() ||
+                    selectedInvoice.User.email
+                  : `User #${selectedInvoice.userId}`}
+              </div>
+              {selectedInvoice.User?.email && (
+                <div className="text-gray-600">{selectedInvoice.User.email}</div>
+              )}
+            </div>
+            <table className="w-full border-t border-b">
+              <thead>
+                <tr className="text-left text-xs text-gray-500">
+                  <th className="py-2">Description</th>
+                  <th className="py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="py-2 pr-2">
+                    <div className="font-medium">
+                      {selectedInvoice.description ||
+                        (selectedInvoice.kind === 'premium'
+                          ? `Premium ${selectedInvoice.plan || ''}`
+                          : `JonCoin ${selectedInvoice.joncoinAmount || ''}`)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selectedInvoice.kind} · {selectedInvoice.source}
+                      {selectedInvoice.productId ? ` · ${selectedInvoice.productId}` : ''}
+                    </div>
+                  </td>
+                  <td className="py-2 text-right font-mono whitespace-nowrap">
+                    {selectedInvoice.amount} {selectedInvoice.currency}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex justify-between font-semibold text-base">
+              <span>Total</span>
+              <span className="font-mono">
+                {selectedInvoice.amount} {selectedInvoice.currency}
+              </span>
+            </div>
+            <div className="text-xs text-gray-500">
+              Status: {selectedInvoice.status}
+              {selectedInvoice.externalId ? ` · Ref: ${selectedInvoice.externalId}` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Sidebar - live snapshot */}
     <div className="lg:col-span-1 space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
@@ -1187,6 +1485,13 @@ export default function AdminDashboard() {
             className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
           >
             Review reports
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('invoices')}
+            className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
+          >
+            Invoices
           </button>
           <button
             type="button"

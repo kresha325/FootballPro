@@ -14,6 +14,9 @@ const {
   togglePremium,
   resetUserPassword,
   getPendingJonCoinTransactions,
+  listInvoices,
+  getInvoice,
+  exportInvoicesCsv,
 } = require('../controllers/admin');
 
 // All admin routes require admin middleware
@@ -38,5 +41,10 @@ router.get('/analytics', getAnalytics);
 
 // JonCoin moderation
 router.get('/joncoin/pending', getPendingJonCoinTransactions);
+
+// Invoices
+router.get('/invoices/export.csv', exportInvoicesCsv);
+router.get('/invoices', listInvoices);
+router.get('/invoices/:id', getInvoice);
 
 module.exports = router;

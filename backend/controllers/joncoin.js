@@ -153,6 +153,22 @@ exports.purchase = async (req, res) => {
         user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + parseFloat(amount));
         await user.save();
       }
+      try {
+        const { createInvoiceIfNeeded } = require('../utils/invoices');
+        await createInvoiceIfNeeded({
+          userId: req.user.id,
+          kind: 'joncoin',
+          source: 'auto',
+          amount: parseFloat(amount),
+          currency: 'JC',
+          description: 'Blerje JonCoin (auto-approved)',
+          joncoinAmount: parseFloat(amount),
+          externalId: `joncoin-tx:${tx.id}`,
+          joncoinTransactionId: tx.id,
+        });
+      } catch (invErr) {
+        console.warn('JonCoin auto invoice skipped:', invErr?.message || invErr);
+      }
       return res.json({ success: true, transaction: tx, autoCompleted: true });
     }
 
@@ -317,6 +333,26 @@ exports.updateTransactionStatus = async (req, res) => {
     });
 
     if (out.code) return res.status(out.code).json({ error: out.error });
+
+    if (status === 'completed' && out.tx?.type === 'purchase') {
+      try {
+        const { createInvoiceIfNeeded } = require('../utils/invoices');
+        await createInvoiceIfNeeded({
+          userId: out.tx.userId,
+          kind: 'joncoin',
+          source: 'admin',
+          amount: parseFloat(out.tx.amount),
+          currency: 'JC',
+          description: out.tx.description || 'Blerje JonCoin (admin approved)',
+          joncoinAmount: parseFloat(out.tx.amount),
+          externalId: `joncoin-tx:${out.tx.id}`,
+          joncoinTransactionId: out.tx.id,
+        });
+      } catch (invErr) {
+        console.warn('JonCoin admin invoice skipped:', invErr?.message || invErr);
+      }
+    }
+
     return res.json({ success: true, transaction: out.tx });
   } catch (err) {
     console.error('updateTransactionStatus:', err);

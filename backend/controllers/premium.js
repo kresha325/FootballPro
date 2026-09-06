@@ -3,6 +3,7 @@ const stripe = require('stripe')(stripeKey);
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const { stripeLiveReady } = require('../config/payments');
+const { createInvoiceIfNeeded } = require('../utils/invoices');
 
 const PLANS = {
   monthly: {
@@ -27,7 +28,13 @@ function frontendBase() {
   return (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
 }
 
-async function activatePremiumForUser(userId, plan, sessionId = null) {
+/**
+ * @param {number} userId
+ * @param {string} plan
+ * @param {string|null} sessionId - Stripe session id, or `iap:{txId}`, or null for demo
+ * @param {{ productId?: string, iapPurchaseId?: number, source?: string }} [opts]
+ */
+async function activatePremiumForUser(userId, plan, sessionId = null, opts = {}) {
   const config = PLANS[plan] || PLANS.monthly;
   const user = await User.findByPk(userId);
   if (!user) return null;
@@ -38,25 +45,65 @@ async function activatePremiumForUser(userId, plan, sessionId = null) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + config.days);
 
-  if (sessionId) {
+  let paymentId = null;
+  let source = opts.source;
+  if (!source) {
+    if (!sessionId) source = 'demo';
+    else if (String(sessionId).startsWith('iap:')) source = 'iap';
+    else source = 'stripe';
+  }
+
+  const externalId =
+    sessionId ||
+    opts.externalId ||
+    `demo:premium:${userId}:${plan}:${Date.now()}`;
+
+  if (sessionId || source === 'demo') {
     try {
-      await Payment.create({
+      const payment = await Payment.create({
         userId,
         amount: config.amountCents / 100,
         currency: 'eur',
         status: 'completed',
-        stripePaymentIntentId: sessionId,
-        description: `Premium ${config.label}`,
+        stripePaymentIntentId: String(externalId).slice(0, 255),
+        description: `Premium ${config.label}${source === 'demo' ? ' (demo)' : ''}`,
       });
+      paymentId = payment.id;
     } catch (payErr) {
       console.warn('Premium payment record skipped:', payErr?.message);
     }
+  }
+
+  let invoice = null;
+  try {
+    const inv = await createInvoiceIfNeeded({
+      userId,
+      kind: 'premium',
+      source,
+      amount: config.amountCents / 100,
+      currency: 'EUR',
+      description: config.name,
+      plan,
+      productId: opts.productId || null,
+      externalId,
+      paymentId,
+      iapPurchaseId: opts.iapPurchaseId || null,
+      rawPayload: {
+        plan,
+        days: config.days,
+        source,
+      },
+    });
+    invoice = inv.invoice;
+  } catch (invErr) {
+    console.warn('Premium invoice skipped:', invErr?.message || invErr);
   }
 
   return {
     premium: true,
     plan,
     expiresAt: expiresAt.toISOString(),
+    invoice,
     user: {
       id: user.id,
       premium: user.premium,
@@ -85,7 +132,7 @@ exports.createPremiumCheckout = async (req, res) => {
     const userId = req.user.id;
 
     if (!stripeConfigured()) {
-      const result = await activatePremiumForUser(userId, plan);
+      const result = await activatePremiumForUser(userId, plan, null, { source: 'demo' });
       if (!result) return res.status(404).json({ msg: 'User not found' });
       return res.json({
         mode: 'demo',
