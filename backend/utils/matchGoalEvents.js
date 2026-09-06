@@ -1,4 +1,5 @@
 const MatchScorer = require('../models/MatchScorer');
+const Profile = require('../models/Profile');
 
 function inferSide(userId, match) {
   const uid = Number(userId);
@@ -49,11 +50,76 @@ function normalizeGoalEvents(rawEvents, match) {
   return rows;
 }
 
+function collectAffectedUserIds(rows) {
+  const ids = new Set();
+  for (const row of rows || []) {
+    const uid = Number(row.userId);
+    const aid = Number(row.assistUserId);
+    if (Number.isFinite(uid) && uid > 0) ids.add(uid);
+    if (Number.isFinite(aid) && aid > 0) ids.add(aid);
+  }
+  return [...ids];
+}
+
+/**
+ * Recompute career goals/assists on Profile.stats from all MatchScorer rows.
+ * Goals: each MatchScorer row for userId counts its `goals` (usually 1).
+ * Assists: each MatchScorer row with assistUserId = user counts as 1 assist.
+ */
+async function syncProfileGoalAssistStats(userIds) {
+  const ids = [...new Set((userIds || []).map(Number).filter((id) => Number.isFinite(id) && id > 0))];
+  if (!ids.length) return;
+
+  for (const userId of ids) {
+    const goalsSum = await MatchScorer.sum('goals', { where: { userId } });
+    const assistsCount = await MatchScorer.count({ where: { assistUserId: userId } });
+
+    const profile = await Profile.findOne({ where: { userId } });
+    if (!profile) continue;
+
+    const stats =
+      profile.stats && typeof profile.stats === 'object' && !Array.isArray(profile.stats)
+        ? { ...profile.stats }
+        : {};
+
+    stats.goals = Number(goalsSum) || 0;
+    stats.assists = Number(assistsCount) || 0;
+    profile.stats = stats;
+    profile.changed('stats', true);
+    await profile.save();
+  }
+}
+
+/**
+ * Replace goal events for a match and sync player Profile.stats.
+ * Changing/removing a scorer or assister recalculates their totals.
+ */
 async function saveMatchGoalEvents(matchId, rawEvents, match) {
+  const previous = await MatchScorer.findAll({
+    where: { matchId },
+    attributes: ['userId', 'assistUserId', 'goals'],
+  });
+  const affected = new Set(collectAffectedUserIds(previous));
+
   await MatchScorer.destroy({ where: { matchId } });
   const rows = normalizeGoalEvents(rawEvents, match).map((row) => ({ ...row, matchId }));
-  if (!rows.length) return [];
-  return MatchScorer.bulkCreate(rows);
+
+  let created = [];
+  if (rows.length) {
+    created = await MatchScorer.bulkCreate(rows);
+  }
+
+  for (const id of collectAffectedUserIds(rows)) {
+    affected.add(id);
+  }
+
+  try {
+    await syncProfileGoalAssistStats([...affected]);
+  } catch (syncErr) {
+    console.error('syncProfileGoalAssistStats:', syncErr);
+  }
+
+  return created;
 }
 
 function sumGoalsForSide(scorers, side, teamUserId) {
@@ -66,5 +132,6 @@ module.exports = {
   inferSide,
   normalizeGoalEvents,
   saveMatchGoalEvents,
+  syncProfileGoalAssistStats,
   sumGoalsForSide,
 };
