@@ -28,9 +28,15 @@ const ProfileSelector = ({ user, profile, isOwner }) => {
     case 'media':
       return <BusinessProfile profile={profile} />;
     case 'liga':
-      return <LigaProfile profile={profile} />;
+      return (
+        <LigaProfile
+          liga={null}
+          profile={profile}
+          userId={user?.id || profile?.userId || profile?.User?.id}
+        />
+      );
     case 'federation':
-      return <FederationProfile profile={profile} />;
+      return <FederationProfile federation={profile} profile={profile} />;
     default:
       return <div>Unknown role or profile type.</div>;
   }

@@ -23,6 +23,26 @@ const EditProfile = ({ user, onClose }) => {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [ligaUser, setLigaUser] = useState(user);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (user?.role !== 'liga') {
+      setLigaUser(user);
+      return undefined;
+    }
+    ligaAPI
+      .getLiga(user.id)
+      .then((res) => {
+        if (!cancelled) setLigaUser({ ...user, ...res.data });
+      })
+      .catch(() => {
+        if (!cancelled) setLigaUser(user);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleSave = async (form) => {
     setLoading(true);
@@ -66,7 +86,7 @@ const EditProfile = ({ user, onClose }) => {
           <EditCoachProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
         {user.role === 'liga' && (
-          <EditLigaProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
+          <EditLigaProfile user={ligaUser} onSave={handleSave} loading={loading} errors={errors} />
         )}
         {user.role === 'federation' && (
           <EditFederationProfile user={user} onSave={handleSave} loading={loading} errors={errors} />

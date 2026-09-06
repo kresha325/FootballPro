@@ -48,25 +48,68 @@ exports.getLiga = async (req, res) => {
   }
 };
 
-// Update Liga profile
+// Update Liga profile (create if missing — upsert for first-time liga users)
 exports.updateLiga = async (req, res) => {
   try {
-    const liga = await Liga.findOne({ where: { userId: req.user.id } });
-    if (!liga) {
-      return res.status(404).json({ msg: 'Liga profile not found' });
+    if (req.user.role !== 'liga') {
+      return res.status(403).json({ msg: 'Access denied' });
     }
+    let liga = await Liga.findOne({ where: { userId: req.user.id } });
+    const fields = {
+      name: req.body.name,
+      logo: req.body.logo,
+      country: req.body.country,
+      level: req.body.level,
+      foundedYear: req.body.foundedYear ? parseInt(req.body.foundedYear, 10) : undefined,
+      description: req.body.description,
+      website: req.body.website,
+      clubs: req.body.clubs,
+      competitions: req.body.competitions,
+      contact: req.body.contact,
+      socialLinks: req.body.socialLinks,
+    };
+
+    // FormData may send JSON fields as strings
+    ['clubs', 'competitions', 'contact', 'socialLinks'].forEach((key) => {
+      if (typeof fields[key] === 'string') {
+        try {
+          fields[key] = JSON.parse(fields[key]);
+        } catch {
+          /* keep string */
+        }
+      }
+    });
+
+    if (!liga) {
+      liga = await Liga.create({
+        userId: req.user.id,
+        name: fields.name || 'Liga',
+        level: fields.level || 'other',
+        logo: fields.logo || null,
+        country: fields.country || null,
+        foundedYear: fields.foundedYear || null,
+        description: fields.description || null,
+        website: fields.website || null,
+        clubs: fields.clubs || [],
+        competitions: fields.competitions || [],
+        contact: fields.contact || {},
+        socialLinks: fields.socialLinks || {},
+      });
+      return res.json(liga);
+    }
+
     await liga.update({
-      name: req.body.name || liga.name,
-      logo: req.body.logo || liga.logo,
-      country: req.body.country || liga.country,
-      level: req.body.level || liga.level,
-      foundedYear: req.body.foundedYear || liga.foundedYear,
-      description: req.body.description || liga.description,
-      website: req.body.website || liga.website,
-      clubs: req.body.clubs || liga.clubs,
-      competitions: req.body.competitions || liga.competitions,
-      contact: req.body.contact || liga.contact,
-      socialLinks: req.body.socialLinks || liga.socialLinks,
+      name: fields.name || liga.name,
+      logo: fields.logo !== undefined && fields.logo !== '' ? fields.logo : liga.logo,
+      country: fields.country || liga.country,
+      level: fields.level || liga.level,
+      foundedYear: fields.foundedYear || liga.foundedYear,
+      description: fields.description || liga.description,
+      website: fields.website || liga.website,
+      clubs: fields.clubs || liga.clubs,
+      competitions: fields.competitions || liga.competitions,
+      contact: fields.contact || liga.contact,
+      socialLinks: fields.socialLinks || liga.socialLinks,
     });
     res.json(liga);
   } catch (err) {
