@@ -9,6 +9,7 @@ const {
   deletePost,
   getAnalytics,
   banUser,
+  unbanUser,
   verifyUser,
   togglePremium,
   resetUserPassword,
@@ -22,6 +23,7 @@ router.use(admin);
 router.get('/users', getAllUsers);
 router.put('/users/:userId/role', updateUserRole);
 router.post('/users/:userId/ban', banUser);
+router.post('/users/:userId/unban', unbanUser);
 router.post('/users/:userId/verify', verifyUser);
 router.post('/users/:userId/premium', togglePremium);
 router.post('/users/:userId/reset-password', resetUserPassword);

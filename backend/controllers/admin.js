@@ -74,13 +74,19 @@ exports.updateUserRole = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   const { userId } = req.params;
   try {
+    if (String(userId) === String(req.user.id)) {
+      return res.status(400).json({ msg: 'Nuk mund të fshish llogarinë tënde nga admin panel' });
+    }
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
     await user.destroy();
     res.json({ msg: 'User deleted' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({
+      msg: 'Server error',
+      error: error?.message || 'Delete failed (FK constraints?)',
+    });
   }
 };
 
@@ -136,119 +142,162 @@ exports.deletePost = async (req, res) => {
   }
 };
 
-// Get analytics data
+// Get analytics data (resilient: one failing query must not blank the whole dashboard)
 exports.getAnalytics = async (req, res) => {
-  try {
-    // Total counts
-    const userCount = await User.count();
-    const postCount = await Post.count();
-    const commentCount = await Comment.count();
-    const likeCount = await Like.count();
-    const matchCount = await Match.count();
-    const tournamentCount = await Tournament.count();
-    const subscriptionCount = await Subscription.count();
-    const orderCount = await Order.count();
-    const paymentCount = await Payment.count();
-    const videoCount = await Video.count();
-    const streamCount = await Stream.count();
+  const safe = async (label, fn, fallback) => {
+    try {
+      return await fn();
+    } catch (err) {
+      console.warn(`getAnalytics.${label}:`, err?.message || err);
+      return fallback;
+    }
+  };
 
-    // Recent activity (last 7 days)
+  try {
+    const Message = (() => {
+      try {
+        return require('../models/Message');
+      } catch {
+        return null;
+      }
+    })();
+    const { JonCoinTransaction, LiveStream, Report, Block } = require('../models');
+
+    const [
+      userCount,
+      postCount,
+      commentCount,
+      likeCount,
+      matchCount,
+      tournamentCount,
+      subscriptionCount,
+      orderCount,
+      paymentCount,
+      videoCount,
+      streamCount,
+      messageCount,
+      liveStreamCount,
+      joncoinTxCount,
+      reportCount,
+      blockCount,
+    ] = await Promise.all([
+      safe('users', () => User.count(), 0),
+      safe('posts', () => Post.count(), 0),
+      safe('comments', () => Comment.count(), 0),
+      safe('likes', () => Like.count(), 0),
+      safe('matches', () => Match.count(), 0),
+      safe('tournaments', () => Tournament.count(), 0),
+      safe('subscriptions', () => Subscription.count(), 0),
+      safe('orders', () => Order.count(), 0),
+      safe('payments', () => Payment.count(), 0),
+      safe('videos', () => Video.count(), 0),
+      safe('streams', () => Stream.count(), 0),
+      safe('messages', () => (Message ? Message.count() : 0), 0),
+      safe('liveStreams', () => (LiveStream ? LiveStream.count() : 0), 0),
+      safe('joncoin', () => (JonCoinTransaction ? JonCoinTransaction.count() : 0), 0),
+      safe('reports', () => (Report ? Report.count() : 0), 0),
+      safe('blocks', () => (Block ? Block.count() : 0), 0),
+    ]);
+
     const last7Days = new Date();
     last7Days.setDate(last7Days.getDate() - 7);
 
-    const recentUsers = await User.count({
-      where: { createdAt: { [Op.gte]: last7Days } },
-    });
-    const recentPosts = await Post.count({
-      where: { createdAt: { [Op.gte]: last7Days } },
-    });
-    const recentVideos = await Video.count({
-      where: { createdAt: { [Op.gte]: last7Days } },
-    });
+    const recentUsers = await safe('recentUsers', () => User.count({ where: { createdAt: { [Op.gte]: last7Days } } }), 0);
+    const recentPosts = await safe('recentPosts', () => Post.count({ where: { createdAt: { [Op.gte]: last7Days } } }), 0);
+    const recentVideos = await safe('recentVideos', () => Video.count({ where: { createdAt: { [Op.gte]: last7Days } } }), 0);
 
-    // Active users (posted/commented/liked in last 7 days)
-    const activeUsers = await User.count({
-      where: {
-        [Op.or]: [
-          {
-            id: {
-              [Op.in]: sequelize.literal(
-                `(SELECT DISTINCT "userId" FROM "Posts" WHERE "createdAt" >= NOW() - INTERVAL '7 days')`
-              ),
-            },
+    const activeUsers = await safe('activeUsers', async () => {
+      const [rows] = await sequelize.query(`
+        SELECT COUNT(*)::int AS count FROM (
+          SELECT DISTINCT "userId" AS uid FROM "Posts"
+            WHERE "createdAt" >= NOW() - INTERVAL '7 days' AND "userId" IS NOT NULL
+          UNION
+          SELECT DISTINCT "userId" AS uid FROM "Comments"
+            WHERE "createdAt" >= NOW() - INTERVAL '7 days' AND "userId" IS NOT NULL
+        ) active
+      `);
+      return rows?.[0]?.count || 0;
+    }, 0);
+
+    const userRolesRaw = await safe(
+      'userRoles',
+      () =>
+        User.findAll({
+          attributes: ['role', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+          group: ['role'],
+          raw: true,
+        }),
+      []
+    );
+
+    const monthlyUsersRaw = await safe(
+      'monthlyUsers',
+      () =>
+        User.findAll({
+          attributes: [
+            [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'month'],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          ],
+          where: {
+            createdAt: { [Op.gte]: sequelize.literal("NOW() - INTERVAL '12 months'") },
           },
-          {
-            id: {
-              [Op.in]: sequelize.literal(
-                `(SELECT DISTINCT "userId" FROM "Comments" WHERE "createdAt" >= NOW() - INTERVAL '7 days')`
-              ),
-            },
+          group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt'))],
+          order: [[sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'ASC']],
+          raw: true,
+        }),
+      []
+    );
+
+    const dailyPostsRaw = await safe(
+      'dailyPosts',
+      () =>
+        Post.findAll({
+          attributes: [
+            [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          ],
+          where: {
+            createdAt: { [Op.gte]: sequelize.literal("NOW() - INTERVAL '30 days'") },
           },
-        ],
-      },
-    });
+          group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+          order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+          raw: true,
+        }),
+      []
+    );
 
-    // User role distribution
-    const userRoles = await User.findAll({
-      attributes: [
-        'role',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-      ],
-      group: ['role'],
-      raw: true,
-    });
+    const topPostersRaw = await safe(
+      'topPosters',
+      () =>
+        User.findAll({
+          attributes: [
+            'id',
+            'firstName',
+            'lastName',
+            [sequelize.literal('(SELECT COUNT(*) FROM "Posts" WHERE "Posts"."userId" = "User"."id")'), 'postsCount'],
+          ],
+          order: [[sequelize.literal('"postsCount"'), 'DESC']],
+          limit: 10,
+          raw: true,
+        }),
+      []
+    );
 
-    // Monthly user registrations (last 12 months)
-    const monthlyUsers = await User.findAll({
-      attributes: [
-        [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'month'],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-      ],
-      where: {
-        createdAt: {
-          [Op.gte]: sequelize.literal("NOW() - INTERVAL '12 months'"),
-        },
-      },
-      group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt'))],
-      order: [[sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'ASC']],
-      raw: true,
-    });
-
-    // Daily posts (last 30 days)
-    const dailyPosts = await Post.findAll({
-      attributes: [
-        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-      ],
-      where: {
-        createdAt: {
-          [Op.gte]: sequelize.literal("NOW() - INTERVAL '30 days'"),
-        },
-      },
-      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
-      raw: true,
-    });
-
-    // Top users by posts
-    const topPosters = await User.findAll({
-      attributes: [
-        'id',
-        'firstName',
-        'lastName',
-        [sequelize.literal('(SELECT COUNT(*) FROM "Posts" WHERE "Posts"."userId" = "User"."id")'), 'postsCount'],
-      ],
-      order: [[sequelize.literal('postsCount'), 'DESC']],
-      limit: 10,
-      raw: true,
-    });
-
-    // System health
     const systemHealth = {
-      activeStreams: await Stream.count({ where: { isLive: true } }),
-      processingVideos: await Video.count({ where: { isProcessing: true } }),
-      verifiedUsers: await User.count({ where: { verified: true } }),
-      premiumUsers: await User.count({ where: { premium: true } }),
+      activeStreams: await safe('activeStreams', () => Stream.count({ where: { isLive: true } }), 0),
+      liveNow: await safe(
+        'liveNow',
+        () => (LiveStream ? LiveStream.count({ where: { isLive: true } }) : 0),
+        0
+      ),
+      processingVideos: await safe('processingVideos', () => Video.count({ where: { isProcessing: true } }), 0),
+      verifiedUsers: await safe('verifiedUsers', () => User.count({ where: { verified: true } }), 0),
+      premiumUsers: await safe('premiumUsers', () => User.count({ where: { premium: true } }), 0),
+      pendingReports: await safe(
+        'pendingReports',
+        () => (Report ? Report.count({ where: { status: 'pending' } }) : 0),
+        0
+      ),
     };
 
     res.json({
@@ -264,6 +313,11 @@ exports.getAnalytics = async (req, res) => {
         payments: paymentCount,
         videos: videoCount,
         streams: streamCount,
+        messages: messageCount,
+        liveStreams: liveStreamCount,
+        joncoinTransactions: joncoinTxCount,
+        reports: reportCount,
+        blocks: blockCount,
       },
       recentActivity: {
         users: recentUsers,
@@ -271,19 +325,24 @@ exports.getAnalytics = async (req, res) => {
         videos: recentVideos,
         activeUsers,
       },
-      userRoles,
-      monthlyUsers: monthlyUsers.map(m => ({
-        month: new Date(m.month).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
-        count: parseInt(m.count),
+      userRoles: (userRolesRaw || []).map((r) => ({
+        role: r.role,
+        count: parseInt(r.count, 10) || 0,
       })),
-      dailyPosts: dailyPosts.map(d => ({
-        date: d.date,
-        count: parseInt(d.count),
+      monthlyUsers: (monthlyUsersRaw || []).map((m) => ({
+        month: m.month
+          ? new Date(m.month).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+          : '',
+        count: parseInt(m.count, 10) || 0,
       })),
-      topPosters: topPosters.map(u => ({
+      dailyPosts: (dailyPostsRaw || []).map((d) => ({
+        date: d.date ? String(d.date).slice(0, 10) : '',
+        count: parseInt(d.count, 10) || 0,
+      })),
+      topPosters: (topPostersRaw || []).map((u) => ({
         id: u.id,
-        name: `${u.firstName} ${u.lastName}`,
-        posts: parseInt(u.postsCount),
+        name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || `User #${u.id}`,
+        posts: parseInt(u.postsCount, 10) || 0,
       })),
       systemHealth,
     });
@@ -299,6 +358,10 @@ exports.banUser = async (req, res) => {
     const { userId } = req.params;
     const { reason, duration } = req.body;
 
+    if (String(userId) === String(req.user.id)) {
+      return res.status(400).json({ msg: 'Nuk mund të banosh veten' });
+    }
+
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
@@ -306,16 +369,33 @@ exports.banUser = async (req, res) => {
     user.banReason = reason ? String(reason).slice(0, 1000) : 'Banned by admin';
     user.verified = false;
     if (duration) {
-      // duration in days stored in reason note only for now
       user.banReason = `${user.banReason} (durationDays=${duration})`;
     }
     user.pushTokenMobile = null;
     user.pushTokenWeb = null;
     await user.save();
 
-    res.json({ msg: 'User banned successfully' });
+    res.json({ msg: 'User banned successfully', userId: user.id, bannedAt: user.bannedAt });
   } catch (error) {
     console.error('Ban user error:', error);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Unban user
+exports.unbanUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
+    user.bannedAt = null;
+    user.banReason = null;
+    await user.save();
+
+    res.json({ msg: 'User unbanned successfully', userId: user.id });
+  } catch (error) {
+    console.error('Unban user error:', error);
     res.status(500).json({ msg: 'Server error' });
   }
 };
