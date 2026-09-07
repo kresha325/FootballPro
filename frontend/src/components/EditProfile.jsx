@@ -69,7 +69,7 @@ const EditProfile = ({ user, onClose }) => {
         }
       }
       setLoading(false);
-      onClose();
+      onClose(true);
     } catch {
       setLoading(false);
       setErrors({ general: 'Gabim gjatë ruajtjes së profilit.' });
@@ -82,7 +82,7 @@ const EditProfile = ({ user, onClose }) => {
         {user.role === 'athlete' && (
           <EditAthleteProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
-        {user.role === 'coach' && (
+        {(user.role === 'coach' || user.role === 'trajner') && (
           <EditCoachProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
         {user.role === 'liga' && (

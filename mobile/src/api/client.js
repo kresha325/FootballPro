@@ -131,6 +131,8 @@ export const deleteCommentRequest = (commentId) => api.delete(`/api/comments/${c
 export const followUserRequest = (userId) => api.post(`/api/profiles/${userId}/follow`);
 export const unfollowUserRequest = (userId) => api.delete(`/api/profiles/${userId}/unfollow`);
 export const followStatusRequest = (userId) => api.get(`/api/profiles/${userId}/follow-status`);
+export const followersListRequest = (userId) => api.get(`/api/profiles/${userId}/followers`);
+export const followingListRequest = (userId) => api.get(`/api/profiles/${userId}/following`);
 export const myGalleryRequest = () => api.get('/api/gallery');
 export const userGalleryRequest = (userId) => api.get(`/api/gallery/user/${userId}`);
 export const createGalleryItemRequest = (payload = {}) => {

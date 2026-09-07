@@ -14,6 +14,47 @@ const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
 const sequelize = require('../config/database');
 
+/**
+ * Numëron ndjekësit / duke ndjekur duke përjashtuar:
+ * - status ≠ accepted
+ * - përdorues të fshirë / që nuk ekzistojnë
+ */
+async function countFollowStats(userId) {
+  const uid = parseInt(userId, 10);
+  if (!Number.isFinite(uid) || uid <= 0) {
+    return { followers: 0, following: 0 };
+  }
+
+  const [rows] = await sequelize.query(
+    `
+    SELECT
+      (
+        SELECT COUNT(*)::int
+        FROM "Follows" f
+        INNER JOIN "Users" u ON u.id = f."followerId"
+        WHERE f."followingId" = :uid
+          AND COALESCE(f.status, 'accepted') = 'accepted'
+          AND u."deletedAt" IS NULL
+      ) AS followers,
+      (
+        SELECT COUNT(*)::int
+        FROM "Follows" f
+        INNER JOIN "Users" u ON u.id = f."followingId"
+        WHERE f."followerId" = :uid
+          AND COALESCE(f.status, 'accepted') = 'accepted'
+          AND u."deletedAt" IS NULL
+      ) AS following
+    `,
+    { replacements: { uid } }
+  );
+
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  return {
+    followers: Number(row?.followers) || 0,
+    following: Number(row?.following) || 0,
+  };
+}
+
 const resolveClubUser = async ({ clubId, clubName }) => {
   let clubUser;
 
@@ -221,7 +262,10 @@ exports.getProfile = async (req, res) => {
   try {
     console.log('🔎 [getProfile] req.user:', req.user);
     console.log('🔎 [getProfile] req.params.id:', req.params.id);
-    const userId = req.params.id || req.user.id;
+    const userId = parseInt(req.params.id || req.user.id, 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return res.status(400).json({ msg: 'ID e pavlefshme' });
+    }
     const profile = await Profile.findOne({ 
       where: { userId }, 
       include: [{
@@ -239,9 +283,7 @@ exports.getProfile = async (req, res) => {
     const age = user && user.getAge ? user.getAge() : null;
     const ageGroup = user && user.getAgeGroup ? user.getAgeGroup() : null;
 
-    // Get followers and following counts
-    const followersCount = await Follow.count({ where: { followingId: userId } });
-    const followingCount = await Follow.count({ where: { followerId: userId } });
+    const { followers: followersCount, following: followingCount } = await countFollowStats(userId);
 
     // Clean profile object (avoid cyclic references)
     const plainProfile = profile.get({ plain: true });
@@ -378,7 +420,15 @@ exports.updateProfile = async (req, res) => {
             updateData[key] = key === 'careerHistory' ? req.body[key] : undefined;
           }
         } else {
-          updateData[key] = req.body[key];
+          // ENUM fields: empty string from <select> must become null (not "")
+          if (
+            (key === 'coachAffiliation' || key === 'coachCategory') &&
+            (req.body[key] === '' || req.body[key] == null)
+          ) {
+            updateData[key] = null;
+          } else {
+            updateData[key] = req.body[key];
+          }
         }
       }
     }
@@ -799,41 +849,40 @@ exports.registerPushToken = async (req, res) => {
 // Follow a user
 exports.followUser = async (req, res) => {
   try {
-    const followerId = req.user.id;
-    const followingId = parseInt(req.params.userId);
+    const followerId = parseInt(req.user.id, 10);
+    const followingId = parseInt(req.params.userId, 10);
 
-    // Cannot follow yourself
     if (followerId === followingId) {
       return res.status(400).json({ msg: 'Nuk mund ta ndiqni veten' });
     }
 
-    // Check if user to follow exists
     const userToFollow = await User.findByPk(followingId);
-    if (!userToFollow) {
+    if (!userToFollow || userToFollow.deletedAt) {
       return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     }
 
-    // Check if already following
     const existingFollow = await Follow.findOne({
-      where: { followerId, followingId }
+      where: { followerId, followingId },
     });
 
     if (existingFollow) {
-      return res.status(400).json({ msg: 'Tashmë po e ndiqni këtë përdorues' });
+      if (existingFollow.status !== 'accepted') {
+        existingFollow.status = 'accepted';
+        await existingFollow.save();
+      } else {
+        return res.status(400).json({ msg: 'Tashmë po e ndiqni këtë përdorues' });
+      }
+    } else {
+      await Follow.create({
+        followerId,
+        followingId,
+        status: 'accepted',
+      });
     }
 
-    // Create follow relationship
-    const follow = await Follow.create({
-      followerId,
-      followingId,
-      status: 'accepted' // For now, auto-accept all follows
-    });
-
-    // In-app + push via notifyFollow
     const { notifyFollow } = require('./notifications');
     await notifyFollow(followingId, followerId);
 
-    // Send email notification
     try {
       const follower = await User.findByPk(followerId);
       const followerName = `${follower.firstName} ${follower.lastName}`;
@@ -842,7 +891,18 @@ exports.followUser = async (req, res) => {
       console.error('Email notification failed:', emailError);
     }
 
-    res.status(201).json({ msg: 'Successfully followed user', follow });
+    const [targetStats, viewerStats] = await Promise.all([
+      countFollowStats(followingId),
+      countFollowStats(followerId),
+    ]);
+
+    res.status(201).json({
+      msg: 'Successfully followed user',
+      followers: targetStats.followers,
+      following: targetStats.following,
+      myFollowers: viewerStats.followers,
+      myFollowing: viewerStats.following,
+    });
   } catch (err) {
     console.error('Follow user error:', err);
     res.status(500).json({ msg: 'Gabim në server', error: err.message });
@@ -852,11 +912,11 @@ exports.followUser = async (req, res) => {
 // Unfollow a user
 exports.unfollowUser = async (req, res) => {
   try {
-    const followerId = req.user.id;
-    const followingId = parseInt(req.params.userId);
+    const followerId = parseInt(req.user.id, 10);
+    const followingId = parseInt(req.params.userId, 10);
 
     const follow = await Follow.findOne({
-      where: { followerId, followingId }
+      where: { followerId, followingId },
     });
 
     if (!follow) {
@@ -865,7 +925,18 @@ exports.unfollowUser = async (req, res) => {
 
     await follow.destroy();
 
-    res.json({ msg: 'Ndjekja u hoq me sukses' });
+    const [targetStats, viewerStats] = await Promise.all([
+      countFollowStats(followingId),
+      countFollowStats(followerId),
+    ]);
+
+    res.json({
+      msg: 'Ndjekja u hoq me sukses',
+      followers: targetStats.followers,
+      following: targetStats.following,
+      myFollowers: viewerStats.followers,
+      myFollowing: viewerStats.following,
+    });
   } catch (err) {
     console.error('Unfollow user error:', err);
     res.status(500).json({ msg: 'Gabim në server', error: err.message });
@@ -875,26 +946,35 @@ exports.unfollowUser = async (req, res) => {
 // Get followers of a user
 exports.getFollowers = async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = parseInt(req.params.userId, 10);
 
     const followers = await Follow.findAll({
-      where: { followingId: userId },
+      where: {
+        followingId: userId,
+        status: 'accepted',
+      },
       include: [{
         model: User,
         as: 'follower',
         attributes: ['id', 'firstName', 'lastName', 'email'],
         required: true,
+        where: { deletedAt: null },
         include: [{
           model: Profile,
-          attributes: ['profilePhoto', 'bio', 'city', 'country']
-        }]
-      }]
+          attributes: ['profilePhoto', 'bio', 'city', 'country'],
+        }],
+      }],
     });
 
-    // Filter out any null users
-    const validFollowers = followers.filter(f => f.follower !== null);
-
-    res.json(validFollowers);
+    const valid = followers.filter((f) => f.follower !== null);
+    const payload = valid.map((f) => {
+      const j = typeof f.toJSON === 'function' ? f.toJSON() : f;
+      if (j.follower?.Profile?.profilePhoto) {
+        j.follower.Profile.profilePhoto = toAbsoluteUploadsUrl(req, j.follower.Profile.profilePhoto);
+      }
+      return j;
+    });
+    res.json(payload);
   } catch (err) {
     console.error('Get followers error:', err);
     res.status(500).json({ msg: 'Gabim në server', error: err.message });
@@ -904,26 +984,35 @@ exports.getFollowers = async (req, res) => {
 // Get following of a user
 exports.getFollowing = async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = parseInt(req.params.userId, 10);
 
     const following = await Follow.findAll({
-      where: { followerId: userId },
+      where: {
+        followerId: userId,
+        status: 'accepted',
+      },
       include: [{
         model: User,
         as: 'following',
         attributes: ['id', 'firstName', 'lastName', 'email'],
         required: true,
+        where: { deletedAt: null },
         include: [{
           model: Profile,
-          attributes: ['profilePhoto', 'bio', 'city', 'country']
-        }]
-      }]
+          attributes: ['profilePhoto', 'bio', 'city', 'country'],
+        }],
+      }],
     });
 
-    // Filter out any null users
-    const validFollowing = following.filter(f => f.following !== null);
-
-    res.json(validFollowing);
+    const valid = following.filter((f) => f.following !== null);
+    const payload = valid.map((f) => {
+      const j = typeof f.toJSON === 'function' ? f.toJSON() : f;
+      if (j.following?.Profile?.profilePhoto) {
+        j.following.Profile.profilePhoto = toAbsoluteUploadsUrl(req, j.following.Profile.profilePhoto);
+      }
+      return j;
+    });
+    res.json(payload);
   } catch (err) {
     console.error('Get following error:', err);
     res.status(500).json({ msg: 'Gabim në server', error: err.message });
@@ -1084,20 +1173,28 @@ exports.getUserTournamentSummary = async (req, res) => {
 // Check if current user is following another user
 exports.checkFollowStatus = async (req, res) => {
   try {
-    const followerId = req.user.id;
-    const followingId = parseInt(req.params.userId);
+    const followerId = parseInt(req.user.id, 10);
+    const followingId = parseInt(req.params.userId, 10);
 
     const follow = await Follow.findOne({
-      where: { followerId, followingId }
+      where: {
+        followerId,
+        followingId,
+        status: 'accepted',
+      },
     });
 
     const reverseFollow = await Follow.findOne({
-      where: { followerId: followingId, followingId: followerId }
+      where: {
+        followerId: followingId,
+        followingId: followerId,
+        status: 'accepted',
+      },
     });
 
     res.json({
       isFollowing: !!follow,
-      isFollowedBy: !!reverseFollow
+      isFollowedBy: !!reverseFollow,
     });
   } catch (err) {
     console.error('Check follow status error:', err);

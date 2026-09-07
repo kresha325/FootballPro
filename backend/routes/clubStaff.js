@@ -1,9 +1,20 @@
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const ClubStaff = require('../models/ClubStaff');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+
+function withAbsoluteStaffPhotos(req, rows) {
+  return (rows || []).map((row) => {
+    const j = typeof row.toJSON === 'function' ? row.toJSON() : { ...row };
+    if (j.staff?.Profile?.profilePhoto) {
+      j.staff.Profile.profilePhoto = toAbsoluteUploadsUrl(req, j.staff.Profile.profilePhoto);
+    }
+    return j;
+  });
+}
 
 // Get club staff
 router.get('/club/:clubId', async (req, res) => {
@@ -47,7 +58,7 @@ router.get('/club/:clubId', async (req, res) => {
       }
     }
 
-    res.json(staff);
+    res.json(withAbsoluteStaffPhotos(req, staff));
   } catch (error) {
     console.error('Get club staff error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -136,7 +147,7 @@ router.post('/', protect, async (req, res) => {
       }]
     });
 
-    res.status(201).json(result);
+    res.status(201).json(withAbsoluteStaffPhotos(req, result ? [result] : [])[0] || result);
   } catch (error) {
     console.error('Add staff error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -182,7 +193,7 @@ router.patch('/:staffMemberId', protect, async (req, res) => {
       }]
     });
 
-    res.json(result);
+    res.json(withAbsoluteStaffPhotos(req, result ? [result] : [])[0] || result);
   } catch (error) {
     console.error('Update staff error:', error);
     res.status(500).json({ msg: 'Server error' });

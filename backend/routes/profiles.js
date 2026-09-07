@@ -33,6 +33,9 @@ router.get('/me', auth, (req, res, next) => {
 });
 
 router.get('/:userId/tournament-summary', auth, getUserTournamentSummary);
+router.get('/:userId/followers', auth, getFollowers);
+router.get('/:userId/following', auth, getFollowing);
+router.get('/:userId/follow-status', auth, checkFollowStatus);
 
 router.get('/:id', auth, getProfile);
 
@@ -64,23 +67,5 @@ router.post('/:userId/follow', auth, followUser);
  * DELETE /api/profiles/:userId/unfollow
  */
 router.delete('/:userId/unfollow', auth, unfollowUser);
-
-/**
- * GET FOLLOWERS OF A USER
- * GET /api/profiles/:userId/followers
- */
-router.get('/:userId/followers', auth, getFollowers);
-
-/**
- * GET FOLLOWING OF A USER
- * GET /api/profiles/:userId/following
- */
-router.get('/:userId/following', auth, getFollowing);
-
-/**
- * CHECK FOLLOW STATUS
- * GET /api/profiles/:userId/follow-status
- */
-router.get('/:userId/follow-status', auth, checkFollowStatus);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AiGenerateBioButton from '../../ai/AiGenerateBioButton';
 import { profileAPI } from '../../../services/api';
+import { getFullUrl } from '../../../utils/mediaUrl';
 
 const EditCoachProfile = ({ user, onSave, loading, errors }) => {
   const [form, setForm] = useState({
@@ -20,11 +21,15 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
   };
 
   const [profilePhoto, setProfilePhoto] = useState(null);
-  const [preview, setPreview] = useState(user.profilePhoto || '');
+  const [preview, setPreview] = useState(user.profilePhoto ? getFullUrl(user.profilePhoto) : '');
   const [clubSuggestions, setClubSuggestions] = useState([]);
   const [showClubSuggestions, setShowClubSuggestions] = useState(false);
   const [clubQuery, setClubQuery] = useState(user.club || '');
   const [selectedClubId, setSelectedClubId] = useState(null);
+
+  useEffect(() => {
+    setPreview(user.profilePhoto ? getFullUrl(user.profilePhoto) : '');
+  }, [user.profilePhoto]);
 
   useEffect(() => {
     const query = clubQuery.trim();

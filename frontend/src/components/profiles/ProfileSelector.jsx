@@ -14,6 +14,7 @@ const ProfileSelector = ({ user, profile, isOwner, onEdit }) => {
     case 'athlete':
       return <PlayerProfile profile={profile} />;
     case 'coach':
+    case 'trajner':
       return <CoachProfile profile={profile} />;
     case 'scout':
       return <ScoutProfile profile={profile} />;

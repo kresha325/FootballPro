@@ -28,6 +28,8 @@ import {
   deleteTransferHistoryRequest,
   extractErrorMessage,
   followStatusRequest,
+  followersListRequest,
+  followingListRequest,
   gamificationAchievementsRequest,
   joncoinBalanceRequest,
   followUserRequest,
@@ -98,6 +100,9 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [error, setError] = useState('');
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [followListMode, setFollowListMode] = useState(null); // 'followers' | 'following'
+  const [followListRows, setFollowListRows] = useState([]);
+  const [followListLoading, setFollowListLoading] = useState(false);
   /** Full-screen preview for cover or profile photo */
   const [headerImagePreview, setHeaderImagePreview] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -383,6 +388,38 @@ export default function PublicProfileScreen({ route, navigation }) {
     ]);
   };
 
+  const openFollowList = async (mode) => {
+    if (!userId) return;
+    setFollowListMode(mode);
+    setFollowListLoading(true);
+    setFollowListRows([]);
+    try {
+      const res =
+        mode === 'followers'
+          ? await followersListRequest(userId)
+          : await followingListRequest(userId);
+      const raw = Array.isArray(res?.data) ? res.data : [];
+      const rows = raw
+        .map((row) => {
+          const u = mode === 'followers' ? row.follower || row : row.following || row;
+          if (!u?.id) return null;
+          return {
+            id: u.id,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            profilePhoto: u.Profile?.profilePhoto || u.profilePhoto || null,
+          };
+        })
+        .filter(Boolean);
+      setFollowListRows(rows);
+    } catch (err) {
+      Alert.alert('Lista', extractErrorMessage(err, 'Nuk u ngarkua lista'));
+      setFollowListMode(null);
+    } finally {
+      setFollowListLoading(false);
+    }
+  };
+
   const onToggleFollow = async () => {
     if (busy || isSelf) return;
     setBusy(true);
@@ -639,14 +676,14 @@ export default function PublicProfileScreen({ route, navigation }) {
                 <Text style={[styles.statNum, { color: theme.text }]}>{postCount}</Text>
                 <Text style={[styles.statLabel, { color: theme.muted }]}>Postime</Text>
               </View>
-              <View style={styles.statCell}>
+              <TouchableOpacity style={styles.statCell} onPress={() => openFollowList('followers')}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.followers ?? 0}</Text>
                 <Text style={[styles.statLabel, { color: theme.muted }]}>Ndjekës</Text>
-              </View>
-              <View style={styles.statCell}>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.statCell} onPress={() => openFollowList('following')}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.following ?? 0}</Text>
                 <Text style={[styles.statLabel, { color: theme.muted }]}>Duke ndjekur</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {(contact.instagram || contact.twitter || contact.facebook) && !isSelf ? (
@@ -889,6 +926,63 @@ export default function PublicProfileScreen({ route, navigation }) {
               <Image source={{ uri: headerImagePreview }} style={styles.previewModalImg} resizeMode="contain" />
             </View>
           ) : null}
+        </View>
+      </View>
+    </Modal>
+
+    <Modal
+      visible={!!followListMode}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setFollowListMode(null)}
+    >
+      <View style={styles.followModalBackdrop}>
+        <View style={[styles.followModalSheet, { backgroundColor: isDark ? '#0f172a' : '#fff' }]}>
+          <View style={styles.followModalHeader}>
+            <Text style={[styles.followModalTitle, { color: theme.text }]}>
+              {followListMode === 'followers' ? 'Ndjekës' : 'Duke ndjekur'}
+            </Text>
+            <TouchableOpacity onPress={() => setFollowListMode(null)} hitSlop={12}>
+              <Ionicons name="close" size={24} color={theme.muted} />
+            </TouchableOpacity>
+          </View>
+          {followListLoading ? (
+            <ActivityIndicator style={{ marginVertical: 24 }} color="#0f766e" />
+          ) : followListRows.length === 0 ? (
+            <Text style={[styles.followEmpty, { color: theme.muted }]}>
+              {followListMode === 'followers' ? 'Nuk ka ndjekës ende.' : 'Nuk po ndjek askënd ende.'}
+            </Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 420 }}>
+              {followListRows.map((u) => {
+                const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || `User #${u.id}`;
+                const photo = u.profilePhoto && typeof u.profilePhoto === 'string' ? u.profilePhoto : null;
+                return (
+                  <TouchableOpacity
+                    key={String(u.id)}
+                    style={styles.followRow}
+                    onPress={() => {
+                      setFollowListMode(null);
+                      openUserProfile(navigation, u.id);
+                    }}
+                  >
+                    {photo ? (
+                      <Image source={{ uri: photo }} style={styles.followAvatar} />
+                    ) : (
+                      <View style={[styles.followAvatar, styles.followAvatarPh]}>
+                        <Text style={styles.followAvatarText}>
+                          {`${u.firstName?.[0] || ''}${u.lastName?.[0] || ''}`.toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={[styles.followName, { color: theme.text }]} numberOfLines={1}>
+                      {name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>
@@ -1154,4 +1248,37 @@ const styles = StyleSheet.create({
   transferCancelText: { color: '#475569', fontWeight: '700' },
   transferSaveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#0f766e' },
   transferSaveText: { color: '#fff', fontWeight: '700' },
+  followModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  followModalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 28,
+    maxHeight: '75%',
+  },
+  followModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  followModalTitle: { fontSize: 18, fontWeight: '800' },
+  followEmpty: { textAlign: 'center', paddingVertical: 28, fontSize: 14 },
+  followRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e2e8f0',
+  },
+  followAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e2e8f0' },
+  followAvatarPh: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f766e' },
+  followAvatarText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  followName: { flex: 1, fontWeight: '700', fontSize: 15 },
 });

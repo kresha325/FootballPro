@@ -20,6 +20,7 @@ import { getFullUrl } from '../utils/mediaUrl';
 import { LiveStreamChat, LiveStreamReactions, LiveStreamGuests } from './profile/LiveStreamWidgets';
 import ProfileSponsorsPanel from './profile/ProfileSponsorsPanel';
 import ProfileGalleryPanel from './profile/ProfileGalleryPanel';
+import FollowListModal from './FollowListModal';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -31,7 +32,7 @@ const Profile = () => {
   const [editingSponsorId, setEditingSponsorId] = useState(null);
   const [editingSponsor, setEditingSponsor] = useState({ name: '', link: '' });
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { 
     allPosts, 
     likedPosts, 
@@ -95,7 +96,13 @@ const Profile = () => {
   const [tournamentSummary, setTournamentSummary] = useState({ tournaments: [], totals: null });
   // Shtojme state per modalin e fotos full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const [followListMode, setFollowListMode] = useState(null); // 'followers' | 'following' | null
   const livePreviewRef = useRef(null);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [profile?.profilePhoto, id]);
 
   useEffect(() => {
     if (!fullScreenImage) return;
@@ -446,25 +453,45 @@ const Profile = () => {
     if (followLoading) return;
     setFollowLoading(true);
     try {
+      let resFollow;
       if (isFollowing) {
-        await profileAPI.unfollowUser(id);
+        resFollow = await profileAPI.unfollowUser(id);
         setIsFollowing(false);
-        setStats(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
       } else {
-        await profileAPI.followUser(id);
+        resFollow = await profileAPI.followUser(id);
         setIsFollowing(true);
-        setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
-      // Refresh profile to get accurate counts from server
-      const res = await profileAPI.getProfile(id);
-      setStats({
-        posts: stats.posts,
-        followers: res.data.followers || 0,
-        following: res.data.following || 0,
-      });
+      const data = resFollow?.data || {};
+      // Prefer counts returned by follow/unfollow; fall back to full profile refresh
+      if (data.followers != null || data.following != null) {
+        setStats((prev) => ({
+          ...prev,
+          followers: data.followers != null ? Number(data.followers) : prev.followers,
+          following: data.following != null ? Number(data.following) : prev.following,
+        }));
+      } else {
+        const res = await profileAPI.getProfile(id);
+        setStats((prev) => ({
+          ...prev,
+          followers: res.data.followers || 0,
+          following: res.data.following || 0,
+        }));
+      }
     } catch (error) {
       console.error('Follow error:', error);
       alert(error.response?.data?.msg || 'Nuk u arrit përditësimi i statusit të ndjekjes');
+      try {
+        const res = await profileAPI.getProfile(id);
+        setStats((prev) => ({
+          ...prev,
+          followers: res.data.followers || 0,
+          following: res.data.following || 0,
+        }));
+        const followStatusRes = await profileAPI.checkFollowStatus(id);
+        setIsFollowing(!!followStatusRes.data.isFollowing);
+      } catch {
+        /* ignore */
+      }
     } finally {
       setFollowLoading(false);
     }
@@ -582,7 +609,7 @@ const Profile = () => {
             {/* Avatar */}
             <div className="relative">
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
-                {profile.profilePhoto ? (
+                {profile.profilePhoto && !avatarBroken ? (
                   <img
                     src={getFullUrl(profile.profilePhoto)}
                     alt={`${profile.firstName} ${profile.lastName}`}
@@ -600,7 +627,7 @@ const Profile = () => {
                         setFullScreenImage(getFullUrl(profile.profilePhoto));
                       }
                     }}
-                    onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                    onError={() => setAvatarBroken(true)}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
@@ -696,14 +723,22 @@ const Profile = () => {
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.posts}</div>
                   <div className="text-sm text-gray-500">Postime</div>
                 </div>
-                <div className="text-center cursor-pointer hover:text-blue-600 transition">
+                <button
+                  type="button"
+                  onClick={() => setFollowListMode('followers')}
+                  className="text-center cursor-pointer hover:text-blue-600 transition"
+                >
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.followers}</div>
                   <div className="text-sm text-gray-500">Ndjekës</div>
-                </div>
-                <div className="text-center cursor-pointer hover:text-blue-600 transition">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFollowListMode('following')}
+                  className="text-center cursor-pointer hover:text-blue-600 transition"
+                >
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.following}</div>
                   <div className="text-sm text-gray-500">Duke ndjekur</div>
-                </div>
+                </button>
               </div>
               
               {/* Social Links */}
@@ -1021,7 +1056,7 @@ const Profile = () => {
             {activeTab === 'about' && (
               <div className="space-y-6">
                 {/* Transfer History */}
-                {(profile.role === 'athlete' || profile.role === 'coach') && (
+                {(profile.role === 'athlete' || profile.role === 'coach' || profile.role === 'trajner') && (
                   <TransferHistory userId={profile.userId || profile.id} isOwner={isOwner} />
                 )}
 
@@ -1157,6 +1192,14 @@ const Profile = () => {
         </div>
       </div>
 
+      {followListMode && id && (
+        <FollowListModal
+          userId={id}
+          mode={followListMode}
+          onClose={() => setFollowListMode(null)}
+        />
+      )}
+
       {editOpen && profile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
@@ -1169,7 +1212,18 @@ const Profile = () => {
             </button>
             <EditProfile
               user={profile}
-              onClose={() => setEditOpen(false)}
+              onClose={async (saved) => {
+                setEditOpen(false);
+                if (!saved) return;
+                try {
+                  const res = await profileAPI.getProfile(id);
+                  setProfile(res.data);
+                  setAvatarBroken(false);
+                  if (typeof refreshUser === 'function') await refreshUser();
+                } catch (err) {
+                  console.error('Refresh profile after edit failed:', err);
+                }
+              }}
             />
           </div>
         </div>
