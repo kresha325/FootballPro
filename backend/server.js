@@ -411,7 +411,7 @@ app.get('/share/cv/:id', async (req, res) => {
 
     const Profile = require('./models/Profile');
     const User = require('./models/User');
-    const { toAbsoluteUploadsUrl } = require('./utils/url');
+    const { toAbsoluteUploadsUrl, toFacebookOgImageUrl } = require('./utils/url');
 
     const profile = await Profile.findOne({
       where: { userId },
@@ -434,10 +434,12 @@ app.get('/share/cv/:id', async (req, res) => {
     const description = String(
       profile.bio || `${name}${role ? ` (${role})` : ''} — CV dixhitale në X TALENTI`
     ).slice(0, 200);
-    const image =
+    const brandOg = `${frontendBase}/og-share.jpg`;
+    const rawImage =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
-      `${frontendBase}/og-share.jpg`;
+      brandOg;
+    const image = toFacebookOgImageUrl(rawImage, brandOg);
 
     const ua = String(req.get('user-agent') || '');
     const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(

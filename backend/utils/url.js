@@ -32,7 +32,37 @@ const toAbsoluteUploadsUrl = (req, value) => {
   return normalized;
 };
 
+/**
+ * Facebook needs a large landscape JPEG (~1200×630). Profile/cover Cloudinary
+ * URLs are often portrait/small with f_auto — rewrite to a fill crop JPG.
+ */
+const toFacebookOgImageUrl = (absoluteUrl, fallbackUrl) => {
+  const fallback = fallbackUrl || 'https://xtalenti.com/og-share.jpg';
+  if (!absoluteUrl) return fallback;
+  const url = String(absoluteUrl).trim();
+  if (!/^https?:\/\//i.test(url)) return fallback;
+
+  const cloudinary = url.match(
+    /^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/i
+  );
+  if (cloudinary) {
+    const rest = cloudinary[2];
+    // Drop existing transforms; keep version + public_id (…/v123/folder/id or folder/id)
+    const publicId = rest.replace(/^(?:[^/]+\/)+?(?=(?:v\d+\/)?[^/]+)/, (prefix) => {
+      // Only strip segments that look like transforms (f_auto, w_100, …)
+      const segs = prefix.split('/').filter(Boolean);
+      const allTransforms = segs.every((s) => /[,_=]|^(f|q|w|h|c|g|e|b|a|dpr|fl)_/.test(s) || /,/.test(s));
+      return allTransforms ? '' : prefix;
+    });
+    const cleaned = publicId.replace(/^\/+/, '') || rest.replace(/^[^/]+\//, '');
+    return `${cloudinary[1]}w_1200,h_630,c_fill,g_auto,f_jpg,q_auto/${cleaned}`;
+  }
+
+  return url;
+};
+
 module.exports = {
   getBaseUrl,
   toAbsoluteUploadsUrl,
+  toFacebookOgImageUrl,
 };
