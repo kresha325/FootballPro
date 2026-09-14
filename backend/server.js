@@ -209,22 +209,25 @@ app.use('/uploads', (req, res) => {
 try {
   const frontendPublic = path.join(__dirname, '..', 'frontend', 'public');
   const backendPublic = path.join(__dirname, 'public');
-  // Social OG image on API host — Facebook scrapes this more reliably than GitHub Pages
-  app.get('/og-share.jpg', (req, res) => {
-    const candidates = [
-      path.join(backendPublic, 'og-share.jpg'),
-      path.join(frontendPublic, 'og-share.jpg'),
-    ];
+  // Social OG images on API host (+ keep filenames for scrapers)
+  const sendPublicJpeg = (fileNames) => (req, res) => {
+    const candidates = fileNames.flatMap((name) => [
+      path.join(backendPublic, name),
+      path.join(frontendPublic, name),
+    ]);
     for (const p of candidates) {
       if (fs.existsSync(p)) {
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         return res.sendFile(p);
       }
     }
     return res.sendStatus(404);
-  });
+  };
+  app.get('/og-share.jpg', sendPublicJpeg(['og-share.jpg', 'xtalenti-og.jpg']));
+  app.get('/xtalenti-og.jpg', sendPublicJpeg(['xtalenti-og.jpg', 'og-share.jpg']));
   app.get('/favicon.ico', (req, res) => {
     const p = path.join(frontendPublic, 'footballpro-icon-192.png');
     if (fs.existsSync(p)) {
@@ -327,6 +330,14 @@ app.use('/api/moderation', require('./routes/moderation'));
 app.use('/api/iap', require('./routes/iap'));
 
 // Open Graph landings for social shares (crawlers get meta; browsers redirect to SPA)
+function brandOgImageUrl() {
+  // Prefer CDN URL — Facebook frequently fails fetching images from GitHub Pages.
+  return (
+    process.env.OG_IMAGE_URL ||
+    'https://cdn.jsdelivr.net/gh/kresha325/FootballPro@main/frontend/public/xtalenti-og.jpg'
+  );
+}
+
 function escapeHtmlAttr(s) {
   return String(s || '')
     .replace(/&/g, '&amp;')
@@ -385,7 +396,7 @@ app.get('/share', (req, res) => {
   );
   const siteUrl = `${frontendBase}/`;
   // Prefer same-origin image on the public site (GitHub Pages serves it reliably).
-  const image = `${frontendBase}/og-share.jpg`;
+  const image = brandOgImageUrl();
   if (!isBot) return res.redirect(302, siteUrl);
   return sendOgHtml(res, {
     title: 'X TALENTI',
@@ -434,7 +445,7 @@ app.get('/share/cv/:id', async (req, res) => {
     const description = String(
       profile.bio || `${name}${role ? ` (${role})` : ''} — CV dixhitale në X TALENTI`
     ).slice(0, 200);
-    const brandOg = `${frontendBase}/og-share.jpg`;
+    const brandOg = brandOgImageUrl();
     const rawImage =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
