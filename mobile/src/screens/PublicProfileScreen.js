@@ -48,6 +48,7 @@ import {
 } from '../api/client';
 import ReportSheet from '../components/ReportSheet';
 import PublicProfileTournamentsTab from '../components/publicProfile/PublicProfileTournamentsTab';
+import { promptShareProfileCv } from '../utils/shareProfile';
 import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
 import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
@@ -158,41 +159,60 @@ export default function PublicProfileScreen({ route, navigation }) {
     navigation.setOptions({
       title: ownProfileRoot && !profile ? 'Profili im' : displayName,
       headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
-      headerRight: !isSelf && userId
+      headerRight: profile
         ? () => (
-            <TouchableOpacity
-              onPress={() => {
-                Alert.alert(displayName || 'Profili', undefined, [
-                  {
-                    text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
-                    style: iBlocked ? 'default' : 'destructive',
-                    onPress: async () => {
-                      try {
-                        if (iBlocked) {
-                          await unblockUserRequest(userId);
-                          setIBlocked(false);
-                        } else {
-                          await blockUserRequest(userId);
-                          setIBlocked(true);
-                          Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
-                        }
-                      } catch (err) {
-                        Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
-                      }
-                    },
-                  },
-                  { text: 'Raporto', onPress: () => setReportOpen(true) },
-                  { text: 'Anulo', style: 'cancel' },
-                ]);
-              }}
-              style={{ paddingHorizontal: 12 }}
-            >
-              <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => promptShareProfileCv(profile)}
+                style={{ paddingHorizontal: 10 }}
+                accessibilityLabel="Ndaj CV"
+              >
+                <Ionicons name="share-outline" size={22} color="#0f766e" />
+              </TouchableOpacity>
+              {!isSelf && userId ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert(displayName || 'Profili', undefined, [
+                      {
+                        text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
+                        style: iBlocked ? 'default' : 'destructive',
+                        onPress: async () => {
+                          try {
+                            if (iBlocked) {
+                              await unblockUserRequest(userId);
+                              setIBlocked(false);
+                            } else {
+                              await blockUserRequest(userId);
+                              setIBlocked(true);
+                              Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
+                            }
+                          } catch (err) {
+                            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
+                          }
+                        },
+                      },
+                      { text: 'Raporto', onPress: () => setReportOpen(true) },
+                      { text: 'Anulo', style: 'cancel' },
+                    ]);
+                  }}
+                  style={{ paddingHorizontal: 12 }}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           )
         : undefined,
     });
-  }, [navigation, displayName, ownProfileRoot, profile, isSelf, userId, iBlocked]);
+  }, [
+    navigation,
+    ownProfileRoot,
+    profile,
+    displayName,
+    isSelf,
+    userId,
+    iBlocked,
+  ]);
 
   useEffect(() => {
     if (!userId || isSelf) {

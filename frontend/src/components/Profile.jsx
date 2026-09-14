@@ -22,6 +22,7 @@ import { LiveStreamChat, LiveStreamReactions, LiveStreamGuests } from './profile
 import ProfileSponsorsPanel from './profile/ProfileSponsorsPanel';
 import ProfileGalleryPanel from './profile/ProfileGalleryPanel';
 import FollowListModal from './FollowListModal';
+import ShareProfileCvButton from './ShareProfileCvButton';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -824,6 +825,7 @@ const Profile = () => {
 
             {/* Action Buttons */}
             <div className="mt-8 md:mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+              <ShareProfileCvButton profile={profile} />
               {isOwner && (
                 <button
                   onClick={() => setShowLiveModal(true)}

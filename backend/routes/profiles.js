@@ -3,7 +3,8 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 
 const { 
-  getProfile, 
+  getProfile,
+  getPublicProfileCv,
   createProfile, 
   updateProfile, 
   getAllProfiles, 
@@ -31,6 +32,9 @@ router.get('/me', auth, (req, res, next) => {
   req.params.id = req.user.id;
   return getProfile(req, res, next);
 });
+
+/** Public digital CV — no auth */
+router.get('/cv/:id', getPublicProfileCv);
 
 router.get('/:userId/tournament-summary', auth, getUserTournamentSummary);
 router.get('/:userId/followers', auth, getFollowers);

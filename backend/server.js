@@ -307,6 +307,86 @@ app.use('/api/joncoin', require('./routes/joncoin'));
 app.use('/api/moderation', require('./routes/moderation'));
 app.use('/api/iap', require('./routes/iap'));
 
+// Open Graph landing for shared digital CVs (crawlers get meta; browsers redirect to SPA)
+app.get('/share/cv/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const frontendBase = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://xtalenti.com').replace(
+      /\/$/,
+      ''
+    );
+    const cvUrl = `${frontendBase}/cv/${userId}`;
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return res.redirect(302, frontendBase);
+    }
+
+    const Profile = require('./models/Profile');
+    const User = require('./models/User');
+    const { toAbsoluteUploadsUrl } = require('./utils/url');
+
+    const profile = await Profile.findOne({
+      where: { userId },
+      include: [{
+        model: User,
+        attributes: ['id', 'firstName', 'lastName', 'role', 'deletedAt', 'bannedAt'],
+      }],
+    });
+
+    if (!profile?.User || profile.User.deletedAt || profile.User.bannedAt) {
+      return res.redirect(302, frontendBase);
+    }
+
+    const name =
+      `${profile.User.firstName || ''} ${profile.User.lastName || ''}`.trim() ||
+      profile.club ||
+      'Profil';
+    const role = profile.User.role || '';
+    const title = `${name} · CV · X TALENTI`;
+    const description = String(profile.bio || `${name}${role ? ` (${role})` : ''} në X TALENTI`).slice(0, 200);
+    const image = profile.profilePhoto
+      ? toAbsoluteUploadsUrl(req, profile.profilePhoto)
+      : `${frontendBase}/footballpro-icon-512.png`;
+
+    const ua = String(req.get('user-agent') || '');
+    const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord/i.test(
+      ua
+    );
+    if (!isBot) {
+      return res.redirect(302, cvUrl);
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8" />
+  <title>${title.replace(/</g, '')}</title>
+  <meta property="og:type" content="profile" />
+  <meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />
+  <meta property="og:description" content="${description.replace(/"/g, '&quot;')}" />
+  <meta property="og:url" content="${cvUrl}" />
+  <meta property="og:image" content="${String(image).replace(/"/g, '&quot;')}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />
+  <meta name="twitter:description" content="${description.replace(/"/g, '&quot;')}" />
+  <meta name="twitter:image" content="${String(image).replace(/"/g, '&quot;')}" />
+  <link rel="canonical" href="${cvUrl}" />
+  <meta http-equiv="refresh" content="0;url=${cvUrl}" />
+</head>
+<body>
+  <p><a href="${cvUrl}">${name} — CV në X TALENTI</a></p>
+</body>
+</html>`);
+  } catch (err) {
+    console.warn('share/cv error:', err?.message || err);
+    const frontendBase = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://xtalenti.com').replace(
+      /\/$/,
+      ''
+    );
+    res.redirect(302, frontendBase);
+  }
+});
+
 
 // Endpoint për të kontrolluar nëse një user është online
 app.get('/api/users/:userId/online', (req, res) => {

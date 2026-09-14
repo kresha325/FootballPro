@@ -39,6 +39,7 @@ const LiveStreamViewer = lazy(() => import('./components/LiveStreamViewer'));
 const StreamsPage = lazy(() => import('./components/StreamsPage'));
 const EmbedOutboundCall = lazy(() => import('./components/EmbedOutboundCall'));
 const LegalPage = lazy(() => import('./components/LegalPage'));
+const PublicCvPage = lazy(() => import('./components/PublicCvPage'));
 const EmbedIncomingCall = lazy(() => import('./components/EmbedIncomingCall'));
 const EmbedGoLive = lazy(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
@@ -55,7 +56,9 @@ function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const isFullscreenRoute =
-    location.pathname.startsWith('/embed-') || /^\/live\/[^/]+/.test(location.pathname);
+    location.pathname.startsWith('/embed-') ||
+    /^\/live\/[^/]+/.test(location.pathname) ||
+    /^\/cv\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
     document.title = APP_BRAND_NAME;
@@ -103,6 +106,9 @@ function App() {
             <Route path="/onboarding" element={user ? <RegisterOnboarding /> : <Navigate to="/login" />} />
             <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
             <Route path="/parent-verified" element={<ParentVerified />} />
+
+            {/* Public digital CV (no login) */}
+            <Route path="/cv/:id" element={<PublicCvPage />} />
 
             {/* FEED */}
             <Route path="/feed" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Feed />) : <Navigate to="/login" />} />

@@ -437,6 +437,149 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+/**
+ * Public digital CV (no auth): overview + stats only.
+ * Omits email, wallet, and other private fields.
+ */
+exports.getPublicProfileCv = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return res.status(400).json({ msg: 'ID e pavlefshme' });
+    }
+
+    const profile = await Profile.findOne({
+      where: { userId },
+      include: [{
+        model: User,
+        attributes: [
+          'id',
+          'firstName',
+          'lastName',
+          'role',
+          'dateOfBirth',
+          'gender',
+          'verified',
+          'bannedAt',
+          'deletedAt',
+        ],
+      }],
+    });
+
+    if (!profile || !profile.User || profile.User.deletedAt || profile.User.bannedAt) {
+      return res.status(404).json({ msg: 'Profili nuk u gjet' });
+    }
+
+    const user = profile.User;
+    const role = user.role;
+    const isOrg = isOrgProfileRole(role);
+    const age = !isOrg && user.getAge ? user.getAge() : null;
+    const ageGroup = !isOrg && user.getAgeGroup ? user.getAgeGroup() : null;
+    const { followers: followersCount, following: followingCount } = await countFollowStats(userId);
+
+    const plainProfile = profile.get({ plain: true });
+    delete plainProfile.User;
+
+    let ligaFoundedYear = null;
+    if (role === 'liga') {
+      try {
+        const Liga = require('../models/Liga');
+        const liga = await Liga.findOne({
+          where: { userId },
+          attributes: ['foundedYear'],
+        });
+        if (liga?.foundedYear) ligaFoundedYear = liga.foundedYear;
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+
+    const contactRaw =
+      plainProfile.contact && typeof plainProfile.contact === 'object' && !Array.isArray(plainProfile.contact)
+        ? plainProfile.contact
+        : {};
+    const contact = {
+      phone: contactRaw.phone || undefined,
+      website: contactRaw.website || undefined,
+      email: contactRaw.email || undefined,
+      instagram: contactRaw.instagram || undefined,
+      twitter: contactRaw.twitter || undefined,
+      facebook: contactRaw.facebook || undefined,
+    };
+    Object.keys(contact).forEach((k) => {
+      if (contact[k] == null || contact[k] === '') delete contact[k];
+    });
+
+    const response = {
+      id: plainProfile.userId,
+      userId: plainProfile.userId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role,
+      verified: Boolean(user.verified),
+      gender: user.gender || null,
+      dateOfBirth: isOrg ? null : user.dateOfBirth || null,
+      age,
+      ageGroup,
+      foundedYear: ligaFoundedYear || plainProfile.foundedYear || null,
+      bio: plainProfile.bio || '',
+      careerHistory: plainProfile.careerHistory || '',
+      club: plainProfile.club || null,
+      clubId: plainProfile.clubId || null,
+      city: plainProfile.city || null,
+      country: plainProfile.country || null,
+      position: plainProfile.position || null,
+      profilePhoto: plainProfile.profilePhoto || null,
+      coverPhoto: plainProfile.coverPhoto || null,
+      stats: plainProfile.stats && typeof plainProfile.stats === 'object' ? plainProfile.stats : {},
+      founded: plainProfile.founded ?? null,
+      stadium: plainProfile.stadium || null,
+      capacity: plainProfile.capacity ?? null,
+      league: plainProfile.league || null,
+      contact,
+      matches: Array.isArray(plainProfile.matches) ? plainProfile.matches : [],
+      achievements: Array.isArray(plainProfile.achievements) ? plainProfile.achievements : [],
+      followers: followersCount,
+      following: followingCount,
+      cv: true,
+    };
+
+    if (isOrg) {
+      response.foundingYear = getFoundingYear(response);
+      response.age = null;
+      response.ageGroup = null;
+    }
+
+    if (response.founded != null || response.stadium || response.capacity != null || response.league) {
+      const statsObj =
+        response.stats && typeof response.stats === 'object' && !Array.isArray(response.stats)
+          ? { ...response.stats }
+          : {};
+      if (response.founded != null && statsObj.founded == null) statsObj.founded = response.founded;
+      if (response.stadium && !statsObj.stadium) statsObj.stadium = response.stadium;
+      if (response.capacity != null && statsObj.capacity == null) statsObj.capacity = response.capacity;
+      if (response.league && !statsObj.league) statsObj.league = response.league;
+      response.stats = statsObj;
+      if (response.founded != null && !response.foundingYear) {
+        response.foundingYear = response.founded;
+      }
+    }
+
+    if (response.profilePhoto) {
+      response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);
+    }
+    if (response.coverPhoto) {
+      response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
+    }
+    await enrichClubDisplayFields(req, response);
+
+    res.json(response);
+  } catch (err) {
+    console.error('Get public CV error:', err);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
 exports.updateProfile = async (req, res) => {
   const cloudinary = require('../utils/cloudinary');
   const fs = require('fs');
