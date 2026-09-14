@@ -16,8 +16,8 @@ function cloudinaryOgDeliveryUrl() {
 function brandOgImageUrl() {
   if (process.env.OG_IMAGE_URL) return String(process.env.OG_IMAGE_URL).trim();
   if (runtimeCloudinaryUrl) return runtimeCloudinaryUrl;
-  // Same-origin card first (no Render cold-start). Cloudinary replaces this after boot upload.
-  return SITE_OG_FALLBACK;
+  // Prefer Cloudinary delivery (asset uploaded on boot); site/Render as last resorts.
+  return cloudinaryOgDeliveryUrl() || SITE_OG_FALLBACK;
 }
 
 function resolveLocalOgFiles() {
