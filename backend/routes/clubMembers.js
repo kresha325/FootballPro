@@ -118,7 +118,7 @@ router.get('/club/:clubId', async (req, res) => {
         {
           model: User,
           as: 'athlete',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'gender', 'dateOfBirth'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'gender', 'dateOfBirth', 'role'],
           include: [{
             model: Profile,
             attributes: ['profilePhoto', 'position', 'bio', 'stats', 'age', 'ageGroup'],

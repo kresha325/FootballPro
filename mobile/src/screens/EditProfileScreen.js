@@ -399,16 +399,6 @@ export default function EditProfileScreen({ navigation }) {
         /* optional */
       }
     }
-    if (editRole === 'coach') {
-      try {
-        await clubMembersRequestMembership({
-          clubId: form.selectedClubId || undefined,
-          clubName: trimmedClub,
-        });
-      } catch (_e) {
-        /* optional */
-      }
-    }
   };
 
   const onSave = async () => {

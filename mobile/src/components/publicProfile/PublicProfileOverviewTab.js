@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 function formatCoachCategory(cat) {
   if (!cat) return '';
@@ -89,7 +89,6 @@ function ChipList({ items, theme }) {
 
 function athleteDisplayName(member) {
   const athlete = member?.athlete || member?.User || member?.user || {};
-  const profile = athlete?.Profile || athlete?.profile || {};
   const name = `${athlete?.firstName || ''} ${athlete?.lastName || ''}`.trim();
   return name || 'Player';
 }
@@ -99,44 +98,97 @@ function athleteUserId(member) {
   return athlete?.id ?? member?.athleteId ?? member?.userId ?? null;
 }
 
+function isAthleteMembership(member) {
+  const athlete = member?.athlete || member?.User || member?.user || {};
+  const role = String(athlete?.role || '').toLowerCase();
+  return !role || role === 'athlete';
+}
+
+function competitionLabel(cat) {
+  if (!cat) return '';
+  const labels = {
+    open: 'Open',
+    senior: 'Senior',
+    u23: 'U23',
+    u21: 'U21',
+    u19: 'U19',
+    u17: 'U17',
+    u15: 'U15',
+    u13: 'U13',
+    u11: 'U11',
+    u10: 'U10',
+    u9: 'U9',
+  };
+  return labels[cat] || String(cat);
+}
+
+function AvatarCircle({ uri, initials, theme }) {
+  if (uri && typeof uri === 'string') {
+    return <Image source={{ uri }} style={styles.avatar} />;
+  }
+  return (
+    <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.border }]}>
+      <Text style={[styles.avatarInitials, { color: theme.text }]}>{initials || '?'}</Text>
+    </View>
+  );
+}
+
 function ClubSquadSection({ members, theme, onPressUser }) {
+  const athletes = useMemo(() => (members || []).filter(isAthleteMembership), [members]);
+
   const grouped = useMemo(() => {
     const map = {};
-    (members || []).forEach((m) => {
-      const team = m?.teamType ? teamTypeLabel(m.teamType) : null;
-      const age = m?.athlete?.Profile?.ageGroup || m?.athlete?.profile?.ageGroup || 'Squad';
-      const key = team || age;
+    athletes.forEach((m) => {
+      const key = m?.teamType ? teamTypeLabel(m.teamType) : 'Pa kategori';
       if (!map[key]) map[key] = [];
       map[key].push(m);
     });
     return Object.entries(map);
-  }, [members]);
+  }, [athletes]);
 
-  if (!members?.length) {
-    return <Text style={[styles.muted, { color: theme.muted }]}>No approved squad members yet.</Text>;
+  if (!athletes.length) {
+    return <Text style={[styles.muted, { color: theme.muted }]}>Nuk ka atletë të aprovuar ende.</Text>;
   }
 
   return (
     <View>
       {grouped.map(([group, list]) => (
         <View key={group} style={styles.groupBlock}>
-          <Text style={[styles.groupTitle, { color: theme.text }]}>{group}</Text>
+          <Text style={[styles.groupTitle, { color: theme.text }]}>
+            {group} · {list.length}
+          </Text>
           {list.map((m) => {
             const uid = athleteUserId(m);
-            const position = m?.position || m?.athlete?.Profile?.position || '—';
-            const jersey = m?.jerseyNumber ?? m?.athlete?.Profile?.stats?.jerseyNumber;
+            const athlete = m?.athlete || {};
+            const photo = athlete?.Profile?.profilePhoto || athlete?.profile?.profilePhoto;
+            const initials = `${(athlete?.firstName || '?').charAt(0)}${(athlete?.lastName || '').charAt(0)}`.toUpperCase();
+            const position = m?.position || athlete?.Profile?.position || '—';
+            const jersey = m?.jerseyNumber ?? athlete?.Profile?.stats?.jerseyNumber;
+            const competition = competitionLabel(m?.competitionCategory);
+            const ageGroup = athlete?.Profile?.ageGroup || athlete?.profile?.ageGroup;
             return (
               <TouchableOpacity
                 key={String(m.id || uid || athleteDisplayName(m))}
-                style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                style={[styles.listRow, styles.personRow, { borderColor: theme.border, backgroundColor: theme.card }]}
                 onPress={() => uid != null && onPressUser?.(uid)}
                 disabled={uid == null || !onPressUser}
+                activeOpacity={0.75}
               >
-                <Text style={[styles.listTitle, { color: theme.text }]}>{athleteDisplayName(m)}</Text>
-                <Text style={[styles.listMeta, { color: theme.muted }]}>
-                  {position}
-                  {jersey != null && jersey !== '' ? ` · #${jersey}` : ''}
-                </Text>
+                <AvatarCircle uri={photo} initials={initials} theme={theme} />
+                <View style={styles.personMeta}>
+                  <Text style={[styles.listTitle, { color: theme.text }]}>{athleteDisplayName(m)}</Text>
+                  <Text style={[styles.listMeta, { color: theme.muted }]}>
+                    {[
+                      'Atlet',
+                      competition ? `Ligë: ${competition}` : null,
+                      ageGroup,
+                      position,
+                      jersey != null && jersey !== '' ? `#${jersey}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -146,25 +198,56 @@ function ClubSquadSection({ members, theme, onPressUser }) {
   );
 }
 
-function StaffListSection({ staff, theme }) {
+function StaffListSection({ staff, theme, onPressUser }) {
+  const grouped = useMemo(() => {
+    const map = {};
+    (staff || []).forEach((s) => {
+      const key = s?.teamType ? teamTypeLabel(s.teamType) : 'Pa kategori';
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    return Object.entries(map);
+  }, [staff]);
+
   if (!staff?.length) {
-    return <Text style={[styles.muted, { color: theme.muted }]}>No active staff listed.</Text>;
+    return <Text style={[styles.muted, { color: theme.muted }]}>Nuk ka staf aktiv ende.</Text>;
   }
+
   return (
     <View>
-      {staff.map((s) => {
-        const person = s?.staff || s?.User || {};
-        const name = `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || 'Staff';
-        return (
-          <View key={String(s.id)} style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}>
-            <Text style={[styles.listTitle, { color: theme.text }]}>{name}</Text>
-            <Text style={[styles.listMeta, { color: theme.muted }]}>
-              {staffRoleLabel(s.staffRole)}
-              {s.teamType ? ` · ${teamTypeLabel(s.teamType)}` : ''}
-            </Text>
-          </View>
-        );
-      })}
+      {grouped.map(([group, list]) => (
+        <View key={group} style={styles.groupBlock}>
+          <Text style={[styles.groupTitle, { color: theme.text }]}>
+            {group} · {list.length}
+          </Text>
+          {list.map((s) => {
+            const person = s?.staff || s?.User || {};
+            const uid = person?.id ?? s?.staffId ?? null;
+            const name = `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || 'Staff';
+            const photo = person?.Profile?.profilePhoto || person?.profile?.profilePhoto;
+            const initials = `${(person?.firstName || '?').charAt(0)}${(person?.lastName || '').charAt(0)}`.toUpperCase();
+            return (
+              <TouchableOpacity
+                key={String(s.id)}
+                style={[styles.listRow, styles.personRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                onPress={() => uid != null && onPressUser?.(uid)}
+                disabled={uid == null || !onPressUser}
+                activeOpacity={0.75}
+              >
+                <AvatarCircle uri={photo} initials={initials} theme={theme} />
+                <View style={styles.personMeta}>
+                  <Text style={[styles.listTitle, { color: theme.text }]}>{name}</Text>
+                  <Text style={[styles.listMeta, { color: theme.muted }]}>
+                    {[staffRoleLabel(s.staffRole) || 'Staff', s.teamType ? teamTypeLabel(s.teamType) : null]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -349,11 +432,14 @@ export default function PublicProfileOverviewTab({
               </Text>
             ) : null}
           </Section>
-          <Section title={`Squad (${clubMembers.length})`} theme={theme}>
+          <Section
+            title={`Skuadra · atletë (${(clubMembers || []).filter(isAthleteMembership).length})`}
+            theme={theme}
+          >
             <ClubSquadSection members={clubMembers} theme={theme} onPressUser={onPressUser} />
           </Section>
-          <Section title="Staff" theme={theme}>
-            <StaffListSection staff={clubStaff} theme={theme} />
+          <Section title={`Stafi / trajnerë (${clubStaff.length})`} theme={theme}>
+            <StaffListSection staff={clubStaff} theme={theme} onPressUser={onPressUser} />
           </Section>
         </>
       ) : null}
@@ -496,6 +582,11 @@ const styles = StyleSheet.create({
   wrap: { paddingBottom: 8 },
   sectionTitle: { fontSize: 17, fontWeight: '800', marginBottom: 8 },
   bio: { fontSize: 15, lineHeight: 22 },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  personMeta: { flex: 1, minWidth: 0 },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  avatarInitials: { fontSize: 13, fontWeight: '800' },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 8 },
   statCard: {
     width: '48%',

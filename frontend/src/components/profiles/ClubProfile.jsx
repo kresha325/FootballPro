@@ -26,7 +26,6 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
   const [loadingPending, setLoadingPending] = useState(true);
   const [clubStaff, setClubStaff] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
-  const squadSize = loadingMembers ? '...' : clubMembers.length;
 
   const staffRoleLabels = {
     president: 'President',
@@ -82,14 +81,67 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
     u9: 'U9',
   };
 
-  const groupedMembers = clubMembers.reduce((acc, member) => {
-    const teamType = member.teamType ? teamTypeLabels[member.teamType] || member.teamType : null;
-    const ageGroup = member.athlete?.Profile?.ageGroup || 'Pa grupmoshë';
-    const groupKey = teamType || ageGroup;
-    if (!acc[groupKey]) acc[groupKey] = [];
-    acc[groupKey].push(member);
-    return acc;
-  }, {});
+  const competitionCategoryLabels = {
+    open: 'Open',
+    senior: 'Senior',
+    u23: 'U23',
+    u21: 'U21',
+    u19: 'U19',
+    u17: 'U17',
+    u15: 'U15',
+    u13: 'U13',
+    u11: 'U11',
+    u10: 'U10',
+    u9: 'U9',
+  };
+
+  const isAthleteMember = (member) => {
+    const role = String(member?.athlete?.role || '').toLowerCase();
+    return !role || role === 'athlete';
+  };
+
+  const athleteMembers = clubMembers.filter(isAthleteMember);
+  const squadSize = loadingMembers ? '...' : athleteMembers.length;
+
+  const groupByTeam = (items, getTeamType) =>
+    items.reduce((acc, item) => {
+      const raw = getTeamType(item);
+      const groupKey = raw ? teamTypeLabels[raw] || raw : 'Pa kategori';
+      if (!acc[groupKey]) acc[groupKey] = [];
+      acc[groupKey].push(item);
+      return acc;
+    }, {});
+
+  const groupedMembers = groupByTeam(athleteMembers, (m) => m.teamType);
+  const groupedStaff = groupByTeam(clubStaff, (s) => s.teamType);
+
+  const avatarFallback = (first, last) =>
+    `${(first || '?').charAt(0)}${(last || '').charAt(0)}`.toUpperCase();
+
+  const PersonAvatar = ({ photo, firstName, lastName, tone = 'blue' }) => {
+    const toneClass =
+      tone === 'green'
+        ? 'bg-gradient-to-br from-green-500 to-teal-600'
+        : 'bg-gradient-to-br from-blue-500 to-indigo-600';
+    if (photo) {
+      return (
+        <img
+          src={getFullUrl(photo)}
+          alt={`${firstName || ''} ${lastName || ''}`.trim() || 'Avatar'}
+          className="w-12 h-12 rounded-full object-cover shrink-0"
+          loading="lazy"
+          decoding="async"
+        />
+      );
+    }
+    return (
+      <div
+        className={`w-12 h-12 rounded-full ${toneClass} text-white flex items-center justify-center font-bold text-sm shrink-0`}
+      >
+        {avatarFallback(firstName, lastName)}
+      </div>
+    );
+  };
 
   const fetchClubMembers = async () => {
     const clubId = profile.userId || profile.User?.id || profile.id;
@@ -264,37 +316,60 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Club Staff */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-          <span>🧑‍🏫</span> Trajnerët e klubit
+        <h3 className="text-xl font-bold mb-1 text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🧑‍🏫</span> Stafi / Trajnerët
         </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Sipas kategorisë së ekipit dhe rolit — klikoni për profilin.
+        </p>
         {loadingStaff ? (
           <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
         ) : clubStaff.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400">Nuk ka trajnerë ende.</div>
+          <div className="text-gray-500 dark:text-gray-400">Nuk ka staf aktiv ende.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clubStaff.map((staff) => (
-              <div key={staff.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                {staff.staff?.Profile?.profilePhoto ? (
-                  <img
-                    src={getFullUrl(staff.staff.Profile.profilePhoto)}
-                    alt={`${staff.staff?.firstName} ${staff.staff?.lastName}`}
-                    className="w-12 h-12 rounded-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
-                    {`${staff.staff?.firstName?.[0] || ''}${staff.staff?.lastName?.[0] || ''}`}
-                  </div>
-                )}
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
-                    {staff.staff?.firstName} {staff.staff?.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Trajner'}
-                  </div>
+          <div className="space-y-6">
+            {Object.entries(groupedStaff).map(([group, staffList]) => (
+              <div key={group}>
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200">
+                    {group}
+                  </span>
+                  <span className="text-xs text-gray-400 font-normal">{staffList.length}</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {staffList.map((staff) => {
+                    const staffUser = staff.staff;
+                    const staffId = staffUser?.id || staff.staffId;
+                    const card = (
+                      <>
+                        <PersonAvatar
+                          photo={staffUser?.Profile?.profilePhoto}
+                          firstName={staffUser?.firstName}
+                          lastName={staffUser?.lastName}
+                          tone="green"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-white truncate">
+                            {staffUser?.firstName} {staffUser?.lastName}
+                          </div>
+                          <div className="text-sm text-green-700 dark:text-green-300">
+                            {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff'}
+                          </div>
+                        </div>
+                      </>
+                    );
+                    const className =
+                      'flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition';
+                    return staffId ? (
+                      <Link key={staff.id} to={`/profile/${staffId}`} className={className}>
+                        {card}
+                      </Link>
+                    ) : (
+                      <div key={staff.id} className={className}>
+                        {card}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -310,19 +385,27 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
           </h3>
           {loadingPending ? (
             <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
-          ) : pendingMembers.length === 0 ? (
+          ) : pendingMembers.filter(isAthleteMember).length === 0 ? (
             <div className="text-gray-500 dark:text-gray-400">Nuk ka kërkesa në pritje.</div>
           ) : (
             <div className="space-y-3">
-              {pendingMembers.map((member) => (
+              {pendingMembers.filter(isAthleteMember).map((member) => (
                 <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">
-                      {member.athlete?.firstName} {member.athlete?.lastName}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PersonAvatar
+                      photo={member.athlete?.Profile?.profilePhoto}
+                      firstName={member.athlete?.firstName}
+                      lastName={member.athlete?.lastName}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white">
+                        {member.athlete?.firstName} {member.athlete?.lastName}
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-300 font-medium">Atlet</div>
+                      {member.position && (
+                        <div className="text-sm text-gray-500">{member.position}</div>
+                      )}
                     </div>
-                    {member.position && (
-                      <div className="text-sm text-gray-500">{member.position}</div>
-                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -348,42 +431,86 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       )}
 
       {/* Squad by group */}
-      {!loadingMembers && clubMembers.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>⚽</span> Skuadra
-          </h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-bold mb-1 text-gray-900 dark:text-white flex items-center gap-2">
+          <span>⚽</span> Skuadra (atletë)
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Të ndarë sipas ekipit / kategorisë — klikoni për profilin.
+        </p>
+        {loadingMembers ? (
+          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+        ) : athleteMembers.length === 0 ? (
+          <div className="text-gray-500 dark:text-gray-400">Nuk ka atletë të aprovuar ende.</div>
+        ) : (
           <div className="space-y-6">
             {Object.entries(groupedMembers).map(([group, members]) => (
               <div key={group}>
-                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{group}</h4>
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                    {group}
+                  </span>
+                  <span className="text-xs text-gray-400 font-normal">{members.length}</span>
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {members.map((member) => (
-                    <Link
-                      key={member.id}
-                      to={`/profile/${member.athlete?.id || member.userId}`}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                        {`${member.athlete?.firstName?.[0] || ''}${member.athlete?.lastName?.[0] || ''}`}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {member.athlete?.firstName} {member.athlete?.lastName}
+                  {members.map((member) => {
+                    const athleteId = member.athlete?.id || member.athleteId;
+                    const position =
+                      member.position || member.athlete?.Profile?.position || null;
+                    const jersey =
+                      member.jerseyNumber ??
+                      member.athlete?.Profile?.stats?.jerseyNumber ??
+                      null;
+                    const competition =
+                      competitionCategoryLabels[member.competitionCategory] ||
+                      member.competitionCategory ||
+                      null;
+                    const ageGroup = member.athlete?.Profile?.ageGroup || null;
+                    return (
+                      <Link
+                        key={member.id}
+                        to={`/profile/${athleteId}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                      >
+                        <PersonAvatar
+                          photo={member.athlete?.Profile?.profilePhoto}
+                          firstName={member.athlete?.firstName}
+                          lastName={member.athlete?.lastName}
+                        />
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white truncate">
+                            {member.athlete?.firstName} {member.athlete?.lastName}
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                              Atlet
+                            </span>
+                            {competition && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
+                                Ligë: {competition}
+                              </span>
+                            )}
+                            {ageGroup && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200">
+                                {ageGroup}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5 truncate">
+                            {[position, jersey != null && jersey !== '' ? `#${jersey}` : null]
+                              .filter(Boolean)
+                              .join(' · ') || '—'}
+                          </div>
                         </div>
-                        {member.jerseyNumber != null && (
-                          <div className="text-xs text-gray-500">#{member.jerseyNumber}</div>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
+        )}
+      </div>
       {/* Club Roster */}
       {isOwner && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
