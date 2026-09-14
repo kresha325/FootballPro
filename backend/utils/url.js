@@ -61,8 +61,20 @@ const toFacebookOgImageUrl = (absoluteUrl, fallbackUrl) => {
   return url;
 };
 
+/**
+ * Cloudinary video → first-frame JPG for thumbnails / OG.
+ */
+const toCloudinaryVideoPosterUrl = (absoluteUrl) => {
+  const url = String(absoluteUrl || '').trim();
+  if (!url || !/res\.cloudinary\.com\/[^/]+\/video\/upload\//i.test(url)) return null;
+  return url
+    .replace(/\/video\/upload\//i, '/video/upload/so_0,w_640,h_640,c_fill,f_jpg,q_auto/')
+    .replace(/\.(mp4|mov|webm|m4v|avi|mkv)(\?.*)?$/i, '.jpg$2');
+};
+
 module.exports = {
   getBaseUrl,
   toAbsoluteUploadsUrl,
   toFacebookOgImageUrl,
+  toCloudinaryVideoPosterUrl,
 };

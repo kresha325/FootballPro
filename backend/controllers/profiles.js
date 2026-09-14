@@ -154,7 +154,7 @@ async function enrichClubDisplayFields(req, response) {
 
 const multer = require('multer');
 const path = require('path');
-const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { toAbsoluteUploadsUrl, toCloudinaryVideoPosterUrl } = require('../utils/url');
 const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
 const { isOrgProfileRole, getFoundingYear } = require('../utils/orgProfile');
 
@@ -593,17 +593,24 @@ exports.getPublicProfileCv = async (req, res) => {
         .slice(0, 5)
         .map((g) => {
           const obj = g.get({ plain: true });
+          const imageUrl = obj.imageUrl ? toAbsoluteUploadsUrl(req, obj.imageUrl) : null;
+          const videoUrl = obj.videoUrl ? toAbsoluteUploadsUrl(req, obj.videoUrl) : null;
+          const looksVideo =
+            obj.type === 'video' ||
+            !!videoUrl ||
+            (imageUrl && /\/video\/upload\/|\.(mp4|mov|webm|m4v)(\?|$)/i.test(imageUrl));
+          const playUrl = videoUrl || (looksVideo ? imageUrl : null);
+          const poster =
+            (imageUrl && !looksVideo ? imageUrl : null) ||
+            (playUrl && toCloudinaryVideoPosterUrl(playUrl)) ||
+            null;
           return {
             id: obj.id,
             title: obj.title || null,
-            type: obj.type || (obj.videoUrl ? 'video' : 'photo'),
-            imageUrl: obj.imageUrl ? toAbsoluteUploadsUrl(req, obj.imageUrl) : null,
-            videoUrl: obj.videoUrl ? toAbsoluteUploadsUrl(req, obj.videoUrl) : null,
-            thumbnail: obj.imageUrl
-              ? toAbsoluteUploadsUrl(req, obj.imageUrl)
-              : obj.videoUrl
-                ? toAbsoluteUploadsUrl(req, obj.videoUrl)
-                : null,
+            type: looksVideo ? 'video' : obj.type || 'photo',
+            imageUrl: looksVideo ? null : imageUrl,
+            videoUrl: playUrl,
+            thumbnail: poster || imageUrl,
           };
         });
     } catch (_e) {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { profileAPI } from '../services/api';
-import { getFullUrl } from '../utils/mediaUrl';
+import { getFullUrl, getGalleryMediaUrl, getVideoPosterUrl, isVideoMedia } from '../utils/mediaUrl';
 import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
@@ -288,23 +288,50 @@ function PublicCvPage() {
           {gallery.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               {gallery.map((item) => {
-                const src = item.thumbnail || item.imageUrl || item.videoUrl;
-                const isVideo = item.type === 'video' || (!!item.videoUrl && !item.imageUrl);
+                const isVideo = isVideoMedia(item);
+                const mediaUrl = getGalleryMediaUrl(item);
+                const poster =
+                  item.thumbnail && !isVideoMedia(item.thumbnail)
+                    ? getFullUrl(item.thumbnail)
+                    : getVideoPosterUrl(mediaUrl);
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setLightbox(src)}
+                    onClick={() => setLightbox({ url: mediaUrl, isVideo, title: item.title || '' })}
                     className="group relative aspect-square overflow-hidden rounded-2xl bg-slate-800 ring-1 ring-white/10"
                   >
-                    {src ? (
+                    {isVideo ? (
+                      poster ? (
+                        <img
+                          src={poster}
+                          alt={item.title || ''}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <video
+                          src={mediaUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="h-full w-full object-cover"
+                        />
+                      )
+                    ) : mediaUrl ? (
                       <img
-                        src={getFullUrl(src)}
+                        src={mediaUrl}
                         alt={item.title || ''}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-slate-500">—</div>
+                    )}
+                    {isVideo && (
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/30">
+                          ▶
+                        </span>
+                      </span>
                     )}
                     {isVideo && (
                       <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white">
@@ -451,7 +478,28 @@ function PublicCvPage() {
           onClick={() => setLightbox(null)}
           aria-label="Mbyll"
         >
-          <img src={getFullUrl(lightbox)} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
+          <div
+            className="max-h-full max-w-full"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            {lightbox.isVideo ? (
+              <video
+                src={getFullUrl(lightbox.url)}
+                controls
+                autoPlay
+                playsInline
+                className="max-h-[85vh] max-w-[92vw] rounded-lg bg-black"
+              />
+            ) : (
+              <img
+                src={getFullUrl(lightbox.url)}
+                alt={lightbox.title || ''}
+                className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
+              />
+            )}
+          </div>
         </button>
       )}
     </div>
