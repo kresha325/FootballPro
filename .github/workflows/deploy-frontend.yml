@@ -52,7 +52,9 @@ jobs:
         run: |
           test -f dist/404.html
           grep -q 'id="root"' dist/404.html
-          echo "SPA 404 fallback OK"
+          test -f dist/feed/index.html
+          grep -q 'id="root"' dist/feed/index.html
+          echo "SPA fallback OK (404.html + feed/index.html)"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
