@@ -102,6 +102,9 @@ const defaultForm = () => ({
   contactJson: '{}',
   industry: '',
   founded: '',
+  stadium: '',
+  capacity: '',
+  league: '',
   companySize: '',
   revenue: '',
   employees: '',
@@ -171,7 +174,20 @@ export default function EditProfileScreen({ navigation }) {
           careerHistory: careerHistoryToString(p.careerHistory),
           contactJson: contactToString(p.contact),
           industry: stats.industry != null ? String(stats.industry) : '',
-          founded: stats.founded != null ? String(stats.founded) : '',
+          founded:
+            p.founded != null
+              ? String(p.founded)
+              : stats.founded != null
+                ? String(stats.founded)
+                : '',
+          stadium: p.stadium != null ? String(p.stadium) : stats.stadium != null ? String(stats.stadium) : '',
+          capacity:
+            p.capacity != null
+              ? String(p.capacity)
+              : stats.capacity != null
+                ? String(stats.capacity)
+                : '',
+          league: p.league != null ? String(p.league) : stats.league != null ? String(stats.league) : '',
           companySize: stats.companySize != null ? String(stats.companySize) : '',
           revenue: stats.revenue != null ? String(stats.revenue) : '',
           employees: stats.employees != null ? String(stats.employees) : '',
@@ -316,7 +332,16 @@ export default function EditProfileScreen({ navigation }) {
         add('country', trim(form.country));
         add('bio', trim(form.bio));
         add('careerHistory', trim(form.careerHistory));
-        payload.stats = { founded: trim(form.founded) };
+        add('founded', trim(form.founded));
+        add('stadium', trim(form.stadium));
+        add('capacity', trim(form.capacity));
+        add('league', trim(form.league));
+        payload.stats = {
+          founded: trim(form.founded),
+          stadium: trim(form.stadium),
+          capacity: trim(form.capacity),
+          league: trim(form.league),
+        };
         try {
           payload.contact = JSON.parse(form.contactJson || '{}');
         } catch {
@@ -659,6 +684,12 @@ export default function EditProfileScreen({ navigation }) {
           {input('club')}
           {labelFor('Viti i themelimit')}
           {input('founded', { keyboardType: 'number-pad', placeholder: 'p.sh. 2017' })}
+          {labelFor('Stadium')}
+          {input('stadium', { placeholder: 'Emri i stadiumit' })}
+          {labelFor('Capacity')}
+          {input('capacity', { keyboardType: 'number-pad', placeholder: 'p.sh. 5000' })}
+          {labelFor('League')}
+          {input('league', { placeholder: 'p.sh. Liga e Parë' })}
           {labelFor('City')}
           {input('city')}
           {labelFor('Country')}

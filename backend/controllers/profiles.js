@@ -395,6 +395,22 @@ exports.getProfile = async (req, res) => {
       response.ageGroup = null;
     }
 
+    // Ensure Club Information UI can read from stats.* even when columns are the source of truth
+    if (response.founded != null || response.stadium || response.capacity != null || response.league) {
+      const statsObj =
+        response.stats && typeof response.stats === 'object' && !Array.isArray(response.stats)
+          ? { ...response.stats }
+          : {};
+      if (response.founded != null && statsObj.founded == null) statsObj.founded = response.founded;
+      if (response.stadium && !statsObj.stadium) statsObj.stadium = response.stadium;
+      if (response.capacity != null && statsObj.capacity == null) statsObj.capacity = response.capacity;
+      if (response.league && !statsObj.league) statsObj.league = response.league;
+      response.stats = statsObj;
+      if (response.founded != null && !response.foundingYear) {
+        response.foundingYear = response.founded;
+      }
+    }
+
     // Standardize profilePhoto path for avatar
     if (response.profilePhoto) {
       response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);
@@ -467,6 +483,10 @@ exports.updateProfile = async (req, res) => {
       'coachCategory',
       'matches',
       'achievements',
+      'founded',
+      'stadium',
+      'capacity',
+      'league',
     ];
     let updateData = {};
     for (const key in req.body) {
@@ -476,6 +496,21 @@ exports.updateProfile = async (req, res) => {
           if (!Number.isNaN(parsed) && parsed > 0) {
             updateData.clubId = parsed;
           }
+          continue;
+        }
+        if (key === 'founded' || key === 'capacity') {
+          const raw = String(req.body[key] ?? '').trim();
+          if (!raw) {
+            updateData[key] = null;
+          } else {
+            const n = parseInt(raw.replace(/[^\d]/g, ''), 10);
+            updateData[key] = Number.isFinite(n) ? n : null;
+          }
+          continue;
+        }
+        if (key === 'stadium' || key === 'league') {
+          const raw = String(req.body[key] ?? '').trim();
+          updateData[key] = raw || null;
           continue;
         }
         // Parse JSON fields if needed
@@ -506,6 +541,44 @@ exports.updateProfile = async (req, res) => {
           }
         }
       }
+    }
+
+    // Prepare club info ↔ stats sync (final merge with existing stats happens after profile load)
+    if (updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)) {
+      if (updateData.founded === undefined && updateData.stats.founded != null) {
+        const n = parseInt(String(updateData.stats.founded).replace(/[^\d]/g, ''), 10);
+        if (Number.isFinite(n)) updateData.founded = n;
+      }
+      if (updateData.stadium === undefined && updateData.stats.stadium != null) {
+        updateData.stadium = String(updateData.stats.stadium).trim() || null;
+      }
+      if (updateData.capacity === undefined && updateData.stats.capacity != null) {
+        const n = parseInt(String(updateData.stats.capacity).replace(/[^\d]/g, ''), 10);
+        if (Number.isFinite(n)) updateData.capacity = n;
+      }
+      if (updateData.league === undefined && updateData.stats.league != null) {
+        updateData.league = String(updateData.stats.league).trim() || null;
+      }
+    }
+    if (
+      updateData.founded !== undefined ||
+      updateData.stadium !== undefined ||
+      updateData.capacity !== undefined ||
+      updateData.league !== undefined
+    ) {
+      const patch = {
+        ...(updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)
+          ? updateData.stats
+          : {}),
+      };
+      if (updateData.founded !== undefined) patch.founded = updateData.founded;
+      if (updateData.stadium !== undefined) patch.stadium = updateData.stadium;
+      if (updateData.capacity !== undefined) patch.capacity = updateData.capacity;
+      if (updateData.league !== undefined) patch.league = updateData.league;
+      updateData.stats = patch;
+      updateData._mergeStats = true;
+    } else if (updateData.stats) {
+      updateData._mergeStats = true;
     }
 
     // Allow profilePhoto update from body (URL or string)
@@ -603,6 +676,19 @@ exports.updateProfile = async (req, res) => {
     let profile = await Profile.findOne({ where: { userId: req.user.id } });
     const previousProfilePhoto = profile?.profilePhoto || null;
     const previousCoverPhoto = profile?.coverPhoto || null;
+
+    if (updateData._mergeStats) {
+      const prevStats =
+        profile?.stats && typeof profile.stats === 'object' && !Array.isArray(profile.stats)
+          ? profile.stats
+          : {};
+      const incoming =
+        updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)
+          ? updateData.stats
+          : {};
+      updateData.stats = { ...prevStats, ...incoming };
+      delete updateData._mergeStats;
+    }
 
     if (!profile) {
       profile = await Profile.create({

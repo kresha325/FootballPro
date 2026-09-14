@@ -21,6 +21,11 @@ const Profile = sequelize.define('Profile', {
   club: DataTypes.STRING,
   clubId: DataTypes.INTEGER,
   clubLogo: DataTypes.STRING,
+  /** Club org info (also mirrored into stats for older UI). */
+  founded: DataTypes.INTEGER,
+  stadium: DataTypes.STRING,
+  capacity: DataTypes.INTEGER,
+  league: DataTypes.STRING,
   position: DataTypes.STRING,
   stats: DataTypes.JSON,
   careerHistory: DataTypes.JSON,

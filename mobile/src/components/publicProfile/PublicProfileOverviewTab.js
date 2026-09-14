@@ -413,22 +413,28 @@ export default function PublicProfileOverviewTab({
                 {profile.club}
               </Text>
             ) : null}
-            {stats.founded ? (
+            {stats.founded || profile.founded ? (
               <Text style={[styles.line, { color: theme.muted }]}>
                 <Text style={{ fontWeight: '700', color: theme.text }}>Founded: </Text>
-                {stats.founded}
+                {profile.founded || stats.founded}
               </Text>
             ) : null}
-            {stats.stadium ? (
+            {stats.stadium || profile.stadium ? (
               <Text style={[styles.line, { color: theme.muted }]}>
                 <Text style={{ fontWeight: '700', color: theme.text }}>Stadium: </Text>
-                {stats.stadium}
+                {profile.stadium || stats.stadium}
               </Text>
             ) : null}
-            {stats.league ? (
+            {stats.capacity != null || profile.capacity != null ? (
+              <Text style={[styles.line, { color: theme.muted }]}>
+                <Text style={{ fontWeight: '700', color: theme.text }}>Capacity: </Text>
+                {String(profile.capacity ?? stats.capacity)}
+              </Text>
+            ) : null}
+            {stats.league || profile.league ? (
               <Text style={[styles.line, { color: theme.muted }]}>
                 <Text style={{ fontWeight: '700', color: theme.text }}>League: </Text>
-                {stats.league}
+                {profile.league || stats.league}
               </Text>
             ) : null}
           </Section>

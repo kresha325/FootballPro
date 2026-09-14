@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
+import { getFullUrl } from '../../../utils/mediaUrl';
 
 const EditClubProfile = ({ user, onSave, loading, errors }) => {
+  const stats = user.stats && typeof user.stats === 'object' ? user.stats : {};
   const [form, setForm] = useState({
     club: user.club || '',
     city: user.city || '',
     country: user.country || '',
     bio: user.bio || '',
-    founded: user.stats?.founded || user.foundingYear || '',
+    founded: user.founded ?? stats.founded ?? user.foundingYear ?? '',
+    stadium: user.stadium ?? stats.stadium ?? '',
+    capacity: user.capacity ?? stats.capacity ?? '',
+    league: user.league ?? stats.league ?? '',
     careerHistory: user.careerHistory || '',
     contact: user.contact || {},
     profilePhoto: user.profilePhoto || '',
@@ -17,7 +22,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   };
 
   const [profilePhoto, setProfilePhoto] = useState(null);
-  const [preview, setPreview] = useState(user.profilePhoto || '');
+  const [preview, setPreview] = useState(user.profilePhoto ? getFullUrl(user.profilePhoto) : '');
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -30,13 +35,24 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-    const { founded, ...rest } = form;
+    const { founded, stadium, capacity, league, contact, profilePhoto: _ph, ...rest } = form;
     Object.entries(rest).forEach(([key, value]) => {
-      formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      formData.append(key, value == null ? '' : String(value));
     });
+    formData.append('founded', founded === '' || founded == null ? '' : String(founded));
+    formData.append('stadium', stadium || '');
+    formData.append('capacity', capacity === '' || capacity == null ? '' : String(capacity));
+    formData.append('league', league || '');
+    formData.append(
+      'contact',
+      typeof contact === 'string' ? contact : JSON.stringify(contact || {})
+    );
     const nextStats = {
-      ...(user.stats && typeof user.stats === 'object' ? user.stats : {}),
+      ...(stats || {}),
       founded: founded || undefined,
+      stadium: stadium || undefined,
+      capacity: capacity !== '' && capacity != null ? Number(capacity) || capacity : undefined,
+      league: league || undefined,
     };
     formData.append('stats', JSON.stringify(nextStats));
     if (profilePhoto) {
@@ -74,6 +90,38 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
           />
         </div>
         <div>
+          <label className="block text-sm font-medium mb-1">Stadium</label>
+          <input
+            name="stadium"
+            value={form.stadium}
+            onChange={handleChange}
+            placeholder="Emri i stadiumit"
+            className="w-full p-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Capacity</label>
+          <input
+            name="capacity"
+            value={form.capacity}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            placeholder="p.sh. 5000"
+            className="w-full p-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">League</label>
+          <input
+            name="league"
+            value={form.league}
+            onChange={handleChange}
+            placeholder="p.sh. Liga e Parë"
+            className="w-full p-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium mb-1">City</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
@@ -92,7 +140,13 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">Contact (JSON)</label>
-        <textarea name="contact" value={JSON.stringify(form.contact)} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
+        <textarea
+          name="contact"
+          value={typeof form.contact === 'string' ? form.contact : JSON.stringify(form.contact || {})}
+          onChange={handleChange}
+          rows={2}
+          className="w-full p-2 border border-gray-300 rounded"
+        />
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">

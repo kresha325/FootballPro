@@ -260,19 +260,30 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Founded</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{clubData.founded || 'N/A'}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+              {profile.founded || clubData.founded || profile.foundingYear || 'N/A'}
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Stadium</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{clubData.stadium || 'N/A'}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+              {profile.stadium || clubData.stadium || 'N/A'}
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Capacity</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{clubData.capacity?.toLocaleString() || 'N/A'}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+              {(profile.capacity ?? clubData.capacity) != null &&
+              String(profile.capacity ?? clubData.capacity) !== ''
+                ? Number(profile.capacity ?? clubData.capacity).toLocaleString()
+                : 'N/A'}
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-600 dark:text-gray-400">League</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{clubData.league || 'N/A'}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+              {profile.league || clubData.league || 'N/A'}
+            </p>
           </div>
         </div>
       </div>
