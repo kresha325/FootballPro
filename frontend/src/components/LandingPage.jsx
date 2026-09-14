@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
+import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC, APP_BRAND_BANNER } from '../config/branding';
 
 // Grupe rolesh për çmimet — individë (lojtarë/trajnerë/skautë/etj.) kanë
 // pricing të ndryshëm nga organizatat (klube/federata/media/biznese).
@@ -86,16 +86,25 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-20 md:py-28 text-center">
-          <span className="inline-block bg-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-6">
-            Platforma #1 për talente futbolli
-          </span>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+      {/* HERO — full-bleed brand banner */}
+      <section className="relative overflow-hidden bg-black text-white">
+        <div className="absolute inset-0">
+          <img
+            src={APP_BRAND_BANNER}
+            alt="X TALENTI — Talent has a future"
+            className="h-full w-full object-cover object-center"
+            decoding="async"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 md:px-6 py-24 md:py-36 text-center">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-amber-400">
+            Talent has a future
+          </p>
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight drop-shadow-lg">
             Zbulo. Zhvillo. <span className="text-amber-400">Shko Më Tej.</span>
           </h1>
-          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10">
+          <p className="text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-10 drop-shadow">
             {APP_BRAND_NAME} lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme —
             për të ndarë talentin, për t'u zbuluar dhe për të ndërtuar karrierën në futboll.
           </p>

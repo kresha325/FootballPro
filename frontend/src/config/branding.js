@@ -10,3 +10,9 @@ export const APP_LOGO_SRC = '/footballpro-icon.png';
 
 /** Brand word without the leading X (shown next to the logo). */
 export const APP_BRAND_WORDMARK = APP_BRAND_NAME.replace(/^x\s*/i, '').trim() || 'TALENTI';
+
+/** Default Open Graph / social share image (1200x630). */
+export const APP_OG_IMAGE = '/og-share.jpg';
+
+/** Full brand banner for marketing surfaces. */
+export const APP_BRAND_BANNER = '/xtalenti-brand-banner.png';

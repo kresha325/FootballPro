@@ -362,12 +362,12 @@ app.get('/share', (req, res) => {
     ua
   );
   const siteUrl = `${frontendBase}/`;
-  const image = `${frontendBase}/og-share.png`;
+  const image = `${frontendBase}/og-share.jpg`;
   if (!isBot) return res.redirect(302, siteUrl);
   return sendOgHtml(res, {
     title: 'X TALENTI',
     description:
-      'Rrjet social për futboll. Lidh talentet me klubet — profil, video, turne dhe CV dixhitale.',
+      'TALENT HAS A FUTURE — rrjet social për futboll. Lidh talentet me klubet — profil, video, turne dhe CV dixhitale.',
     url: siteUrl,
     image,
     type: 'website',
@@ -414,7 +414,7 @@ app.get('/share/cv/:id', async (req, res) => {
     const image =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
-      `${frontendBase}/og-share.png`;
+      `${frontendBase}/og-share.jpg`;
 
     const ua = String(req.get('user-agent') || '');
     const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
