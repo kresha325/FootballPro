@@ -32,6 +32,11 @@ async function openShareUrl(url, failLabel) {
   }
 }
 
+export async function previewProfileCv(profile) {
+  const url = getProfileCvShareUrl(profile.id || profile.userId);
+  await openShareUrl(url, 'CV');
+}
+
 export async function shareProfileCvNative(profile) {
   const url = getProfileCvShareUrl(profile.id || profile.userId);
   const text = getProfileCvShareText(profile);
@@ -65,13 +70,22 @@ export async function shareProfileCvTwitter(profile) {
   );
 }
 
-export function promptShareProfileCv(profile) {
-  if (!profile?.id && !profile?.userId) return;
+function showSharePlatforms(profile) {
   Alert.alert('Ndaj CV', 'Zgjidh platformën', [
     { text: 'WhatsApp', onPress: () => shareProfileCvWhatsApp(profile) },
     { text: 'Facebook', onPress: () => shareProfileCvFacebook(profile) },
     { text: 'X (Twitter)', onPress: () => shareProfileCvTwitter(profile) },
     { text: 'Më shumë…', onPress: () => shareProfileCvNative(profile) },
+    { text: 'Anulo', style: 'cancel' },
+  ]);
+}
+
+/** Owner flow: preview CV first, then optionally share. */
+export function promptShareProfileCv(profile) {
+  if (!profile?.id && !profile?.userId) return;
+  Alert.alert('CV dixhitale', 'Shiko CV-në para se ta ndash.', [
+    { text: 'Shiko CV', onPress: () => previewProfileCv(profile) },
+    { text: 'Ndaj…', onPress: () => showSharePlatforms(profile) },
     { text: 'Anulo', style: 'cancel' },
   ]);
 }

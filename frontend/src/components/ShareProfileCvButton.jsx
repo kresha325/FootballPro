@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   FacebookIcon,
   FacebookShareButton,
@@ -10,7 +11,7 @@ import {
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
 
 /**
- * Share digital CV link to social platforms / clipboard.
+ * Owner-only: preview digital CV, then share to social / clipboard.
  */
 export default function ShareProfileCvButton({ profile, className = '' }) {
   const [open, setOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
 
   const url = getProfileCvShareUrl(profile.id);
   const text = getProfileCvShareText(profile);
+  const previewPath = `/cv/${profile.id}`;
 
   const copy = async () => {
     try {
@@ -37,11 +39,23 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
       >
-        Ndaj CV
+        CV dixhitale
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-800">
-          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Ndaj profilin (overview + stats)</p>
+        <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-800">
+          <p className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-200">
+            Shiko CV-në para se ta ndash
+          </p>
+          <Link
+            to={previewPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200"
+            onClick={() => setOpen(false)}
+          >
+            Shiko CV
+          </Link>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Pastaj ndaje:</p>
           <div className="flex items-center gap-2">
             <FacebookShareButton url={url} quote={text}>
               <FacebookIcon size={36} round />

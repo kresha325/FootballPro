@@ -13,6 +13,7 @@ import { getFullUrl } from '../utils/mediaUrl';
 import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import { APP_BRAND_NAME, APP_LOGO_SRC } from '../config/branding';
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
+import { useAuth } from '../contexts/AuthContext';
 
 const ROLE_LABELS = {
   athlete: 'Futbollist',
@@ -45,6 +46,7 @@ function StatCard({ label, value }) {
 
 function PublicCvPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,6 +83,10 @@ function PublicCvPage() {
 
   const shareUrl = profile ? getProfileCvShareUrl(profile.id || id) : '';
   const shareText = profile ? getProfileCvShareText(profile) : '';
+  const isOwner =
+    user != null &&
+    profile != null &&
+    Number(user.id) === Number(profile.id || profile.userId || id);
 
   useEffect(() => {
     if (!profile) return undefined;
@@ -304,43 +310,58 @@ function PublicCvPage() {
           </div>
         </div>
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ndaj CV-në</h2>
-          <p className="mt-1 text-sm text-slate-600">Facebook, X, WhatsApp ose kopjo linkun.</p>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <FacebookShareButton url={shareUrl} quote={shareText}>
-              <FacebookIcon size={40} round />
-            </FacebookShareButton>
-            <TwitterShareButton url={shareUrl} title={shareText}>
-              <TwitterIcon size={40} round />
-            </TwitterShareButton>
-            <WhatsappShareButton url={shareUrl} title={shareText} separator=" ">
-              <WhatsappIcon size={40} round />
-            </WhatsappShareButton>
-            <button
-              type="button"
-              onClick={copyLink}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              {copied ? 'U kopjua' : 'Kopjo linkun'}
-            </button>
-          </div>
-          <p className="mt-3 break-all text-xs text-slate-400">{shareUrl}</p>
-        </section>
+        {isOwner && (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ndaj CV-në</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Kjo është pamja që shohin të tjerët. Ndaje në Facebook, X, WhatsApp ose kopjo linkun.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <FacebookShareButton url={shareUrl} quote={shareText}>
+                <FacebookIcon size={40} round />
+              </FacebookShareButton>
+              <TwitterShareButton url={shareUrl} title={shareText}>
+                <TwitterIcon size={40} round />
+              </TwitterShareButton>
+              <WhatsappShareButton url={shareUrl} title={shareText} separator=" ">
+                <WhatsappIcon size={40} round />
+              </WhatsappShareButton>
+              <button
+                type="button"
+                onClick={copyLink}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {copied ? 'U kopjua' : 'Kopjo linkun'}
+              </button>
+            </div>
+            <p className="mt-3 break-all text-xs text-slate-400">{shareUrl}</p>
+          </section>
+        )}
 
         <div className="mt-6 flex flex-wrap justify-center gap-3 pb-10">
-          <Link
-            to={`/profile/${profile.id}`}
-            className="rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
-          >
-            Hap profilin e plotë
-          </Link>
-          <Link
-            to="/register"
-            className="rounded-full border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
-          >
-            Bashkohu në {APP_BRAND_NAME}
-          </Link>
+          {isOwner ? (
+            <Link
+              to={`/profile/${profile.id}`}
+              className="rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+            >
+              Kthehu te profili
+            </Link>
+          ) : (
+            <>
+              <Link
+                to={`/profile/${profile.id}`}
+                className="rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+              >
+                Hap profilin e plotë
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-full border border-emerald-700 px-5 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+              >
+                Bashkohu në {APP_BRAND_NAME}
+              </Link>
+            </>
+          )}
         </div>
       </main>
     </div>

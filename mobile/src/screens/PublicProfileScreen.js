@@ -159,50 +159,49 @@ export default function PublicProfileScreen({ route, navigation }) {
     navigation.setOptions({
       title: ownProfileRoot && !profile ? 'Profili im' : displayName,
       headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
-      headerRight: profile
+      headerRight: profile && isSelf
         ? () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity
-                onPress={() => promptShareProfileCv(profile)}
-                style={{ paddingHorizontal: 10 }}
-                accessibilityLabel="Ndaj CV"
-              >
-                <Ionicons name="share-outline" size={22} color="#0f766e" />
-              </TouchableOpacity>
-              {!isSelf && userId ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert(displayName || 'Profili', undefined, [
-                      {
-                        text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
-                        style: iBlocked ? 'default' : 'destructive',
-                        onPress: async () => {
-                          try {
-                            if (iBlocked) {
-                              await unblockUserRequest(userId);
-                              setIBlocked(false);
-                            } else {
-                              await blockUserRequest(userId);
-                              setIBlocked(true);
-                              Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
-                            }
-                          } catch (err) {
-                            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
-                          }
-                        },
-                      },
-                      { text: 'Raporto', onPress: () => setReportOpen(true) },
-                      { text: 'Anulo', style: 'cancel' },
-                    ]);
-                  }}
-                  style={{ paddingHorizontal: 12 }}
-                >
-                  <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+            <TouchableOpacity
+              onPress={() => promptShareProfileCv(profile)}
+              style={{ paddingHorizontal: 12 }}
+              accessibilityLabel="CV dixhitale"
+            >
+              <Ionicons name="share-outline" size={22} color="#0f766e" />
+            </TouchableOpacity>
           )
-        : undefined,
+        : !isSelf && userId
+          ? () => (
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(displayName || 'Profili', undefined, [
+                    {
+                      text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
+                      style: iBlocked ? 'default' : 'destructive',
+                      onPress: async () => {
+                        try {
+                          if (iBlocked) {
+                            await unblockUserRequest(userId);
+                            setIBlocked(false);
+                          } else {
+                            await blockUserRequest(userId);
+                            setIBlocked(true);
+                            Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
+                          }
+                        } catch (err) {
+                          Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
+                        }
+                      },
+                    },
+                    { text: 'Raporto', onPress: () => setReportOpen(true) },
+                    { text: 'Anulo', style: 'cancel' },
+                  ]);
+                }}
+                style={{ paddingHorizontal: 12 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
+              </TouchableOpacity>
+            )
+          : undefined,
     });
   }, [
     navigation,
