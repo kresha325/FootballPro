@@ -208,6 +208,23 @@ app.use('/uploads', (req, res) => {
 // Serve favicon and frontend public icons so browser gets icon on all routes
 try {
   const frontendPublic = path.join(__dirname, '..', 'frontend', 'public');
+  const backendPublic = path.join(__dirname, 'public');
+  // Social OG image on API host — Facebook scrapes this more reliably than GitHub Pages
+  app.get('/og-share.jpg', (req, res) => {
+    const candidates = [
+      path.join(backendPublic, 'og-share.jpg'),
+      path.join(frontendPublic, 'og-share.jpg'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.sendFile(p);
+      }
+    }
+    return res.sendStatus(404);
+  });
   app.get('/favicon.ico', (req, res) => {
     const p = path.join(frontendPublic, 'footballpro-icon-192.png');
     if (fs.existsSync(p)) {
@@ -362,7 +379,8 @@ app.get('/share', (req, res) => {
     ua
   );
   const siteUrl = `${frontendBase}/`;
-  const image = `${frontendBase}/og-share.jpg`;
+  const apiPublic = 'https://footballpro.onrender.com';
+  const image = `${apiPublic}/og-share.jpg`;
   if (!isBot) return res.redirect(302, siteUrl);
   return sendOgHtml(res, {
     title: 'X TALENTI',
@@ -411,10 +429,11 @@ app.get('/share/cv/:id', async (req, res) => {
     const description = String(
       profile.bio || `${name}${role ? ` (${role})` : ''} — CV dixhitale në X TALENTI`
     ).slice(0, 200);
+    const apiPublic = 'https://footballpro.onrender.com';
     const image =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
-      `${frontendBase}/og-share.jpg`;
+      `${apiPublic}/og-share.jpg`;
 
     const ua = String(req.get('user-agent') || '');
     const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
