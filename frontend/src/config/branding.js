@@ -11,9 +11,8 @@ export const APP_LOGO_SRC = '/footballpro-icon.png';
 /** Brand word without the leading X (shown next to the logo). */
 export const APP_BRAND_WORDMARK = APP_BRAND_NAME.replace(/^x\s*/i, '').trim() || 'TALENTI';
 
-/** Absolute OG image — Cloudinary (facebookexternalhit already reaches this CDN). */
-export const APP_OG_IMAGE_ABS =
-  'https://res.cloudinary.com/da3t9gvne/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/branding/xtalenti-share-card.jpg';
+/** Absolute OG image — API host (Cloudinary rate-limits facebookexternalhit with 429). */
+export const APP_OG_IMAGE_ABS = 'https://footballpro.onrender.com/share-card.jpg';
 
 /** Default Open Graph / social share image path on this origin (1200x630). */
 export const APP_OG_IMAGE = '/share-card.jpg';

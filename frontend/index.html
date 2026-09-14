@@ -30,9 +30,9 @@
       content="Rrjet social për futboll. Lidh talentet me klubet — profil, video, turne dhe CV dixhitale."
     />
     <meta property="og:url" content="https://xtalenti.com/" />
-    <!-- Cloudinary — same CDN Facebook already fetches for profile/cover photos -->
-    <meta property="og:image" content="https://res.cloudinary.com/da3t9gvne/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/branding/xtalenti-share-card.jpg" />
-    <meta property="og:image:secure_url" content="https://res.cloudinary.com/da3t9gvne/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/branding/xtalenti-share-card.jpg" />
+    <!-- Self-hosted — Cloudinary returns HTTP 429 to facebookexternalhit -->
+    <meta property="og:image" content="https://footballpro.onrender.com/share-card.jpg" />
+    <meta property="og:image:secure_url" content="https://footballpro.onrender.com/share-card.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -40,14 +40,14 @@
     <meta property="og:locale" content="sq_AL" />
     <!-- Injected at build when VITE_FACEBOOK_APP_ID / FACEBOOK_APP_ID is set -->
     <!--fb:app_id-->
-    <link rel="image_src" href="https://res.cloudinary.com/da3t9gvne/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/branding/xtalenti-share-card.jpg" />
+    <link rel="image_src" href="https://footballpro.onrender.com/share-card.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="X TALENTI" />
     <meta
       name="twitter:description"
       content="Rrjet social për futboll. Lidh talentet me klubet — profil, video, turne dhe CV dixhitale."
     />
-    <meta name="twitter:image" content="https://res.cloudinary.com/da3t9gvne/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/branding/xtalenti-share-card.jpg" />
+    <meta name="twitter:image" content="https://footballpro.onrender.com/share-card.jpg" />
     <script>
       // GitHub Pages SPA fallback decoder: rikthen URL nga formati /?/feed
       // (i krijuar nga 404.html) në formatin normal /feed, para se
