@@ -9,6 +9,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
     lastName: user.lastName || '',
     bio: user.bio || '',
     club: user.club || '',
+    clubLogo: user.clubLogo || '',
     coachAffiliation: user.coachAffiliation || '',
     coachCategory: user.coachCategory || '',
     city: user.city || '',
@@ -25,7 +26,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
   const [clubSuggestions, setClubSuggestions] = useState([]);
   const [showClubSuggestions, setShowClubSuggestions] = useState(false);
   const [clubQuery, setClubQuery] = useState(user.club || '');
-  const [selectedClubId, setSelectedClubId] = useState(null);
+  const [selectedClubId, setSelectedClubId] = useState(user.clubId || null);
 
   useEffect(() => {
     setPreview(user.profilePhoto ? getFullUrl(user.profilePhoto) : '');
@@ -153,7 +154,11 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
                       key={club.id}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                       onMouseDown={() => {
-                        setForm((prev) => ({ ...prev, club: label }));
+                        setForm((prev) => ({
+                          ...prev,
+                          club: label,
+                          ...(club.profilePhoto ? { clubLogo: club.profilePhoto } : {}),
+                        }));
                         setClubQuery(label);
                         setSelectedClubId(club.userId || club.id);
                         setShowClubSuggestions(false);

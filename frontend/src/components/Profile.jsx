@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ProfileTournaments from './ProfileTournaments';
 import UserAvatarLink from './UserAvatarLink';
 import { getJonCoinBalance } from '../services/joncoin';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
 import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
 import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
@@ -690,20 +690,41 @@ const Profile = () => {
                   </span>
                 )}
                 {profile.club && (
-                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
-                    {profile.clubLogo ? (
-                      <img
-                        src={getFullUrl(profile.clubLogo)}
-                        alt={profile.club}
-                        className="w-6 h-6 rounded-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <ClubBadge clubName={profile.club} size="sm" />
-                    )}
-                    {profile.club}
-                  </span>
+                  profile.clubId ? (
+                    <Link
+                      to={`/profile/${profile.clubId}`}
+                      className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-600 transition cursor-pointer"
+                      title={`Shiko profilin e ${profile.club}`}
+                    >
+                      {profile.clubLogo ? (
+                        <img
+                          src={getFullUrl(profile.clubLogo)}
+                          alt={profile.club}
+                          className="w-6 h-6 rounded-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <ClubBadge clubName={profile.club} size="sm" />
+                      )}
+                      {profile.club}
+                    </Link>
+                  ) : (
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                      {profile.clubLogo ? (
+                        <img
+                          src={getFullUrl(profile.clubLogo)}
+                          alt={profile.club}
+                          className="w-6 h-6 rounded-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <ClubBadge clubName={profile.club} size="sm" />
+                      )}
+                      {profile.club}
+                    </span>
+                  )
                 )}
                 {profile.stats?.jerseyNumber && (
                   <span className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm font-medium">
@@ -1093,8 +1114,19 @@ const Profile = () => {
                             loading="lazy"
                             decoding="async"
                           />
-                        ) : null}
-                        <span>{profile.club}</span>
+                        ) : (
+                          <ClubBadge clubName={profile.club} size="sm" />
+                        )}
+                        {profile.clubId ? (
+                          <Link
+                            to={`/profile/${profile.clubId}`}
+                            className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                          >
+                            {profile.club}
+                          </Link>
+                        ) : (
+                          <span>{profile.club}</span>
+                        )}
                       </div>
                     )}
                     {profile.stats?.preferredFoot && (

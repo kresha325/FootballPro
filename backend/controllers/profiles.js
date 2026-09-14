@@ -100,6 +100,58 @@ const resolveClubUser = async ({ clubId, clubName }) => {
 
   return clubUser;
 };
+
+/** Attach clubId + live club logo (club profile photo) for display / deep links. */
+async function enrichClubDisplayFields(req, response) {
+  if (!response || typeof response !== 'object') return response;
+
+  let clubId = response.clubId != null && response.clubId !== ''
+    ? parseInt(response.clubId, 10)
+    : null;
+  if (!Number.isFinite(clubId) || clubId <= 0) clubId = null;
+
+  if (!clubId && response.club) {
+    try {
+      const clubUser = await resolveClubUser({ clubId: null, clubName: response.club });
+      if (clubUser?.id) {
+        clubId = clubUser.id;
+        response.clubId = clubUser.id;
+      }
+    } catch (_e) {
+      /* ignore resolve errors */
+    }
+  }
+
+  if (clubId) {
+    response.clubId = clubId;
+    try {
+      const clubProfile = await Profile.findOne({
+        where: { userId: clubId },
+        attributes: ['profilePhoto', 'club', 'clubLogo'],
+      });
+      if (clubProfile) {
+        const logo = clubProfile.profilePhoto || clubProfile.clubLogo || response.clubLogo;
+        if (logo) {
+          response.clubLogo = toAbsoluteUploadsUrl(req, logo);
+        }
+        if (!response.club && clubProfile.club) {
+          response.club = clubProfile.club;
+        }
+      } else if (response.clubLogo) {
+        response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
+      }
+    } catch (_e) {
+      if (response.clubLogo) {
+        response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
+      }
+    }
+  } else if (response.clubLogo) {
+    response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
+  }
+
+  return response;
+}
+
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
@@ -325,9 +377,7 @@ exports.getProfile = async (req, res) => {
     if (response.coverPhoto) {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
-    if (response.clubLogo) {
-      response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
-    }
+    await enrichClubDisplayFields(req, response);
     if (Array.isArray(response.liveVideos) && response.liveVideos.length) {
       response.liveVideos = response.liveVideos.map((item) => {
         if (!item || typeof item !== 'object') return item;
@@ -627,7 +677,15 @@ exports.updateProfile = async (req, res) => {
           const clubUser = await resolveClubUser({ clubId, clubName });
 
           if (clubUser) {
-            await profile.update({ clubId: clubUser.id });
+            const clubProfile = await Profile.findOne({ where: { userId: clubUser.id } });
+            const clubPatch = { clubId: clubUser.id };
+            if (clubProfile?.profilePhoto) {
+              clubPatch.clubLogo = clubProfile.profilePhoto;
+            }
+            if (clubProfile?.club && !updateData.club && !req.body.club) {
+              clubPatch.club = clubProfile.club;
+            }
+            await profile.update(clubPatch);
 
             const existing = await ClubStaff.findOne({
               where: {
@@ -705,6 +763,7 @@ exports.updateProfile = async (req, res) => {
     if (response.coverPhoto) {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
+    await enrichClubDisplayFields(req, response);
     res.json(response);
   } catch (err) {
     console.error('Profile update error:', err);

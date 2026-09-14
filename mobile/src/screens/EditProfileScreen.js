@@ -531,7 +531,12 @@ export default function EditProfileScreen({ navigation }) {
                     key={String(id)}
                     style={styles.suggestRow}
                     onPress={() => {
-                      setForm((p) => ({ ...p, club: label || p.club, selectedClubId: id }));
+                      setForm((p) => ({
+                        ...p,
+                        club: label || p.club,
+                        selectedClubId: id,
+                        ...(club.profilePhoto ? { clubLogo: club.profilePhoto } : {}),
+                      }));
                       setClubSuggestions([]);
                     }}
                   >
@@ -586,7 +591,12 @@ export default function EditProfileScreen({ navigation }) {
                     key={String(id)}
                     style={styles.suggestRow}
                     onPress={() => {
-                      setForm((p) => ({ ...p, club: label || p.club, selectedClubId: id }));
+                      setForm((p) => ({
+                        ...p,
+                        club: label || p.club,
+                        selectedClubId: id,
+                        ...(club.profilePhoto ? { clubLogo: club.profilePhoto } : {}),
+                      }));
                       setClubSuggestions([]);
                     }}
                   >

@@ -556,15 +556,29 @@ export default function PublicProfileScreen({ route, navigation }) {
   const bioSnippet =
     profile.bio && profile.bio.length > 120 ? `${profile.bio.slice(0, 120)}…` : profile.bio;
 
-  const Chip = ({ icon, children }) =>
-    children ? (
+  const Chip = ({ icon, imageUri, onPress, children }) => {
+    if (!children) return null;
+    const body = (
       <View style={[styles.chip, { backgroundColor: theme.chipBg }]}>
-        {icon ? <Ionicons name={icon} size={14} color={theme.chipText} style={{ marginRight: 4 }} /> : null}
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.chipLogo} />
+        ) : icon ? (
+          <Ionicons name={icon} size={14} color={theme.chipText} style={{ marginRight: 4 }} />
+        ) : null}
         <Text style={[styles.chipText, { color: theme.chipText }]} numberOfLines={2}>
           {children}
         </Text>
       </View>
-    ) : null;
+    );
+    if (onPress) {
+      return (
+        <TouchableOpacity onPress={onPress} activeOpacity={0.75}>
+          {body}
+        </TouchableOpacity>
+      );
+    }
+    return body;
+  };
 
   const closeHeaderPreview = () => setHeaderImagePreview(null);
 
@@ -660,7 +674,21 @@ export default function PublicProfileScreen({ route, navigation }) {
                 </Chip>
               ) : null}
               {profile.position ? <Chip icon="football-outline">{profile.position}</Chip> : null}
-              {profile.club ? <Chip icon="business-outline">{profile.club}</Chip> : null}
+              {profile.club ? (
+                <Chip
+                  icon="business-outline"
+                  imageUri={
+                    profile.clubLogo && typeof profile.clubLogo === 'string' ? profile.clubLogo : null
+                  }
+                  onPress={
+                    profile.clubId
+                      ? () => navigation.push('PublicProfile', { userId: profile.clubId })
+                      : undefined
+                  }
+                >
+                  {profile.club}
+                </Chip>
+              ) : null}
               {stats.jerseyNumber != null && String(stats.jerseyNumber) !== '' ? (
                 <Chip icon="shirt-outline">#{stats.jerseyNumber}</Chip>
               ) : null}
@@ -832,6 +860,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   isOwner={isSelf}
                   onAddTransfer={onAddTransfer}
                   onDeleteTransfer={onDeleteTransfer}
+                  onPressClub={(uid) => navigation.push('PublicProfile', { userId: uid })}
                 />
               ) : null}
               {profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
@@ -1075,6 +1104,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     maxWidth: '100%',
+  },
+  chipLogo: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginRight: 6,
   },
   chipText: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
   statsRow: {

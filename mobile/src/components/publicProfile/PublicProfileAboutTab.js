@@ -19,6 +19,7 @@ export default function PublicProfileAboutTab({
   isOwner = false,
   onAddTransfer,
   onDeleteTransfer,
+  onPressClub,
 }) {
   const stats = profile?.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const role = String(profile?.role || '').toLowerCase();
@@ -97,10 +98,22 @@ export default function PublicProfileAboutTab({
             </View>
           ) : null}
           {profile?.club ? (
-            <View style={styles.gridRow}>
+            <TouchableOpacity
+              style={styles.gridRow}
+              disabled={!profile.clubId || !onPressClub}
+              onPress={() => profile.clubId && onPressClub?.(profile.clubId)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.emoji}>🏆</Text>
-              <Text style={[styles.gridText, { color: theme.text }]}>{profile.club}</Text>
-            </View>
+              <Text
+                style={[
+                  styles.gridText,
+                  { color: profile.clubId ? '#2563eb' : theme.text },
+                ]}
+              >
+                {profile.club}
+              </Text>
+            </TouchableOpacity>
           ) : null}
           {stats.preferredFoot ? (
             <View style={styles.gridRow}>

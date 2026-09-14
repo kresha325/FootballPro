@@ -261,10 +261,22 @@ export default function PublicProfileOverviewTab({
                 </Text>
               ) : null}
               {profile.club ? (
-                <Text style={[styles.line, { color: theme.muted }]}>
-                  <Text style={{ fontWeight: '700', color: theme.text }}>Club: </Text>
-                  {profile.club}
-                </Text>
+                <TouchableOpacity
+                  disabled={!profile.clubId || !onPressUser}
+                  onPress={() => profile.clubId && onPressUser?.(profile.clubId)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.line,
+                      { color: theme.muted },
+                      profile.clubId ? { textDecorationLine: 'underline' } : null,
+                    ]}
+                  >
+                    <Text style={{ fontWeight: '700', color: theme.text }}>Club: </Text>
+                    {profile.club}
+                  </Text>
+                </TouchableOpacity>
               ) : null}
               {profile.age != null ? (
                 <Text style={[styles.line, { color: theme.muted }]}>
@@ -346,8 +358,26 @@ export default function PublicProfileOverviewTab({
         </>
       ) : null}
 
-      {(role === 'coach' || role === 'trajner') && (profile.coachCategory || profile.coachAffiliation) ? (
+      {(role === 'coach' || role === 'trajner') && (profile.coachCategory || profile.coachAffiliation || profile.club) ? (
         <Section title="Coach" theme={theme}>
+          {profile.club ? (
+            <TouchableOpacity
+              disabled={!profile.clubId || !onPressUser}
+              onPress={() => profile.clubId && onPressUser?.(profile.clubId)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.line,
+                  { color: theme.muted },
+                  profile.clubId ? { textDecorationLine: 'underline' } : null,
+                ]}
+              >
+                <Text style={{ fontWeight: '700', color: theme.text }}>Club: </Text>
+                {profile.club}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {profile.coachCategory ? (
             <Text style={[styles.line, { color: theme.muted }]}>
               <Text style={{ fontWeight: '700', color: theme.text }}>Category: </Text>
@@ -367,12 +397,16 @@ export default function PublicProfileOverviewTab({
         <Section title="Club assignments" theme={theme}>
           {staffAssignments.map((a) => {
             const clubUser = a.club || a.Club;
+            const clubUid = clubUser?.id || clubUser?.userId || a.clubId;
             const clubName =
               clubUser?.Profile?.club || `${clubUser?.firstName || ''} ${clubUser?.lastName || ''}`.trim() || 'Club';
             return (
-              <View
+              <TouchableOpacity
                 key={String(a.id)}
                 style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                disabled={clubUid == null || !onPressUser}
+                onPress={() => clubUid != null && onPressUser?.(clubUid)}
+                activeOpacity={0.75}
               >
                 <Text style={[styles.listTitle, { color: theme.text }]}>{clubName}</Text>
                 <Text style={[styles.listMeta, { color: theme.muted }]}>
@@ -380,7 +414,7 @@ export default function PublicProfileOverviewTab({
                   {a.teamType ? ` · ${teamTypeLabel(a.teamType)}` : ''}
                   {a.status ? ` · ${a.status}` : ''}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </Section>

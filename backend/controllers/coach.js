@@ -172,6 +172,13 @@ exports.updateCoach = async (req, res) => {
       profilePhoto: req.body.profilePhoto || profile.profilePhoto,
     });
 
+    if (clubUser) {
+      const clubProfile = await Profile.findOne({ where: { userId: clubUser.id } });
+      if (clubProfile?.profilePhoto) {
+        await profile.update({ clubLogo: clubProfile.profilePhoto });
+      }
+    }
+
     const clubName = req.body.club || profile.club;
     const staffClubUser = clubUser || (await resolveClubUser({ clubId: req.body.clubId, clubName }));
 

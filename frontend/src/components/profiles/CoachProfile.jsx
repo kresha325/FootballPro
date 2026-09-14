@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { clubStaffAPI } from '../../services/api';
+import { getFullUrl } from '../../utils/mediaUrl';
+import { ClubBadge } from '../../utils/clubLogos';
 
 const CoachProfile = ({ profile = {} }) => {
   const coachData = profile.stats || {};
@@ -167,21 +170,51 @@ const CoachProfile = ({ profile = {} }) => {
           <div className="text-gray-500 dark:text-gray-400">Nuk ka pozita të aprovuara.</div>
         ) : (
           <div className="space-y-3">
-            {clubStaffAssignments.filter((item) => item.status === 'active').map((assignment) => (
-              <div key={assignment.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold">
-                  {assignment.club?.Profile?.club?.[0] || assignment.club?.firstName?.[0] || '?'}
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-900 dark:text-white">
-                    {staffRoleLabels[assignment.staffRole] || assignment.staffRole}
+            {clubStaffAssignments.filter((item) => item.status === 'active').map((assignment) => {
+              const clubUser = assignment.club;
+              const clubId = clubUser?.id || assignment.clubId;
+              const clubName =
+                clubUser?.Profile?.club ||
+                `${clubUser?.firstName || ''} ${clubUser?.lastName || ''}`.trim() ||
+                'Club';
+              const clubPhoto = clubUser?.Profile?.profilePhoto;
+              const content = (
+                <>
+                  {clubPhoto ? (
+                    <img
+                      src={getFullUrl(clubPhoto)}
+                      alt={clubName}
+                      className="w-10 h-10 rounded-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <ClubBadge clubName={clubName} size="sm" />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      {staffRoleLabels[assignment.staffRole] || assignment.staffRole}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {clubName}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {assignment.club?.Profile?.club || `${assignment.club?.firstName || ''} ${assignment.club?.lastName || ''}`}
-                  </div>
+                </>
+              );
+              return clubId ? (
+                <Link
+                  key={assignment.id}
+                  to={`/profile/${clubId}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={assignment.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  {content}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
