@@ -362,7 +362,7 @@ app.get('/share', (req, res) => {
     ua
   );
   const siteUrl = `${frontendBase}/`;
-  const image = `${frontendBase}/og-share.png?v=2`;
+  const image = `${frontendBase}/og-share.png`;
   if (!isBot) return res.redirect(302, siteUrl);
   return sendOgHtml(res, {
     title: 'X TALENTI',
@@ -414,7 +414,7 @@ app.get('/share/cv/:id', async (req, res) => {
     const image =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
-      `${frontendBase}/og-share.png?v=2`;
+      `${frontendBase}/og-share.png`;
 
     const ua = String(req.get('user-agent') || '');
     const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
