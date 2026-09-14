@@ -29,6 +29,28 @@ function TitleOverlay({ item, pointerEventsNone = false }) {
   );
 }
 
+function isVideoUrl(url) {
+  if (!url) return false;
+  return /\.(mp4|mov|avi|webm|m4v)(\?|$)/i.test(String(url)) || /\/video\/upload\//i.test(String(url));
+}
+
+function isPhotoItem(item) {
+  if (!item) return false;
+  if (item.type === 'video') return false;
+  if (item.videoUrl && !item.imageUrl) return false;
+  if (item.type === 'photo' || item.type === 'highlight') return Boolean(item.imageUrl);
+  if (item.imageUrl && !isVideoUrl(item.imageUrl)) return true;
+  return false;
+}
+
+function isVideoItem(item) {
+  if (!item) return false;
+  if (item.type === 'video') return Boolean(item.videoUrl || item.imageUrl);
+  if (item.videoUrl) return true;
+  if (item.imageUrl && isVideoUrl(item.imageUrl)) return true;
+  return false;
+}
+
 /** Gallery grid + lightbox for the profile page. */
 export default function ProfileGalleryPanel({
   gallery,
@@ -43,64 +65,66 @@ export default function ProfileGalleryPanel({
       <div>
         {gallery.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gallery.map((item) => (
-              <div
-                key={item.id}
-                className="group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition cursor-pointer"
-                onClick={() => item.imageUrl && setSelectedGalleryImage(item)}
-              >
-                {item.imageUrl && item.imageUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
-                  <div className="aspect-video relative">
-                    <img
-                      src={getFullUrl(item.imageUrl)}
-                      alt={item.title || 'Gallery item'}
-                      className="w-full h-full object-cover"
-                    />
-                    <TitleOverlay item={item} />
-                    {isOwner && (
-                      <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
-                    )}
-                  </div>
-                ) : item.imageUrl && item.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) ? (
-                  <div className="aspect-video relative">
-                    <video
-                      src={getFullUrl(item.imageUrl)}
-                      controls
-                      className="w-full h-full object-cover"
-                    />
-                    <TitleOverlay item={item} pointerEventsNone />
-                    {isOwner && (
-                      <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
-                    )}
-                  </div>
-                ) : item.videoUrl ? (
-                  <div className="aspect-video relative">
-                    <video
-                      src={getFullUrl(item.videoUrl)}
-                      controls
-                      className="w-full h-full object-cover"
-                    />
-                    <TitleOverlay item={item} pointerEventsNone />
-                    {isOwner && (
-                      <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
-                    )}
-                  </div>
-                ) : (
-                  <div className="aspect-video flex items-center justify-center bg-gray-200 dark:bg-gray-600 relative">
-                    <span className="text-gray-400">📁</span>
-                    {isOwner && (
-                      <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
-                    )}
-                  </div>
-                )}
+            {gallery.map((item) => {
+              const photo = isPhotoItem(item);
+              const video = isVideoItem(item);
+              const mediaUrl = item.imageUrl || item.videoUrl;
+              return (
+                <div
+                  key={item.id}
+                  className="group relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition cursor-pointer"
+                  onClick={() => mediaUrl && setSelectedGalleryImage(item)}
+                >
+                  {photo ? (
+                    <div className="aspect-video relative bg-slate-200 dark:bg-slate-600">
+                      <img
+                        src={getFullUrl(item.imageUrl)}
+                        alt={item.title || 'Gallery item'}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <TitleOverlay item={item} />
+                      {isOwner && (
+                        <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
+                      )}
+                    </div>
+                  ) : video ? (
+                    <div className="aspect-video relative bg-black">
+                      <video
+                        src={getFullUrl(item.videoUrl || item.imageUrl)}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="bg-black/50 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl">
+                          ▶
+                        </span>
+                      </div>
+                      <TitleOverlay item={item} pointerEventsNone />
+                      {isOwner && (
+                        <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="aspect-video flex items-center justify-center bg-gray-200 dark:bg-gray-600 relative">
+                      <span className="text-gray-400">📁</span>
+                      {isOwner && (
+                        <DeleteButton onClick={(e) => onDeleteItem(item.id, e)} />
+                      )}
+                    </div>
+                  )}
 
-                <div className="p-3 border-t border-gray-200 dark:border-gray-600">
-                  <span className="text-xs text-gray-500">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </span>
+                  <div className="p-3 border-t border-gray-200 dark:border-gray-600">
+                    <span className="text-xs text-gray-500">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -128,11 +152,20 @@ export default function ProfileGalleryPanel({
             >
               ✕
             </button>
-            <img
-              src={getFullUrl(selectedGalleryImage.imageUrl)}
-              alt={selectedGalleryImage.title}
-              className="max-w-full max-h-screen object-contain rounded-lg"
-            />
+            {isVideoItem(selectedGalleryImage) ? (
+              <video
+                src={getFullUrl(selectedGalleryImage.videoUrl || selectedGalleryImage.imageUrl)}
+                controls
+                autoPlay
+                className="max-w-full max-h-[85vh] rounded-lg"
+              />
+            ) : (
+              <img
+                src={getFullUrl(selectedGalleryImage.imageUrl)}
+                alt={selectedGalleryImage.title || 'Gallery'}
+                className="max-w-full max-h-screen object-contain rounded-lg"
+              />
+            )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-6 rounded-b-lg">
               {selectedGalleryImage.title && (
                 <h3 className="text-xl font-bold text-white mb-2">{selectedGalleryImage.title}</h3>
@@ -141,7 +174,7 @@ export default function ProfileGalleryPanel({
                 <p className="text-white/90 mb-4">{selectedGalleryImage.description}</p>
               )}
 
-              {isOwner && (
+              {isOwner && isPhotoItem(selectedGalleryImage) && (
                 <div className="flex gap-3 flex-wrap">
                   <button
                     onClick={() => onSetAsProfilePhoto(selectedGalleryImage.imageUrl, 'profile')}
