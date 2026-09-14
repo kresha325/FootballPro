@@ -1,9 +1,26 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
+function injectFacebookAppId(mode) {
+  const env = loadEnv(mode, process.cwd(), '')
+  const raw = String(env.VITE_FACEBOOK_APP_ID || env.FACEBOOK_APP_ID || '').trim()
+  const appId = /^\d+$/.test(raw) ? raw : ''
+  return {
+    name: 'inject-facebook-app-id',
+    transformIndexHtml(html) {
+      if (!appId) {
+        return html.replace(/\s*<!--fb:app_id-->\n?/, '\n')
+      }
+      return html.replace(
+        '<!--fb:app_id-->',
+        `<meta property="fb:app_id" content="${appId}" />`
+      )
+    },
+  }
+}
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       babel: {
@@ -12,6 +29,7 @@ export default defineConfig({
         }
       }
     }),
+    injectFacebookAppId(mode),
     // VitePWA plugin temporarily removed for Vercel build compatibility
   ],
   build: {
@@ -54,4 +72,4 @@ export default defineConfig({
       ignored: ['**/node_modules/**', '**/.git/**']
     }
   },
-})
+}))

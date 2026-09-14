@@ -41,6 +41,8 @@ jobs:
         env:
           VITE_APP_NAME: XTalenti
           VITE_API_URL: https://footballpro.onrender.com/api
+          # Optional: clears Facebook Sharing Debugger "missing fb:app_id" warning
+          VITE_FACEBOOK_APP_ID: ${{ secrets.VITE_FACEBOOK_APP_ID }}
         run: npm run build
         # npm run build → vite build + scripts/spa-github-pages.mjs
         # (kopjon index.html → 404.html që /feed, /profile/:id të hapen)

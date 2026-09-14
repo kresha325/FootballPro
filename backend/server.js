@@ -340,6 +340,11 @@ function sendOgHtml(res, { title, description, url, image, type = 'website' }) {
   const safeDesc = escapeHtmlAttr(description);
   const safeUrl = escapeHtmlAttr(url);
   const safeImage = escapeHtmlAttr(image);
+  const fbAppIdRaw = String(process.env.FACEBOOK_APP_ID || '').trim();
+  const fbAppId = /^\d+$/.test(fbAppIdRaw) ? fbAppIdRaw : '';
+  const fbAppIdMeta = fbAppId
+    ? `\n  <meta property="fb:app_id" content="${escapeHtmlAttr(fbAppId)}" />`
+    : '';
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.send(`<!DOCTYPE html>
@@ -355,7 +360,7 @@ function sendOgHtml(res, { title, description, url, image, type = 'website' }) {
   <meta property="og:image" content="${safeImage}" />
   <meta property="og:image:secure_url" content="${safeImage}" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:height" content="630" />${fbAppIdMeta}
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${safeTitle}" />
   <meta name="twitter:description" content="${safeDesc}" />
@@ -379,8 +384,8 @@ app.get('/share', (req, res) => {
     ua
   );
   const siteUrl = `${frontendBase}/`;
-  const apiPublic = 'https://footballpro.onrender.com';
-  const image = `${apiPublic}/og-share.jpg`;
+  // Prefer same-origin image on the public site (GitHub Pages serves it reliably).
+  const image = `${frontendBase}/og-share.jpg`;
   if (!isBot) return res.redirect(302, siteUrl);
   return sendOgHtml(res, {
     title: 'X TALENTI',
@@ -429,11 +434,10 @@ app.get('/share/cv/:id', async (req, res) => {
     const description = String(
       profile.bio || `${name}${role ? ` (${role})` : ''} — CV dixhitale në X TALENTI`
     ).slice(0, 200);
-    const apiPublic = 'https://footballpro.onrender.com';
     const image =
       (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
       (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
-      `${apiPublic}/og-share.jpg`;
+      `${frontendBase}/og-share.jpg`;
 
     const ua = String(req.get('user-agent') || '');
     const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
