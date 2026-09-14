@@ -10,7 +10,7 @@ const RENDER_OG_FALLBACK = 'https://footballpro.onrender.com/share-card.jpg';
 let runtimeCloudinaryUrl = null;
 
 function cloudinaryOgDeliveryUrl() {
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/c_fill,f_jpg,h_630,q_auto,w_1200/${PUBLIC_ID}.jpg`;
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/c_fill,f_jpg,fl_progressive:none,h_630,q_auto,w_1200/${PUBLIC_ID}.jpg`;
 }
 
 function brandOgImageUrl() {
