@@ -606,6 +606,31 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                 </a>
               </div>
             )}
+            {profile.contact.instagram && (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📸</span>
+                <a
+                  href={`https://instagram.com/${String(profile.contact.instagram).replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {profile.contact.instagram}
+                </a>
+              </div>
+            )}
+            {profile.contact.facebook && (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👍</span>
+                <span className="text-gray-700 dark:text-gray-300">{profile.contact.facebook}</span>
+              </div>
+            )}
+            {profile.contact.twitter && (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🐦</span>
+                <span className="text-gray-700 dark:text-gray-300">{profile.contact.twitter}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

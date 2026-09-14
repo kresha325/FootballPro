@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
+import { getFullUrl } from '../../../utils/mediaUrl';
 
 const EditFederationProfile = ({ user, onSave, loading, errors }) => {
+  const contact = user.contact && typeof user.contact === 'object' ? user.contact : {};
   const [form, setForm] = useState({
     club: user.club || '',
     city: user.city || '',
     country: user.country || '',
     bio: user.bio || '',
-    contact: user.contact || {},
     careerHistory: user.careerHistory || '',
+    phone: contact.phone || '',
+    email: contact.email || '',
+    website: contact.website || '',
+    instagram: contact.instagram || '',
+    facebook: contact.facebook || '',
+    twitter: contact.twitter || '',
     profilePhoto: user.profilePhoto || '',
   });
 
@@ -16,7 +23,7 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
   };
 
   const [profilePhoto, setProfilePhoto] = useState(null);
-  const [preview, setPreview] = useState(user.profilePhoto || '');
+  const [preview, setPreview] = useState(user.profilePhoto ? getFullUrl(user.profilePhoto) : '');
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -29,9 +36,21 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      formData.append(key, value);
+    const { phone, email, website, instagram, facebook, twitter, profilePhoto: _ph, ...rest } = form;
+    Object.entries(rest).forEach(([key, value]) => {
+      formData.append(key, value == null ? '' : String(value));
     });
+    formData.append(
+      'contact',
+      JSON.stringify({
+        phone: phone || undefined,
+        email: email || undefined,
+        website: website || undefined,
+        instagram: instagram || undefined,
+        facebook: facebook || undefined,
+        twitter: twitter || undefined,
+      })
+    );
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }
@@ -67,12 +86,37 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
         <textarea name="bio" value={form.bio} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Contact (JSON)</label>
-        <textarea name="contact" value={JSON.stringify(form.contact)} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
-      </div>
-      <div>
         <label className="block text-sm font-medium mb-1">Career History</label>
         <textarea name="careerHistory" value={form.careerHistory} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold mb-2 text-gray-800">Kontakt</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Telefon</label>
+            <input name="phone" value={form.phone} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Website</label>
+            <input name="website" value={form.website} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Instagram</label>
+            <input name="instagram" value={form.instagram} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Facebook</label>
+            <input name="facebook" value={form.facebook} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Twitter / X</label>
+            <input name="twitter" value={form.twitter} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+          </div>
+        </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">

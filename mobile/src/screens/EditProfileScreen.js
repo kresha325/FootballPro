@@ -111,6 +111,8 @@ const defaultForm = () => ({
   partnerships: '',
   countries: '',
   phone: '',
+  email: '',
+  website: '',
   instagram: '',
   twitter: '',
   facebook: '',
@@ -194,6 +196,8 @@ export default function EditProfileScreen({ navigation }) {
           partnerships: stats.partnerships != null ? String(stats.partnerships) : '',
           countries: stats.countries != null ? String(stats.countries) : '',
           phone: p.contact?.phone != null ? String(p.contact.phone) : '',
+          email: p.contact?.email != null ? String(p.contact.email) : '',
+          website: p.contact?.website != null ? String(p.contact.website) : '',
           instagram: p.contact?.instagram != null ? String(p.contact.instagram) : '',
           twitter: p.contact?.twitter != null ? String(p.contact.twitter) : '',
           facebook: p.contact?.facebook != null ? String(p.contact.facebook) : '',
@@ -342,11 +346,14 @@ export default function EditProfileScreen({ navigation }) {
           capacity: trim(form.capacity),
           league: trim(form.league),
         };
-        try {
-          payload.contact = JSON.parse(form.contactJson || '{}');
-        } catch {
-          payload.contact = {};
-        }
+        payload.contact = {
+          phone: trim(form.phone),
+          email: trim(form.email),
+          website: trim(form.website),
+          instagram: trim(form.instagram),
+          facebook: trim(form.facebook),
+          twitter: trim(form.twitter),
+        };
         break;
       case 'federation':
         add('club', trim(form.club));
@@ -357,11 +364,14 @@ export default function EditProfileScreen({ navigation }) {
         payload.stats = {
           founded: trim(form.founded),
         };
-        try {
-          payload.contact = JSON.parse(form.contactJson || '{}');
-        } catch {
-          payload.contact = {};
-        }
+        payload.contact = {
+          phone: trim(form.phone),
+          email: trim(form.email),
+          website: trim(form.website),
+          instagram: trim(form.instagram),
+          facebook: trim(form.facebook),
+          twitter: trim(form.twitter),
+        };
         break;
       case 'business':
       case 'media': {
@@ -698,8 +708,18 @@ export default function EditProfileScreen({ navigation }) {
           {input('bio', { multiline: true, style: [styles.input, styles.multiline] })}
           {labelFor('Career History')}
           {input('careerHistory', { multiline: true, style: [styles.input, styles.multilineSmall] })}
-          {labelFor('Contact (JSON)')}
-          {input('contactJson', { multiline: true, style: [styles.input, styles.multiline], autoCapitalize: 'none' })}
+          {labelFor('Telefon')}
+          {input('phone', { keyboardType: 'phone-pad' })}
+          {labelFor('Email')}
+          {input('email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+          {labelFor('Website')}
+          {input('website', { autoCapitalize: 'none', placeholder: 'https://...' })}
+          {labelFor('Instagram')}
+          {input('instagram', { autoCapitalize: 'none' })}
+          {labelFor('Facebook')}
+          {input('facebook', { autoCapitalize: 'none' })}
+          {labelFor('Twitter / X')}
+          {input('twitter', { autoCapitalize: 'none' })}
         </>
       )}
 
@@ -715,8 +735,18 @@ export default function EditProfileScreen({ navigation }) {
           {input('country')}
           {labelFor('Bio')}
           {input('bio', { multiline: true, style: [styles.input, styles.multiline] })}
-          {labelFor('Contact (JSON)')}
-          {input('contactJson', { multiline: true, style: [styles.input, styles.multiline], autoCapitalize: 'none' })}
+          {labelFor('Telefon')}
+          {input('phone', { keyboardType: 'phone-pad' })}
+          {labelFor('Email')}
+          {input('email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+          {labelFor('Website')}
+          {input('website', { autoCapitalize: 'none' })}
+          {labelFor('Instagram')}
+          {input('instagram', { autoCapitalize: 'none' })}
+          {labelFor('Facebook')}
+          {input('facebook', { autoCapitalize: 'none' })}
+          {labelFor('Twitter / X')}
+          {input('twitter', { autoCapitalize: 'none' })}
           {labelFor('Career History')}
           {input('careerHistory', { multiline: true, style: [styles.input, styles.multilineSmall] })}
         </>
