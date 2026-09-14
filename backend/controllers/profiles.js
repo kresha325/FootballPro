@@ -156,6 +156,7 @@ const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
+const { isOrgProfileRole, getFoundingYear } = require('../utils/orgProfile');
 
 /** Map free-text / locale labels to User.gender ENUM (male | female | other). */
 function normalizeGenderInput(raw) {
@@ -330,10 +331,12 @@ exports.getProfile = async (req, res) => {
       return res.status(404).json({ msg: 'Profili nuk u gjet' });
     }
 
-    // Calculate age and age group
+    // Calculate age and age group (athletes/people only — orgs get founding year)
     const user = profile.User;
-    const age = user && user.getAge ? user.getAge() : null;
-    const ageGroup = user && user.getAgeGroup ? user.getAgeGroup() : null;
+    const role = user ? user.role : null;
+    const isOrg = isOrgProfileRole(role);
+    const age = !isOrg && user && user.getAge ? user.getAge() : null;
+    const ageGroup = !isOrg && user && user.getAgeGroup ? user.getAgeGroup() : null;
 
     const { followers: followersCount, following: followingCount } = await countFollowStats(userId);
 
@@ -351,6 +354,20 @@ exports.getProfile = async (req, res) => {
       joncoinBalance = user ? Math.round(parseFloat(user.joncoinBalance || 0) * 100) / 100 : 0;
     }
 
+    let ligaFoundedYear = null;
+    if (role === 'liga') {
+      try {
+        const Liga = require('../models/Liga');
+        const liga = await Liga.findOne({
+          where: { userId },
+          attributes: ['foundedYear'],
+        });
+        if (liga?.foundedYear) ligaFoundedYear = liga.foundedYear;
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+
     const response = {
       ...plainProfile,
       id: plainProfile.userId,
@@ -361,7 +378,8 @@ exports.getProfile = async (req, res) => {
       gender: user ? user.gender : null,
       age,
       ageGroup,
-      role: user ? user.role : null,
+      role,
+      foundedYear: ligaFoundedYear || plainProfile.foundedYear || null,
       followers: followersCount,
       following: followingCount,
       matches: plainProfile.matches || [],
@@ -370,6 +388,13 @@ exports.getProfile = async (req, res) => {
       performanceTrend: plainProfile.performanceTrend || [],
       joncoinBalance,
     };
+
+    if (isOrg) {
+      response.foundingYear = getFoundingYear(response);
+      response.age = null;
+      response.ageGroup = null;
+    }
+
     // Standardize profilePhoto path for avatar
     if (response.profilePhoto) {
       response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);

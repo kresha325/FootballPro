@@ -14,6 +14,7 @@ import EditProfile from './EditProfile';
 import { useAuth } from '../contexts/AuthContext';
 import ProfileSelector from './profiles/ProfileSelector';
 import { ClubBadge } from '../utils/clubLogos';
+import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 import { getFullUrl } from '../utils/mediaUrl';
@@ -679,17 +680,25 @@ const Profile = () => {
               )}
               
               <div className="flex items-center justify-center md:justify-start gap-2 mt-3 text-gray-600 dark:text-gray-400 flex-wrap">
-                {profile.age && profile.ageGroup && (
-                  <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                    🎂 {profile.age} years ({profile.ageGroup})
-                  </span>
+                {isOrgProfileRole(profile.role) ? (
+                  (profile.foundingYear || getFoundingYear(profile)) && (
+                    <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                      🏛️ Themeluar {profile.foundingYear || getFoundingYear(profile)}
+                    </span>
+                  )
+                ) : (
+                  profile.age && profile.ageGroup && (
+                    <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                      🎂 {profile.age} years ({profile.ageGroup})
+                    </span>
+                  )
                 )}
-                {profile.position && (
+                {profile.position && !isOrgProfileRole(profile.role) && (
                   <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                     ⚽ {profile.position}
                   </span>
                 )}
-                {profile.club && (
+                {profile.club && !isOrgProfileRole(profile.role) && (
                   profile.clubId ? (
                     <Link
                       to={`/profile/${profile.clubId}`}
@@ -726,7 +735,12 @@ const Profile = () => {
                     </span>
                   )
                 )}
-                {profile.stats?.jerseyNumber && (
+                {isOrgProfileRole(profile.role) && profile.club && profile.role !== 'club' && (
+                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                    {profile.club}
+                  </span>
+                )}
+                {profile.stats?.jerseyNumber && !isOrgProfileRole(profile.role) && (
                   <span className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm font-medium">
                     #{profile.stats.jerseyNumber}
                   </span>

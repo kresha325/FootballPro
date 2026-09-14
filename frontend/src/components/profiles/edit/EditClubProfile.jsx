@@ -6,6 +6,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     city: user.city || '',
     country: user.country || '',
     bio: user.bio || '',
+    founded: user.stats?.founded || user.foundingYear || '',
     careerHistory: user.careerHistory || '',
     contact: user.contact || {},
     profilePhoto: user.profilePhoto || '',
@@ -29,9 +30,15 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      formData.append(key, value);
+    const { founded, ...rest } = form;
+    Object.entries(rest).forEach(([key, value]) => {
+      formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
     });
+    const nextStats = {
+      ...(user.stats && typeof user.stats === 'object' ? user.stats : {}),
+      founded: founded || undefined,
+    };
+    formData.append('stats', JSON.stringify(nextStats));
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }
@@ -52,6 +59,19 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
         <div>
           <label className="block text-sm font-medium mb-1">Club Name</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Viti i themelimit</label>
+          <input
+            name="founded"
+            value={form.founded}
+            onChange={handleChange}
+            type="number"
+            min="1800"
+            max="2100"
+            placeholder="p.sh. 2017"
+            className="w-full p-2 border border-gray-300 rounded"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">City</label>

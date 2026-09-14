@@ -316,6 +316,7 @@ export default function EditProfileScreen({ navigation }) {
         add('country', trim(form.country));
         add('bio', trim(form.bio));
         add('careerHistory', trim(form.careerHistory));
+        payload.stats = { founded: trim(form.founded) };
         try {
           payload.contact = JSON.parse(form.contactJson || '{}');
         } catch {
@@ -328,6 +329,9 @@ export default function EditProfileScreen({ navigation }) {
         add('country', trim(form.country));
         add('bio', trim(form.bio));
         add('careerHistory', trim(form.careerHistory));
+        payload.stats = {
+          founded: trim(form.founded),
+        };
         try {
           payload.contact = JSON.parse(form.contactJson || '{}');
         } catch {
@@ -663,6 +667,8 @@ export default function EditProfileScreen({ navigation }) {
         <>
           {labelFor('Club Name')}
           {input('club')}
+          {labelFor('Viti i themelimit')}
+          {input('founded', { keyboardType: 'number-pad', placeholder: 'p.sh. 2017' })}
           {labelFor('City')}
           {input('city')}
           {labelFor('Country')}
@@ -680,6 +686,8 @@ export default function EditProfileScreen({ navigation }) {
         <>
           {labelFor('Federation Name')}
           {input('club')}
+          {labelFor('Viti i themelimit')}
+          {input('founded', { keyboardType: 'number-pad', placeholder: 'p.sh. 2017' })}
           {labelFor('City')}
           {input('city')}
           {labelFor('Country')}

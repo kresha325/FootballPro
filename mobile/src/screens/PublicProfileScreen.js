@@ -49,6 +49,7 @@ import {
 import ReportSheet from '../components/ReportSheet';
 import PublicProfileTournamentsTab from '../components/publicProfile/PublicProfileTournamentsTab';
 import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
+import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
 import PublicProfileMatchHistoryTab from '../components/publicProfile/PublicProfileMatchHistoryTab';
 import PublicProfileContactTab from '../components/publicProfile/PublicProfileContactTab';
@@ -668,13 +669,21 @@ export default function PublicProfileScreen({ route, navigation }) {
             ) : null}
 
             <View style={styles.chipRow}>
-              {profile.age != null && profile.ageGroup ? (
+              {isOrgProfileRole(profile.role) ? (
+                (profile.foundingYear || getFoundingYear(profile)) ? (
+                  <Chip icon="flag-outline">
+                    Themeluar {profile.foundingYear || getFoundingYear(profile)}
+                  </Chip>
+                ) : null
+              ) : profile.age != null && profile.ageGroup ? (
                 <Chip icon="calendar-outline">
                   {profile.age} vjeç ({profile.ageGroup})
                 </Chip>
               ) : null}
-              {profile.position ? <Chip icon="football-outline">{profile.position}</Chip> : null}
-              {profile.club ? (
+              {profile.position && !isOrgProfileRole(profile.role) ? (
+                <Chip icon="football-outline">{profile.position}</Chip>
+              ) : null}
+              {profile.club && !isOrgProfileRole(profile.role) ? (
                 <Chip
                   icon="business-outline"
                   imageUri={
@@ -689,7 +698,9 @@ export default function PublicProfileScreen({ route, navigation }) {
                   {profile.club}
                 </Chip>
               ) : null}
-              {stats.jerseyNumber != null && String(stats.jerseyNumber) !== '' ? (
+              {stats.jerseyNumber != null &&
+              String(stats.jerseyNumber) !== '' &&
+              !isOrgProfileRole(profile.role) ? (
                 <Chip icon="shirt-outline">#{stats.jerseyNumber}</Chip>
               ) : null}
               {profile.city || profile.country ? (
