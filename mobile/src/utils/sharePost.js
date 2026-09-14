@@ -13,8 +13,8 @@ export function getPostShareText(post) {
   if (content) {
     return content.length > 220 ? `${content.slice(0, 217)}…` : content;
   }
-  if (name) return `Post nga ${name} në FootballPro`;
-  return 'Shiko këtë post në FootballPro';
+  if (name) return `Post nga ${name} në X TALENTI`;
+  return 'Shiko këtë post në X TALENTI';
 }
 
 async function openShareUrl(url, failLabel) {
@@ -36,7 +36,7 @@ export async function sharePostNative(post) {
   await Share.share({
     message: `${text}\n${url}`,
     url,
-    title: 'FootballPro',
+    title: 'X TALENTI',
   });
 }
 

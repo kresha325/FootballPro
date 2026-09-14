@@ -795,7 +795,7 @@ export default function PublicProfileScreen({ route, navigation }) {
               <View style={styles.selfActionsWrap}>
                 {joncoinBalance != null ? (
                   <View style={[styles.joncoinBanner, { borderColor: theme.border, backgroundColor: theme.chipBg }]}>
-                    <Text style={styles.joncoinLabel}>JonCoin</Text>
+                    <Text style={styles.joncoinLabel}>XCoin</Text>
                     <Text style={styles.joncoinValue}>{joncoinBalance}</Text>
                   </View>
                 ) : null}

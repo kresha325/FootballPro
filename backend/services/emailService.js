@@ -35,12 +35,12 @@ function getTransporter() {
 // Email templates
 const emailTemplates = {
   passwordReset: (firstName, resetUrl) => ({
-    subject: '🔐 Reset your XTalenti password',
+    subject: '🔐 Reset your X TALENTI password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #2563eb;">Password reset</h1>
         <p>Hi ${firstName || 'there'},</p>
-        <p>We received a request to reset your XTalenti password. Click the button below to choose a new password. This link expires in one hour.</p>
+        <p>We received a request to reset your X TALENTI password. Click the button below to choose a new password. This link expires in one hour.</p>
         <a href="${resetUrl}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
           Reset password
@@ -51,10 +51,10 @@ const emailTemplates = {
   }),
 
   welcome: (firstName) => ({
-    subject: '🏆 Welcome to XTalenti!',
+    subject: '🏆 Welcome to X TALENTI!',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Welcome to XTalenti, ${firstName}!</h1>
+        <h1 style="color: #2563eb;">Welcome to X TALENTI, ${firstName}!</h1>
         <p>Thank you for joining our global football community.</p>
         <p>Start building your profile, connect with players, scouts, and clubs worldwide.</p>
         <a href="${process.env.FRONTEND_URL || 'https://xtalenti.com'}"
@@ -69,7 +69,7 @@ const emailTemplates = {
     subject: `🔔 ${followerName} started following you!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>${followerName} is now following you on XTalenti</h2>
+        <h2>${followerName} is now following you on X TALENTI</h2>
         <p>Check out their profile and connect!</p>
         <a href="${process.env.FRONTEND_URL || 'https://xtalenti.com'}/profile/${userId}"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
@@ -200,12 +200,12 @@ const emailTemplates = {
   parentVerification: (athleteName, token) => {
     const confirmUrl = buildParentConfirmUrl(token);
     return {
-      subject: `XTalenti — konfirmim prindi për ${athleteName}`,
+      subject: `X TALENTI — konfirmim prindi për ${athleteName}`,
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
         <h2 style="color: #0f766e;">Konfirmim prindi / kujdestari</h2>
         <p>Përshëndetje,</p>
-        <p><strong>${athleteName}</strong> është regjistruar në <strong>XTalenti</strong> (platformë për futboll: profil, video, turne).</p>
+        <p><strong>${athleteName}</strong> është regjistruar në <strong>X TALENTI</strong> (platformë për futboll: profil, video, turne).</p>
         <p>Për llogari të të miturve nën 18 vjeç, nevojitet miratimi juaj si prind ose kujdestar ligjor.</p>
         <p>Kliko butonin më poshtë për të konfirmuar (linku vlen <strong>7 ditë</strong>):</p>
         <a href="${confirmUrl}"
@@ -215,7 +215,7 @@ const emailTemplates = {
         <p style="color:#6b7280; font-size:13px;">Nëse butoni nuk funksionon, kopjo këtë link në shfletues:</p>
         <p style="word-break: break-all; font-size:12px; color:#475569;">${confirmUrl}</p>
         <p style="margin-top:20px; color:#9ca3af; font-size:12px;">Nëse nuk e prisje këtë email, injoroje — asgjë nuk ndryshohet.</p>
-        <p style="color:#9ca3af; font-size:12px;">— Ekipi XTalenti</p>
+        <p style="color:#9ca3af; font-size:12px;">— Ekipi X TALENTI</p>
       </div>
     `,
     };
@@ -255,7 +255,7 @@ const sendEmail = async (to, templateName, ...params) => {
     const template = emailTemplates[templateName](...params);
 
     const mailOptions = {
-      from: `"XTalenti" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      from: `"X TALENTI" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to,
       subject: template.subject,
       html: template.html,

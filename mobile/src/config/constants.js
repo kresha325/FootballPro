@@ -59,6 +59,6 @@ export const WEB_APP_URL = resolveWebAppUrl();
 
 /**
  * Digital goods via StoreKit / Play Billing (expo-iap).
- * When true, Premium/JonCoin use IAP; Stripe checkout is not used for those in mobile.
+ * When true, Premium/XCoin use IAP; Stripe checkout is not used for those in mobile.
  */
 export const ALLOW_MOBILE_DIGITAL_PURCHASES = appExtra.ALLOW_MOBILE_DIGITAL_PURCHASES === true;

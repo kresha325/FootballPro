@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>XTalenti</string>
+    <string>X TALENTI</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -54,11 +54,11 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>XTalenti ka nevojë për kamerën për live dhe video thirrje.</string>
+    <string>X TALENTI ka nevojë për kamerën për live dhe video thirrje.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>XTalenti ka nevojë për mikrofonin për live dhe thirrje.</string>
+    <string>X TALENTI ka nevojë për mikrofonin për live dhe thirrje.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>XTalenti ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.</string>
+    <string>X TALENTI ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.</string>
     <key>UIBackgroundModes</key>
     <array>
       <string>audio</string>

@@ -47,16 +47,16 @@ export default function CartScreen({ navigation }) {
       const balanceRes = await joncoinBalanceRequest();
       balance = Number(balanceRes?.data?.balance || 0);
     } catch (_e) {
-      Alert.alert('JonCoin', 'Nuk u lexua balanca.');
+      Alert.alert('XCoin', 'Nuk u lexua balanca.');
       return;
     }
     if (balance < subtotalJonCoin) {
-      Alert.alert('JonCoin', 'Nuk ke mjaftueshëm JonCoin për këtë porosi.');
+      Alert.alert('XCoin', 'Nuk ke mjaftueshëm XCoin për këtë porosi.');
       return;
     }
     Alert.alert(
       'Dërgo porosinë',
-      `${subtotalJonCoin} JonCoin për ${totalPieces} copë. Coinat transferohen vetëm kur shitësi e pranon.`,
+      `${subtotalJonCoin} XCoin për ${totalPieces} copë. Coinat transferohen vetëm kur shitësi e pranon.`,
       [
         { text: 'Anulo', style: 'cancel' },
         {
@@ -74,7 +74,7 @@ export default function CartScreen({ navigation }) {
               clearCart();
               Alert.alert(
                 'Pending',
-                'Porosia u dërgua. Shitësi e pranon te Wallet → Shitjet. JonCoin ende nuk u transferuan.',
+                'Porosia u dërgua. Shitësi e pranon te Wallet → Shitjet. XCoin ende nuk u transferuan.',
                 [{ text: 'OK', onPress: () => navigation.goBack() }]
               );
             } catch (err) {
@@ -167,7 +167,7 @@ export default function CartScreen({ navigation }) {
                   {item.name}
                 </Text>
                 <Text style={styles.rowMeta}>
-                  {(Number(item.price) || 0).toFixed(2)} JonCoin × {q}
+                  {(Number(item.price) || 0).toFixed(2)} XCoin × {q}
                 </Text>
                 <View style={styles.qtyBar}>
                   <TouchableOpacity
@@ -196,7 +196,7 @@ export default function CartScreen({ navigation }) {
       />
       <View style={styles.footer}>
         <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalVal}>{subtotalJonCoin} JonCoin</Text>
+        <Text style={styles.totalVal}>{subtotalJonCoin} XCoin</Text>
         <Text style={styles.pendingHint}>Pending derisa shitësi të pranojë — pastaj kalojnë coinat.</Text>
         <TouchableOpacity style={[styles.payBtn, paying && styles.payBtnDisabled]} onPress={pay} disabled={paying}>
           {paying ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Dërgo porosinë</Text>}

@@ -121,7 +121,7 @@ function Premium() {
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-semibold">Pagesat nuk janë aktive</p>
           <p className="text-sm mt-1">
-            Premium aktivizohet në mënyrë demo (pa kartë). Marketplace përdor JonCoin. Stripe aktivizohet vetëm kur
+            Premium aktivizohet në mënyrë demo (pa kartë). Marketplace përdor XCoin. Stripe aktivizohet vetëm kur
             PAYMENTS_ENABLED=true në server.
           </p>
         </div>

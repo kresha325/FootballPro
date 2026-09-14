@@ -11,9 +11,9 @@ export const PREMIUM_SKUS = [IAP_PRODUCTS.premiumMonthly, IAP_PRODUCTS.premiumYe
 export const JONCOIN_SKUS = [IAP_PRODUCTS.joncoin100, IAP_PRODUCTS.joncoin500, IAP_PRODUCTS.joncoin1000];
 
 export const JONCOIN_PACKS = [
-  { sku: IAP_PRODUCTS.joncoin100, amount: 100, label: '100 JonCoin' },
-  { sku: IAP_PRODUCTS.joncoin500, amount: 500, label: '500 JonCoin' },
-  { sku: IAP_PRODUCTS.joncoin1000, amount: 1000, label: '1000 JonCoin' },
+  { sku: IAP_PRODUCTS.joncoin100, amount: 100, label: '100 XCoin' },
+  { sku: IAP_PRODUCTS.joncoin500, amount: 500, label: '500 XCoin' },
+  { sku: IAP_PRODUCTS.joncoin1000, amount: 1000, label: '1000 XCoin' },
 ];
 
 export function premiumSkuForPlan(plan) {

@@ -97,7 +97,7 @@ export default function MoreScreen({ navigation }) {
       />
 
       <Text style={[styles.sectionLabel, { marginTop: 8 }]}>Module</Text>
-      <MenuButton title="Wallet" subtitle="JonCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
+      <MenuButton title="Wallet" subtitle="XCoin balance and transactions" onPress={() => navigation.navigate('Wallet')} />
       {canUseInsights ? (
         <MenuButton
           title="Insights"

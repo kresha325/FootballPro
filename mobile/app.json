@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "XTalenti",
+    "name": "X TALENTI",
     "slug": "x-talenti",
     "scheme": "footballpro",
     "version": "1.0.0",
@@ -30,8 +30,8 @@
       [
         "@config-plugins/react-native-webrtc",
         {
-          "cameraPermission": "XTalenti ka nevojë për kamerën për live dhe video thirrje.",
-          "microphonePermission": "XTalenti ka nevojë për mikrofonin për live dhe thirrje."
+          "cameraPermission": "X TALENTI ka nevojë për kamerën për live dhe video thirrje.",
+          "microphonePermission": "X TALENTI ka nevojë për mikrofonin për live dhe thirrje."
         }
       ],
       [
@@ -89,9 +89,9 @@
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "XTalenti ka nevojë për kamerën për live dhe video thirrje.",
-        "NSMicrophoneUsageDescription": "XTalenti ka nevojë për mikrofonin për live dhe thirrje.",
-        "NSPhotoLibraryUsageDescription": "XTalenti ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.",
+        "NSCameraUsageDescription": "X TALENTI ka nevojë për kamerën për live dhe video thirrje.",
+        "NSMicrophoneUsageDescription": "X TALENTI ka nevojë për mikrofonin për live dhe thirrje.",
+        "NSPhotoLibraryUsageDescription": "X TALENTI ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.",
         "UIBackgroundModes": ["audio", "remote-notification"],
         "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
         "LSMinimumSystemVersion": "15.1"

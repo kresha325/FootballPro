@@ -160,7 +160,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
                 : 'Një fjali për ty — klubet dhe lojtarët të njohin.'}
             </Text>
             <AiBioButton
-              hints={{ city, country, extra: 'Regjistrim i ri në FootballPro' }}
+              hints={{ city, country, extra: 'Regjistrim i ri në X TALENTI' }}
               onBio={setBio}
             />
             <TextInput

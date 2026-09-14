@@ -72,8 +72,8 @@ export default function WalletScreen() {
   const purchasePack = async (pack) => {
     if (!ALLOW_MOBILE_DIGITAL_PURCHASES) {
       Alert.alert(
-        'JonCoin',
-        'Blerja e JonCoin me para reale në app kërkon IAP (App Store / Play). Për tani përdor web ose transfer nga një balancë ekzistuese.',
+        'XCoin',
+        'Blerja e XCoin me para reale në app kërkon IAP (App Store / Play). Për tani përdor web ose transfer nga një balancë ekzistuese.',
         [
           { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/wallet`).catch(() => {}) },
           { text: 'OK', style: 'cancel' },
@@ -86,13 +86,13 @@ export default function WalletScreen() {
       const data = await purchaseAndFulfill(pack.sku, { type: 'inapp' });
       const bal = data?.fulfillment?.joncoinBalance;
       Alert.alert(
-        'JonCoin',
+        'XCoin',
         bal != null ? `U shtuan ${pack.amount} JC. Balanca: ${bal}` : `${pack.label} u blenë me sukses.`
       );
       await loadData({ silent: true });
     } catch (err) {
       if (err?.cancelled) return;
-      Alert.alert('Purchase failed', extractErrorMessage(err, err?.message || 'Could not purchase JonCoin'));
+      Alert.alert('Purchase failed', extractErrorMessage(err, err?.message || 'Could not purchase XCoin'));
     } finally {
       setBuyingSku(null);
     }
@@ -126,12 +126,12 @@ export default function WalletScreen() {
       setTransferAmount('');
       await loadData({ silent: true });
     } catch (err) {
-      Alert.alert('Transfer failed', extractErrorMessage(err, 'Could not transfer JonCoin'));
+      Alert.alert('Transfer failed', extractErrorMessage(err, 'Could not transfer XCoin'));
     }
   };
 
   const acceptSale = (id) => {
-    Alert.alert('Prano', 'JonCoin transferohen tani. Vazhdo?', [
+    Alert.alert('Prano', 'XCoin transferohen tani. Vazhdo?', [
       { text: 'Anulo', style: 'cancel' },
       {
         text: 'Prano',
@@ -140,7 +140,7 @@ export default function WalletScreen() {
           try {
             await acceptOrderRequest(id);
             await loadData({ silent: true });
-            Alert.alert('OK', 'Porosia u pranua. JonCoin u transferuan.');
+            Alert.alert('OK', 'Porosia u pranua. XCoin u transferuan.');
           } catch (err) {
             Alert.alert('Gabim', extractErrorMessage(err, 'Pranimi dështoi'));
           } finally {
@@ -152,7 +152,7 @@ export default function WalletScreen() {
   };
 
   const rejectSale = (id) => {
-    Alert.alert('Refuzo', 'Porosia anulohet pa transfer JonCoin.', [
+    Alert.alert('Refuzo', 'Porosia anulohet pa transfer XCoin.', [
       { text: 'Anulo', style: 'cancel' },
       {
         text: 'Refuzo',
@@ -216,11 +216,11 @@ export default function WalletScreen() {
         <View>
           <View style={styles.balanceCard}>
             <Text style={styles.balanceTitle}>Wallet Balance</Text>
-            <Text style={styles.balanceValue}>{balance} JonCoin</Text>
+            <Text style={styles.balanceValue}>{balance} XCoin</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Buy JonCoin (IAP)</Text>
+            <Text style={styles.cardTitle}>Buy XCoin (IAP)</Text>
             {ALLOW_MOBILE_DIGITAL_PURCHASES ? (
               JONCOIN_PACKS.map((pack) => (
                 <TouchableOpacity
@@ -238,7 +238,7 @@ export default function WalletScreen() {
               <TouchableOpacity
                 style={styles.primaryBtn}
                 onPress={() =>
-                  Alert.alert('JonCoin', 'IAP nuk është aktiv. Hap web për blerje.', [
+                  Alert.alert('XCoin', 'IAP nuk është aktiv. Hap web për blerje.', [
                     { text: 'Hap web', onPress: () => Linking.openURL(`${WEB_APP_URL}/wallet`).catch(() => {}) },
                     { text: 'OK', style: 'cancel' },
                   ])
@@ -250,7 +250,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Withdraw JonCoin</Text>
+            <Text style={styles.cardTitle}>Withdraw XCoin</Text>
             <Text style={styles.feeHint}>{withdrawFeePct}% withdrawal fee applies to the amount you cash out.</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={withdrawAmount} onChangeText={setWithdrawAmount} placeholder="Amount" />
             <TouchableOpacity style={styles.warningBtn} onPress={withdraw}>
@@ -259,7 +259,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Transfer JonCoin</Text>
+            <Text style={styles.cardTitle}>Transfer XCoin</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={toUserId} onChangeText={setToUserId} placeholder="To User ID" />
             <TextInput style={styles.input} keyboardType="numeric" value={transferAmount} onChangeText={setTransferAmount} placeholder="Amount" />
             <TouchableOpacity style={styles.infoBtn} onPress={transfer}>
@@ -337,7 +337,7 @@ export default function WalletScreen() {
       renderItem={({ item }) => (
         <View style={styles.txCard}>
           <Text style={styles.txType}>{item?.type || 'transaction'} ({item?.status || 'pending'})</Text>
-          <Text style={styles.txAmount}>{item?.amount} JonCoin</Text>
+          <Text style={styles.txAmount}>{item?.amount} XCoin</Text>
           <Text style={styles.txDesc}>{item?.description || 'No description'}</Text>
         </View>
       )}

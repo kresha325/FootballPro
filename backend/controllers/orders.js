@@ -120,7 +120,7 @@ exports.getOrder = async (req, res) => {
 };
 
 /**
- * Krijon porosi në status pending: rezervon stokun, NUK transferon JonCoin.
+ * Krijon porosi në status pending: rezervon stokun, NUK transferon XCoin.
  * Trupi: { products, deliveryMethod?, deliveryAddress?, buyerContact?, deliveryNotes? }
  * Një porosi për shitës.
  */
@@ -208,7 +208,7 @@ exports.createOrder = async (req, res) => {
 
       const balance = await getCompletedJonCoinBalance(buyerId, { transaction: t });
       if (balance < grandTotal) {
-        throw Object.assign(new Error('Insufficient JonCoin balance'), { status: 400 });
+        throw Object.assign(new Error('Insufficient XCoin balance'), { status: 400 });
       }
 
       const orders = [];
@@ -286,7 +286,7 @@ exports.createOrder = async (req, res) => {
     return res.json({
       orders: full.map(serializeOrder),
       order: full[0] ? serializeOrder(full[0]) : null,
-      msg: 'Porosia u dërgua. JonCoin transferohen kur shitësi e pranon.',
+      msg: 'Porosia u dërgua. XCoin transferohen kur shitësi e pranon.',
     });
   } catch (err) {
     const status = err.status || 500;
@@ -297,7 +297,7 @@ exports.createOrder = async (req, res) => {
 };
 
 /**
- * Shitësi pranon porosinë → transferohen JonCoin, status = paid.
+ * Shitësi pranon porosinë → transferohen XCoin, status = paid.
  */
 exports.acceptOrder = async (req, res) => {
   const orderId = parseInt(req.params.id, 10);
@@ -326,7 +326,7 @@ exports.acceptOrder = async (req, res) => {
       const balance = await getCompletedJonCoinBalance(buyerId, { transaction: t });
       if (balance < totalAmount) {
         throw Object.assign(
-          new Error('Blerësi nuk ka mjaftueshëm JonCoin. Anulo ose prit rimbushje.'),
+          new Error('Blerësi nuk ka mjaftueshëm XCoin. Anulo ose prit rimbushje.'),
           { status: 400 }
         );
       }
@@ -386,7 +386,7 @@ exports.acceptOrder = async (req, res) => {
     const full = await Order.findByPk(order.id, { include: buyerSellerInclude });
     return res.json({
       order: serializeOrder(full),
-      msg: 'Porosia u pranua. JonCoin u transferuan.',
+      msg: 'Porosia u pranua. XCoin u transferuan.',
     });
   } catch (err) {
     const status = err.status || 500;

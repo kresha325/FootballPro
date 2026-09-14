@@ -161,7 +161,7 @@ exports.createNotification = async (data) => {
         if (persist.type === 'message') {
           body = 'Ke një mesazh të ri';
         }
-        await exports.sendNotification(persist.userId, persist.title || 'XTalenti', body, {
+        await exports.sendNotification(persist.userId, persist.title || 'X TALENTI', body, {
           type: persist.type,
           link: persist.link,
           entityType: persist.entityType,

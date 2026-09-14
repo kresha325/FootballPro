@@ -67,7 +67,13 @@ export default function AdminDashboard() {
   const [actionBusy, setActionBusy] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
-  const [invoiceFilters, setInvoiceFilters] = useState({ kind: '', source: '', search: '' });
+  const [invoiceFilters, setInvoiceFilters] = useState({
+    kind: '',
+    source: '',
+    search: '',
+    from: '',
+    to: '',
+  });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   const fetchAnalytics = async () => {
@@ -141,8 +147,8 @@ export default function AdminDashboard() {
       const res = await api.get('/admin/joncoin/pending');
       setJoncoinPending(res.data.transactions || []);
     } catch (error) {
-      console.error('Error fetching JonCoin pending:', error);
-      window.alert(apiError(error, 'Nuk u ngarkuan JonCoin pending'));
+      console.error('Error fetching XCoin pending:', error);
+      window.alert(apiError(error, 'Nuk u ngarkuan XCoin pending'));
       setJoncoinPending([]);
     } finally {
       setJoncoinLoading(false);
@@ -175,6 +181,8 @@ export default function AdminDashboard() {
           kind: invoiceFilters.kind || undefined,
           source: invoiceFilters.source || undefined,
           search: invoiceFilters.search || undefined,
+          from: invoiceFilters.from || undefined,
+          to: invoiceFilters.to || undefined,
         },
       });
       setInvoices(res.data?.invoices || []);
@@ -190,7 +198,15 @@ export default function AdminDashboard() {
     } finally {
       setInvoicesLoading(false);
     }
-  }, [pagination.page, pagination.limit, invoiceFilters.kind, invoiceFilters.source, invoiceFilters.search]);
+  }, [
+    pagination.page,
+    pagination.limit,
+    invoiceFilters.kind,
+    invoiceFilters.source,
+    invoiceFilters.search,
+    invoiceFilters.from,
+    invoiceFilters.to,
+  ]);
 
   const openInvoice = async (id) => {
     try {
@@ -208,6 +224,8 @@ export default function AdminDashboard() {
           kind: invoiceFilters.kind || undefined,
           source: invoiceFilters.source || undefined,
           search: invoiceFilters.search || undefined,
+          from: invoiceFilters.from || undefined,
+          to: invoiceFilters.to || undefined,
         },
         responseType: 'blob',
       });
@@ -259,13 +277,13 @@ export default function AdminDashboard() {
 
   const handleJoncoinDecision = async (txId, status) => {
     const label = status === 'completed' ? 'approve' : 'reject';
-    if (!window.confirm(`${label === 'approve' ? 'Approve' : 'Reject'} this JonCoin transaction?`)) return;
+    if (!window.confirm(`${label === 'approve' ? 'Approve' : 'Reject'} this XCoin transaction?`)) return;
     setActionBusy(true);
     try {
       await api.patch(`/joncoin/transaction/${txId}`, { status });
       await fetchJoncoinPending();
     } catch (error) {
-      console.error('JonCoin transaction update:', error);
+      console.error('XCoin transaction update:', error);
       window.alert(apiError(error, 'Update failed'));
     } finally {
       setActionBusy(false);
@@ -461,7 +479,7 @@ export default function AdminDashboard() {
           }`}
         >
           <BanknotesIcon className="w-5 h-5 inline mr-2" />
-          JonCoin
+          XCoin
         </button>
         <button
           onClick={() => switchTab('invoices')}
@@ -557,7 +575,7 @@ export default function AdminDashboard() {
               ['Subscriptions', analytics.totals?.subscriptions],
               ['Orders', analytics.totals?.orders],
               ['Payments', analytics.totals?.payments],
-              ['JonCoin txs', analytics.totals?.joncoinTransactions],
+              ['XCoin txs', analytics.totals?.joncoinTransactions],
               ['Reports', analytics.totals?.reports],
               ['Blocks', analytics.totals?.blocks],
             ].map(([label, value]) => (
@@ -994,7 +1012,7 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Pending purchases, withdrawals, and other JonCoin rows awaiting approval.
+              Pending purchases, withdrawals, and other XCoin rows awaiting approval.
             </p>
             <button
               type="button"
@@ -1009,7 +1027,7 @@ export default function AdminDashboard() {
             <div className="text-gray-500 text-sm">Loading…</div>
           ) : joncoinPending.length === 0 ? (
             <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500 text-sm">
-              No pending JonCoin transactions.
+              No pending XCoin transactions.
             </div>
           ) : (
             <div className="bg-white shadow rounded-lg overflow-x-auto">
@@ -1101,7 +1119,7 @@ export default function AdminDashboard() {
               >
                 <option value="">All kinds</option>
                 <option value="premium">Premium</option>
-                <option value="joncoin">JonCoin</option>
+                <option value="joncoin">XCoin</option>
               </select>
               <select
                 value={invoiceFilters.source}
@@ -1118,6 +1136,30 @@ export default function AdminDashboard() {
                 <option value="auto">Auto</option>
                 <option value="admin">Admin</option>
               </select>
+              <label className="flex items-center gap-1 text-sm text-gray-600">
+                <span className="whitespace-nowrap">From</span>
+                <input
+                  type="date"
+                  value={invoiceFilters.from}
+                  onChange={(e) => {
+                    setInvoiceFilters({ ...invoiceFilters, from: e.target.value });
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className="px-2 py-2 text-sm border border-gray-300 rounded-lg"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-sm text-gray-600">
+                <span className="whitespace-nowrap">To</span>
+                <input
+                  type="date"
+                  value={invoiceFilters.to}
+                  onChange={(e) => {
+                    setInvoiceFilters({ ...invoiceFilters, to: e.target.value });
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className="px-2 py-2 text-sm border border-gray-300 rounded-lg"
+                />
+              </label>
             </div>
             <div className="flex gap-2">
               <button
@@ -1141,7 +1183,7 @@ export default function AdminDashboard() {
             <div className="text-gray-500 text-sm">Loading invoices…</div>
           ) : invoices.length === 0 ? (
             <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500 text-sm">
-              No invoices yet. They are created automatically on Premium / JonCoin payments.
+              No invoices yet. They are created automatically on Premium / XCoin payments.
             </div>
           ) : (
             <div className="bg-white shadow rounded-lg overflow-x-auto">
@@ -1362,7 +1404,7 @@ export default function AdminDashboard() {
           </div>
           <div id="invoice-print-area" className="text-sm text-gray-900 space-y-3">
             <div className="border-b pb-3">
-              <div className="text-2xl font-bold tracking-tight">XTalenti</div>
+              <div className="text-2xl font-bold tracking-tight">X TALENTI</div>
               <div className="text-gray-500">xtalenti.com</div>
             </div>
             <div className="flex justify-between gap-4">
@@ -1405,7 +1447,7 @@ export default function AdminDashboard() {
                       {selectedInvoice.description ||
                         (selectedInvoice.kind === 'premium'
                           ? `Premium ${selectedInvoice.plan || ''}`
-                          : `JonCoin ${selectedInvoice.joncoinAmount || ''}`)}
+                          : `XCoin ${selectedInvoice.joncoinAmount || ''}`)}
                     </div>
                     <div className="text-xs text-gray-500">
                       {selectedInvoice.kind} · {selectedInvoice.source}
@@ -1458,7 +1500,7 @@ export default function AdminDashboard() {
               ['Live now', analytics?.systemHealth?.liveNow ?? analytics?.systemHealth?.activeStreams],
               ['Pending reports', analytics?.systemHealth?.pendingReports],
               ['Messages', analytics?.totals?.messages],
-              ['JonCoin txs', analytics?.totals?.joncoinTransactions],
+              ['XCoin txs', analytics?.totals?.joncoinTransactions],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-2">
                 <dt className="text-gray-600">{label}</dt>
@@ -1498,7 +1540,7 @@ export default function AdminDashboard() {
             onClick={() => switchTab('joncoin')}
             className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
           >
-            JonCoin pending
+            XCoin pending
           </button>
         </div>
       </div>

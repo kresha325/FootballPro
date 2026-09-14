@@ -20,14 +20,14 @@ async function getPendingWithdrawTotal(userId, { transaction } = {}) {
   return round2(sum || 0);
 }
 
-/** Sa JonCoin mund të tërhiqesh / transferohet (ledger minus tërheqje pending). */
+/** Sa XCoin mund të tërhiqesh / transferohet (ledger minus tërheqje pending). */
 async function getSpendableLedgerBalance(userId, opts) {
   const ledger = await getCompletedLedgerBalance(userId, opts);
   const pendingWd = await getPendingWithdrawTotal(userId, opts);
   return round2(ledger - pendingWd);
 }
 
-// Transfer JonCoin mes userave (atomic + row locks)
+// Transfer XCoin mes userave (atomic + row locks)
 exports.transfer = async (req, res) => {
   try {
     const toUserId = Number(req.body?.toUserId);
@@ -58,7 +58,7 @@ exports.transfer = async (req, res) => {
       if (spendable < amount) {
         return {
           code: 400,
-          error: 'Nuk ke mjaftueshëm JonCoin të disponueshëm (përfshi tërheqjet në pritje)',
+          error: 'Nuk ke mjaftueshëm XCoin të disponueshëm (përfshi tërheqjet në pritje)',
         };
       }
 
@@ -98,7 +98,7 @@ exports.transfer = async (req, res) => {
     if (result.code) return res.status(result.code).json({ error: result.error });
     return res.json({ success: true });
   } catch (err) {
-    console.error('JonCoin transfer error:', err);
+    console.error('XCoin transfer error:', err);
     res.status(500).json({ error: 'Gabim në server' });
   }
 };
@@ -128,7 +128,7 @@ exports.getTransactions = async (req, res) => {
 };
 
 /**
- * Kërkesë për “blerje” JonCoin (mbushje wallet).
+ * Kërkesë për “blerje” XCoin (mbushje wallet).
  * Nëse `JONCOIN_AUTO_COMPLETE_PURCHASE=true`, kredito menjëherë (dev / test pa admin).
  */
 exports.purchase = async (req, res) => {
@@ -146,7 +146,7 @@ exports.purchase = async (req, res) => {
         type: 'purchase',
         amount,
         status: 'completed',
-        description: 'Blerje JonCoin (auto-approved)',
+        description: 'Blerje XCoin (auto-approved)',
       });
       const user = await User.findByPk(req.user.id);
       if (user) {
@@ -161,13 +161,13 @@ exports.purchase = async (req, res) => {
           source: 'auto',
           amount: parseFloat(amount),
           currency: 'JC',
-          description: 'Blerje JonCoin (auto-approved)',
+          description: 'Blerje XCoin (auto-approved)',
           joncoinAmount: parseFloat(amount),
           externalId: `joncoin-tx:${tx.id}`,
           joncoinTransactionId: tx.id,
         });
       } catch (invErr) {
-        console.warn('JonCoin auto invoice skipped:', invErr?.message || invErr);
+        console.warn('XCoin auto invoice skipped:', invErr?.message || invErr);
       }
       return res.json({ success: true, transaction: tx, autoCompleted: true });
     }
@@ -177,7 +177,7 @@ exports.purchase = async (req, res) => {
       type: 'purchase',
       amount,
       status: 'pending',
-      description: 'Blerje JonCoin (në pritje të konfirmimit nga admin)',
+      description: 'Blerje XCoin (në pritje të konfirmimit nga admin)',
     });
     return res.json({ success: true, transaction: tx, autoCompleted: false });
   } catch (err) {
@@ -192,7 +192,7 @@ exports.spend = async (req, res) => {
 
     const spendable = await getSpendableLedgerBalance(req.user.id);
     if (spendable < amount) {
-      return res.status(400).json({ error: 'Nuk ke mjaftueshëm JonCoin të disponueshëm' });
+      return res.status(400).json({ error: 'Nuk ke mjaftueshëm XCoin të disponueshëm' });
     }
 
     const tx = await JonCoinTransaction.create({
@@ -242,7 +242,7 @@ exports.withdraw = async (req, res) => {
     const spendable = await getSpendableLedgerBalance(req.user.id);
     if (spendable < gross) {
       return res.status(400).json({
-        error: 'Nuk ke mjaftueshëm JonCoin të disponueshëm (përfshi tërheqjet në pritje)',
+        error: 'Nuk ke mjaftueshëm XCoin të disponueshëm (përfshi tërheqjet në pritje)',
       });
     }
 
@@ -270,8 +270,8 @@ exports.withdraw = async (req, res) => {
       relatedEntityId: withdrawal.id,
       description:
         feeAmount > 0
-          ? `Tërheqje JonCoin (bruto ${gross}, komision ${feePct}%: ${feeAmount}, net ${netPayout})`
-          : 'Kërkesë për tërheqje JonCoin',
+          ? `Tërheqje XCoin (bruto ${gross}, komision ${feePct}%: ${feeAmount}, net ${netPayout})`
+          : 'Kërkesë për tërheqje XCoin',
     });
     return res.json({
       success: true,
@@ -343,13 +343,13 @@ exports.updateTransactionStatus = async (req, res) => {
           source: 'admin',
           amount: parseFloat(out.tx.amount),
           currency: 'JC',
-          description: out.tx.description || 'Blerje JonCoin (admin approved)',
+          description: out.tx.description || 'Blerje XCoin (admin approved)',
           joncoinAmount: parseFloat(out.tx.amount),
           externalId: `joncoin-tx:${out.tx.id}`,
           joncoinTransactionId: out.tx.id,
         });
       } catch (invErr) {
-        console.warn('JonCoin admin invoice skipped:', invErr?.message || invErr);
+        console.warn('XCoin admin invoice skipped:', invErr?.message || invErr);
       }
     }
 

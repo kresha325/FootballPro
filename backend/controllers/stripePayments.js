@@ -6,10 +6,10 @@ const Product = require('../models/Product');
 const User = require('../models/User');
 const { activatePremiumFromStripeSession } = require('./premium');
 
-// Marketplace përdor JonCoin (shiko orders.createOrder). Endpoint mbetet për klientë të vjetër.
+// Marketplace përdor XCoin (shiko orders.createOrder). Endpoint mbetet për klientë të vjetër.
 exports.createCheckoutSession = async (req, res) => {
   return res.status(400).json({
-    msg: 'Marketplace purchases use JonCoin. Use POST /api/orders with { products: [{ productId, quantity }] } from your wallet balance.',
+    msg: 'Marketplace purchases use XCoin. Use POST /api/orders with { products: [{ productId, quantity }] } from your wallet balance.',
   });
 };
 

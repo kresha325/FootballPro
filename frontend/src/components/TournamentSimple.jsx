@@ -655,7 +655,7 @@ export default function TournamentSimple() {
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-400/90">FootballPro · Competitions</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-400/90">X TALENTI · Competitions</p>
             <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
             <p className="mt-2 sm:mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
               Ligë, cup dhe knockout — tabela live, raport golash, minuta dhe asiste direkt në profilin e atletit.

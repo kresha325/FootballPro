@@ -25,7 +25,7 @@ export default function GoLiveScreen({ route, navigation }) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const [title, setTitle] = useState('Mobile Live Session');
-  const [description, setDescription] = useState('Streaming from FootballPro mobile app');
+  const [description, setDescription] = useState('Streaming from X TALENTI mobile app');
   const [loading, setLoading] = useState(false);
   const [lastStream, setLastStream] = useState(null);
   const [loadingLists, setLoadingLists] = useState(false);

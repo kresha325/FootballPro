@@ -61,7 +61,7 @@ async function sendPurchaseNoticeToSeller(
   const buyerName = [buyer?.firstName, buyer?.lastName].filter(Boolean).join(' ').trim() || `User #${buyerId}`;
 
   const lineParts = (lines || []).map(
-    (l) => `• ${l.name} × ${l.quantity} = ${l.lineTotal} JonCoin`
+    (l) => `• ${l.name} × ${l.quantity} = ${l.lineTotal} XCoin`
   );
 
   const deliveryLines = [];
@@ -78,10 +78,10 @@ async function sendPurchaseNoticeToSeller(
     '',
     lineParts.join('\n'),
     '',
-    `Nëntotali (për ty): ${sellerTotal} JonCoin`,
+    `Nëntotali (për ty): ${sellerTotal} XCoin`,
     deliveryLines.length ? `\nDërgesa / pranimi:\n${deliveryLines.join('\n')}` : '',
     pending
-      ? '\n⚠️ JonCoin NUK janë transferuar ende. Pranoje porosinë te Wallet → Shitjet e mia (Prano porosinë).'
+      ? '\n⚠️ XCoin NUK janë transferuar ende. Pranoje porosinë te Wallet → Shitjet e mia (Prano porosinë).'
       : '',
   ]
     .filter((x) => x !== '')

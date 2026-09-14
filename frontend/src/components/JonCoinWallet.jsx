@@ -76,7 +76,7 @@ const JonCoinWallet = () => {
   };
 
   const handleAcceptSale = async (id) => {
-    if (!window.confirm('Prano porosinë? JonCoin do të transferohen tani.')) return;
+    if (!window.confirm('Prano porosinë? XCoin do të transferohen tani.')) return;
     setOrderBusyId(id);
     setMessage('');
     try {
@@ -91,7 +91,7 @@ const JonCoinWallet = () => {
   };
 
   const handleRejectSale = async (id) => {
-    if (!window.confirm('Refuzo porosinë? Stoku kthehet, pa transfer JonCoin.')) return;
+    if (!window.confirm('Refuzo porosinë? Stoku kthehet, pa transfer XCoin.')) return;
     setOrderBusyId(id);
     setMessage('');
     try {
@@ -127,7 +127,7 @@ const JonCoinWallet = () => {
       const auto = res?.autoCompleted;
       setMessage(
         auto
-          ? 'JonCoin u shtua në llogarinë tënde.'
+          ? 'XCoin u shtua në llogarinë tënde.'
           : 'Kërkesa për blerje u dërgua (në pritje të konfirmimit nga admin).'
       );
       setBuyAmount('');
@@ -174,7 +174,7 @@ const JonCoinWallet = () => {
   return (
     <div className="max-w-4xl mx-auto mt-8 px-4 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">JonCoin Wallet</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">XCoin Wallet</h2>
         <Link
           to="/marketplace"
           className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700"
@@ -185,14 +185,14 @@ const JonCoinWallet = () => {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">1 JonCoin = 1 € (referencë)</div>
+          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">1 XCoin = 1 € (referencë)</div>
           <div className="mb-6 text-lg text-gray-900 dark:text-white">
             Balanca: <span className="font-mono text-green-600 dark:text-green-400">{balance}</span>{' '}
-            <span className="text-gray-600 dark:text-gray-300">JonCoin</span>
+            <span className="text-gray-600 dark:text-gray-300">XCoin</span>
           </div>
 
           <form onSubmit={handleBuy} className="space-y-3 mb-6">
-            <div className="font-semibold text-gray-900 dark:text-white">Bli JonCoin</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Bli XCoin</div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Në prodhim, blerjet mund të jenë në pritje derisa admin t’i konfirmojë, përveç nëse përdoret auto-approve në server.
             </p>
@@ -206,7 +206,7 @@ const JonCoinWallet = () => {
               required
             />
             <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
-              Bli JonCoin
+              Bli XCoin
             </button>
           </form>
 
@@ -259,7 +259,7 @@ const JonCoinWallet = () => {
           <div>
             <div className="font-semibold text-gray-900 dark:text-white mb-1">Shitjet e mia (prano / refuzo)</div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Kur pranon, JonCoin transferohen. Deri atëherë porosia është pending.
+              Kur pranon, XCoin transferohen. Deri atëherë porosia është pending.
             </p>
             <div className="space-y-3 max-h-72 overflow-y-auto text-xs">
               {sellerOrders.length === 0 && (
@@ -271,7 +271,7 @@ const JonCoinWallet = () => {
                   className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-1"
                 >
                   <div className="flex justify-between gap-2 font-semibold text-gray-900 dark:text-white">
-                    <span>#{o.id} · {o.totalAmount} JonCoin</span>
+                    <span>#{o.id} · {o.totalAmount} XCoin</span>
                     <span className="capitalize text-amber-600">{o.status}</span>
                   </div>
                   <p className="text-gray-700 dark:text-gray-300">
@@ -325,7 +325,7 @@ const JonCoinWallet = () => {
                   className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-1"
                 >
                   <div className="flex justify-between gap-2 font-semibold text-gray-900 dark:text-white">
-                    <span>#{o.id} · {o.totalAmount} JonCoin</span>
+                    <span>#{o.id} · {o.totalAmount} XCoin</span>
                     <span className="capitalize">{o.status}</span>
                   </div>
                   <p className="text-gray-700 dark:text-gray-300">

@@ -382,7 +382,7 @@ function ProductResults({ items, getFullUrl }) {
               <img src={getFullUrl(p.imageUrl)} alt="" className="h-24 w-full object-cover rounded-lg mb-2" />
             ) : null}
             <p className="font-bold text-gray-900 dark:text-white">{p.name}</p>
-            <p className="text-sm text-emerald-600 font-semibold">{p.price} JonCoin</p>
+            <p className="text-sm text-emerald-600 font-semibold">{p.price} XCoin</p>
           </Link>
         ))}
       </div>

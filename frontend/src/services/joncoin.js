@@ -1,4 +1,4 @@
-// Ndrysho statusin e një transaksioni JonCoin (admin)
+// Ndrysho statusin e një transaksioni XCoin (admin)
 export const updateJonCoinTransactionStatus = async (id, status) => {
   const res = await API.patch(`/joncoin/transaction/${id}`, { status });
   return res.data;

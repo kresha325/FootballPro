@@ -7,13 +7,13 @@ const { createInvoiceIfNeeded } = require('../utils/invoices');
 
 const PLANS = {
   monthly: {
-    name: 'XTalenti Premium — Monthly',
+    name: 'X TALENTI Premium — Monthly',
     amountCents: 999,
     days: 30,
     label: 'Monthly',
   },
   yearly: {
-    name: 'XTalenti Premium — Yearly',
+    name: 'X TALENTI Premium — Yearly',
     amountCents: 9999,
     days: 365,
     label: 'Yearly',

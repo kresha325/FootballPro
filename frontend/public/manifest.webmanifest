@@ -1,10 +1,10 @@
 {
-  "name": "X Talenti",
-  "short_name": "X Talenti",
+  "name": "X TALENTI",
+  "short_name": "X TALENTI",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "X Talenti web app",
+  "description": "X TALENTI web app",
   "icons": [
     {
       "src": "/footballpro-icon-192.png",

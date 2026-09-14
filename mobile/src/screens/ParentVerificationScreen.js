@@ -64,7 +64,7 @@ export default function ParentVerificationScreen({ navigation }) {
     if (!confirmUrl) return;
     try {
       await Share.share({
-        message: `Konfirmo llogarinë FootballPro të fëmijës:\n${confirmUrl}`,
+        message: `Konfirmo llogarinë X TALENTI të fëmijës:\n${confirmUrl}`,
       });
     } catch (_e) {
       Alert.alert('Linku', confirmUrl);

@@ -288,7 +288,7 @@ exports.verifyAndFulfill = async (req, res) => {
           source: 'iap',
           amount: Number(catalog.amount),
           currency: 'JC',
-          description: `JonCoin pack ${catalog.amount}`,
+          description: `XCoin pack ${catalog.amount}`,
           productId,
           joncoinAmount: Number(catalog.amount),
           externalId: `iap:${transactionId}`,
@@ -297,7 +297,7 @@ exports.verifyAndFulfill = async (req, res) => {
           rawPayload: { platform, productId, transactionId },
         });
       } catch (invErr) {
-        console.warn('IAP JonCoin invoice skipped:', invErr?.message || invErr);
+        console.warn('IAP XCoin invoice skipped:', invErr?.message || invErr);
       }
     } else if (catalog.kind === 'premium' && fulfillment?.invoice && purchase?.id) {
       try {

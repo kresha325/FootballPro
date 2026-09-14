@@ -646,7 +646,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Name, JonCoin Balance, and Stats */}
+            {/* Name, XCoin Balance, and Stats */}
             <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -662,12 +662,12 @@ const Profile = () => {
                     <span>Sponsored</span>
                   </span>
                 )}
-                {/* JonCoin — vetëm në profilin tënd (wallet nga ledger) */}
+                {/* XCoin — vetëm në profilin tënd (wallet nga ledger) */}
                 {user && Number(user.id) === Number(id) && (
-                  <span className="ml-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
+                  <span className="ml-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="XCoin Balance">
                     <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" stroke="gold" strokeWidth="2" fill="yellow" /><text x="10" y="15" textAnchor="middle" fontSize="10" fill="#b45309" fontWeight="bold">JC</text></svg>
-                    {jonCoinBalance} JonCoin
-                    <span className="text-xs text-gray-500 ml-1">(1 JonCoin = 1€)</span>
+                    {jonCoinBalance} XCoin
+                    <span className="text-xs text-gray-500 ml-1">(1 XCoin = 1€)</span>
                   </span>
                 )}
               </div>

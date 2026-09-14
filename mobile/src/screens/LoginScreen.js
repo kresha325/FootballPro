@@ -22,7 +22,7 @@ import {
   registerRoleLabel,
 } from '../constants/registerRoles';
 import { useAuth } from '../context/AuthContext';
-import { APP_BRAND_NAME } from '../config/branding';
+import { APP_BRAND_WORDMARK } from '../config/branding';
 
 function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
   return (
@@ -196,7 +196,7 @@ export default function LoginScreen() {
         ) : null}
         <Text style={styles.title}>
           <Text style={styles.titleX}>X</Text>
-          <Text>{APP_BRAND_NAME.replace(/^x/i, '').trim()}</Text>
+          <Text>{APP_BRAND_WORDMARK}</Text>
         </Text>
         <Text style={styles.subtitle}>
           {mode === 'login'

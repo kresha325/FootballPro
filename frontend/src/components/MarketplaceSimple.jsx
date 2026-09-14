@@ -128,7 +128,7 @@ export default function MarketplaceSimple() {
   useEffect(() => {
     fetchProducts();
 
-    // Fetch JonCoin balance
+    // Fetch XCoin balance
     getJonCoinBalance().then(({ balance: bal }) => setJonCoinBalance(Number(bal) || 0));
     
     const success = searchParams.get('success');
@@ -213,7 +213,7 @@ export default function MarketplaceSimple() {
     }
     const total = subtotalJonCoin;
     if (total > (Number(jonCoinBalance) || 0)) {
-      alert('Nuk ke mjaftueshëm JonCoin për këtë porosi.');
+      alert('Nuk ke mjaftueshëm XCoin për këtë porosi.');
       return;
     }
     if (!String(checkoutForm.buyerContact || '').trim()) {
@@ -226,7 +226,7 @@ export default function MarketplaceSimple() {
     }
     if (
       !window.confirm(
-        `Dërgo porosinë (${total} JonCoin)? Coinat transferohen vetëm kur shitësi e pranon.`
+        `Dërgo porosinë (${total} XCoin)? Coinat transferohen vetëm kur shitësi e pranon.`
       )
     ) {
       return;
@@ -241,7 +241,7 @@ export default function MarketplaceSimple() {
         buyerContact: checkoutForm.buyerContact,
         deliveryNotes: checkoutForm.deliveryNotes,
       });
-      alert('✅ Porosia u dërgua (pending). Shitësi e sheh te Wallet → Shitjet e mia. JonCoin transferohen kur e pranon.');
+      alert('✅ Porosia u dërgua (pending). Shitësi e sheh te Wallet → Shitjet e mia. XCoin transferohen kur e pranon.');
       clearCart();
       setShowCartDrawer(false);
       setCheckoutForm({
@@ -288,12 +288,12 @@ export default function MarketplaceSimple() {
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
-      {/* JonCoin Balance Header */}
+      {/* XCoin Balance Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="JonCoin Balance">
-            {jonCoinBalance !== null ? `${jonCoinBalance} JonCoin` : '...'}
-            <span className="text-xs text-gray-500 ml-1">(1 JonCoin = 1€)</span>
+          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="XCoin Balance">
+            {jonCoinBalance !== null ? `${jonCoinBalance} XCoin` : '...'}
+            <span className="text-xs text-gray-500 ml-1">(1 XCoin = 1€)</span>
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -399,7 +399,7 @@ export default function MarketplaceSimple() {
 
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {product.price} JonCoin
+                    {product.price} XCoin
                   </span>
                   <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium capitalize">
                     {product.condition}
@@ -539,7 +539,7 @@ export default function MarketplaceSimple() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Çmimi (JonCoin)
+                  Çmimi (XCoin)
                 </label>
                 <input
                   type="number"
@@ -659,7 +659,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Çmimi (JonCoin)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Çmimi (XCoin)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -780,7 +780,7 @@ export default function MarketplaceSimple() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 dark:text-white truncate">{line.name}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {(Number(line.price) || 0).toFixed(2)} JonCoin × {q}
+                            {(Number(line.price) || 0).toFixed(2)} XCoin × {q}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <button
@@ -867,10 +867,10 @@ export default function MarketplaceSimple() {
               </div>
               <div className="flex justify-between text-gray-900 dark:text-white font-bold">
                 <span>Total</span>
-                <span>{subtotalJonCoin} JonCoin</span>
+                <span>{subtotalJonCoin} XCoin</span>
               </div>
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                Porosia mbetet pending. JonCoin transferohen vetëm kur shitësi e pranon.
+                Porosia mbetet pending. XCoin transferohen vetëm kur shitësi e pranon.
               </p>
               <button
                 type="button"
@@ -916,7 +916,7 @@ export default function MarketplaceSimple() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                  {selectedProduct.price} JonCoin
+                  {selectedProduct.price} XCoin
                 </span>
                 <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium capitalize">
                   {selectedProduct.condition}
@@ -1000,7 +1000,7 @@ export default function MarketplaceSimple() {
                         ) || 1) *
                         100
                     ) / 100}{' '}
-                    JonCoin
+                    XCoin
                   </button>
                 </div>
               )}

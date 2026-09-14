@@ -507,7 +507,7 @@ exports.resetUserPassword = async (req, res) => {
   }
 };
 
-/** JonCoin: transaksione në pritje (blerje, tërheqje, shpenzime) për moderim admin. */
+/** XCoin: transaksione në pritje (blerje, tërheqje, shpenzime) për moderim admin. */
 exports.getPendingJonCoinTransactions = async (req, res) => {
   try {
     const { JonCoinTransaction, User: UserModel } = require('../models');

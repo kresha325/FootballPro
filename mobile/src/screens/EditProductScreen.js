@@ -144,7 +144,7 @@ export default function EditProductScreen({ route, navigation }) {
         placeholder="Përshkrim"
         multiline
       />
-      <Text style={styles.label}>Çmim (JonCoin) *</Text>
+      <Text style={styles.label}>Çmim (XCoin) *</Text>
       <TextInput
         style={styles.input}
         value={price}

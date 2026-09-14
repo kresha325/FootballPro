@@ -62,7 +62,7 @@ export default function CreateProductScreen({ navigation }) {
     }
     const priceNum = parseFloat(String(price).replace(',', '.'));
     if (Number.isNaN(priceNum) || priceNum < 0) {
-      Alert.alert('Çmim', 'Jep një çmim të vlefshëm në JonCoin.');
+      Alert.alert('Çmim', 'Jep një çmim të vlefshëm në XCoin.');
       return;
     }
     const stockNum = parseInt(String(stock), 10);
@@ -103,7 +103,7 @@ export default function CreateProductScreen({ navigation }) {
         placeholder="Përshkrim i shkurtër"
         multiline
       />
-      <Text style={styles.label}>Çmim (JonCoin) *</Text>
+      <Text style={styles.label}>Çmim (XCoin) *</Text>
       <TextInput
         style={styles.input}
         value={price}

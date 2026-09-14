@@ -2,7 +2,7 @@ import React from 'react';
 
 const pages = {
   'community-guidelines': {
-    title: 'Udhëzuesit e komunitetit — XTalenti',
+    title: 'Udhëzuesit e komunitetit — X TALENTI',
     body: [
       'Respekto të tjerët. Nuk lejohet ngacmimi, gjuha e urrejtjes, kërcënimet ose dhuna.',
       'Mos publiko spam, mashtrime, përmbajtje seksuale të padëshiruar, ose materiale ilegale.',
@@ -12,7 +12,7 @@ const pages = {
     ],
   },
   privacy: {
-    title: 'Politika e privatësisë — XTalenti',
+    title: 'Politika e privatësisë — X TALENTI',
     body: [
       'Mbledhim të dhëna llogarie (email, emër, profil) për të ofruar shërbimin.',
       'Mund të përdorim media (foto/video) që ngarkon ti, për feed, profil dhe live.',
@@ -23,13 +23,13 @@ const pages = {
     ],
   },
   terms: {
-    title: 'Kushtet e përdorimit — XTalenti',
+    title: 'Kushtet e përdorimit — X TALENTI',
     body: [
-      'Duke përdorur XTalenti, pranon këto kushte dhe udhëzuesit e komunitetit.',
+      'Duke përdorur X TALENTI, pranon këto kushte dhe udhëzuesit e komunitetit.',
       'Je përgjegjës për përmbajtjen që publikon.',
       'Ne mund të heqim përmbajtje ose pezullojmë llogari që shkelin rregullat.',
       'Shërbimi ofrohet “siç është”; ndërprerjet e rrjetit/live mund të ndodhin.',
-      'Pagesat Premium/JonCoin/marketplace rregullohen sipas politikave të pagesës dhe App Store / Play ku aplikohet.',
+      'Pagesat Premium/XCoin/marketplace rregullohen sipas politikave të pagesës dhe App Store / Play ku aplikohet.',
     ],
   },
 };
@@ -49,7 +49,7 @@ export default function LegalPage({ kind = 'community-guidelines' }) {
         </ul>
         <p className="mt-8 text-sm text-slate-500">
           <a className="text-teal-700 font-semibold" href="/">
-            ← Kthehu te XTalenti
+            ← Kthehu te X TALENTI
           </a>
         </p>
       </div>

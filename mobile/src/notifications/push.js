@@ -43,7 +43,7 @@ export async function setPushPreference(enabled) {
 export async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'XTalenti',
+    name: 'X TALENTI',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#0f766e',

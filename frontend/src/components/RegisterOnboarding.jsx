@@ -109,7 +109,7 @@ export default function RegisterOnboarding() {
             <p className="text-sm text-gray-600 mb-4">Mund ta ndryshosh më vonë te profili.</p>
             <div className="flex justify-end mb-2">
               <AiGenerateBioButton
-                hints={{ city, country, extra: 'Regjistrim i ri në FootballPro' }}
+                hints={{ city, country, extra: 'Regjistrim i ri në X TALENTI' }}
                 onBio={setBio}
               />
             </div>

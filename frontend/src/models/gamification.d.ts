@@ -1,4 +1,4 @@
-// Gamification models for FootballPro frontend
+// Gamification models for X TALENTI frontend
 
 export interface Achievement {
   id: number;

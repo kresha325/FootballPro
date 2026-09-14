@@ -44,7 +44,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
       <Text style={styles.description}>{item?.description || 'No description'}</Text>
       <View style={styles.rowBetween}>
         <Text style={styles.price}>
-          {priceN} JonCoin {stock > 0 ? <Text style={styles.perUnit}>/ copë</Text> : null}
+          {priceN} XCoin {stock > 0 ? <Text style={styles.perUnit}>/ copë</Text> : null}
         </Text>
         <Text style={styles.stock}>Stok: {stock}</Text>
       </View>
@@ -203,7 +203,7 @@ export default function MarketplaceScreen() {
         ListHeaderComponent={
           <View>
             <View style={styles.balanceWrap}>
-              <Text style={styles.balanceLabel}>JonCoin Balance</Text>
+              <Text style={styles.balanceLabel}>XCoin Balance</Text>
               <Text style={styles.balanceValue}>{balance}</Text>
             </View>
             <ListSearchBar
