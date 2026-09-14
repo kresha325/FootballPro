@@ -573,6 +573,91 @@ exports.getPublicProfileCv = async (req, res) => {
     }
     await enrichClubDisplayFields(req, response);
 
+    // Public CV extras: real counters + last 5 gallery photos
+    let galleryPreview = [];
+    let galleryCount = 0;
+    let postsCount = 0;
+    let athletesCount = null;
+    let staffCount = null;
+    let tournamentTotals = null;
+
+    try {
+      const galleryRows = await Gallery.findAll({
+        where: { userId },
+        order: [['createdAt', 'DESC']],
+        limit: 12,
+      });
+      galleryCount = await Gallery.count({ where: { userId } });
+      galleryPreview = galleryRows
+        .filter((g) => g.imageUrl || g.videoUrl)
+        .slice(0, 5)
+        .map((g) => {
+          const obj = g.get({ plain: true });
+          return {
+            id: obj.id,
+            title: obj.title || null,
+            type: obj.type || (obj.videoUrl ? 'video' : 'photo'),
+            imageUrl: obj.imageUrl ? toAbsoluteUploadsUrl(req, obj.imageUrl) : null,
+            videoUrl: obj.videoUrl ? toAbsoluteUploadsUrl(req, obj.videoUrl) : null,
+            thumbnail: obj.imageUrl
+              ? toAbsoluteUploadsUrl(req, obj.imageUrl)
+              : obj.videoUrl
+                ? toAbsoluteUploadsUrl(req, obj.videoUrl)
+                : null,
+          };
+        });
+    } catch (_e) {
+      /* ignore gallery */
+    }
+
+    try {
+      postsCount = await Post.count({ where: { userId } });
+    } catch (_e) {
+      postsCount = 0;
+    }
+
+    if (String(role).toLowerCase() === 'club') {
+      try {
+        athletesCount = await ClubMember.count({
+          where: { clubId: userId, status: 'approved' },
+        });
+      } catch (_e) {
+        athletesCount = null;
+      }
+      try {
+        staffCount = await ClubStaff.count({
+          where: { clubId: userId, status: 'active' },
+        });
+      } catch (_e) {
+        staffCount = null;
+      }
+    }
+
+    if (String(role).toLowerCase() === 'athlete') {
+      try {
+        const participations = await TournamentParticipant.findAll({
+          where: { userId, status: { [Op.in]: ['accepted', 'pending'] } },
+          attributes: ['points', 'goalsFor'],
+        });
+        tournamentTotals = {
+          tournamentsPlayed: participations.length,
+          points: participations.reduce((s, p) => s + (Number(p.points) || 0), 0),
+          goalsFor: participations.reduce((s, p) => s + (Number(p.goalsFor) || 0), 0),
+        };
+      } catch (_e) {
+        tournamentTotals = null;
+      }
+    }
+
+    response.galleryPreview = galleryPreview;
+    response.galleryCount = galleryCount;
+    response.postsCount = postsCount;
+    response.athletesCount = athletesCount;
+    response.staffCount = staffCount;
+    response.tournamentTotals = tournamentTotals;
+    response.profilePath = `/profile/${userId}`;
+    response.cvPath = `/cv/${userId}`;
+
     res.json(response);
   } catch (err) {
     console.error('Get public CV error:', err);

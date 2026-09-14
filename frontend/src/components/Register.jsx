@@ -1,9 +1,22 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { setOnboardingPending } from './RegisterOnboarding';
+import { safeNextPath } from '../utils/safeNextPath';
+
+const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
+  const nextFromQuery = searchParams.get('next');
+  if (nextFromQuery) {
+    try {
+      sessionStorage.setItem(POST_AUTH_NEXT_KEY, safeNextPath(nextFromQuery, '/feed'));
+    } catch {
+      /* ignore */
+    }
+  }
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',

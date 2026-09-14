@@ -21,7 +21,7 @@ router.get('/public', (_req, res) => {
     aiConfigured: isAiConfigured(),
     marketplacePayments: 'joncoin',
     premiumMode: stripeLiveReady() ? 'stripe' : 'demo',
-    version: process.env.APP_VERSION || '1.0.1-cv',
+    version: process.env.APP_VERSION || '1.0.2-cv',
   });
 });
 

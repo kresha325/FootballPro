@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { profileAPI } from '../services/api';
 import AiGenerateBioButton from './ai/AiGenerateBioButton';
+import { safeNextPath } from '../utils/safeNextPath';
 
 const ONBOARDING_KEY = 'fp_pending_onboarding';
+const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
 
 export function isOnboardingPending() {
   return localStorage.getItem(ONBOARDING_KEY) === '1';
@@ -44,6 +46,17 @@ export default function RegisterOnboarding() {
       localStorage.removeItem('fp_requires_parent');
       if (needsParent) {
         navigate('/parent-verification');
+        return;
+      }
+      let storedNext = null;
+      try {
+        storedNext = sessionStorage.getItem(POST_AUTH_NEXT_KEY);
+        sessionStorage.removeItem(POST_AUTH_NEXT_KEY);
+      } catch {
+        /* ignore */
+      }
+      if (storedNext) {
+        navigate(safeNextPath(storedNext, goProfile ? '/profile' : '/feed'));
         return;
       }
       navigate(goProfile ? '/profile' : '/feed');

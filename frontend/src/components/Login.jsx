@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_BRAND_NAME } from '../config/branding';
+import { safeNextPath } from '../utils/safeNextPath';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get('next'));
 
   const handleChange = (e) => {
     setFormData({
@@ -29,7 +32,7 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate('/feed');
+      navigate(nextPath);
     } else {
       setError(result.error);
     }
@@ -105,7 +108,7 @@ const Login = () => {
           </div>
           <div className="text-center">
             <Link
-              to="/register"
+              to={nextPath && nextPath !== '/feed' ? `/register?next=${encodeURIComponent(nextPath)}` : '/register'}
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               Nuk ke llogari? Regjistrohu
