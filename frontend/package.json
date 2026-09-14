@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "build": "vite build && node ./scripts/spa-github-pages.mjs",
     "dev": "vite",
     "dev:remote": "vite --mode remote",
-    "build": "vite build",
     "lint": "eslint .",
     "test": "vitest",
     "preview": "vite preview"

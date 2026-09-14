@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <title>XTalenti</title>
     <!--
-      GitHub Pages SPA fallback: kur nuk gjendet një path (p.sh. refresh
-      në /profile), ridrejtojmë te index.html duke ruajtur path-in origjinal
-      në query string, që react-router-dom ta rikthejë me script-in më poshtë.
-      Referencë: https://github.com/rafgraph/spa-github-pages
+      Fallback për GitHub Pages (rafgraph/spa-github-pages).
+      Në deploy prod, ky skedar zakonisht mbivendoset me dist/index.html
+      nga scripts/spa-github-pages.mjs që SPA të ngarkohet menjëherë.
+      Ky redirect mbetet si backup nëse kopjimi dështon.
     -->
     <script>
       var pathSegmentsToKeep = 0;
@@ -21,6 +21,5 @@
       );
     </script>
   </head>
-  <body>
-  </body>
+  <body></body>
 </html>

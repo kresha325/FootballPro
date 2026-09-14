@@ -42,9 +42,17 @@ jobs:
           VITE_APP_NAME: XTalenti
           VITE_API_URL: https://footballpro.onrender.com/api
         run: npm run build
+        # npm run build → vite build + scripts/spa-github-pages.mjs
+        # (kopjon index.html → 404.html që /feed, /profile/:id të hapen)
 
       - name: Add custom domain (CNAME)
         run: echo "xtalenti.com" > dist/CNAME
+
+      - name: Verify SPA 404 fallback
+        run: |
+          test -f dist/404.html
+          grep -q 'id="root"' dist/404.html
+          echo "SPA 404 fallback OK"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
