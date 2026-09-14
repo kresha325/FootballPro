@@ -39,6 +39,15 @@ function logSocketEvent(socket, event, details) {
 const app = express();
 // trust proxy must be set after app is created
 app.set('trust proxy', 1);
+
+// OG share images FIRST — before Helmet/rate-limit (Facebook crawler needs a plain JPEG)
+const {
+  mountOgImageRoutes,
+  ensureOgImageOnCloudinary,
+  brandOgImageUrl,
+} = require('./utils/ogImage');
+mountOgImageRoutes(app);
+
 let server = http.createServer(app);
 let io;
 const PORT = process.env.PORT || 10000;
@@ -208,26 +217,6 @@ app.use('/uploads', (req, res) => {
 // Serve favicon and frontend public icons so browser gets icon on all routes
 try {
   const frontendPublic = path.join(__dirname, '..', 'frontend', 'public');
-  const backendPublic = path.join(__dirname, 'public');
-  // Social OG images on API host (+ keep filenames for scrapers)
-  const sendPublicJpeg = (fileNames) => (req, res) => {
-    const candidates = fileNames.flatMap((name) => [
-      path.join(backendPublic, name),
-      path.join(frontendPublic, name),
-    ]);
-    for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        res.setHeader('Content-Type', 'image/jpeg');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-        return res.sendFile(p);
-      }
-    }
-    return res.sendStatus(404);
-  };
-  app.get('/og-share.jpg', sendPublicJpeg(['og-share.jpg', 'xtalenti-og.jpg']));
-  app.get('/xtalenti-og.jpg', sendPublicJpeg(['xtalenti-og.jpg', 'og-share.jpg']));
   app.get('/favicon.ico', (req, res) => {
     const p = path.join(frontendPublic, 'footballpro-icon-192.png');
     if (fs.existsSync(p)) {
@@ -330,14 +319,6 @@ app.use('/api/moderation', require('./routes/moderation'));
 app.use('/api/iap', require('./routes/iap'));
 
 // Open Graph landings for social shares (crawlers get meta; browsers redirect to SPA)
-function brandOgImageUrl() {
-  // Prefer CDN URL — Facebook frequently fails fetching images from GitHub Pages.
-  return (
-    process.env.OG_IMAGE_URL ||
-    'https://cdn.jsdelivr.net/gh/kresha325/FootballPro@main/frontend/public/xtalenti-og.jpg'
-  );
-}
-
 function escapeHtmlAttr(s) {
   return String(s || '')
     .replace(/&/g, '&amp;')
@@ -370,8 +351,10 @@ function sendOgHtml(res, { title, description, url, image, type = 'website' }) {
   <meta property="og:url" content="${safeUrl}" />
   <meta property="og:image" content="${safeImage}" />
   <meta property="og:image:secure_url" content="${safeImage}" />
+  <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />${fbAppIdMeta}
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="${safeTitle}" />${fbAppIdMeta}
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${safeTitle}" />
   <meta name="twitter:description" content="${safeDesc}" />
@@ -898,6 +881,9 @@ if (!PORT) {
 }
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+  ensureOgImageOnCloudinary().catch((err) => {
+    console.warn('[og-image] startup upload error:', err?.message || err);
+  });
 });
 
 // Error handling middleware (duhet të jetë në fund të file-it)
