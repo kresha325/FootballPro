@@ -691,7 +691,7 @@ const Feed = () => {
                 <img 
                   src={getCloudinarySafeUrl(getFullUrl(post.imageUrl))}
                   alt="Post content" 
-                  className="w-full rounded-lg mb-4 max-h-96 object-cover"
+                  className="w-full h-auto max-h-[min(80vh,48rem)] rounded-lg mb-4 object-contain bg-slate-100 dark:bg-slate-800/60"
                   loading="lazy"
                   decoding="async"
                   onError={(e) => {
@@ -705,7 +705,7 @@ const Feed = () => {
                   src={getCloudinarySafeUrl(getFullUrl(post.videoUrl || post.imageUrl))}
                   controls 
                   preload="metadata"
-                  className="w-full rounded-lg mb-4 max-h-96"
+                  className="w-full h-auto max-h-[min(80vh,48rem)] rounded-lg mb-4 object-contain bg-black"
                   onError={(e) => {
                     console.error('Post video failed to load:', post.videoUrl || post.imageUrl);
                     e.target.style.display = 'none';

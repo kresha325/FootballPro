@@ -921,11 +921,11 @@ const Profile = () => {
                       
                       {/* Post Image */}
                       {post.imageUrl && (
-                        <div className="mt-3 rounded-lg overflow-hidden">
+                        <div className="mt-3 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800/60">
                           <img 
                             src={getFullUrl(post.imageUrl)}
                             alt="Post" 
-                            className="w-full h-auto object-cover"
+                            className="w-full h-auto max-h-[min(80vh,48rem)] object-contain"
                             loading="lazy"
                             decoding="async"
                             onDoubleClick={() => setFullScreenImage(post.imageUrl)}
