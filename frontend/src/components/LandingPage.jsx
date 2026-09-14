@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { APP_BRAND_NAME } from '../config/branding';
+import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 
 // Grupe rolesh për çmimet — individë (lojtarë/trajnerë/skautë/etj.) kanë
 // pricing të ndryshëm nga organizatat (klube/federata/media/biznese).
@@ -58,9 +58,16 @@ export default function LandingPage() {
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <span className="text-2xl font-extrabold uppercase tracking-wide flex items-baseline gap-0.5">
-            <span className="text-amber-500 dark:text-amber-400">X</span>
-            <span className="text-slate-900 dark:text-white">{APP_BRAND_NAME.replace(/^x/i, '').trim()}</span>
+          <span className="flex items-center gap-1.5 text-2xl font-extrabold uppercase tracking-wide">
+            <img
+              src={APP_LOGO_SRC}
+              alt=""
+              className="h-9 w-9 object-contain shrink-0"
+              width={36}
+              height={36}
+              decoding="async"
+            />
+            <span className="text-slate-900 dark:text-white">{APP_BRAND_WORDMARK}</span>
           </span>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium">

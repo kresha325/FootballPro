@@ -8,7 +8,7 @@ import { liveStreamAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI }
 import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
 import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
-import { APP_BRAND_NAME } from '../config/branding';
+import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 
 
 
@@ -232,10 +232,23 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 z-50">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
 
-        {/* LOGO */}
-        <Link to="/feed" className="text-2xl font-extrabold uppercase tracking-wide flex items-baseline gap-0.5">
-          <span className="text-amber-500 dark:text-amber-400">X</span>
-          <span className="text-slate-900 dark:text-white">{APP_BRAND_NAME.replace(/^x/i, '').trim()}</span>
+        {/* LOGO: mark + TALENTI */}
+        <Link
+          to="/feed"
+          className="flex items-center gap-1.5 min-w-0"
+          aria-label={APP_BRAND_NAME}
+        >
+          <img
+            src={APP_LOGO_SRC}
+            alt=""
+            className="h-9 w-9 sm:h-10 sm:w-10 object-contain shrink-0"
+            width={40}
+            height={40}
+            decoding="async"
+          />
+          <span className="text-xl sm:text-2xl font-extrabold uppercase tracking-wide text-slate-900 dark:text-white truncate">
+            {APP_BRAND_WORDMARK}
+          </span>
         </Link>
 
         {/* RIGHT SECTION: Search + Dark Mode + Burger Menu */}
