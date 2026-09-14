@@ -673,13 +673,6 @@ const Profile = () => {
                 )}
               </div>
               
-              {/* Bio */}
-              {profile.bio && (
-                <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-2xl">
-                  {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
-                </p>
-              )}
-              
               <div className="flex items-center justify-center md:justify-start gap-2 mt-3 text-gray-600 dark:text-gray-400 flex-wrap">
                 {isOrgProfileRole(profile.role) ? (
                   (profile.foundingYear || getFoundingYear(profile)) && (
