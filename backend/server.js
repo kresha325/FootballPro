@@ -240,6 +240,8 @@ try {
 app.use('/api/config', require('./routes/config'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
+// Public CV must be reachable without auth (also registered inside profiles router).
+app.get('/api/profiles/cv/:id', require('./controllers/profiles').getPublicProfileCv);
 app.use('/api/profiles', require('./routes/profiles'));
 app.use('/api/gallery', require('./routes/gallery'));
 app.use('/api/posts', require('./routes/posts'));
