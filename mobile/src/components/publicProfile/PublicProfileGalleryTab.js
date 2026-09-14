@@ -12,14 +12,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResizeMode, Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
-function isImageUrl(url) {
+function isVideoUrl(url) {
   if (!url || typeof url !== 'string') return false;
-  return /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
+  return /\.(mp4|mov|webm|avi|m4v)(\?|$)/i.test(url) || /\/video\/upload\//i.test(url);
 }
 
-function isVideoPath(url) {
-  if (!url || typeof url !== 'string') return false;
-  return /\.(mp4|mov|webm|avi)(\?|$)/i.test(url);
+function isPhotoItem(item) {
+  if (!item) return false;
+  if (item.type === 'video') return false;
+  if (item.videoUrl && !item.imageUrl) return false;
+  if (item.type === 'photo' || item.type === 'highlight') return Boolean(item.imageUrl);
+  if (item.imageUrl && !isVideoUrl(item.imageUrl)) return true;
+  return false;
+}
+
+function isVideoItem(item) {
+  if (!item) return false;
+  if (item.type === 'video') return Boolean(item.videoUrl || item.imageUrl);
+  if (item.videoUrl) return true;
+  if (item.imageUrl && isVideoUrl(item.imageUrl)) return true;
+  return false;
 }
 
 export default function PublicProfileGalleryTab({ items = [], theme }) {
@@ -41,23 +53,26 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
     <View>
       <View style={styles.grid}>
         {items.map((item) => {
-          const img = item.imageUrl && isImageUrl(item.imageUrl) ? item.imageUrl : null;
-          const vid = item.videoUrl || (item.imageUrl && isVideoPath(item.imageUrl) ? item.imageUrl : null);
+          const photo = isPhotoItem(item);
+          const video = isVideoItem(item);
+          const imgUri = photo ? item.imageUrl : null;
+          const vidUri = video ? item.videoUrl || item.imageUrl : null;
           return (
             <TouchableOpacity
               key={String(item.id)}
               style={[styles.tile, { backgroundColor: theme.chipBg, borderColor: theme.border }]}
               activeOpacity={0.9}
               onPress={() => {
-                if (img) setModalUri({ type: 'image', uri: img });
+                if (imgUri) setModalUri({ type: 'image', uri: imgUri });
+                else if (vidUri) setModalUri({ type: 'video', uri: vidUri });
               }}
             >
-              {img ? (
-                <Image source={{ uri: img }} style={styles.thumb} resizeMode="cover" />
-              ) : vid ? (
+              {imgUri ? (
+                <Image source={{ uri: imgUri }} style={styles.thumb} resizeMode="cover" />
+              ) : vidUri ? (
                 <View style={styles.thumb}>
                   <Video
-                    source={{ uri: vid }}
+                    source={{ uri: vidUri }}
                     style={StyleSheet.absoluteFillObject}
                     resizeMode={ResizeMode.COVER}
                     shouldPlay={false}
@@ -81,7 +96,13 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
                   </Text>
                 </View>
-              ) : null}
+              ) : (
+                <View style={styles.tileFooter}>
+                  <Text style={[styles.tileDate, { color: theme.muted }]}>
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -108,6 +129,16 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
             {modalUri?.type === 'image' ? (
               <View style={styles.modalImgWrap} pointerEvents="auto">
                 <Image source={{ uri: modalUri.uri }} style={styles.modalImg} resizeMode="contain" />
+              </View>
+            ) : modalUri?.type === 'video' ? (
+              <View style={styles.modalImgWrap} pointerEvents="auto">
+                <Video
+                  source={{ uri: modalUri.uri }}
+                  style={styles.modalImg}
+                  useNativeControls
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay
+                />
               </View>
             ) : null}
           </View>
