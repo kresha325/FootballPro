@@ -261,8 +261,15 @@ const Feed = () => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 100000000) { // 100MB
-        alert('File size must be less than 100MB');
+      const isVideo = String(file.type || '').startsWith('video/');
+      const maxBytes = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        alert(
+          isVideo
+            ? 'Videoja është shumë e madhe. Maksimumi është 100MB.'
+            : 'Fotoja është shumë e madhe. Maksimumi është 10MB.'
+        );
+        e.target.value = '';
         return;
       }
       setSelectedFile(file);
@@ -290,7 +297,11 @@ const Feed = () => {
       const formData = new FormData();
       formData.append('content', newPost);
       if (selectedFile) {
-        formData.append('image', selectedFile);
+        if (String(selectedFile.type || '').startsWith('video/')) {
+          formData.append('video', selectedFile);
+        } else {
+          formData.append('image', selectedFile);
+        }
       }
       if (location.trim()) {
         formData.append('location', location.trim());
@@ -305,6 +316,13 @@ const Feed = () => {
       await fetchPosts({ followedOnly }); // Refresh to get new post with counts (respect current filter)
     } catch (error) {
       console.error('Error creating post:', error);
+      const status = error?.response?.status;
+      const msg = error?.response?.data?.msg || error?.response?.data?.error;
+      if (status === 413) {
+        alert(msg || 'Skedari është shumë i madh. Foto max 10MB, video max 100MB.');
+      } else {
+        alert(msg || 'Dështoi publikimi i postimit. Provo përsëri.');
+      }
     } finally {
       setPosting(false);
     }
@@ -409,7 +427,11 @@ const Feed = () => {
           {/* File Preview */}
           {filePreview && (
             <div className="mt-3 relative">
-              <img src={filePreview} alt="Preview" className="max-h-64 rounded-lg" />
+              {selectedFile && String(selectedFile.type || '').startsWith('video/') ? (
+                <video src={filePreview} controls className="max-h-64 rounded-lg w-full bg-black" />
+              ) : (
+                <img src={filePreview} alt="Preview" className="max-h-64 rounded-lg" />
+              )}
               <button
                 type="button"
                 onClick={removeFile}

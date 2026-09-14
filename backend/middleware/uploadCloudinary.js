@@ -39,8 +39,13 @@ const localStorage = multer.diskStorage({
 	}
 });
 
-// Allow configurable max file size; default to 10MB to match Cloudinary limits
-const MAX_FILE_SIZE = parseInt(process.env.CLOUDINARY_MAX_FILE_SIZE || '10485760', 10);
+// Images default 10MB; videos 100MB (same as /api/videos). Multer limit = max of both.
+const MAX_IMAGE_SIZE = parseInt(process.env.UPLOAD_MAX_IMAGE_BYTES || '10485760', 10);
+const MAX_VIDEO_SIZE = parseInt(
+  process.env.UPLOAD_MAX_VIDEO_BYTES || process.env.CLOUDINARY_MAX_FILE_SIZE || String(100 * 1024 * 1024),
+  10
+);
+const MAX_FILE_SIZE = Math.max(MAX_IMAGE_SIZE, MAX_VIDEO_SIZE);
 
 function fileFilter(req, file, cb) {
 	if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) return cb(null, true);
@@ -55,6 +60,10 @@ function fileFilter(req, file, cb) {
 }
 
 const upload = multer({ storage: isCloudinaryEnabled ? tempStorage : localStorage, limits: { fileSize: MAX_FILE_SIZE }, fileFilter });
+
+function isVideoFile(file) {
+	return /^video\//i.test(file?.mimetype || '') || /\.(mp4|mov|webm|avi|mkv|m4v)$/i.test(file?.originalname || '');
+}
 
 // Wrapper for .fields to upload to Cloudinary after multer
 function cloudinaryFields(fields) {
@@ -72,7 +81,11 @@ function cloudinaryFields(fields) {
 					console.error('Failed to log multer req.files:', logErr && logErr.message);
 				}
 				if (err.code === 'LIMIT_FILE_SIZE') {
-					return res.status(413).json({ msg: 'File too large', max: MAX_FILE_SIZE });
+					return res.status(413).json({
+						msg: `Skedari është shumë i madh. Foto max ${Math.round(MAX_IMAGE_SIZE / 1024 / 1024)}MB, video max ${Math.round(MAX_VIDEO_SIZE / 1024 / 1024)}MB.`,
+						maxImage: MAX_IMAGE_SIZE,
+						maxVideo: MAX_VIDEO_SIZE,
+					});
 				}
 				if (err.message === 'Invalid image file') {
 					return res.status(400).json({ msg: 'Invalid image file' });
@@ -80,12 +93,35 @@ function cloudinaryFields(fields) {
 				return next(err);
 			}
 			if (!req.files) return next();
+
+			// Enforce per-type caps (multer only has one global limit)
+			for (const field of fields) {
+				const files = req.files[field.name] || [];
+				for (const file of files) {
+					const video = isVideoFile(file);
+					const cap = video ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+					if (file.size > cap) {
+						return res.status(413).json({
+							msg: video
+								? `Videoja është shumë e madhe. Maksimumi është ${Math.round(MAX_VIDEO_SIZE / 1024 / 1024)}MB.`
+								: `Fotoja është shumë e madhe. Maksimumi është ${Math.round(MAX_IMAGE_SIZE / 1024 / 1024)}MB.`,
+							max: cap,
+						});
+					}
+				}
+			}
+
 			if (!isCloudinaryEnabled) {
 				for (const field of fields) {
 					const files = req.files[field.name];
 					if (files && files.length > 0) {
 						for (const file of files) {
-							req.body[field.name] = `/uploads/${file.filename}`;
+							const url = `/uploads/${file.filename}`;
+							if (isVideoFile(file)) {
+								req.body.video = url;
+							} else {
+								req.body[field.name] = url;
+							}
 						}
 					}
 				}
@@ -97,36 +133,46 @@ function cloudinaryFields(fields) {
 				if (files && files.length > 0) {
 					for (const file of files) {
 						try {
-							// Determine resource type and folder
+							// Determine resource type and folder (by field name OR mimetype —
+							// Feed historically sends videos as field "image")
 							let resource_type = 'image';
 							let folder = 'profile_photos';
 							if (field.name === 'coverPhoto') {
 								folder = 'cover_photos';
 							}
-							if (field.name === 'video' || field.name === 'videoFile') {
+							if (field.name === 'video' || field.name === 'videoFile' || isVideoFile(file)) {
 								resource_type = 'video';
 								folder = 'videos';
+							} else if (field.name === 'image') {
+								folder = 'posts';
 							}
-								// Request Cloudinary to deliver a browser-friendly format automatically
-								// `fetch_format: 'auto'` + `quality: 'auto'` lets Cloudinary return WebP/AVIF/JPEG depending on client
 								const uploadOptions = {
 									resource_type,
 									folder,
-									transformation: [{ fetch_format: 'auto', quality: 'auto' }],
+									transformation: resource_type === 'image'
+										? [{ fetch_format: 'auto', quality: 'auto' }]
+										: undefined,
 								};
 								const cloudRes = await cloudinary.uploader.upload(file.path, uploadOptions);
-								// Build a delivery URL that requests an automatic browser-friendly format
-								// Use public_id to construct a URL with `fetch_format:auto` so HEIC will be served as WebP/AVIF/JPEG
 								try {
-									const deliveredUrl = cloudinary.url(cloudRes.public_id, {
-										secure: true,
-										resource_type,
-										transformation: [{ fetch_format: 'auto', quality: 'auto' }]
-									});
-									req.body[field.name] = deliveredUrl;
+									const deliveredUrl = resource_type === 'image'
+										? cloudinary.url(cloudRes.public_id, {
+												secure: true,
+												resource_type,
+												transformation: [{ fetch_format: 'auto', quality: 'auto' }]
+											})
+										: cloudRes.secure_url;
+									if (resource_type === 'video') {
+										req.body.video = deliveredUrl;
+									} else {
+										req.body[field.name] = deliveredUrl;
+									}
 								} catch (urlErr) {
-									// Fallback to the secure_url from upload if url generation fails
-									req.body[field.name] = cloudRes.secure_url;
+									if (resource_type === 'video') {
+										req.body.video = cloudRes.secure_url;
+									} else {
+										req.body[field.name] = cloudRes.secure_url;
+									}
 								}
 								if (process.env.DEBUG_UPLOADS === 'true') {
 									console.log(`[${new Date().toISOString()}] Uploaded ${file.originalname} -> ${cloudRes.secure_url} (${resource_type})`, { uploadOptions });
@@ -154,5 +200,7 @@ function cloudinaryFields(fields) {
 }
 
 module.exports = {
-	fields: cloudinaryFields
+	fields: cloudinaryFields,
+	MAX_IMAGE_SIZE,
+	MAX_VIDEO_SIZE,
 };

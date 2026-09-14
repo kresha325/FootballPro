@@ -890,7 +890,7 @@ server.listen(PORT, '0.0.0.0', () => {
 app.use((err, req, res, next) => {
   console.error('❌ Express error:', err);
   if (err && err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File too large. Max 10MB.' });
+    return res.status(413).json({ error: 'File too large. Foto max 10MB, video max 100MB.' });
   }
   if (err && err.message === 'Invalid file type') {
     return res.status(400).json({ error: 'Invalid file type.' });
