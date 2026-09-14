@@ -1,19 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import {
-  FacebookIcon,
-  FacebookShareButton,
-  TwitterIcon,
-  TwitterShareButton,
-  WhatsappIcon,
-  WhatsappShareButton,
-} from 'react-share';
 import { profileAPI } from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
 import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
 import { useAuth } from '../contexts/AuthContext';
+import ShareChannelsPanel from './ShareChannelsPanel';
 
 const ROLE_LABELS = {
   athlete: 'Futbollist',
@@ -51,7 +44,6 @@ function PublicCvPage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -98,16 +90,6 @@ function PublicCvPage() {
       document.title = prev;
     };
   }, [profile, displayName]);
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt('Kopjo linkun e CV:', shareUrl);
-    }
-  };
 
   if (loading) {
     return (
@@ -452,26 +434,12 @@ function PublicCvPage() {
         {isOwner && (
           <section className="mt-6 rounded-3xl border border-white/10 bg-slate-900/60 p-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400/90">Ndaj CV-në</h2>
-            <p className="mt-2 text-sm text-slate-400">Kjo është pamja që shohin të tjerët.</p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <FacebookShareButton url={shareUrl} quote={shareText}>
-                <FacebookIcon size={40} round />
-              </FacebookShareButton>
-              <TwitterShareButton url={shareUrl} title={shareText}>
-                <TwitterIcon size={40} round />
-              </TwitterShareButton>
-              <WhatsappShareButton url={shareUrl} title={shareText} separator=" ">
-                <WhatsappIcon size={40} round />
-              </WhatsappShareButton>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-white/5"
-              >
-                {copied ? 'U kopjua' : 'Kopjo linkun e CV'}
-              </button>
+            <p className="mt-2 text-sm text-slate-400">
+              Facebook, WhatsApp, Instagram, TikTok ose kopjo linkun. Preview-i në FB vjen nga Open Graph.
+            </p>
+            <div className="mt-4">
+              <ShareChannelsPanel url={shareUrl} text={shareText} />
             </div>
-            <p className="mt-3 break-all text-xs text-slate-500">{shareUrl}</p>
           </section>
         )}
       </main>

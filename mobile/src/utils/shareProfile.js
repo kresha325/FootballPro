@@ -1,9 +1,25 @@
 import { Alert, Linking, Share } from 'react-native';
-import { WEB_APP_URL } from '../config/constants';
+import { WEB_APP_URL, BACKEND_URL, publicAssetBaseUrl } from '../config/constants';
 
-export function getProfileCvShareUrl(userId) {
+function apiOrigin() {
+  try {
+    return publicAssetBaseUrl();
+  } catch {
+    return String(BACKEND_URL || 'https://footballpro.onrender.com')
+      .replace(/\/api\/?$/, '')
+      .replace(/\/$/, '');
+  }
+}
+
+/** SPA page for humans */
+export function getProfileCvPublicUrl(userId) {
   const base = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
   return `${base}/cv/${userId}`;
+}
+
+/** OG URL for Facebook / WhatsApp crawlers */
+export function getProfileCvShareUrl(userId) {
+  return `${apiOrigin()}/share/cv/${userId}`;
 }
 
 export function getProfileCvShareText(profile) {
@@ -32,8 +48,17 @@ async function openShareUrl(url, failLabel) {
   }
 }
 
+async function copyLink(url, tip) {
+  try {
+    await Share.share({ message: url, url, title: 'X TALENTI' });
+  } catch {
+    Alert.alert('Linku', url);
+  }
+  if (tip) Alert.alert('Gati', tip);
+}
+
 export async function previewProfileCv(profile) {
-  const url = getProfileCvShareUrl(profile.id || profile.userId);
+  const url = getProfileCvPublicUrl(profile.id || profile.userId);
   await openShareUrl(url, 'CV');
 }
 
@@ -70,11 +95,28 @@ export async function shareProfileCvTwitter(profile) {
   );
 }
 
+export async function shareProfileCvInstagram(profile) {
+  const url = getProfileCvShareUrl(profile.id || profile.userId);
+  await copyLink(url, 'Ngjite linkun në Story / bio në Instagram.');
+}
+
+export async function shareProfileCvTikTok(profile) {
+  const url = getProfileCvShareUrl(profile.id || profile.userId);
+  await copyLink(url, 'Ngjite linkun në bio / caption në TikTok.');
+}
+
+export async function shareProfileCvCopy(profile) {
+  const url = getProfileCvShareUrl(profile.id || profile.userId);
+  await copyLink(url, 'Linku i CV u kopjua / u nda.');
+}
+
 function showSharePlatforms(profile) {
   Alert.alert('Ndaj CV', 'Zgjidh platformën', [
     { text: 'WhatsApp', onPress: () => shareProfileCvWhatsApp(profile) },
     { text: 'Facebook', onPress: () => shareProfileCvFacebook(profile) },
-    { text: 'X (Twitter)', onPress: () => shareProfileCvTwitter(profile) },
+    { text: 'Instagram', onPress: () => shareProfileCvInstagram(profile) },
+    { text: 'TikTok', onPress: () => shareProfileCvTikTok(profile) },
+    { text: 'Kopjo / ndaj linkun', onPress: () => shareProfileCvCopy(profile) },
     { text: 'Më shumë…', onPress: () => shareProfileCvNative(profile) },
     { text: 'Anulo', style: 'cancel' },
   ]);

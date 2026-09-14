@@ -309,7 +309,71 @@ app.use('/api/joncoin', require('./routes/joncoin'));
 app.use('/api/moderation', require('./routes/moderation'));
 app.use('/api/iap', require('./routes/iap'));
 
-// Open Graph landing for shared digital CVs (crawlers get meta; browsers redirect to SPA)
+// Open Graph landings for social shares (crawlers get meta; browsers redirect to SPA)
+function escapeHtmlAttr(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function sendOgHtml(res, { title, description, url, image, type = 'website' }) {
+  const safeTitle = escapeHtmlAttr(title);
+  const safeDesc = escapeHtmlAttr(description);
+  const safeUrl = escapeHtmlAttr(url);
+  const safeImage = escapeHtmlAttr(image);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.send(`<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8" />
+  <title>${safeTitle}</title>
+  <meta property="og:type" content="${escapeHtmlAttr(type)}" />
+  <meta property="og:site_name" content="X TALENTI" />
+  <meta property="og:title" content="${safeTitle}" />
+  <meta property="og:description" content="${safeDesc}" />
+  <meta property="og:url" content="${safeUrl}" />
+  <meta property="og:image" content="${safeImage}" />
+  <meta property="og:image:secure_url" content="${safeImage}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${safeTitle}" />
+  <meta name="twitter:description" content="${safeDesc}" />
+  <meta name="twitter:image" content="${safeImage}" />
+  <link rel="canonical" href="${safeUrl}" />
+  <meta http-equiv="refresh" content="0;url=${safeUrl}" />
+</head>
+<body>
+  <p><a href="${safeUrl}">${safeTitle}</a></p>
+</body>
+</html>`);
+}
+
+app.get('/share', (req, res) => {
+  const frontendBase = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://xtalenti.com').replace(
+    /\/$/,
+    ''
+  );
+  const ua = String(req.get('user-agent') || '');
+  const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
+    ua
+  );
+  const siteUrl = `${frontendBase}/`;
+  const image = `${frontendBase}/footballpro-icon-512.png`;
+  if (!isBot) return res.redirect(302, siteUrl);
+  return sendOgHtml(res, {
+    title: 'X TALENTI',
+    description:
+      'Rrjet social për futboll. Lidh talentet me klubet — profil, video, turne dhe CV dixhitale.',
+    url: siteUrl,
+    image,
+    type: 'website',
+  });
+});
+
 app.get('/share/cv/:id', async (req, res) => {
   try {
     const userId = parseInt(req.params.id, 10);
@@ -344,41 +408,29 @@ app.get('/share/cv/:id', async (req, res) => {
       'Profil';
     const role = profile.User.role || '';
     const title = `${name} · CV · X TALENTI`;
-    const description = String(profile.bio || `${name}${role ? ` (${role})` : ''} në X TALENTI`).slice(0, 200);
-    const image = profile.profilePhoto
-      ? toAbsoluteUploadsUrl(req, profile.profilePhoto)
-      : `${frontendBase}/footballpro-icon-512.png`;
+    const description = String(
+      profile.bio || `${name}${role ? ` (${role})` : ''} — CV dixhitale në X TALENTI`
+    ).slice(0, 200);
+    const image =
+      (profile.coverPhoto && toAbsoluteUploadsUrl(req, profile.coverPhoto)) ||
+      (profile.profilePhoto && toAbsoluteUploadsUrl(req, profile.profilePhoto)) ||
+      `${frontendBase}/footballpro-icon-512.png`;
 
     const ua = String(req.get('user-agent') || '');
-    const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord/i.test(
+    const isBot = /bot|crawl|slurp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Telegram|Discord|TikTok/i.test(
       ua
     );
     if (!isBot) {
       return res.redirect(302, cvUrl);
     }
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<!DOCTYPE html>
-<html lang="sq">
-<head>
-  <meta charset="utf-8" />
-  <title>${title.replace(/</g, '')}</title>
-  <meta property="og:type" content="profile" />
-  <meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />
-  <meta property="og:description" content="${description.replace(/"/g, '&quot;')}" />
-  <meta property="og:url" content="${cvUrl}" />
-  <meta property="og:image" content="${String(image).replace(/"/g, '&quot;')}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />
-  <meta name="twitter:description" content="${description.replace(/"/g, '&quot;')}" />
-  <meta name="twitter:image" content="${String(image).replace(/"/g, '&quot;')}" />
-  <link rel="canonical" href="${cvUrl}" />
-  <meta http-equiv="refresh" content="0;url=${cvUrl}" />
-</head>
-<body>
-  <p><a href="${cvUrl}">${name} — CV në X TALENTI</a></p>
-</body>
-</html>`);
+    return sendOgHtml(res, {
+      title,
+      description,
+      url: cvUrl,
+      image,
+      type: 'profile',
+    });
   } catch (err) {
     console.warn('share/cv error:', err?.message || err);
     const frontendBase = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://xtalenti.com').replace(

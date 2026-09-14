@@ -1,36 +1,22 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ShareChannelsPanel from './ShareChannelsPanel';
 import {
-  FacebookIcon,
-  FacebookShareButton,
-  TwitterIcon,
-  TwitterShareButton,
-  WhatsappIcon,
-  WhatsappShareButton,
-} from 'react-share';
-import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
+  getProfileCvPublicUrl,
+  getProfileCvShareText,
+  getProfileCvShareUrl,
+} from '../utils/shareProfile';
 
 /**
  * Owner-only: preview digital CV, then share to social / clipboard.
  */
 export default function ShareProfileCvButton({ profile, className = '' }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   if (!profile?.id) return null;
 
-  const url = getProfileCvShareUrl(profile.id);
+  const shareUrl = getProfileCvShareUrl(profile.id);
+  const publicPath = `/cv/${profile.id}`;
   const text = getProfileCvShareText(profile);
-  const previewPath = `/cv/${profile.id}`;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt('Kopjo linkun e CV:', url);
-    }
-  };
 
   return (
     <div className={`relative inline-block ${className}`}>
@@ -42,12 +28,12 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
         CV dixhitale
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-800">
+        <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-800">
           <p className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-200">
             Shiko CV-në para se ta ndash
           </p>
           <Link
-            to={previewPath}
+            to={publicPath}
             target="_blank"
             rel="noopener noreferrer"
             className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200"
@@ -55,26 +41,13 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
           >
             Shiko CV
           </Link>
-          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Pastaj ndaje:</p>
-          <div className="flex items-center gap-2">
-            <FacebookShareButton url={url} quote={text}>
-              <FacebookIcon size={36} round />
-            </FacebookShareButton>
-            <TwitterShareButton url={url} title={text}>
-              <TwitterIcon size={36} round />
-            </TwitterShareButton>
-            <WhatsappShareButton url={url} title={text} separator=" ">
-              <WhatsappIcon size={36} round />
-            </WhatsappShareButton>
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:border-gray-500 dark:hover:bg-gray-700"
-            >
-              {copied ? 'OK' : 'Kopjo'}
-            </button>
-          </div>
-          <p className="mt-2 break-all text-[10px] text-gray-400">{url}</p>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+            Ndaje në Facebook, WhatsApp, Instagram, TikTok…
+          </p>
+          <ShareChannelsPanel url={shareUrl} text={text} />
+          <p className="mt-2 text-[10px] text-gray-400">
+            Pamja publike: {getProfileCvPublicUrl(profile.id)}
+          </p>
           <button
             type="button"
             className="mt-2 text-xs text-gray-500 hover:underline"
