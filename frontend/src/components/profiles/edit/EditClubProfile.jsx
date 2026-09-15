@@ -60,7 +60,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     country: user.country || '',
     bio: user.bio || '',
     founded: user.founded ?? stats.founded ?? user.foundingYear ?? '',
-    stadium: user.Stadium?.name || user.stadium ?? stats.stadium ?? '',
+    stadium: user.Stadium?.name || user.stadium || stats.stadium || '',
     capacity: user.Stadium?.capacity ?? user.capacity ?? stats.capacity ?? '',
     careerHistory: user.careerHistory || '',
     phone: contact.phone || '',
