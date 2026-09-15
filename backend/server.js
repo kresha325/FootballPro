@@ -466,8 +466,8 @@ app.get('/share/cv/:id', async (req, res) => {
 app.get('/api/users/:userId/online', (req, res) => {
   try {
     const { userId } = req.params;
-    // userSockets është në scope global të server.js
-    const isOnline = isUserRealtimeOnline(userId);
+    const { isUserOnline } = require('./utils/socket');
+    const isOnline = isUserOnline(userId);
     res.json({ userId, online: isOnline });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -481,12 +481,11 @@ app.get('/', (req, res) => {
 // Socket.IO for real-time messaging and video calls
 // Store user socket mappings
 const userSockets = new Map(); // userId -> socketId
-
-function isUserRealtimeOnline(userId) {
-  if (!io || userId == null) return false;
-  const room = io.sockets.adapter.rooms.get(String(userId));
-  return !!(room && room.size > 0);
-}
+const {
+  markUserOnline,
+  markUserOffline,
+  isUserOnline: isUserRealtimeOnline,
+} = require('./utils/socket');
 
 const VideoCall = require('./models/VideoCall');
 
@@ -496,6 +495,7 @@ io.on('connection', (socket) => {
   if (authenticatedUserId) {
     socket.join(authenticatedUserId);
     userSockets.set(authenticatedUserId, socket.id);
+    markUserOnline(authenticatedUserId, socket.id);
   }
   logSocketEvent(socket, 'connected', { userId: authenticatedUserId });
 
@@ -553,6 +553,7 @@ io.on('connection', (socket) => {
     socket.userId = authenticatedUserId;
     socket.join(authenticatedUserId);
     userSockets.set(authenticatedUserId, socket.id);
+    markUserOnline(authenticatedUserId, socket.id);
     logSocketEvent(socket, 'join', { userId: authenticatedUserId, room: authenticatedUserId });
   });
 
@@ -593,9 +594,11 @@ io.on('connection', (socket) => {
 
   // Handle disconnect
   socket.on('disconnect', () => {
-    if (socket.userId) {
-      userSockets.delete(String(socket.userId));
-      logSocketEvent(socket, 'disconnect', { userId: socket.userId });
+    const uid = authenticatedUserId || (socket.userId ? String(socket.userId) : '');
+    if (uid) {
+      markUserOffline(uid, socket.id);
+      if (!isUserRealtimeOnline(uid)) userSockets.delete(uid);
+      logSocketEvent(socket, 'disconnect', { userId: uid });
     }
     logSocketEvent(socket, 'socket-disconnected', {});
   });

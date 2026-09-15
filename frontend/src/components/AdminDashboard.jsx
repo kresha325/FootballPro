@@ -624,9 +624,9 @@ export default function AdminDashboard() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-emerald-600">
-                  {analytics.systemHealth?.liveNow ?? 0}
+                  {analytics.systemHealth?.onlineUsers ?? analytics.systemHealth?.liveNow ?? 0}
                 </div>
-                <div className="text-sm text-gray-600">Live now</div>
+                <div className="text-sm text-gray-600">Online now</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
@@ -1535,7 +1535,7 @@ export default function AdminDashboard() {
               ['Posts', analytics?.totals?.posts],
               ['Active (7d)', analytics?.recentActivity?.activeUsers],
               ['Premium', analytics?.systemHealth?.premiumUsers],
-              ['Live now', analytics?.systemHealth?.liveNow ?? analytics?.systemHealth?.activeStreams],
+              ['Online now', analytics?.systemHealth?.onlineUsers ?? analytics?.systemHealth?.liveNow],
               ['Pending reports', analytics?.systemHealth?.pendingReports],
               ['Messages', analytics?.totals?.messages],
               ['XCoin txs', analytics?.totals?.joncoinTransactions],

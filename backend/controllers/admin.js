@@ -323,11 +323,15 @@ exports.getAnalytics = async (req, res) => {
 
     const systemHealth = {
       activeStreams: await safe('activeStreams', () => Stream.count({ where: { isLive: true } }), 0),
-      liveNow: await safe(
-        'liveNow',
-        () => (LiveStream ? LiveStream.count({ where: { isLive: true } }) : 0),
-        0
-      ),
+      // Distinct users currently connected via Socket.IO (online now)
+      liveNow: await safe('liveNow', () => {
+        const { getOnlineUsersCount } = require('../utils/socket');
+        return getOnlineUsersCount();
+      }, 0),
+      onlineUsers: await safe('onlineUsers', () => {
+        const { getOnlineUsersCount } = require('../utils/socket');
+        return getOnlineUsersCount();
+      }, 0),
       processingVideos: await safe('processingVideos', () => Video.count({ where: { isProcessing: true } }), 0),
       verifiedUsers: await safe('verifiedUsers', () => User.count({ where: { verified: true } }), 0),
       premiumUsers: await safe('premiumUsers', () => User.count({ where: { premium: true } }), 0),
