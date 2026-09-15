@@ -138,14 +138,17 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">League</label>
+          <label className="block text-sm font-medium mb-1">Liga (manual)</label>
           <input
             name="league"
             value={form.league}
             onChange={handleChange}
-            placeholder="p.sh. Liga e Parë"
+            placeholder="Opsionale — nëse nuk je bashkuar në një ligë në platformë"
             className="w-full p-2 border border-gray-300 rounded"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Ligat ku bashkohet klubi shfaqen automatikisht në Overview.
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">City</label>

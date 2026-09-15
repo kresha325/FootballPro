@@ -235,6 +235,29 @@ function removeClubFromList(clubs, clubId) {
   return list;
 }
 
+/** Ligas that list this club userId in Liga.clubs. */
+async function findLigasForClub(clubUserId) {
+  if (clubUserId == null || clubUserId === '') return [];
+  const Liga = require('../models/Liga');
+  const ligas = await Liga.findAll({
+    attributes: ['id', 'userId', 'name', 'logo', 'level', 'country', 'clubs'],
+  });
+  return ligas
+    .filter((l) => ligaIncludesClub(l, clubUserId))
+    .map((l) => {
+      const plain = typeof l.get === 'function' ? l.get({ plain: true }) : { ...l };
+      return {
+        id: plain.userId,
+        ligaId: plain.id,
+        userId: plain.userId,
+        name: plain.name,
+        logo: plain.logo || null,
+        level: plain.level || null,
+        country: plain.country || null,
+      };
+    });
+}
+
 module.exports = {
   ALLOWED_CREATOR_ROLES,
   CATEGORY_OPTIONS,
@@ -244,6 +267,7 @@ module.exports = {
   syncClubAthletesToLiga,
   removeClubAthletesFromLiga,
   ligaIncludesClub,
+  findLigasForClub,
   normalizeClubsArray,
   addClubToList,
   removeClubFromList,

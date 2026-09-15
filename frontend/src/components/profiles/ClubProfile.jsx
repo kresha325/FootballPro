@@ -280,10 +280,44 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">League</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-              {profile.league || clubData.league || 'N/A'}
-            </p>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              {Array.isArray(profile.joinedLigas) && profile.joinedLigas.length > 1 ? 'Ligat' : 'Liga'}
+            </label>
+            {Array.isArray(profile.joinedLigas) && profile.joinedLigas.length > 0 ? (
+              <ul className="mt-1 space-y-1.5">
+                {profile.joinedLigas.map((liga) => {
+                  const lid = liga.userId || liga.id;
+                  const logo = getFullUrl(liga.logo);
+                  return (
+                    <li key={lid || liga.ligaId || liga.name} className="flex items-center gap-2">
+                      {logo ? (
+                        <img src={logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                          {String(liga.name || 'L').slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      {lid ? (
+                        <Link
+                          to={`/profile/${lid}`}
+                          className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate"
+                        >
+                          {liga.name}
+                        </Link>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                          {liga.name}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                {profile.league || clubData.league || 'N/A'}
+              </p>
+            )}
           </div>
         </div>
       </div>

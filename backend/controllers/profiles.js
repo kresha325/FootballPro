@@ -157,6 +157,34 @@ const path = require('path');
 const { toAbsoluteUploadsUrl, toCloudinaryVideoPosterUrl } = require('../utils/url');
 const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
 const { isOrgProfileRole, getFoundingYear } = require('../utils/orgProfile');
+const { findLigasForClub } = require('../utils/ligaTournaments');
+
+async function attachJoinedLigas(req, response, role, clubUserId) {
+  if (role !== 'club' || !clubUserId) return;
+  try {
+    const joined = await findLigasForClub(clubUserId);
+    response.joinedLigas = joined.map((l) => ({
+      ...l,
+      logo: l.logo ? toAbsoluteUploadsUrl(req, l.logo) : null,
+    }));
+    if (response.joinedLigas.length) {
+      const names = response.joinedLigas.map((l) => l.name).filter(Boolean);
+      if (names.length) {
+        response.league = names.join(', ');
+        const statsObj =
+          response.stats && typeof response.stats === 'object' && !Array.isArray(response.stats)
+            ? { ...response.stats }
+            : {};
+        statsObj.league = response.league;
+        response.stats = statsObj;
+      }
+    } else if (!Array.isArray(response.joinedLigas)) {
+      response.joinedLigas = [];
+    }
+  } catch (_e) {
+    response.joinedLigas = [];
+  }
+}
 
 /** Map free-text / locale labels to User.gender ENUM (male | female | other). */
 function normalizeGenderInput(raw) {
@@ -419,6 +447,7 @@ exports.getProfile = async (req, res) => {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
     await enrichClubDisplayFields(req, response);
+    await attachJoinedLigas(req, response, role, userId);
     if (Array.isArray(response.liveVideos) && response.liveVideos.length) {
       response.liveVideos = response.liveVideos.map((item) => {
         if (!item || typeof item !== 'object') return item;
@@ -572,6 +601,7 @@ exports.getPublicProfileCv = async (req, res) => {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
     await enrichClubDisplayFields(req, response);
+    await attachJoinedLigas(req, response, role, userId);
 
     // Public CV extras: real counters + last 5 gallery photos
     let galleryPreview = [];
