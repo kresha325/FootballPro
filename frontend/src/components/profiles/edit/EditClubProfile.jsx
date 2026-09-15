@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getFullUrl } from '../../../utils/mediaUrl';
-import { ligaAPI } from '../../../services/api';
+import api, { ligaAPI } from '../../../services/api';
 
 function clubInLiga(liga, clubUserId) {
   if (clubUserId == null || !liga) return false;
@@ -42,6 +42,17 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   const [showLigaDropdown, setShowLigaDropdown] = useState(false);
   const [ligaSyncError, setLigaSyncError] = useState('');
   const dropdownRef = useRef(null);
+  const stadiumDropdownRef = useRef(null);
+
+  const [allStadiums, setAllStadiums] = useState([]);
+  const [loadingStadiums, setLoadingStadiums] = useState(true);
+  const [stadiumId, setStadiumId] = useState(
+    user.stadiumId != null ? String(user.stadiumId) : user.Stadium?.id != null ? String(user.Stadium.id) : ''
+  );
+  const [stadiumQuery, setStadiumQuery] = useState(
+    user.Stadium?.name || user.stadium || stats.stadium || ''
+  );
+  const [showStadiumDropdown, setShowStadiumDropdown] = useState(false);
 
   const [form, setForm] = useState({
     club: user.club || '',
@@ -49,8 +60,8 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     country: user.country || '',
     bio: user.bio || '',
     founded: user.founded ?? stats.founded ?? user.foundingYear ?? '',
-    stadium: user.stadium ?? stats.stadium ?? '',
-    capacity: user.capacity ?? stats.capacity ?? '',
+    stadium: user.Stadium?.name || user.stadium ?? stats.stadium ?? '',
+    capacity: user.Stadium?.capacity ?? user.capacity ?? stats.capacity ?? '',
     careerHistory: user.careerHistory || '',
     phone: contact.phone || '',
     email: contact.email || '',
@@ -60,6 +71,38 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     twitter: contact.twitter || '',
     profilePhoto: user.profilePhoto || '',
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/stadiums', { params: { limit: 200 } });
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (!cancelled) {
+          setAllStadiums(list);
+          if (stadiumId) {
+            const found = list.find((s) => String(s.id) === String(stadiumId));
+            if (found) {
+              setStadiumQuery(found.name || '');
+              setForm((prev) => ({
+                ...prev,
+                stadium: found.name || '',
+                capacity: found.capacity != null ? found.capacity : prev.capacity,
+              }));
+            }
+          }
+        }
+      } catch {
+        if (!cancelled) setAllStadiums([]);
+      } finally {
+        if (!cancelled) setLoadingStadiums(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +142,9 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowLigaDropdown(false);
       }
+      if (stadiumDropdownRef.current && !stadiumDropdownRef.current.contains(e.target)) {
+        setShowStadiumDropdown(false);
+      }
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -120,6 +166,34 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       })
       .slice(0, 30);
   }, [allLigas, ligaQuery, selectedIds]);
+
+  const filteredStadiums = useMemo(() => {
+    const q = stadiumQuery.trim().toLowerCase();
+    return allStadiums
+      .filter((s) => {
+        if (!q) return true;
+        const hay = `${s.name || ''} ${s.city || ''} ${s.country || ''}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 30);
+  }, [allStadiums, stadiumQuery]);
+
+  const selectStadium = (s) => {
+    setStadiumId(String(s.id));
+    setStadiumQuery(s.name || '');
+    setForm((prev) => ({
+      ...prev,
+      stadium: s.name || '',
+      capacity: s.capacity != null ? s.capacity : '',
+    }));
+    setShowStadiumDropdown(false);
+  };
+
+  const clearStadium = () => {
+    setStadiumId('');
+    setStadiumQuery('');
+    setForm((prev) => ({ ...prev, stadium: '', capacity: '' }));
+  };
 
   const addLiga = (liga) => {
     const id = String(liga.id || liga.userId);
@@ -184,6 +258,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       formData.append(key, value == null ? '' : String(value));
     });
     formData.append('founded', founded === '' || founded == null ? '' : String(founded));
+    formData.append('stadiumId', stadiumId || '');
     formData.append('stadium', stadium || '');
     formData.append('capacity', capacity === '' || capacity == null ? '' : String(capacity));
     const leagueNames = selectedLigas.map((l) => l.name).filter(Boolean).join(', ');
@@ -248,15 +323,70 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Stadium</label>
-          <input
-            name="stadium"
-            value={form.stadium}
-            onChange={handleChange}
-            placeholder="Emri i stadiumit"
-            className="w-full p-2 border border-gray-300 rounded"
-          />
+        <div className="md:col-span-2" ref={stadiumDropdownRef}>
+          <label className="block text-sm font-medium mb-1">Stadiumi</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={stadiumQuery}
+              onChange={(e) => {
+                setStadiumQuery(e.target.value);
+                setStadiumId('');
+                setForm((prev) => ({ ...prev, stadium: e.target.value }));
+                setShowStadiumDropdown(true);
+              }}
+              onFocus={() => setShowStadiumDropdown(true)}
+              placeholder={loadingStadiums ? 'Duke ngarkuar stadiumet…' : 'Shkruaj për të kërkuar stadium…'}
+              disabled={loadingStadiums}
+              className="w-full p-2 border border-gray-300 rounded"
+              autoComplete="off"
+            />
+            {showStadiumDropdown && !loadingStadiums && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded shadow-md max-h-56 overflow-y-auto">
+                {filteredStadiums.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-gray-500">
+                    {stadiumQuery.trim()
+                      ? 'Nuk u gjet stadium. Shtohet nga Admin → Stadiume.'
+                      : allStadiums.length === 0
+                        ? 'Nuk ka stadiume në katalog. Admini duhet t’i shtojë.'
+                        : 'Shkruaj emrin e stadiumit…'}
+                  </p>
+                ) : (
+                  filteredStadiums.map((s) => (
+                    <button
+                      type="button"
+                      key={s.id}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selectStadium(s);
+                      }}
+                    >
+                      <span className="block font-medium text-gray-900">{s.name}</span>
+                      <span className="block text-xs text-gray-500">
+                        {[s.city, s.country].filter(Boolean).join(' • ')}
+                        {s.capacity != null ? ` · ${Number(s.capacity).toLocaleString()} ulëse` : ''}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          {stadiumId ? (
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-gray-600">
+              <span>
+                Kapaciteti: <strong>{form.capacity != null && form.capacity !== '' ? Number(form.capacity).toLocaleString() : '—'}</strong>
+              </span>
+              <button type="button" onClick={clearStadium} className="text-red-600 hover:underline">
+                Hiq stadiumin
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">
+              Zgjidh nga katalogu (Admin → Stadiume). Kapaciteti mbushët automatikisht.
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Capacity</label>
@@ -266,8 +396,9 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             onChange={handleChange}
             type="number"
             min="0"
-            placeholder="p.sh. 5000"
-            className="w-full p-2 border border-gray-300 rounded"
+            placeholder="Automatikisht nga stadiumi"
+            readOnly={Boolean(stadiumId)}
+            className={`w-full p-2 border border-gray-300 rounded ${stadiumId ? 'bg-slate-50 text-gray-600' : ''}`}
           />
         </div>
 

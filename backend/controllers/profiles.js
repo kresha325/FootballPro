@@ -158,6 +158,7 @@ const { toAbsoluteUploadsUrl, toCloudinaryVideoPosterUrl } = require('../utils/u
 const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
 const { isOrgProfileRole, getFoundingYear } = require('../utils/orgProfile');
 const { findLigasForClub } = require('../utils/ligaTournaments');
+const Stadium = require('../models/Stadium');
 
 async function attachJoinedLigas(req, response, role, clubUserId) {
   if (role !== 'club' || !clubUserId) return;
@@ -183,6 +184,39 @@ async function attachJoinedLigas(req, response, role, clubUserId) {
     }
   } catch (_e) {
     response.joinedLigas = [];
+  }
+}
+
+/** Resolve catalog stadium onto club profile response (name + capacity). */
+async function attachStadium(req, response, role) {
+  if (role !== 'club' || !response) return;
+  const sid = response.stadiumId != null ? parseInt(response.stadiumId, 10) : null;
+  if (!Number.isFinite(sid) || sid <= 0) {
+    response.Stadium = null;
+    return;
+  }
+  try {
+    const stadium = await Stadium.findByPk(sid);
+    if (!stadium) {
+      response.Stadium = null;
+      return;
+    }
+    const plain = stadium.get({ plain: true });
+    response.Stadium = {
+      ...plain,
+      photo: plain.photo ? toAbsoluteUploadsUrl(req, plain.photo) : null,
+    };
+    if (plain.name) response.stadium = plain.name;
+    if (plain.capacity != null) response.capacity = plain.capacity;
+    const statsObj =
+      response.stats && typeof response.stats === 'object' && !Array.isArray(response.stats)
+        ? { ...response.stats }
+        : {};
+    if (plain.name) statsObj.stadium = plain.name;
+    if (plain.capacity != null) statsObj.capacity = plain.capacity;
+    response.stats = statsObj;
+  } catch (_e) {
+    response.Stadium = null;
   }
 }
 
@@ -448,6 +482,7 @@ exports.getProfile = async (req, res) => {
     }
     await enrichClubDisplayFields(req, response);
     await attachJoinedLigas(req, response, role, userId);
+    await attachStadium(req, response, role);
     if (Array.isArray(response.liveVideos) && response.liveVideos.length) {
       response.liveVideos = response.liveVideos.map((item) => {
         if (!item || typeof item !== 'object') return item;
@@ -563,6 +598,7 @@ exports.getPublicProfileCv = async (req, res) => {
       stats: plainProfile.stats && typeof plainProfile.stats === 'object' ? plainProfile.stats : {},
       founded: plainProfile.founded ?? null,
       stadium: plainProfile.stadium || null,
+      stadiumId: plainProfile.stadiumId ?? null,
       capacity: plainProfile.capacity ?? null,
       league: plainProfile.league || null,
       contact,
@@ -602,6 +638,7 @@ exports.getPublicProfileCv = async (req, res) => {
     }
     await enrichClubDisplayFields(req, response);
     await attachJoinedLigas(req, response, role, userId);
+    await attachStadium(req, response, role);
 
     // Public CV extras: real counters + last 5 gallery photos
     let galleryPreview = [];
@@ -750,16 +787,22 @@ exports.updateProfile = async (req, res) => {
       'achievements',
       'founded',
       'stadium',
+      'stadiumId',
       'capacity',
       'league',
     ];
     let updateData = {};
     for (const key in req.body) {
       if (profileFields.includes(key)) {
-        if (key === 'clubId') {
-          const parsed = parseInt(req.body[key], 10);
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            updateData.clubId = parsed;
+        if (key === 'clubId' || key === 'stadiumId') {
+          const raw = String(req.body[key] ?? '').trim();
+          if (!raw) {
+            updateData[key] = null;
+          } else {
+            const parsed = parseInt(raw, 10);
+            if (!Number.isNaN(parsed) && parsed > 0) {
+              updateData[key] = parsed;
+            }
           }
           continue;
         }
@@ -844,6 +887,33 @@ exports.updateProfile = async (req, res) => {
       updateData._mergeStats = true;
     } else if (updateData.stats) {
       updateData._mergeStats = true;
+    }
+
+    // Catalog stadium: sync denormalized name + capacity when stadiumId is set
+    if (updateData.stadiumId !== undefined) {
+      if (updateData.stadiumId == null) {
+        // keep free-text stadium/capacity if user cleared catalog link
+      } else {
+        try {
+          const catalog = await Stadium.findByPk(updateData.stadiumId);
+          if (!catalog) {
+            return res.status(400).json({ msg: 'Stadiumi i zgjedhur nuk ekziston.', field: 'stadiumId' });
+          }
+          updateData.stadium = catalog.name;
+          if (catalog.capacity != null) updateData.capacity = catalog.capacity;
+          const patch = {
+            ...(updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)
+              ? updateData.stats
+              : {}),
+            stadium: catalog.name,
+          };
+          if (catalog.capacity != null) patch.capacity = catalog.capacity;
+          updateData.stats = patch;
+          updateData._mergeStats = true;
+        } catch (e) {
+          console.warn('stadiumId resolve failed:', e.message);
+        }
+      }
     }
 
     // Allow profilePhoto update from body (URL or string)
@@ -1140,6 +1210,8 @@ exports.updateProfile = async (req, res) => {
       response.coverPhoto = toAbsoluteUploadsUrl(req, response.coverPhoto);
     }
     await enrichClubDisplayFields(req, response);
+    await attachJoinedLigas(req, response, req.user.role, req.user.id);
+    await attachStadium(req, response, req.user.role);
     res.json(response);
   } catch (err) {
     console.error('Profile update error:', err);

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
+import AdminStadiums from './AdminStadiums';
 import {
   UsersIcon,
   DocumentTextIcon,
@@ -16,6 +17,7 @@ import {
   XCircleIcon,
   MagnifyingGlassIcon,
   BanknotesIcon,
+  BuildingLibraryIcon,
 } from '@heroicons/react/24/outline';
 import {
   LineChart,
@@ -502,6 +504,17 @@ export default function AdminDashboard() {
         >
           <ShieldCheckIcon className="w-5 h-5 inline mr-2" />
           Reports
+        </button>
+        <button
+          onClick={() => switchTab('stadiums')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'stadiums'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <BuildingLibraryIcon className="w-5 h-5 inline mr-2" />
+          Stadiume
         </button>
       </div>
 
@@ -1475,6 +1488,12 @@ export default function AdminDashboard() {
       </div>
     )}
 
+      {activeTab === 'stadiums' && (
+        <div className="lg:col-span-3">
+          <AdminStadiums />
+        </div>
+      )}
+
     {/* Sidebar - live snapshot */}
     <div className="lg:col-span-1 space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
@@ -1534,6 +1553,13 @@ export default function AdminDashboard() {
             className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
           >
             Invoices
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('stadiums')}
+            className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
+          >
+            Stadiume
           </button>
           <button
             type="button"

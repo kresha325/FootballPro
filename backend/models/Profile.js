@@ -24,6 +24,7 @@ const Profile = sequelize.define('Profile', {
   /** Club org info (also mirrored into stats for older UI). */
   founded: DataTypes.INTEGER,
   stadium: DataTypes.STRING,
+  stadiumId: DataTypes.INTEGER,
   capacity: DataTypes.INTEGER,
   league: DataTypes.STRING,
   position: DataTypes.STRING,

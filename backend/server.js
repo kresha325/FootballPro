@@ -309,6 +309,7 @@ app.use('/api/medias', require('./routes/media'));
 app.use('/api/businesses', require('./routes/business'));
 
 app.use('/api/ligas', require('./routes/liga'));
+app.use('/api/stadiums', require('./routes/stadium'));
 
 // Streams routes (live/recording)
 app.use('/api/streams', require('./routes/streams'));

@@ -47,6 +47,7 @@ const Follow = require('./Follow');
 const Subscription = require('./Subscription');
 const Profile = require('./Profile');
 const Liga = require('./Liga');
+const Stadium = require('./Stadium');
 const Like = require('./Like');
 const Comment = require('./Comment');
 const Post = require('./Post');
@@ -73,6 +74,8 @@ Follow.belongsTo(User, { as: 'following', foreignKey: 'followingId' });
 // User/Profile
 User.hasOne(Profile, { foreignKey: 'userId' });
 Profile.belongsTo(User, { foreignKey: 'userId' });
+Profile.belongsTo(Stadium, { foreignKey: 'stadiumId', as: 'Stadium' });
+Stadium.hasMany(Profile, { foreignKey: 'stadiumId', as: 'clubs' });
 // User/Liga
 User.hasOne(Liga, { foreignKey: 'userId' });
 Liga.belongsTo(User, { foreignKey: 'userId' });
@@ -124,6 +127,7 @@ module.exports = {
   Subscription,
   Profile,
   Liga,
+  Stadium,
   Like,
   Comment,
   Post,
