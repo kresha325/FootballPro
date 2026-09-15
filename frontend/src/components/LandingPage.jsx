@@ -86,38 +86,53 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* HERO — full-bleed brand banner */}
-      <section className="relative overflow-hidden bg-black text-white">
-        <div className="absolute inset-0">
+      {/* HERO — one composition: brand + headline + line + CTAs */}
+      <section className="relative flex min-h-[88vh] items-center overflow-hidden bg-[#070b12] text-white">
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(245,158,11,0.18),transparent_55%),radial-gradient(ellipse_at_80%_80%,rgba(15,23,42,0.9),#070b12_70%)]" />
           <img
             src={APP_BRAND_BANNER}
-            alt="X TALENTI — Talent has a future"
-            className="h-full w-full object-cover object-center"
+            alt=""
+            className="h-full w-full object-cover object-[center_30%] opacity-[0.28] saturate-75"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#070b12] via-[#070b12]/75 to-[#070b12]/45" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 md:px-6 py-24 md:py-36 text-center">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-amber-400">
-            Talent has a future
-          </p>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight drop-shadow-lg">
+
+        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-24 text-center md:px-6 md:py-28">
+          <div className="mb-8 flex flex-col items-center gap-3 animate-[fadeIn_0.7s_ease-out]">
+            <img
+              src={APP_LOGO_SRC}
+              alt=""
+              className="h-16 w-16 object-contain drop-shadow-lg md:h-20 md:w-20"
+              width={80}
+              height={80}
+              decoding="async"
+            />
+            <p className="text-3xl font-extrabold uppercase tracking-[0.12em] text-white md:text-4xl">
+              {APP_BRAND_NAME}
+            </p>
+          </div>
+
+          <h1 className="mb-5 text-3xl font-extrabold leading-tight tracking-tight text-white animate-[fadeIn_0.9s_ease-out] md:text-5xl">
             Zbulo. Zhvillo. <span className="text-amber-400">Shko Më Tej.</span>
           </h1>
-          <p className="text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-10 drop-shadow">
-            {APP_BRAND_NAME} lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme —
-            për të ndarë talentin, për t'u zbuluar dhe për të ndërtuar karrierën në futboll.
+
+          <p className="mx-auto mb-10 max-w-xl text-base text-slate-300 animate-[fadeIn_1.1s_ease-out] md:text-lg">
+            Lidh lojtarët, trajnerët, skautët dhe klubet — për të ndarë talentin dhe për të ndërtuar
+            karrierën në futboll.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+          <div className="flex flex-col items-center justify-center gap-3 animate-[fadeIn_1.25s_ease-out] sm:flex-row sm:gap-4">
             <Link
               to="/register"
-              className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-8 py-3 rounded-lg shadow-lg transition-colors w-full sm:w-auto"
+              className="w-full rounded-lg bg-amber-500 px-8 py-3.5 text-center font-bold text-slate-900 shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-400 sm:w-auto"
             >
               Regjistrohu Falas
             </Link>
             <a
               href="#cmimet"
-              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold px-8 py-3 rounded-lg transition-colors w-full sm:w-auto"
+              className="w-full rounded-lg border border-white/25 bg-white/5 px-8 py-3.5 text-center font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto"
             >
               Shiko Çmimet
             </a>
