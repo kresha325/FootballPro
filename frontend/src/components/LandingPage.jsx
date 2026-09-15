@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
-import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC, APP_BRAND_BANNER } from '../config/branding';
+import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC, APP_HERO_DESKTOP, APP_HERO_DESKTOP_W, APP_HERO_DESKTOP_H, APP_HERO_MOBILE, APP_HERO_MOBILE_W, APP_HERO_MOBILE_H } from '../config/branding';
 
 // Grupe rolesh për çmimet — individë (lojtarë/trajnerë/skautë/etj.) kanë
 // pricing të ndryshëm nga organizatat (klube/federata/media/biznese).
@@ -86,53 +86,66 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* HERO — one composition: brand + headline + line + CTAs */}
-      <section className="relative flex min-h-[88vh] items-center overflow-hidden bg-[#070b12] text-white">
+      {/* HERO — responsive desktop/mobile backgrounds */}
+      <section className="relative flex min-h-[100svh] items-end overflow-hidden bg-[#070b12] text-white md:min-h-[88vh] md:items-center">
         <div className="pointer-events-none absolute inset-0" aria-hidden>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(245,158,11,0.18),transparent_55%),radial-gradient(ellipse_at_80%_80%,rgba(15,23,42,0.9),#070b12_70%)]" />
-          <img
-            src={APP_BRAND_BANNER}
-            alt=""
-            className="h-full w-full object-cover object-[center_30%] opacity-[0.28] saturate-75"
-            decoding="async"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#070b12] via-[#070b12]/75 to-[#070b12]/45" />
+          <picture className="absolute inset-0 block h-full w-full">
+            {/* Desktop / tablet landscape */}
+            <source
+              media="(min-width: 768px)"
+              srcSet={APP_HERO_DESKTOP}
+              width={APP_HERO_DESKTOP_W}
+              height={APP_HERO_DESKTOP_H}
+            />
+            {/* Mobile portrait */}
+            <img
+              src={APP_HERO_MOBILE}
+              alt=""
+              width={APP_HERO_MOBILE_W}
+              height={APP_HERO_MOBILE_H}
+              className="h-full w-full object-cover object-center md:object-[center_40%]"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </picture>
+          {/* Readable scrim — stronger at bottom where copy sits */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#070b12] via-[#070b12]/55 to-[#070b12]/25 md:bg-gradient-to-r md:from-[#070b12]/90 md:via-[#070b12]/45 md:to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-24 text-center md:px-6 md:py-28">
-          <div className="mb-8 flex flex-col items-center gap-3 animate-[fadeIn_0.7s_ease-out]">
+        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 pb-16 pt-28 text-center md:mx-0 md:max-w-xl md:px-10 md:pb-28 md:pt-28 md:text-left lg:px-16">
+          <div className="mb-6 flex flex-col items-center gap-3 animate-[fadeIn_0.7s_ease-out] md:items-start">
             <img
               src={APP_LOGO_SRC}
               alt=""
-              className="h-16 w-16 object-contain drop-shadow-lg md:h-20 md:w-20"
-              width={80}
-              height={80}
+              className="h-14 w-14 object-contain drop-shadow-lg md:h-16 md:w-16"
+              width={64}
+              height={64}
               decoding="async"
             />
-            <p className="text-3xl font-extrabold uppercase tracking-[0.12em] text-white md:text-4xl">
+            <p className="text-2xl font-extrabold uppercase tracking-[0.12em] text-white md:text-3xl">
               {APP_BRAND_NAME}
             </p>
           </div>
 
-          <h1 className="mb-5 text-3xl font-extrabold leading-tight tracking-tight text-white animate-[fadeIn_0.9s_ease-out] md:text-5xl">
+          <h1 className="mb-4 text-3xl font-extrabold leading-tight tracking-tight text-white animate-[fadeIn_0.9s_ease-out] md:text-5xl">
             Zbulo. Zhvillo. <span className="text-amber-400">Shko Më Tej.</span>
           </h1>
 
-          <p className="mx-auto mb-10 max-w-xl text-base text-slate-300 animate-[fadeIn_1.1s_ease-out] md:text-lg">
+          <p className="mx-auto mb-8 max-w-md text-base text-slate-200 animate-[fadeIn_1.1s_ease-out] md:mx-0 md:text-lg">
             Lidh lojtarët, trajnerët, skautët dhe klubet — për të ndarë talentin dhe për të ndërtuar
             karrierën në futboll.
           </p>
 
-          <div className="flex flex-col items-center justify-center gap-3 animate-[fadeIn_1.25s_ease-out] sm:flex-row sm:gap-4">
+          <div className="flex flex-col items-stretch justify-center gap-3 animate-[fadeIn_1.25s_ease-out] sm:flex-row sm:items-center md:justify-start">
             <Link
               to="/register"
-              className="w-full rounded-lg bg-amber-500 px-8 py-3.5 text-center font-bold text-slate-900 shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-400 sm:w-auto"
+              className="rounded-lg bg-amber-500 px-8 py-3.5 text-center font-bold text-slate-900 shadow-lg shadow-amber-500/25 transition-colors hover:bg-amber-400"
             >
               Regjistrohu Falas
             </Link>
             <a
               href="#cmimet"
-              className="w-full rounded-lg border border-white/25 bg-white/5 px-8 py-3.5 text-center font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto"
+              className="rounded-lg border border-white/30 bg-black/25 px-8 py-3.5 text-center font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/40"
             >
               Shiko Çmimet
             </a>

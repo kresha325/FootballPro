@@ -17,5 +17,15 @@ export const APP_OG_IMAGE_ABS = 'https://footballpro.onrender.com/share-card.jpg
 /** Default Open Graph / social share image path on this origin (1200x630). */
 export const APP_OG_IMAGE = '/share-card.jpg';
 
-/** Full brand banner for marketing surfaces. */
+/** Full brand banner for marketing surfaces (legacy collage). */
 export const APP_BRAND_BANNER = '/xtalenti-brand-banner.png';
+
+/** Landing hero — desktop landscape (1024×409). */
+export const APP_HERO_DESKTOP = '/hero-desktop.jpg';
+export const APP_HERO_DESKTOP_W = 1024;
+export const APP_HERO_DESKTOP_H = 409;
+
+/** Landing hero — mobile portrait (751×1024). */
+export const APP_HERO_MOBILE = '/hero-mobile.jpg';
+export const APP_HERO_MOBILE_W = 751;
+export const APP_HERO_MOBILE_H = 1024;
