@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ShareChannelsPanel from './ShareChannelsPanel';
 import {
-  getProfileCvPublicUrl,
   getProfileCvShareText,
   getProfileCvShareUrl,
 } from '../utils/shareProfile';
@@ -26,7 +25,6 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
 
   const shareUrl = getProfileCvShareUrl(profile.id);
   const publicPath = `/cv/${profile.id}`;
-  const publicUrl = getProfileCvPublicUrl(profile.id);
   const text = getProfileCvShareText(profile);
 
   return (
@@ -51,9 +49,6 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
             aria-label="Ndaj CV dixhitale"
             className="fixed left-1/2 top-1/2 z-50 w-[min(20rem,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0 md:translate-y-0 md:shadow-lg"
           >
-            <p className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-200">
-              Shiko CV-në para se ta ndash
-            </p>
             <Link
               to={publicPath}
               target="_blank"
@@ -63,13 +58,7 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
             >
               Shiko CV
             </Link>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-              Ndaje në Facebook, WhatsApp ose kopjo linkun
-            </p>
             <ShareChannelsPanel url={shareUrl} text={text} />
-            <p className="mt-2 truncate text-[10px] text-gray-400" title={publicUrl}>
-              Pamja publike: {publicUrl}
-            </p>
             <button
               type="button"
               className="mt-2 text-xs text-gray-500 hover:underline"

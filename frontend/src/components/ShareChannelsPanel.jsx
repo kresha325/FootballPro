@@ -70,7 +70,6 @@ export default function ShareChannelsPanel({ url, text, className = '' }) {
         </ChannelButton>
       </div>
       {hint ? <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">{hint}</p> : null}
-      <p className="mt-2 break-all text-[10px] text-slate-400">{url}</p>
     </div>
   );
 }
