@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getFullUrl } from '../../../utils/mediaUrl';
 import { ligaAPI } from '../../../services/api';
 
@@ -15,13 +14,35 @@ function clubInLiga(liga, clubUserId) {
   });
 }
 
+function normalizeLiga(l) {
+  return {
+    id: String(l.userId || l.User?.id || l.id || ''),
+    userId: l.userId || l.User?.id,
+    ligaId: l.ligaId || l.id,
+    name: l.name || 'Liga',
+    logo: l.logo || null,
+    level: l.level || null,
+    country: l.country || null,
+  };
+}
+
 const EditClubProfile = ({ user, onSave, loading, errors }) => {
   const stats = user.stats && typeof user.stats === 'object' ? user.stats : {};
   const contact = user.contact && typeof user.contact === 'object' ? user.contact : {};
   const clubUserId = user.userId || user.id || user.User?.id;
-  const initialJoined = Array.isArray(user.joinedLigas) ? user.joinedLigas : [];
-  const [joinedLigas, setJoinedLigas] = useState(initialJoined);
-  const [loadingLigas, setLoadingLigas] = useState(initialJoined.length === 0);
+  const initialJoined = Array.isArray(user.joinedLigas) ? user.joinedLigas.map(normalizeLiga) : [];
+
+  const [allLigas, setAllLigas] = useState([]);
+  const [selectedLigas, setSelectedLigas] = useState(initialJoined);
+  const [initialSelectedIds, setInitialSelectedIds] = useState(
+    () => new Set(initialJoined.map((l) => String(l.id || l.userId)).filter(Boolean))
+  );
+  const [loadingLigas, setLoadingLigas] = useState(true);
+  const [ligaQuery, setLigaQuery] = useState('');
+  const [showLigaDropdown, setShowLigaDropdown] = useState(false);
+  const [ligaSyncError, setLigaSyncError] = useState('');
+  const dropdownRef = useRef(null);
+
   const [form, setForm] = useState({
     club: user.club || '',
     city: user.city || '',
@@ -30,7 +51,6 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     founded: user.founded ?? stats.founded ?? user.foundingYear ?? '',
     stadium: user.stadium ?? stats.stadium ?? '',
     capacity: user.capacity ?? stats.capacity ?? '',
-    league: initialJoined.length ? '' : (user.league ?? stats.league ?? ''),
     careerHistory: user.careerHistory || '',
     phone: contact.phone || '',
     email: contact.email || '',
@@ -44,27 +64,26 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (initialJoined.length > 0 || !clubUserId) {
-        setLoadingLigas(false);
-        return;
-      }
       try {
         const res = await ligaAPI.getAllLigas();
-        const all = Array.isArray(res.data) ? res.data : [];
-        const mine = all
-          .filter((l) => clubInLiga(l, clubUserId))
-          .map((l) => ({
-            id: l.userId || l.User?.id,
-            userId: l.userId || l.User?.id,
-            ligaId: l.id,
-            name: l.name,
-            logo: l.logo || null,
-            level: l.level || null,
-            country: l.country || null,
-          }));
-        if (!cancelled) setJoinedLigas(mine);
+        const all = (Array.isArray(res.data) ? res.data : []).map(normalizeLiga).filter((l) => l.id);
+        if (cancelled) return;
+        setAllLigas(all);
+
+        let selected = initialJoined.filter((l) => l.id);
+        if (selected.length === 0 && clubUserId) {
+          selected = (Array.isArray(res.data) ? res.data : [])
+            .filter((l) => clubInLiga(l, clubUserId))
+            .map(normalizeLiga)
+            .filter((l) => l.id);
+        }
+        setSelectedLigas(selected);
+        setInitialSelectedIds(new Set(selected.map((l) => String(l.id))));
       } catch {
-        if (!cancelled) setJoinedLigas([]);
+        if (!cancelled) {
+          setAllLigas([]);
+          setSelectedLigas(initialJoined.filter((l) => l.id));
+        }
       } finally {
         if (!cancelled) setLoadingLigas(false);
       }
@@ -72,7 +91,48 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     return () => {
       cancelled = true;
     };
-  }, [clubUserId, initialJoined.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per club
+  }, [clubUserId]);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowLigaDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const selectedIds = useMemo(
+    () => new Set(selectedLigas.map((l) => String(l.id || l.userId))),
+    [selectedLigas]
+  );
+
+  const filteredLigas = useMemo(() => {
+    const q = ligaQuery.trim().toLowerCase();
+    return allLigas
+      .filter((l) => !selectedIds.has(String(l.id)))
+      .filter((l) => {
+        if (!q) return true;
+        const hay = `${l.name || ''} ${l.country || ''} ${l.level || ''}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 30);
+  }, [allLigas, ligaQuery, selectedIds]);
+
+  const addLiga = (liga) => {
+    const id = String(liga.id || liga.userId);
+    if (!id || selectedIds.has(id)) return;
+    setSelectedLigas((prev) => [...prev, normalizeLiga(liga)]);
+    setLigaQuery('');
+    setShowLigaDropdown(true);
+  };
+
+  const removeLiga = (ligaId) => {
+    const id = String(ligaId);
+    setSelectedLigas((prev) => prev.filter((l) => String(l.id || l.userId) !== id));
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -89,14 +149,28 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const syncLigaMemberships = async () => {
+    const nextIds = new Set(selectedLigas.map((l) => String(l.id || l.userId)).filter(Boolean));
+    const toJoin = [...nextIds].filter((id) => !initialSelectedIds.has(id));
+    const toLeave = [...initialSelectedIds].filter((id) => !nextIds.has(id));
+
+    for (const id of toJoin) {
+      await ligaAPI.joinLiga(id);
+    }
+    for (const id of toLeave) {
+      await ligaAPI.leaveLiga(id);
+    }
+    setInitialSelectedIds(nextIds);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLigaSyncError('');
     const formData = new FormData();
     const {
       founded,
       stadium,
       capacity,
-      league,
       phone,
       email,
       website,
@@ -112,9 +186,8 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     formData.append('founded', founded === '' || founded == null ? '' : String(founded));
     formData.append('stadium', stadium || '');
     formData.append('capacity', capacity === '' || capacity == null ? '' : String(capacity));
-    // Ligat e bashkuara vijnë nga platforma; ruaj vetëm shënimin manual nëse nuk ka bashkim
-    const manualLeague = joinedLigas.length > 0 ? '' : league || '';
-    formData.append('league', manualLeague);
+    const leagueNames = selectedLigas.map((l) => l.name).filter(Boolean).join(', ');
+    formData.append('league', leagueNames);
     formData.append(
       'contact',
       JSON.stringify({
@@ -131,11 +204,18 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       founded: founded || undefined,
       stadium: stadium || undefined,
       capacity: capacity !== '' && capacity != null ? Number(capacity) || capacity : undefined,
-      league: manualLeague || undefined,
+      league: leagueNames || undefined,
     };
     formData.append('stats', JSON.stringify(nextStats));
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
+    }
+
+    try {
+      await syncLigaMemberships();
+    } catch {
+      setLigaSyncError('Nuk u përditësuan disa liga. Provo përsëri.');
+      return;
     }
     onSave(formData);
   };
@@ -190,62 +270,107 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
-        <div className="md:col-span-2">
+
+        <div className="md:col-span-2" ref={dropdownRef}>
           <label className="block text-sm font-medium mb-1">
-            Ligat e regjistruara ({joinedLigas.length})
+            Ligat ku merr pjesë ({selectedLigas.length})
           </label>
-          {loadingLigas ? (
-            <p className="text-sm text-gray-500">Duke ngarkuar ligat…</p>
-          ) : joinedLigas.length > 0 ? (
-            <ul className="space-y-2 rounded-lg border border-gray-200 bg-slate-50 p-3">
-              {joinedLigas.map((liga) => {
-                const lid = liga.userId || liga.id;
+          {selectedLigas.length > 0 && (
+            <ul className="mb-2 flex flex-wrap gap-2">
+              {selectedLigas.map((liga) => {
+                const lid = String(liga.id || liga.userId);
                 const logo = getFullUrl(liga.logo);
                 return (
-                  <li key={lid || liga.ligaId || liga.name} className="flex items-center gap-2 text-sm">
+                  <li
+                    key={lid}
+                    className="inline-flex items-center gap-1.5 max-w-full rounded-full border border-slate-200 bg-slate-50 pl-1.5 pr-2 py-1 text-sm"
+                  >
                     {logo ? (
-                      <img src={logo} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 bg-white" />
+                      <img src={logo} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
                         {String(liga.name || 'L').slice(0, 1).toUpperCase()}
-                      </div>
+                      </span>
                     )}
-                    <div className="min-w-0 flex-1">
-                      {lid ? (
-                        <Link
-                          to={`/profile/${lid}`}
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline truncate block"
-                        >
-                          {liga.name}
-                        </Link>
-                      ) : (
-                        <span className="font-medium text-gray-900 truncate block">{liga.name}</span>
-                      )}
-                      {(liga.level || liga.country) && (
-                        <span className="text-xs text-gray-500">
-                          {[liga.country, liga.level].filter(Boolean).join(' • ')}
-                        </span>
-                      )}
-                    </div>
+                    <span className="truncate font-medium text-gray-900">{liga.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeLiga(lid)}
+                      className="ml-0.5 text-slate-400 hover:text-red-600 text-base leading-none shrink-0"
+                      aria-label={`Hiq ${liga.name}`}
+                    >
+                      ×
+                    </button>
                   </li>
                 );
               })}
             </ul>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">
-                Nuk je bashkuar ende në asnjë ligë në platformë. Bashkohu nga profili i ligës — këtu listohen automatikisht.
-              </p>
-              <input
-                name="league"
-                value={form.league}
-                onChange={handleChange}
-                placeholder="Opsionale: shënim manual (p.sh. Liga e Parë)"
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
           )}
+          <div className="relative">
+            <input
+              type="text"
+              value={ligaQuery}
+              onChange={(e) => {
+                setLigaQuery(e.target.value);
+                setShowLigaDropdown(true);
+              }}
+              onFocus={() => setShowLigaDropdown(true)}
+              placeholder={loadingLigas ? 'Duke ngarkuar ligat…' : 'Shkruaj për të kërkuar dhe zgjedhur liga…'}
+              disabled={loadingLigas}
+              className="w-full p-2 border border-gray-300 rounded"
+              autoComplete="off"
+            />
+            {showLigaDropdown && !loadingLigas && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded shadow-md max-h-56 overflow-y-auto">
+                {filteredLigas.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-gray-500">
+                    {ligaQuery.trim()
+                      ? 'Nuk u gjet asnjë ligë me këtë emër.'
+                      : allLigas.length === 0
+                        ? 'Nuk ka liga të regjistruara ende.'
+                        : 'Të gjitha ligat e disponueshme janë zgjedhur.'}
+                  </p>
+                ) : (
+                  filteredLigas.map((liga) => {
+                    const logo = getFullUrl(liga.logo);
+                    return (
+                      <button
+                        type="button"
+                        key={liga.id}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          addLiga(liga);
+                        }}
+                      >
+                        {logo ? (
+                          <img src={logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <span className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                            {String(liga.name || 'L').slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block font-medium text-gray-900 truncate">{liga.name}</span>
+                          {(liga.country || liga.level) && (
+                            <span className="block text-xs text-gray-500 truncate">
+                              {[liga.country, liga.level].filter(Boolean).join(' • ')}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Zgjidh një ose më shumë liga. Ruajtja i bashkon automatikisht klubin në ligat e zgjedhura.
+          </p>
+          {ligaSyncError ? <p className="text-sm text-amber-600 mt-1">{ligaSyncError}</p> : null}
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">City</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
