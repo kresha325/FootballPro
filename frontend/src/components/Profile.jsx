@@ -609,113 +609,113 @@ const Profile = () => {
       >
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
-            {/* Avatar */}
-            <div className="relative">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
-                {profile.profilePhoto && !avatarBroken ? (
-                  <img
-                    src={getFullUrl(profile.profilePhoto)}
-                    alt={`${profile.firstName} ${profile.lastName}`}
-                    className="w-full h-full object-cover bg-white cursor-pointer"
-                    loading="lazy"
-                    decoding="async"
-                    style={{ background: '#f3f4f6' }}
-                    title="View full size"
-                    tabIndex={0}
-                    role="button"
-                    onClick={() => setFullScreenImage(getFullUrl(profile.profilePhoto))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setFullScreenImage(getFullUrl(profile.profilePhoto));
-                      }
-                    }}
-                    onError={() => setAvatarBroken(true)}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
-                    {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`}
+            {/* Avatar + verification chips under photo */}
+            <div className="flex flex-col items-center shrink-0">
+              <div className="relative">
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
+                  {profile.profilePhoto && !avatarBroken ? (
+                    <img
+                      src={getFullUrl(profile.profilePhoto)}
+                      alt={`${profile.firstName} ${profile.lastName}`}
+                      className="w-full h-full object-cover bg-white cursor-pointer"
+                      loading="lazy"
+                      decoding="async"
+                      style={{ background: '#f3f4f6' }}
+                      title="View full size"
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => setFullScreenImage(getFullUrl(profile.profilePhoto))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setFullScreenImage(getFullUrl(profile.profilePhoto));
+                        }
+                      }}
+                      onError={() => setAvatarBroken(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
+                      {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`}
+                    </div>
+                  )}
+                </div>
+                {profile.verified && (
+                  <div className="absolute bottom-2 right-2 bg-blue-600 rounded-full p-1.5 border-2 border-white dark:border-gray-800 shadow">
+                    <VerifiedBadge verified size="md" tone="white" />
                   </div>
                 )}
               </div>
-              {/* Verified Badge */}
-              {profile.verified && (
-                <div className="absolute bottom-2 right-2 bg-blue-600 rounded-full p-1.5 border-2 border-white dark:border-gray-800">
-                  <VerifiedBadge verified size="md" tone="white" />
+
+              {isAthlete ? (
+                <div className="mt-2 flex flex-row flex-wrap justify-center gap-1.5 max-w-[11rem] md:max-w-[12rem]">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                      profile.clubVerified
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                    }`}
+                    title={
+                      profile.clubVerified
+                        ? 'I verifikuar nga klubi'
+                        : 'Në pritje të pranimit nga klubi'
+                    }
+                  >
+                    {profile.clubVerified ? '✓' : '○'} Klubi
+                  </span>
+                  {(profile.needsParentVerification || profile.parentVerified) && (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                        profile.parentVerified
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                      }`}
+                      title={
+                        profile.parentVerified
+                          ? 'I verifikuar nga prindi'
+                          : 'Verifikimi i prindit (nën 18 vjeç)'
+                      }
+                    >
+                      {profile.parentVerified ? '✓' : '○'} Prindi
+                    </span>
+                  )}
                 </div>
-              )}
+              ) : profile.role && profile.role !== 'admin' ? (
+                <div className="mt-2 flex flex-row flex-wrap justify-center gap-1.5 max-w-[11rem] md:max-w-[12rem]">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                      profile.premium
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                    }`}
+                    title={profile.premium ? 'Abonimi aktiv' : 'Duhet pagesa e abonimit'}
+                  >
+                    {profile.premium ? '✓' : '○'} Abonim
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                      profile.adminVerified
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                    }`}
+                    title={
+                      profile.adminVerified
+                        ? 'I konfirmuar nga admin'
+                        : 'Në pritje të konfirmimit nga admin'
+                    }
+                  >
+                    {profile.adminVerified ? '✓' : '○'} Admin
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {/* Name, XCoin Balance, and Stats */}
             <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
-              <div className="flex flex-col md:flex-row md:items-start justify-center md:justify-start gap-3">
-                <div className="flex flex-col items-center md:items-start gap-2 min-w-0">
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {profile.firstName} {profile.lastName}
-                  </h1>
-                  {isAthlete ? (
-                    <div className="flex flex-col gap-1.5 items-center md:items-start">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          profile.clubVerified
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
-                        }`}
-                        title={
-                          profile.clubVerified
-                            ? 'I verifikuar nga klubi'
-                            : 'Në pritje të pranimit nga klubi'
-                        }
-                      >
-                        {profile.clubVerified ? '✓' : '○'} Klubi
-                      </span>
-                      {(profile.needsParentVerification || profile.parentVerified) && (
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            profile.parentVerified
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
-                          }`}
-                          title={
-                            profile.parentVerified
-                              ? 'I verifikuar nga prindi'
-                              : 'Verifikimi i prindit (nën 18 vjeç)'
-                          }
-                        >
-                          {profile.parentVerified ? '✓' : '○'} Prindi
-                        </span>
-                      )}
-                    </div>
-                  ) : profile.role && profile.role !== 'admin' ? (
-                    <div className="flex flex-col gap-1.5 items-center md:items-start">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          profile.premium
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
-                        }`}
-                        title={profile.premium ? 'Abonimi aktiv' : 'Duhet pagesa e abonimit'}
-                      >
-                        {profile.premium ? '✓' : '○'} Abonim
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          profile.adminVerified
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
-                        }`}
-                        title={
-                          profile.adminVerified
-                            ? 'I konfirmuar nga admin'
-                            : 'Në pritje të konfirmimit nga admin'
-                        }
-                      >
-                        {profile.adminVerified ? '✓' : '○'} Admin
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+              <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white inline-flex items-center gap-2">
+                  {profile.firstName} {profile.lastName}
+                  {profile.verified ? <VerifiedBadge verified size="lg" /> : null}
+                </h1>
                 {isSponsoredProfile && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
                     <span>Sponsored</span>
@@ -729,7 +729,6 @@ const Profile = () => {
                     <span className="text-xs text-gray-500 ml-1">(1 XCoin = 1€)</span>
                   </span>
                 )}
-                </div>
               </div>
               
               <div className="flex items-center justify-center md:justify-start gap-2 mt-3 text-gray-600 dark:text-gray-400 flex-wrap">
