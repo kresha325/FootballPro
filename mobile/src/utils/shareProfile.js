@@ -1,25 +1,33 @@
 import { Alert, Linking, Share } from 'react-native';
-import { WEB_APP_URL, BACKEND_URL, publicAssetBaseUrl } from '../config/constants';
+import { WEB_APP_URL, SHARE_ORIGIN } from '../config/constants';
 
-function apiOrigin() {
-  try {
-    return publicAssetBaseUrl();
-  } catch {
-    return String(BACKEND_URL || 'https://footballpro.onrender.com')
-      .replace(/\/api\/?$/, '')
-      .replace(/\/$/, '');
-  }
+function webOrigin() {
+  return (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
+}
+
+/**
+ * Host shown in WhatsApp/Facebook link previews.
+ * Optional SHARE_ORIGIN (e.g. https://share.xtalenti.com) for OG HTML on Render.
+ * When unset, share xtalenti.com/cv/:id — not footballpro.onrender.com.
+ */
+function shareBase() {
+  const custom = SHARE_ORIGIN && String(SHARE_ORIGIN).trim();
+  if (custom) return custom.replace(/\/$/, '');
+  return webOrigin();
 }
 
 /** SPA page for humans */
 export function getProfileCvPublicUrl(userId) {
-  const base = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
-  return `${base}/cv/${userId}`;
+  return `${webOrigin()}/cv/${userId}`;
 }
 
-/** OG URL for Facebook / WhatsApp crawlers */
+/** URL pasted into WhatsApp / Facebook / etc. */
 export function getProfileCvShareUrl(userId) {
-  return `${apiOrigin()}/share/cv/${userId}`;
+  const base = shareBase();
+  if (SHARE_ORIGIN && String(SHARE_ORIGIN).trim()) {
+    return `${base}/share/cv/${userId}`;
+  }
+  return `${base}/cv/${userId}`;
 }
 
 export function getProfileCvShareText(profile) {

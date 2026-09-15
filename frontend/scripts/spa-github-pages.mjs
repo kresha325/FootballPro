@@ -49,6 +49,7 @@ const STATIC_ROUTES = [
   'privacy',
   'terms',
   'cv',
+  'share',
 ];
 
 if (!existsSync(indexHtml)) {

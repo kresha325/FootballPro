@@ -58,6 +58,17 @@ function resolveWebAppUrl() {
 export const WEB_APP_URL = resolveWebAppUrl();
 
 /**
+ * Optional branded host that serves backend `/share/cv` OG HTML (CNAME → Render).
+ * Leave unset to share `WEB_APP_URL/cv/:id` (WhatsApp shows xtalenti.com).
+ */
+export const SHARE_ORIGIN = String(
+  process.env.EXPO_PUBLIC_SHARE_ORIGIN ||
+    process.env.SHARE_ORIGIN ||
+    appExtra.SHARE_ORIGIN ||
+    ''
+).replace(/\/$/, '');
+
+/**
  * Digital goods via StoreKit / Play Billing (expo-iap).
  * When true, Premium/XCoin use IAP; Stripe checkout is not used for those in mobile.
  */

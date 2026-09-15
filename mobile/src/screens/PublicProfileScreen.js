@@ -369,16 +369,20 @@ export default function PublicProfileScreen({ route, navigation }) {
       Alert.alert('Validim', 'Klubi i destinacionit është i detyrueshëm.');
       return;
     }
+    if (!transferForm.season.trim()) {
+      Alert.alert('Validim', 'Sezoni është i detyrueshëm (p.sh. 2026-2027).');
+      return;
+    }
     setTransferSaving(true);
     try {
       await addTransferHistoryRequest({
         transferType: 'player_transfer',
-        fromClub: transferForm.fromClub.trim(),
+        fromClub: transferForm.fromClub.trim() || null,
         toClub: transferForm.toClub.trim(),
-        position: transferForm.position.trim(),
+        position: transferForm.position.trim() || null,
         season: transferForm.season.trim(),
         transferDate: transferForm.transferDate.trim() || undefined,
-        notes: transferForm.notes.trim(),
+        notes: transferForm.notes.trim() || null,
       });
       setTransferModalOpen(false);
       await loadProfile({ silent: true });

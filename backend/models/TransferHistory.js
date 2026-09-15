@@ -28,6 +28,22 @@ const TransferHistory = sequelize.define('TransferHistory', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  fromClubUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: User,
+      key: 'id',
+    },
+  },
+  toClubUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: User,
+      key: 'id',
+    },
+  },
   position: {
     type: DataTypes.STRING,
     allowNull: true,

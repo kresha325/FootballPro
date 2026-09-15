@@ -1,22 +1,24 @@
 import { APP_BRAND_NAME } from '../config/branding';
 
-function apiOrigin() {
-  const env = import.meta.env?.VITE_API_URL;
-  if (env && typeof env === 'string' && env.length) {
-    return String(env).replace(/\/api\/?$/, '').replace(/\/$/, '');
-  }
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:10000';
-  }
-  return 'https://footballpro.onrender.com';
-}
-
 function webOrigin(origin) {
   return String(origin || (typeof window !== 'undefined' ? window.location.origin : 'https://xtalenti.com')).replace(
     /\/$/,
     ''
   );
+}
+
+/**
+ * Host used in shared links (WhatsApp/Facebook show this domain).
+ * Optional VITE_SHARE_ORIGIN = branded API host that serves /share/cv OG HTML
+ * (e.g. https://share.xtalenti.com → Render). When unset, share the public SPA URL
+ * so the preview domain is xtalenti.com — not footballpro.onrender.com.
+ */
+function shareOrigin(origin) {
+  const env = import.meta.env?.VITE_SHARE_ORIGIN;
+  if (env && typeof env === 'string' && env.trim()) {
+    return String(env).replace(/\/$/, '');
+  }
+  return webOrigin(origin);
 }
 
 /** Public SPA page humans open. */
@@ -25,15 +27,26 @@ export function getProfileCvPublicUrl(userId, origin) {
 }
 
 /**
- * URL for social crawlers (Facebook/WhatsApp) — backend serves Open Graph HTML,
- * then redirects browsers to the SPA CV page.
+ * URL pasted into WhatsApp / Facebook / etc.
+ * Prefer branded xtalenti.com/cv/:id. If VITE_SHARE_ORIGIN is set to an OG host,
+ * use /share/cv/:id on that host (backend serves meta, then redirects to SPA).
  */
-export function getProfileCvShareUrl(userId) {
-  return `${apiOrigin()}/share/cv/${userId}`;
+export function getProfileCvShareUrl(userId, origin) {
+  const base = shareOrigin(origin);
+  const env = import.meta.env?.VITE_SHARE_ORIGIN;
+  if (env && typeof env === 'string' && env.trim()) {
+    return `${base}/share/cv/${userId}`;
+  }
+  return `${base}/cv/${userId}`;
 }
 
-export function getSiteShareUrl() {
-  return `${apiOrigin()}/share`;
+export function getSiteShareUrl(origin) {
+  const base = shareOrigin(origin);
+  const env = import.meta.env?.VITE_SHARE_ORIGIN;
+  if (env && typeof env === 'string' && env.trim()) {
+    return `${base}/share`;
+  }
+  return `${base}/`;
 }
 
 export function getProfileCvShareText(profile = {}) {

@@ -13,6 +13,8 @@ module.exports = ({ config }) => {
       BACKEND_URL: process.env.BACKEND_URL || staticExtra.BACKEND_URL || 'https://footballpro.onrender.com',
       WEB_APP_URL:
         process.env.WEB_APP_URL || staticExtra.WEB_APP_URL || 'https://xtalenti.com',
+      // Optional: https://share.xtalenti.com (CNAME → Render) for rich OG while branded
+      SHARE_ORIGIN: process.env.SHARE_ORIGIN || staticExtra.SHARE_ORIGIN || '',
       ...(process.env.EAS_PROJECT_ID
         ? { eas: { projectId: process.env.EAS_PROJECT_ID } }
         : {}),

@@ -110,6 +110,8 @@ function App() {
 
             {/* Public digital CV (no login) */}
             <Route path="/cv/:id" element={<PublicCvPage />} />
+            {/* Legacy / OG share path on SPA host → same public CV */}
+            <Route path="/share/cv/:id" element={<PublicCvPage />} />
 
             {/* FEED */}
             <Route path="/feed" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Feed />) : <Navigate to="/login" />} />

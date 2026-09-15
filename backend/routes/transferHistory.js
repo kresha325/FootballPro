@@ -7,40 +7,101 @@ const TransferHistory = require('../models/TransferHistory');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 
+function transferBodyValidators({ requireCore }) {
+  const list = [
+    body('fromClub').optional({ values: 'falsy' }).isString().trim(),
+    body('position').optional({ values: 'falsy' }).isString().trim(),
+    body('transferFee').optional({ values: 'falsy' }).isString().trim(),
+    body('contractUntil').optional({ values: 'falsy' }).isString().trim(),
+    body('notes').optional({ values: 'falsy' }).isString().trim(),
+    body('transferDate')
+      .optional({ values: 'falsy' })
+      .isISO8601()
+      .withMessage('transferDate must be a valid date (YYYY-MM-DD)')
+      .toDate(),
+    body('fromClubUserId').optional({ values: 'falsy' }).isInt({ min: 1 }).toInt(),
+    body('toClubUserId').optional({ values: 'falsy' }).isInt({ min: 1 }).toInt(),
+  ];
+
+  if (requireCore) {
+    list.unshift(
+      body('transferType')
+        .isString()
+        .trim()
+        .notEmpty()
+        .isIn(['player_transfer', 'coach_appointment', 'staff_appointment', 'loan'])
+    );
+    list.push(body('toClub').isString().trim().notEmpty().withMessage('To club is required'));
+    list.push(body('season').isString().trim().notEmpty().withMessage('Season is required'));
+  } else {
+    list.unshift(
+      body('transferType')
+        .optional({ values: 'falsy' })
+        .isString()
+        .trim()
+        .isIn(['player_transfer', 'coach_appointment', 'staff_appointment', 'loan'])
+    );
+    list.push(body('toClub').optional({ values: 'falsy' }).isString().trim());
+    list.push(body('season').optional({ values: 'falsy' }).isString().trim());
+  }
+  return list;
+}
+
+function normalizeTransferPayload(body) {
+  const fromClub = body.fromClub != null ? String(body.fromClub).trim() : '';
+  const toClub = body.toClub != null ? String(body.toClub).trim() : '';
+  const season = body.season != null ? String(body.season).trim() : '';
+  return {
+    transferType: body.transferType,
+    fromClub: fromClub || null,
+    toClub,
+    fromClubUserId: body.fromClubUserId ? Number(body.fromClubUserId) : null,
+    toClubUserId: body.toClubUserId ? Number(body.toClubUserId) : null,
+    position: body.position != null && String(body.position).trim() !== '' ? String(body.position).trim() : null,
+    season,
+    transferDate: body.transferDate || new Date(),
+    transferFee:
+      body.transferFee != null && String(body.transferFee).trim() !== ''
+        ? String(body.transferFee).trim()
+        : null,
+    contractUntil:
+      body.contractUntil != null && String(body.contractUntil).trim() !== ''
+        ? String(body.contractUntil).trim()
+        : null,
+    notes: body.notes != null && String(body.notes).trim() !== '' ? String(body.notes).trim() : null,
+  };
+}
+
 // Get user's transfer history
 router.get('/user/:userId', async (req, res) => {
   try {
-    console.log('[TransferHistory] Route HIT: /user/:userId');
     const { userId } = req.params;
-    console.log('[TransferHistory] userId param:', userId, 'type:', typeof userId);
     if (!userId || isNaN(Number(userId))) {
-      console.error('[TransferHistory] Invalid userId param:', userId);
       return res.status(400).json({ msg: 'Invalid userId parameter' });
     }
-    let transfers;
     try {
-      transfers = await TransferHistory.findAll({
-        where: { userId: parseInt(userId) },
-        order: [['transferDate', 'DESC']],
+      const transfers = await TransferHistory.findAll({
+        where: { userId: parseInt(userId, 10) },
+        order: [
+          ['transferDate', 'DESC'],
+          ['id', 'DESC'],
+        ],
       });
-      console.log('[TransferHistory] Query result:', transfers);
+      return res.json(transfers);
     } catch (dbError) {
       console.error('[TransferHistory] DB Query Error:', dbError);
-      if (dbError && dbError.stack) {
-        console.error('[TransferHistory] DB Error Stack:', dbError.stack);
-      }
       const message = dbError?.message || '';
-      if (message.includes('TransferHistories') || message.includes('transferhistories') || message.includes('does not exist')) {
+      if (
+        message.includes('TransferHistories') ||
+        message.includes('transferhistories') ||
+        message.includes('does not exist')
+      ) {
         return res.json([]);
       }
       return res.status(500).json({ msg: 'DB error', error: dbError.message });
     }
-    res.json(transfers);
   } catch (error) {
     console.error('[TransferHistory] Route Handler Error:', error);
-    if (error && error.stack) {
-      console.error('[TransferHistory] Handler Error Stack:', error.stack);
-    }
     res.status(500).json({ msg: 'Server error', error: error.message });
   }
 });
@@ -49,19 +110,18 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/club/:clubName', async (req, res) => {
   try {
     const { clubName } = req.params;
-    
+
     const transfers = await TransferHistory.findAll({
       where: {
-        [require('sequelize').Op.or]: [
-          { fromClub: clubName },
-          { toClub: clubName }
-        ]
+        [require('sequelize').Op.or]: [{ fromClub: clubName }, { toClub: clubName }],
       },
-      include: [{
-        model: User,
-        attributes: ['id', 'firstName', 'lastName', 'role'],
-        include: [{ model: Profile, attributes: ['profilePhoto'] }]
-      }],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'role'],
+          include: [{ model: Profile, attributes: ['profilePhoto'] }],
+        },
+      ],
       order: [['transferDate', 'DESC']],
     });
 
@@ -73,56 +133,36 @@ router.get('/club/:clubName', async (req, res) => {
 });
 
 // Add transfer record
-router.post('/', protect, async (req, res) => {
-  await body('transferType').isString().trim().notEmpty().run(req);
-  await body('fromClub').isString().trim().notEmpty().run(req);
-  await body('toClub').isString().trim().notEmpty().run(req);
-  await body('position').optional().isString().trim().run(req);
-  await body('season').optional().isString().trim().run(req);
-  await body('transferDate').optional().isISO8601().toDate().run(req);
-  await body('transferFee').optional().isNumeric().run(req);
-  await body('contractUntil').optional().isISO8601().toDate().run(req);
-  await body('notes').optional().isString().trim().run(req);
+router.post('/', protect, ...transferBodyValidators({ requireCore: true }), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ msg: 'Validation failed', errors: errors.array() });
   }
   try {
-    const { transferType, fromClub, toClub, position, season, transferDate, transferFee, contractUntil, notes } = req.body;
+    const payload = normalizeTransferPayload(req.body);
+    if (!payload.toClub) {
+      return res.status(400).json({ msg: 'To club is required' });
+    }
+    if (!payload.season) {
+      return res.status(400).json({ msg: 'Season is required' });
+    }
     const transfer = await TransferHistory.create({
       userId: req.user.id,
-      transferType,
-      fromClub,
-      toClub,
-      position,
-      season,
-      transferDate: transferDate || new Date(),
-      transferFee,
-      contractUntil,
-      notes,
+      ...payload,
     });
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Add transfer error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: 'Server error', error: error.message });
   }
 });
 
 // Update transfer record
-router.put('/:transferId', protect, async (req, res) => {
+router.put('/:transferId', protect, ...transferBodyValidators({ requireCore: false }), async (req, res) => {
   await param('transferId').isInt({ min: 1 }).run(req);
-  await body('transferType').optional().isString().trim().run(req);
-  await body('fromClub').optional().isString().trim().run(req);
-  await body('toClub').optional().isString().trim().run(req);
-  await body('position').optional().isString().trim().run(req);
-  await body('season').optional().isString().trim().run(req);
-  await body('transferDate').optional().isISO8601().toDate().run(req);
-  await body('transferFee').optional().isNumeric().run(req);
-  await body('contractUntil').optional().isISO8601().toDate().run(req);
-  await body('notes').optional().isString().trim().run(req);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ msg: 'Validation failed', errors: errors.array() });
   }
   try {
     const { transferId } = req.params;
@@ -130,10 +170,11 @@ router.put('/:transferId', protect, async (req, res) => {
     if (!transfer) {
       return res.status(404).json({ msg: 'Transfer record not found' });
     }
-    if (transfer.userId !== req.user.id && req.user.role !== 'admin') {
+    if (Number(transfer.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
       return res.status(403).json({ msg: 'Not authorized' });
     }
-    await transfer.update(req.body);
+    const payload = normalizeTransferPayload({ ...transfer.toJSON(), ...req.body });
+    await transfer.update(payload);
     res.json(transfer);
   } catch (error) {
     console.error('Update transfer error:', error);
@@ -146,7 +187,7 @@ router.delete('/:transferId', protect, async (req, res) => {
   await param('transferId').isInt({ min: 1 }).run(req);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ msg: 'Validation failed', errors: errors.array() });
   }
   try {
     const { transferId } = req.params;
@@ -154,7 +195,7 @@ router.delete('/:transferId', protect, async (req, res) => {
     if (!transfer) {
       return res.status(404).json({ msg: 'Transfer record not found' });
     }
-    if (transfer.userId !== req.user.id && req.user.role !== 'admin') {
+    if (Number(transfer.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
       return res.status(403).json({ msg: 'Not authorized' });
     }
     await transfer.destroy();

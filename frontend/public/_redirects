@@ -1,2 +1,8 @@
-/* Cloudflare Pages / Netlify — SPA fallback (200 rewrite) */
+# Cloudflare Pages / Netlify
+# Proxy OG share endpoints to Render so WhatsApp/Facebook get personal meta
+# while the shared URL stays on xtalenti.com (not footballpro.onrender.com).
+/share/cv/*  https://footballpro.onrender.com/share/cv/:splat  200
+/share       https://footballpro.onrender.com/share  200
+
+# SPA fallback
 /*    /index.html   200
