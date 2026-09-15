@@ -19,6 +19,8 @@ const emptyForm = {
   capacity: '',
   address: '',
   photo: '',
+  featured: false,
+  days: '7',
 };
 
 export default function AdminStadiums() {
@@ -79,6 +81,10 @@ export default function AdminStadiums() {
       fd.append('country', form.country.trim());
       fd.append('capacity', form.capacity === '' ? '' : String(form.capacity));
       fd.append('address', form.address.trim());
+      fd.append('featured', form.featured ? 'true' : 'false');
+      if (form.featured) {
+        fd.append('days', form.days === '' ? '7' : String(form.days));
+      }
       if (photoFile) {
         fd.append('photo', photoFile);
       } else if (clearPhoto) {
@@ -107,6 +113,12 @@ export default function AdminStadiums() {
 
   const startEdit = (s) => {
     setEditingId(s.id);
+    let daysLeft = '7';
+    if (s.featured && s.featuredStart && s.featuredEnd) {
+      const ms = new Date(s.featuredEnd) - new Date();
+      const d = Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+      daysLeft = String(d);
+    }
     setForm({
       name: s.name || '',
       city: s.city || '',
@@ -114,6 +126,8 @@ export default function AdminStadiums() {
       capacity: s.capacity != null ? String(s.capacity) : '',
       address: s.address || '',
       photo: s.photo || '',
+      featured: Boolean(s.featured),
+      days: daysLeft,
     });
     setPhotoFile(null);
     setClearPhoto(false);
@@ -241,6 +255,31 @@ export default function AdminStadiums() {
             </div>
           </div>
 
+          <div className="md:col-span-2 flex flex-wrap items-end gap-4 rounded-lg border border-gray-200 bg-slate-50 p-3">
+            <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-800">
+              <input
+                type="checkbox"
+                checked={form.featured}
+                onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+                className="rounded border-gray-300"
+              />
+              Shfaq në Feed
+            </label>
+            {form.featured ? (
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Ditë (duration)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={form.days}
+                  onChange={(e) => setForm({ ...form, days: e.target.value })}
+                  className="w-24 p-2 border border-gray-300 rounded"
+                />
+              </div>
+            ) : null}
+          </div>
+
           <div className="md:col-span-2 flex gap-2">
             <button
               type="submit"
@@ -285,6 +324,7 @@ export default function AdminStadiums() {
                   <th className="py-2 pr-4">Emri</th>
                   <th className="py-2 pr-4">Qyteti</th>
                   <th className="py-2 pr-4">Kapaciteti</th>
+                  <th className="py-2 pr-4">Feed</th>
                   <th className="py-2 pr-4">Veprime</th>
                 </tr>
               </thead>
@@ -308,6 +348,13 @@ export default function AdminStadiums() {
                     </td>
                     <td className="py-2.5 pr-4 text-gray-600">
                       {s.capacity != null ? Number(s.capacity).toLocaleString() : '—'}
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-600">
+                      {s.featured ? (
+                        <span className="text-green-700 font-medium">Po</span>
+                      ) : (
+                        <span className="text-gray-400">Jo</span>
+                      )}
                     </td>
                     <td className="py-2.5 pr-4 space-x-2">
                       <button

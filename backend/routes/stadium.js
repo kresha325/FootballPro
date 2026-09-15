@@ -9,6 +9,7 @@ const photoUpload = uploadCloud.fields([{ name: 'photo', maxCount: 1 }]);
 
 // Clubs / any logged-in user can list & view
 router.get('/', auth, stadiumController.listStadiums);
+router.get('/featured', auth, stadiumController.listFeaturedStadiums);
 router.get('/:id', auth, stadiumController.getStadium);
 
 // Admin CRUD (multipart photo optional)

@@ -14,6 +14,7 @@ import UserCardsSection from './UserCardsSection';
 import FeedLiveNow from './FeedLiveNow';
 import FeedScoutingReport from './FeedScoutingReport';
 import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
+import StadiumStrip from './StadiumStrip';
 import { API } from '../services/api';
 
 const Feed = () => {
@@ -963,6 +964,8 @@ const Feed = () => {
               Menaxho turnetë
             </button>
           </div>
+
+          <StadiumStrip />
         </div>
 
         {/* Ad 3 - Sponsor Banner */}

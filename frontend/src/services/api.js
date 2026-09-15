@@ -32,6 +32,14 @@ export const ligaAPI = {
   leaveLiga: (ligaUserId) => API.delete(`/ligas/${ligaUserId}/leave`),
   removeClub: (clubId) => API.delete(`/ligas/clubs/${clubId}`),
 };
+/* =========================
+   STADIUMS
+========================= */
+export const stadiumsAPI = {
+  getAll: (params) => API.get('/stadiums', { params }),
+  getFeatured: () => API.get('/stadiums/featured'),
+  getStadium: (id) => API.get(`/stadiums/${id}`),
+};
 import axios from 'axios';
 
 const resolveApiBaseUrl = () => {

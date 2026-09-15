@@ -33,6 +33,19 @@ const Stadium = sequelize.define(
       type: DataTypes.STRING(512),
       allowNull: true,
     },
+    featured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    featuredStart: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    featuredEnd: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: 'Stadiums',
