@@ -385,7 +385,7 @@ exports.getProfile = async (req, res) => {
       where: { userId }, 
       include: [{
         model: User,
-        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance', 'verified', 'parentVerified', 'clubVerified', 'clubVerifiedAt']
+        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance', 'verified', 'adminVerified', 'premium', 'parentVerified', 'clubVerified', 'clubVerifiedAt']
       }]
     });
 
@@ -438,7 +438,16 @@ exports.getProfile = async (req, res) => {
       email: user ? user.email : null,
       dateOfBirth: user ? user.dateOfBirth : null,
       gender: user ? user.gender : null,
-      verified: Boolean(user?.verified),
+      verified: (() => {
+        try {
+          const { effectiveVerified } = require('../utils/userVerification');
+          return effectiveVerified(user);
+        } catch {
+          return Boolean(user?.verified);
+        }
+      })(),
+      adminVerified: Boolean(user?.adminVerified),
+      premium: Boolean(user?.premium),
       parentVerified: Boolean(user?.parentVerified),
       clubVerified: Boolean(user?.clubVerified),
       clubVerifiedAt: user?.clubVerifiedAt || null,
@@ -536,6 +545,8 @@ exports.getPublicProfileCv = async (req, res) => {
           'dateOfBirth',
           'gender',
           'verified',
+          'adminVerified',
+          'premium',
           'parentVerified',
           'clubVerified',
           'bannedAt',
@@ -594,9 +605,18 @@ exports.getPublicProfileCv = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       role,
-      verified: Boolean(user.verified),
+      verified: (() => {
+        try {
+          const { effectiveVerified } = require('../utils/userVerification');
+          return effectiveVerified(user);
+        } catch {
+          return Boolean(user.verified);
+        }
+      })(),
       parentVerified: Boolean(user.parentVerified),
       clubVerified: Boolean(user.clubVerified),
+      premium: Boolean(user.premium),
+      adminVerified: Boolean(user.adminVerified),
       gender: user.gender || null,
       dateOfBirth: isOrg ? null : user.dateOfBirth || null,
       age,

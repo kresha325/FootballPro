@@ -449,10 +449,21 @@ exports.verifyUser = async (req, res) => {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    user.verified = true;
-    await user.save();
+    const { isAthleteRole, markAdminVerified } = require('../utils/userVerification');
+    if (isAthleteRole(user)) {
+      // Admin override for athletes
+      user.verified = true;
+      await user.save();
+    } else {
+      await markAdminVerified(user);
+    }
 
-    res.json({ msg: 'User verified successfully', user });
+    res.json({
+      msg: user.verified
+        ? 'User verified successfully'
+        : 'Admin confirmation saved. Badge activates after premium subscription payment.',
+      user,
+    });
   } catch (error) {
     console.error('Verify user error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -467,6 +478,8 @@ exports.togglePremium = async (req, res) => {
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
     user.premium = !user.premium;
+    const { syncOverallVerified } = require('../utils/userVerification');
+    syncOverallVerified(user);
     await user.save();
 
     res.json({ msg: `Premium ${user.premium ? 'enabled' : 'disabled'}`, user });

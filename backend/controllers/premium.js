@@ -40,6 +40,8 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   if (!user) return null;
 
   user.premium = true;
+  const { syncOverallVerified } = require('../utils/userVerification');
+  syncOverallVerified(user);
   await user.save();
 
   const expiresAt = new Date();

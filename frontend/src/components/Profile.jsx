@@ -648,45 +648,74 @@ const Profile = () => {
 
             {/* Name, XCoin Balance, and Stats */}
             <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {profile.firstName} {profile.lastName}
-                </h1>
-                <VerifiedBadge verified={profile.verified} size="lg" />
-                {isAthlete && (
-                  <>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        profile.clubVerified
-                          ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200'
-                          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-                      }`}
-                      title={
-                        profile.clubVerified
-                          ? 'I verifikuar nga klubi'
-                          : 'Në pritje të pranimit nga klubi'
-                      }
-                    >
-                      {profile.clubVerified ? '✓' : '○'} Klubi
-                    </span>
-                    {(profile.needsParentVerification || profile.parentVerified) && (
+              <div className="flex flex-col md:flex-row md:items-start justify-center md:justify-start gap-3">
+                <div className="flex flex-col items-center md:items-start gap-2 min-w-0">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {profile.firstName} {profile.lastName}
+                  </h1>
+                  {isAthlete ? (
+                    <div className="flex flex-col gap-1.5 items-center md:items-start">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          profile.parentVerified
-                            ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200'
-                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          profile.clubVerified
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
                         }`}
                         title={
-                          profile.parentVerified
-                            ? 'I verifikuar nga prindi'
-                            : 'Verifikimi i prindit (nën 18 vjeç)'
+                          profile.clubVerified
+                            ? 'I verifikuar nga klubi'
+                            : 'Në pritje të pranimit nga klubi'
                         }
                       >
-                        {profile.parentVerified ? '✓' : '○'} Prindi
+                        {profile.clubVerified ? '✓' : '○'} Klubi
                       </span>
-                    )}
-                  </>
-                )}
+                      {(profile.needsParentVerification || profile.parentVerified) && (
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            profile.parentVerified
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
+                          }`}
+                          title={
+                            profile.parentVerified
+                              ? 'I verifikuar nga prindi'
+                              : 'Verifikimi i prindit (nën 18 vjeç)'
+                          }
+                        >
+                          {profile.parentVerified ? '✓' : '○'} Prindi
+                        </span>
+                      )}
+                    </div>
+                  ) : profile.role && profile.role !== 'admin' ? (
+                    <div className="flex flex-col gap-1.5 items-center md:items-start">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          profile.premium
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
+                        }`}
+                        title={profile.premium ? 'Abonimi aktiv' : 'Duhet pagesa e abonimit'}
+                      >
+                        {profile.premium ? '✓' : '○'} Abonim
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          profile.adminVerified
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-800/80 text-gray-300 dark:bg-gray-900 dark:text-gray-500'
+                        }`}
+                        title={
+                          profile.adminVerified
+                            ? 'I konfirmuar nga admin'
+                            : 'Në pritje të konfirmimit nga admin'
+                        }
+                      >
+                        {profile.adminVerified ? '✓' : '○'} Admin
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
                 {isSponsoredProfile && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
                     <span>Sponsored</span>
@@ -700,6 +729,7 @@ const Profile = () => {
                     <span className="text-xs text-gray-500 ml-1">(1 XCoin = 1€)</span>
                   </span>
                 )}
+                </div>
               </div>
               
               <div className="flex items-center justify-center md:justify-start gap-2 mt-3 text-gray-600 dark:text-gray-400 flex-wrap">

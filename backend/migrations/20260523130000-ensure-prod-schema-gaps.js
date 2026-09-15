@@ -101,6 +101,11 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: true,
       });
+      await addColumnIfMissing(queryInterface, Sequelize, 'Users', 'adminVerified', {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      });
       await addColumnIfMissing(queryInterface, Sequelize, 'Users', 'joncoinBalance', {
         type: Sequelize.DECIMAL(12, 2),
         allowNull: false,

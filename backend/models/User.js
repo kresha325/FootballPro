@@ -25,11 +25,16 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('athlete', 'coach', 'scout', 'manager', 'referee', 'club', 'federation', 'liga', 'media', 'business', 'admin'),
     allowNull: false,
   },
-  premium: {
+  verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  verified: {
+  /** Admin confirmation for non-athlete roles (badge needs this + premium). */
+  adminVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  premium: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
