@@ -1,19 +1,25 @@
 import { Alert, Linking, Share } from 'react-native';
-import { WEB_APP_URL, SHARE_ORIGIN } from '../config/constants';
+import { WEB_APP_URL, SHARE_ORIGIN, publicAssetBaseUrl, BACKEND_URL } from '../config/constants';
 
 function webOrigin() {
   return (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 }
 
-/**
- * Host shown in WhatsApp/Facebook link previews.
- * Optional SHARE_ORIGIN (e.g. https://share.xtalenti.com) for OG HTML on Render.
- * When unset, share xtalenti.com/cv/:id — not footballpro.onrender.com.
- */
-function shareBase() {
+function apiOrigin() {
+  try {
+    return publicAssetBaseUrl();
+  } catch {
+    return String(BACKEND_URL || 'https://footballpro.onrender.com')
+      .replace(/\/api\/?$/, '')
+      .replace(/\/$/, '');
+  }
+}
+
+/** OG host: SHARE_ORIGIN (e.g. share.xtalenti.com) or API — SPA /cv has no personal meta. */
+function ogShareOrigin() {
   const custom = SHARE_ORIGIN && String(SHARE_ORIGIN).trim();
   if (custom) return custom.replace(/\/$/, '');
-  return webOrigin();
+  return apiOrigin();
 }
 
 /** SPA page for humans */
@@ -21,13 +27,9 @@ export function getProfileCvPublicUrl(userId) {
   return `${webOrigin()}/cv/${userId}`;
 }
 
-/** URL pasted into WhatsApp / Facebook / etc. */
+/** URL for WhatsApp / Facebook — backend /share/cv serves name + photo OG. */
 export function getProfileCvShareUrl(userId) {
-  const base = shareBase();
-  if (SHARE_ORIGIN && String(SHARE_ORIGIN).trim()) {
-    return `${base}/share/cv/${userId}`;
-  }
-  return `${base}/cv/${userId}`;
+  return `${ogShareOrigin()}/share/cv/${userId}`;
 }
 
 export function getProfileCvShareText(profile) {
@@ -70,16 +72,6 @@ export async function previewProfileCv(profile) {
   await openShareUrl(url, 'CV');
 }
 
-export async function shareProfileCvNative(profile) {
-  const url = getProfileCvShareUrl(profile.id || profile.userId);
-  const text = getProfileCvShareText(profile);
-  await Share.share({
-    message: `${text}\n${url}`,
-    url,
-    title: 'X TALENTI CV',
-  });
-}
-
 export async function shareProfileCvWhatsApp(profile) {
   const url = getProfileCvShareUrl(profile.id || profile.userId);
   const text = getProfileCvShareText(profile);
@@ -94,25 +86,6 @@ export async function shareProfileCvFacebook(profile) {
   );
 }
 
-export async function shareProfileCvTwitter(profile) {
-  const url = getProfileCvShareUrl(profile.id || profile.userId);
-  const text = getProfileCvShareText(profile);
-  await openShareUrl(
-    `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-    'X (Twitter)'
-  );
-}
-
-export async function shareProfileCvInstagram(profile) {
-  const url = getProfileCvShareUrl(profile.id || profile.userId);
-  await copyLink(url, 'Ngjite linkun në Story / bio në Instagram.');
-}
-
-export async function shareProfileCvTikTok(profile) {
-  const url = getProfileCvShareUrl(profile.id || profile.userId);
-  await copyLink(url, 'Ngjite linkun në bio / caption në TikTok.');
-}
-
 export async function shareProfileCvCopy(profile) {
   const url = getProfileCvShareUrl(profile.id || profile.userId);
   await copyLink(url, 'Linku i CV u kopjua / u nda.');
@@ -122,10 +95,7 @@ function showSharePlatforms(profile) {
   Alert.alert('Ndaj CV', 'Zgjidh platformën', [
     { text: 'WhatsApp', onPress: () => shareProfileCvWhatsApp(profile) },
     { text: 'Facebook', onPress: () => shareProfileCvFacebook(profile) },
-    { text: 'Instagram', onPress: () => shareProfileCvInstagram(profile) },
-    { text: 'TikTok', onPress: () => shareProfileCvTikTok(profile) },
-    { text: 'Kopjo / ndaj linkun', onPress: () => shareProfileCvCopy(profile) },
-    { text: 'Më shumë…', onPress: () => shareProfileCvNative(profile) },
+    { text: 'Kopjo linkun', onPress: () => shareProfileCvCopy(profile) },
     { text: 'Anulo', style: 'cancel' },
   ]);
 }

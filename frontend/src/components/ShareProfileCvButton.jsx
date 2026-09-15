@@ -64,7 +64,7 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
               Shiko CV
             </Link>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-              Ndaje në Facebook, WhatsApp, Instagram, TikTok…
+              Ndaje në Facebook, WhatsApp ose kopjo linkun
             </p>
             <ShareChannelsPanel url={shareUrl} text={text} />
             <p className="mt-2 truncate text-[10px] text-gray-400" title={publicUrl}>

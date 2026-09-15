@@ -462,7 +462,7 @@ function PublicCvPage() {
           <section className="mt-6 rounded-3xl border border-white/10 bg-slate-900/60 p-6">
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400/90">Ndaj CV-në</h2>
             <p className="mt-2 text-sm text-slate-400">
-              Facebook, WhatsApp, Instagram, TikTok ose kopjo linkun. Preview-i në FB vjen nga Open Graph.
+              Facebook, WhatsApp ose kopjo linkun. Preview-i në FB/WhatsApp vjen nga Open Graph.
             </p>
             <div className="mt-4">
               <ShareChannelsPanel url={shareUrl} text={shareText} />

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   facebookShareHref,
-  twitterShareHref,
   whatsappShareHref,
 } from '../utils/shareProfile';
 
@@ -20,10 +19,7 @@ function ChannelButton({ label, onClick, className, children }) {
   );
 }
 
-/**
- * Share actions: Facebook, WhatsApp, Instagram, TikTok, Copy link.
- * Instagram/TikTok have no public URL share API — we copy the link and open the app/site.
- */
+/** Share actions: Facebook, WhatsApp, Copy link. */
 export default function ShareChannelsPanel({ url, text, className = '' }) {
   const [copied, setCopied] = useState(false);
   const [hint, setHint] = useState('');
@@ -67,46 +63,13 @@ export default function ShareChannelsPanel({ url, text, className = '' }) {
           </span>
         </ChannelButton>
 
-        <ChannelButton
-          label="Instagram"
-          onClick={async () => {
-            await copy('Linku u kopjua — ngjite në Story / bio në Instagram');
-            openExternal('https://www.instagram.com/');
-          }}
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-700 text-sm font-bold text-white">
-            Ig
-          </span>
-        </ChannelButton>
-
-        <ChannelButton
-          label="TikTok"
-          onClick={async () => {
-            await copy('Linku u kopjua — ngjite në bio / caption në TikTok');
-            openExternal('https://www.tiktok.com/');
-          }}
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
-            TT
-          </span>
-        </ChannelButton>
-
-        <ChannelButton
-          label="X"
-          onClick={() => openExternal(twitterShareHref(url, text))}
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-            𝕏
-          </span>
-        </ChannelButton>
-
         <ChannelButton label={copied ? 'OK' : 'Kopjo'} onClick={() => copy('Linku u kopjua')}>
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-bold text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100">
             {copied ? '✓' : '🔗'}
           </span>
         </ChannelButton>
       </div>
-      {hint ? <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">{hint}</p> : null}
       <p className="mt-2 break-all text-[10px] text-slate-400">{url}</p>
     </div>
   );
