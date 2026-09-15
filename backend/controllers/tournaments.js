@@ -348,7 +348,8 @@ async function standingsFromFinishedMatches(tournamentId, participantUserIds) {
   for (const m of matches) {
     const h = m.homeUserId;
     const a = m.awayUserId;
-    if (!stats[h] || !stats[a]) continue;
+    if (h == null || a == null || !stats[h] || !stats[a]) continue;
+    if (m.scoreHome == null || m.scoreAway == null) continue;
     const sh = Number(m.scoreHome) || 0;
     const sa = Number(m.scoreAway) || 0;
     stats[h].played += 1;
@@ -394,49 +395,30 @@ exports.getStandings = async (req, res) => {
       ],
     });
 
-    const fromTable = participants.map((p) => {
-      const gf = Number(p.goalsFor) || 0;
-      const ga = Number(p.goalsAgainst) || 0;
-      return {
-        userId: p.userId,
-        played: (Number(p.wins) || 0) + (Number(p.draws) || 0) + (Number(p.losses) || 0),
-        points: Number(p.points) || 0,
-        wins: Number(p.wins) || 0,
-        draws: Number(p.draws) || 0,
-        losses: Number(p.losses) || 0,
-        goalsFor: gf,
-        goalsAgainst: ga,
-        goalDifference: gf - ga,
-        participantStatus: p.status,
-        User: p.User,
-      };
-    });
+    // Always derive from finished matches (source of truth). Stored W/D/L inflated
+    // when older code incremented on every score edit — heal by recomputing.
+    await recomputeTournamentStandings(tournament.id);
 
-    let rankingMode;
-    let rows;
+    const ids = participants.map((p) => p.userId);
+    const derived = sortStandingsRows(await standingsFromFinishedMatches(tournament.id, ids));
+    const userById = Object.fromEntries(participants.map((p) => [p.userId, p.User]));
+    const statusById = Object.fromEntries(participants.map((p) => [p.userId, p.status]));
 
-    if (tournament.type === 'league') {
-      rankingMode = 'points_table';
-      rows = sortStandingsRows(fromTable).map((r, i) => ({ rank: i + 1, ...r }));
-    } else {
-      rankingMode = 'matches_derived';
-      const ids = participants.map((p) => p.userId);
-      const derived = sortStandingsRows(await standingsFromFinishedMatches(tournament.id, ids));
-      const userById = Object.fromEntries(participants.map((p) => [p.userId, p.User]));
-      rows = derived.map((r, i) => ({
-        rank: i + 1,
-        userId: r.userId,
-        played: r.played,
-        points: r.points,
-        wins: r.wins,
-        draws: r.draws,
-        losses: r.losses,
-        goalsFor: r.goalsFor,
-        goalsAgainst: r.goalsAgainst,
-        goalDifference: r.goalDifference,
-        User: userById[r.userId] || null,
-      }));
-    }
+    const rankingMode = tournament.type === 'league' ? 'points_table' : 'matches_derived';
+    const rows = derived.map((r, i) => ({
+      rank: i + 1,
+      userId: r.userId,
+      played: r.played,
+      points: r.points,
+      wins: r.wins,
+      draws: r.draws,
+      losses: r.losses,
+      goalsFor: r.goalsFor,
+      goalsAgainst: r.goalsAgainst,
+      goalDifference: r.goalDifference,
+      participantStatus: statusById[r.userId],
+      User: userById[r.userId] || null,
+    }));
 
     res.json({
       tournamentId: tournament.id,
@@ -445,7 +427,7 @@ exports.getStandings = async (req, res) => {
       rankingMode,
       caption:
         tournament.type === 'league'
-          ? 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore.'
+          ? 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore. Llogaritet vetëm nga ndeshjet e përfunduara.'
           : 'Për cup/knockout, kjo tabelë përmbledh statistikat nga ndeshjet e përfunduara; kalimi në raund tjetër varet nga bracket-i / rezultatet.',
       rows,
     });
@@ -896,20 +878,32 @@ exports.getTournamentStats = async (req, res) => {
       where: { tournamentId: req.params.id },
     });
 
-    const totalGoals = participants.reduce((sum, p) => sum + p.goalsFor, 0);
-    const finishedMatches = matches.filter(m => m.status === 'finished').length;
-
-    // Top scorer
-    const topScorer = participants.reduce((max, p) => 
-      p.goalsFor > (max?.goalsFor || 0) ? p : max
-    , null);
-
-    // Top team
-    const topTeam = participants.reduce((max, p) => 
-      p.points > (max?.points || 0) ? p : max
-    , null);
-
+    const finished = matches.filter((m) => m.status === 'finished' && m.scoreHome != null && m.scoreAway != null);
+    const finishedMatches = finished.length;
     const scheduledMatches = matches.filter((m) => m.status === 'scheduled').length;
+
+    const totalGoals = finished.reduce(
+      (sum, m) => sum + (Number(m.scoreHome) || 0) + (Number(m.scoreAway) || 0),
+      0
+    );
+
+    // Heal stored participant stats, then use them for summary leaders
+    await recomputeTournamentStandings(tournament.id);
+    const refreshed = await TournamentParticipant.findAll({
+      where: { tournamentId: req.params.id },
+    });
+
+    // Top scorer (goals for from standings / matches GF)
+    const topScorer = refreshed.reduce(
+      (max, p) => (Number(p.goalsFor) > (Number(max?.goalsFor) || 0) ? p : max),
+      null
+    );
+
+    // Top team by points
+    const topTeam = refreshed.reduce(
+      (max, p) => (Number(p.points) > (Number(max?.points) || 0) ? p : max),
+      null
+    );
 
     const recentResults = await Match.findAll({
       where: { tournamentId: req.params.id, status: 'finished' },
@@ -943,7 +937,7 @@ exports.getTournamentStats = async (req, res) => {
     }
 
     const stats = {
-      totalParticipants: participants.length,
+      totalParticipants: refreshed.length,
       totalMatches: matches.length,
       finishedMatches,
       scheduledMatches,
