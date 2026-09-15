@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getFullUrl } from '../../../utils/mediaUrl';
+import { ligaAPI } from '../../../services/api';
+
+function clubInLiga(liga, clubUserId) {
+  if (clubUserId == null || !liga) return false;
+  const id = String(clubUserId);
+  const clubs = liga.clubs;
+  if (!Array.isArray(clubs)) return false;
+  return clubs.some((c) => {
+    if (c == null) return false;
+    if (typeof c === 'number' || typeof c === 'string') return String(c) === id;
+    return String(c.id || c.userId || c.clubId || '') === id;
+  });
+}
 
 const EditClubProfile = ({ user, onSave, loading, errors }) => {
   const stats = user.stats && typeof user.stats === 'object' ? user.stats : {};
   const contact = user.contact && typeof user.contact === 'object' ? user.contact : {};
+  const clubUserId = user.userId || user.id || user.User?.id;
+  const initialJoined = Array.isArray(user.joinedLigas) ? user.joinedLigas : [];
+  const [joinedLigas, setJoinedLigas] = useState(initialJoined);
+  const [loadingLigas, setLoadingLigas] = useState(initialJoined.length === 0);
   const [form, setForm] = useState({
     club: user.club || '',
     city: user.city || '',
@@ -12,7 +30,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     founded: user.founded ?? stats.founded ?? user.foundingYear ?? '',
     stadium: user.stadium ?? stats.stadium ?? '',
     capacity: user.capacity ?? stats.capacity ?? '',
-    league: user.league ?? stats.league ?? '',
+    league: initialJoined.length ? '' : (user.league ?? stats.league ?? ''),
     careerHistory: user.careerHistory || '',
     phone: contact.phone || '',
     email: contact.email || '',
@@ -22,6 +40,39 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     twitter: contact.twitter || '',
     profilePhoto: user.profilePhoto || '',
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (initialJoined.length > 0 || !clubUserId) {
+        setLoadingLigas(false);
+        return;
+      }
+      try {
+        const res = await ligaAPI.getAllLigas();
+        const all = Array.isArray(res.data) ? res.data : [];
+        const mine = all
+          .filter((l) => clubInLiga(l, clubUserId))
+          .map((l) => ({
+            id: l.userId || l.User?.id,
+            userId: l.userId || l.User?.id,
+            ligaId: l.id,
+            name: l.name,
+            logo: l.logo || null,
+            level: l.level || null,
+            country: l.country || null,
+          }));
+        if (!cancelled) setJoinedLigas(mine);
+      } catch {
+        if (!cancelled) setJoinedLigas([]);
+      } finally {
+        if (!cancelled) setLoadingLigas(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clubUserId, initialJoined.length]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -61,7 +112,9 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     formData.append('founded', founded === '' || founded == null ? '' : String(founded));
     formData.append('stadium', stadium || '');
     formData.append('capacity', capacity === '' || capacity == null ? '' : String(capacity));
-    formData.append('league', league || '');
+    // Ligat e bashkuara vijnë nga platforma; ruaj vetëm shënimin manual nëse nuk ka bashkim
+    const manualLeague = joinedLigas.length > 0 ? '' : league || '';
+    formData.append('league', manualLeague);
     formData.append(
       'contact',
       JSON.stringify({
@@ -78,7 +131,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       founded: founded || undefined,
       stadium: stadium || undefined,
       capacity: capacity !== '' && capacity != null ? Number(capacity) || capacity : undefined,
-      league: league || undefined,
+      league: manualLeague || undefined,
     };
     formData.append('stats', JSON.stringify(nextStats));
     if (profilePhoto) {
@@ -137,18 +190,61 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Liga (manual)</label>
-          <input
-            name="league"
-            value={form.league}
-            onChange={handleChange}
-            placeholder="Opsionale — nëse nuk je bashkuar në një ligë në platformë"
-            className="w-full p-2 border border-gray-300 rounded"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Ligat ku bashkohet klubi shfaqen automatikisht në Overview.
-          </p>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1">
+            Ligat e regjistruara ({joinedLigas.length})
+          </label>
+          {loadingLigas ? (
+            <p className="text-sm text-gray-500">Duke ngarkuar ligat…</p>
+          ) : joinedLigas.length > 0 ? (
+            <ul className="space-y-2 rounded-lg border border-gray-200 bg-slate-50 p-3">
+              {joinedLigas.map((liga) => {
+                const lid = liga.userId || liga.id;
+                const logo = getFullUrl(liga.logo);
+                return (
+                  <li key={lid || liga.ligaId || liga.name} className="flex items-center gap-2 text-sm">
+                    {logo ? (
+                      <img src={logo} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 bg-white" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                        {String(liga.name || 'L').slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {lid ? (
+                        <Link
+                          to={`/profile/${lid}`}
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline truncate block"
+                        >
+                          {liga.name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-gray-900 truncate block">{liga.name}</span>
+                      )}
+                      {(liga.level || liga.country) && (
+                        <span className="text-xs text-gray-500">
+                          {[liga.country, liga.level].filter(Boolean).join(' • ')}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                Nuk je bashkuar ende në asnjë ligë në platformë. Bashkohu nga profili i ligës — këtu listohen automatikisht.
+              </p>
+              <input
+                name="league"
+                value={form.league}
+                onChange={handleChange}
+                placeholder="Opsionale: shënim manual (p.sh. Liga e Parë)"
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">City</label>
