@@ -1,6 +1,8 @@
 const Liga = require('../models/Liga');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
 const { Tournament } = require('../models/Tournament');
+const { toAbsoluteUploadsUrl } = require('../utils/url');
 const {
   ensureLigaTournament,
   normalizeCategory,
@@ -10,6 +12,53 @@ const {
   syncClubAthletesToLiga,
   removeClubAthletesFromLiga,
 } = require('../utils/ligaTournaments');
+
+function clubIdsFromLiga(liga) {
+  const clubs = liga?.clubs;
+  if (!Array.isArray(clubs)) return [];
+  return clubs
+    .map((c) => {
+      if (c == null) return null;
+      if (typeof c === 'number' || typeof c === 'string') return parseInt(c, 10);
+      return parseInt(c.id || c.userId || c.clubId, 10);
+    })
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
+/** Expand stored club userIds into display objects (name, logo, link). */
+async function enrichLigaClubs(liga, req) {
+  const plain = typeof liga?.get === 'function' ? liga.get({ plain: true }) : { ...(liga || {}) };
+  const ids = clubIdsFromLiga(plain);
+  if (ids.length === 0) {
+    plain.clubs = [];
+    return plain;
+  }
+
+  const users = await User.findAll({
+    where: { id: ids, role: 'club' },
+    attributes: ['id', 'firstName', 'lastName', 'role'],
+    include: [{ model: Profile, attributes: ['club', 'profilePhoto'] }],
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+
+  plain.clubs = ids.map((id) => {
+    const u = byId.get(id);
+    const p = u?.Profile;
+    const name =
+      (p?.club && String(p.club).trim()) ||
+      `${u?.firstName || ''} ${u?.lastName || ''}`.trim() ||
+      `Klub #${id}`;
+    const logoRaw = p?.profilePhoto || null;
+    return {
+      id,
+      userId: id,
+      name,
+      logo: logoRaw && req ? toAbsoluteUploadsUrl(req, logoRaw) : logoRaw,
+      profilePhoto: logoRaw && req ? toAbsoluteUploadsUrl(req, logoRaw) : logoRaw,
+    };
+  });
+  return plain;
+}
 
 // Create Liga profile
 exports.createLiga = async (req, res) => {
@@ -59,8 +108,9 @@ exports.getLiga = async (req, res) => {
     if (!liga) {
       return res.status(404).json({ msg: 'Liga profile not found' });
     }
-    res.json(liga);
+    res.json(await enrichLigaClubs(liga, req));
   } catch (err) {
+    console.error('getLiga:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -156,7 +206,11 @@ exports.joinLiga = async (req, res) => {
     if (!liga) return res.status(404).json({ msg: 'Liga nuk u gjet.' });
 
     if (ligaIncludesClub(liga, req.user.id)) {
-      return res.status(200).json({ msg: 'Jeni tashmë në këtë ligë.', liga, alreadyJoined: true });
+      return res.status(200).json({
+        msg: 'Jeni tashmë në këtë ligë.',
+        liga: await enrichLigaClubs(liga, req),
+        alreadyJoined: true,
+      });
     }
 
     const { list } = addClubToList(liga.clubs, req.user.id);
@@ -170,7 +224,7 @@ exports.joinLiga = async (req, res) => {
       console.error('syncClubAthletesToLiga on join:', syncErr);
     }
 
-    res.json({ msg: 'U bashkuat në ligë.', liga });
+    res.json({ msg: 'U bashkuat në ligë.', liga: await enrichLigaClubs(liga, req) });
   } catch (err) {
     console.error('joinLiga:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -200,7 +254,7 @@ exports.leaveLiga = async (req, res) => {
     liga.changed('clubs', true);
     await liga.save();
 
-    res.json({ msg: 'U larguat nga liga.', liga });
+    res.json({ msg: 'U larguat nga liga.', liga: await enrichLigaClubs(liga, req) });
   } catch (err) {
     console.error('leaveLiga:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -231,7 +285,7 @@ exports.removeClubFromLiga = async (req, res) => {
     liga.changed('clubs', true);
     await liga.save();
 
-    res.json({ msg: 'Klubi u hoq nga liga.', liga });
+    res.json({ msg: 'Klubi u hoq nga liga.', liga: await enrichLigaClubs(liga, req) });
   } catch (err) {
     console.error('removeClubFromLiga:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });

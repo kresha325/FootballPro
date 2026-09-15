@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ligaAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFullUrl } from '../../utils/mediaUrl';
@@ -25,6 +26,17 @@ function clubIdOf(entry) {
   if (entry == null) return null;
   if (typeof entry === 'number' || typeof entry === 'string') return String(entry);
   return String(entry.id || entry.userId || entry.clubId || '');
+}
+
+function clubDisplayName(entry) {
+  if (entry == null) return 'Klub';
+  if (typeof entry === 'string' || typeof entry === 'number') return `Klub #${entry}`;
+  return (
+    entry.name ||
+    entry.club ||
+    `${entry.firstName || ''} ${entry.lastName || ''}`.trim() ||
+    `Klub #${clubIdOf(entry)}`
+  );
 }
 
 const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
@@ -253,23 +265,39 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
         </a>
       ) : null}
       <div className="mb-4">
-        <h3 className="font-semibold mb-1">Clubs ({clubs.length})</h3>
+        <h3 className="font-semibold mb-1">Klube ({clubs.length})</h3>
         {clubs.length === 0 ? (
           <p className="text-sm text-gray-500">Nuk ka klube të bashkuara ende.</p>
         ) : (
           <ul className="space-y-2">
             {clubs.map((club, idx) => {
               const cid = clubIdOf(club);
-              const label =
-                typeof club === 'string' || typeof club === 'number'
-                  ? `Klub #${club}`
-                  : club?.name || `Klub #${cid}`;
+              const label = clubDisplayName(club);
+              const logo = getFullUrl(club?.logo || club?.profilePhoto);
               return (
                 <li
                   key={`${cid}-${idx}`}
                   className="flex items-center justify-between gap-2 text-sm text-gray-700 bg-slate-50 rounded-lg px-3 py-2"
                 >
-                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    {logo ? (
+                      <img src={logo} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 bg-white" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                        {String(label).slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    {cid ? (
+                      <Link
+                        to={`/profile/${cid}`}
+                        className="min-w-0 truncate font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                      >
+                        {label}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 truncate">{label}</span>
+                    )}
+                  </div>
                   {isOwner && cid ? (
                     <button
                       type="button"
