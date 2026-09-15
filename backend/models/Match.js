@@ -56,6 +56,14 @@ const Match = sequelize.define('Match', {
     allowNull: true,
     defaultValue: 0,
   },
+  stadiumId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'Stadiums',
+      key: 'id',
+    },
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

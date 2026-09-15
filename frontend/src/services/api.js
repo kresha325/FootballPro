@@ -39,6 +39,7 @@ export const stadiumsAPI = {
   getAll: (params) => API.get('/stadiums', { params }),
   getFeatured: () => API.get('/stadiums/featured'),
   getStadium: (id) => API.get(`/stadiums/${id}`),
+  getMatches: (id, params) => API.get(`/stadiums/${id}/matches`, { params }),
 };
 import axios from 'axios';
 

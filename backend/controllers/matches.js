@@ -12,9 +12,12 @@ exports.updateMatch = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ msg: 'Match not found' });
-    const { tournamentId, homeUserId, awayUserId, matchDate, round } = req.body;
+    const { tournamentId, homeUserId, awayUserId, matchDate, round, stadiumId } = req.body;
     if (!tournamentId || !homeUserId || !awayUserId || !matchDate) {
       return res.status(400).json({ msg: 'Të gjitha fushat janë të detyrueshme: tournamentId, homeUserId, awayUserId, matchDate.' });
+    }
+    if (!stadiumId) {
+      return res.status(400).json({ msg: 'Zgjidh stadiumin ku zhvillohet ndeshja.', field: 'stadiumId' });
     }
     if (homeUserId === awayUserId) {
       return res.status(400).json({ msg: 'Nuk mund të zgjedhësh të njëjtin lojtar për të dy ekipet.' });
@@ -34,11 +37,15 @@ exports.updateMatch = async (req, res) => {
       }
     }
 
+    const stadium = await db.Stadium.findByPk(stadiumId);
+    if (!stadium) return res.status(400).json({ msg: 'Stadiumi nuk ekziston.', field: 'stadiumId' });
+
     match.tournamentId = tournamentId;
     match.homeUserId = homeUserId;
     match.awayUserId = awayUserId;
     match.matchDate = matchDate;
     match.round = round;
+    match.stadiumId = stadiumId;
     await match.save();
     res.json(match);
   } catch (err) {
@@ -113,9 +120,12 @@ exports.saveMatchScorers = async (req, res) => {
 
 exports.createMatch = async (req, res) => {
   try {
-    const { tournamentId, homeUserId, awayUserId, matchDate, round } = req.body;
+    const { tournamentId, homeUserId, awayUserId, matchDate, round, stadiumId } = req.body;
     if (!tournamentId || !homeUserId || !awayUserId || !matchDate) {
       return res.status(400).json({ msg: 'Të gjitha fushat janë të detyrueshme: tournamentId, homeUserId, awayUserId, matchDate.' });
+    }
+    if (!stadiumId) {
+      return res.status(400).json({ msg: 'Zgjidh stadiumin ku zhvillohet ndeshja.', field: 'stadiumId' });
     }
     if (Number(homeUserId) === Number(awayUserId)) {
       return res.status(400).json({ msg: 'Nuk mund të zgjedhësh të njëjtin lojtar për të dy ekipet.' });
@@ -126,12 +136,16 @@ exports.createMatch = async (req, res) => {
     const authz = canManageTournamentMatches(tournament, req.user);
     if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
+    const stadium = await db.Stadium.findByPk(stadiumId);
+    if (!stadium) return res.status(400).json({ msg: 'Stadiumi nuk ekziston.', field: 'stadiumId' });
+
     const match = await Match.create({
       tournamentId,
       homeUserId,
       awayUserId,
       matchDate,
       round,
+      stadiumId,
       status: 'scheduled',
     });
     res.status(201).json(match);
@@ -150,6 +164,7 @@ exports.getMatches = async (req, res) => {
           { model: db.Tournament, attributes: ['name'] },
           { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
           { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+          { model: db.Stadium, as: 'Stadium', attributes: ['id', 'name', 'city'], required: false },
           {
             model: db.MatchScorer,
             include: [{ model: db.User, attributes: ['id', 'firstName', 'lastName'] }],
@@ -158,7 +173,7 @@ exports.getMatches = async (req, res) => {
       });
     } catch (err) {
       const message = err?.message || '';
-      if (message.includes('MatchScorers') || message.includes('Tournaments') || message.includes('does not exist')) {
+      if (message.includes('MatchScorers') || message.includes('Tournaments') || message.includes('does not exist') || message.includes('stadium')) {
         matches = await Match.findAll({
           include: [
             { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },

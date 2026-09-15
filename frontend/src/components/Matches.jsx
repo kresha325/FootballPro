@@ -18,13 +18,14 @@ const fetchParticipants = async (tournamentId) => {
   return res.data?.participants || [];
 };
 
-function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onSave }) {
+function EditMatchModal({ isOpen, onClose, match, tournaments, participants, stadiums, onSave }) {
   const [form, setForm] = useState({
     tournamentId: '',
     homeUserId: '',
     awayUserId: '',
     matchDate: '',
     round: 1,
+    stadiumId: '',
   });
 
   useEffect(() => {
@@ -35,6 +36,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
         awayUserId: match.awayUserId || '',
         matchDate: match.matchDate ? String(match.matchDate).slice(0, 16) : '',
         round: match.round || 1,
+        stadiumId: match.stadiumId || match.Stadium?.id || '',
       });
     }
   }, [isOpen, match]);
@@ -49,6 +51,10 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
     }
     if (String(form.homeUserId) === String(form.awayUserId)) {
       alert('Vendas dhe mysafir nuk mund të jenë i njëjti');
+      return;
+    }
+    if (!form.stadiumId) {
+      alert('Zgjidh stadiumin');
       return;
     }
     onSave(match.id, form);
@@ -94,6 +100,22 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, onS
                 onSelect={(awayUserId) => setForm({ ...form, awayUserId })}
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Stadiumi *</label>
+            <select
+              required
+              value={form.stadiumId}
+              onChange={(e) => setForm({ ...form, stadiumId: e.target.value })}
+              className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
+            >
+              <option value="">Zgjidh stadiumin</option>
+              {(stadiums || []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.city ? ` — ${s.city}` : ''}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -149,7 +171,9 @@ function Matches() {
     awayUserId: '',
     matchDate: getNowLocalDateTime(),
     round: 1,
+    stadiumId: '',
   });
+  const [stadiums, setStadiums] = useState([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editMatch, setEditMatch] = useState(null);
   const [editParticipants, setEditParticipants] = useState([]);
@@ -210,6 +234,7 @@ function Matches() {
         awayUserId: form.awayUserId,
         matchDate: form.matchDate,
         round: form.round,
+        stadiumId: form.stadiumId,
       });
       setEditModalOpen(false);
       setEditMatch(null);
@@ -236,6 +261,9 @@ function Matches() {
   useEffect(() => {
     fetchMatches();
     fetchTournaments().then(setTournaments);
+    api.get('/stadiums', { params: { limit: 200 } }).then((res) => {
+      setStadiums(Array.isArray(res.data) ? res.data : []);
+    }).catch(() => setStadiums([]));
   }, []);
 
   useEffect(() => {
@@ -248,8 +276,8 @@ function Matches() {
 
   const handleCreateMatch = async (e) => {
     e.preventDefault();
-    if (!formData.tournamentId || !formData.homeUserId || !formData.awayUserId || !formData.matchDate) {
-      alert('Të gjitha fushat janë të detyrueshme.');
+    if (!formData.tournamentId || !formData.homeUserId || !formData.awayUserId || !formData.matchDate || !formData.stadiumId) {
+      alert('Të gjitha fushat janë të detyrueshme (përfshirë stadiumin).');
       return;
     }
     if (formData.homeUserId === formData.awayUserId) {
@@ -271,6 +299,7 @@ function Matches() {
         awayUserId: formData.awayUserId,
         matchDate: formData.matchDate,
         round: formData.round,
+        stadiumId: formData.stadiumId,
       });
       alert('Ndeshja u planifikua me sukses!');
       setShowCreateModal(false);
@@ -280,6 +309,7 @@ function Matches() {
         awayUserId: '',
         matchDate: getNowLocalDateTime(),
         round: 1,
+        stadiumId: '',
       });
       fetchMatches();
     } catch (error) {
@@ -362,12 +392,12 @@ function Matches() {
                         })}
                       </span>
                     </div>
-                    {match.location && (
+                    {match.Stadium?.name || match.location ? (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <MapPinIcon className="h-5 w-5 shrink-0" />
-                        <span className="text-sm break-words">{match.location}</span>
+                        <span className="text-sm break-words">{match.Stadium?.name || match.location}</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   {/* Status Badge */}
                   <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -398,6 +428,7 @@ function Matches() {
         match={editMatch}
         tournaments={manageableTournaments}
         participants={editParticipants}
+        stadiums={stadiums}
         onSave={handleSaveEditMatch}
       />
 
@@ -452,6 +483,25 @@ function Matches() {
                     onSelect={(awayUserId) => setFormData({ ...formData, awayUserId })}
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stadiumi *</label>
+                <select
+                  required
+                  value={formData.stadiumId}
+                  onChange={(e) => setFormData({ ...formData, stadiumId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">Zgjidh stadiumin</option>
+                  {stadiums.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}{s.city ? ` — ${s.city}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {stadiums.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-600">Nuk ka stadiume në katalog. Admini duhet t’i shtojë te Stadiume.</p>
+                ) : null}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>

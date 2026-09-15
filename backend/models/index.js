@@ -20,6 +20,7 @@ const Tournament = TournamentModule.Tournament;
 const TournamentParticipant = TournamentModule.TournamentParticipant;
 const Match = require('./Match');
 const MatchScorer = require('./MatchScorer');
+const Stadium = require('./Stadium');
 // Lidhjet kryesore për Match
 if (Match && Tournament && User) {
   Match.belongsTo(Tournament, { foreignKey: 'tournamentId' });
@@ -27,6 +28,8 @@ if (Match && Tournament && User) {
   // Lidhjet për homeUser dhe awayUser
   Match.belongsTo(User, { as: 'homeUser', foreignKey: 'homeUserId' });
   Match.belongsTo(User, { as: 'awayUser', foreignKey: 'awayUserId' });
+  Match.belongsTo(Stadium, { as: 'Stadium', foreignKey: 'stadiumId' });
+  Stadium.hasMany(Match, { as: 'matches', foreignKey: 'stadiumId' });
 }
 // Lidhjet për MatchScorer
 if (Match && MatchScorer && User) {
@@ -47,7 +50,6 @@ const Follow = require('./Follow');
 const Subscription = require('./Subscription');
 const Profile = require('./Profile');
 const Liga = require('./Liga');
-const Stadium = require('./Stadium');
 const Like = require('./Like');
 const Comment = require('./Comment');
 const Post = require('./Post');

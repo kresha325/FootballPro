@@ -116,6 +116,106 @@ exports.getStadium = async (req, res) => {
   }
 };
 
+function teamLabel(user) {
+  if (!user) return 'TBD';
+  const club = user.Profile?.club && String(user.Profile.club).trim();
+  if (club) return club;
+  const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  return name || `User #${user.id}`;
+}
+
+/** Matches scheduled at this stadium. Optional ?date=YYYY-MM-DD or ?from=&to= ISO. */
+exports.listStadiumMatches = async (req, res) => {
+  try {
+    const stadiumId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(stadiumId) || stadiumId <= 0) {
+      return res.status(400).json({ msg: 'ID e pavlefshme' });
+    }
+    const stadium = await Stadium.findByPk(stadiumId);
+    if (!stadium) return res.status(404).json({ msg: 'Stadiumi nuk u gjet.' });
+
+    const Match = require('../models/Match');
+    const User = require('../models/User');
+    const Profile = require('../models/Profile');
+    const { Tournament } = require('../models/Tournament');
+    const { Op } = require('sequelize');
+
+    const where = { stadiumId };
+    const dateStr = String(req.query.date || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const start = new Date(`${dateStr}T00:00:00`);
+      const end = new Date(`${dateStr}T23:59:59.999`);
+      where.matchDate = { [Op.between]: [start, end] };
+    } else {
+      const from = req.query.from ? new Date(req.query.from) : null;
+      const to = req.query.to ? new Date(req.query.to) : null;
+      if (from && !Number.isNaN(from.getTime()) && to && !Number.isNaN(to.getTime())) {
+        where.matchDate = { [Op.between]: [from, to] };
+      } else if (from && !Number.isNaN(from.getTime())) {
+        where.matchDate = { [Op.gte]: from };
+      } else if (to && !Number.isNaN(to.getTime())) {
+        where.matchDate = { [Op.lte]: to };
+      }
+    }
+
+    const matches = await Match.findAll({
+      where,
+      include: [
+        { model: Tournament, attributes: ['id', 'name'] },
+        {
+          model: User,
+          as: 'homeUser',
+          attributes: ['id', 'firstName', 'lastName'],
+          include: [{ model: Profile, attributes: ['club'], required: false }],
+        },
+        {
+          model: User,
+          as: 'awayUser',
+          attributes: ['id', 'firstName', 'lastName'],
+          include: [{ model: Profile, attributes: ['club'], required: false }],
+        },
+      ],
+      order: [['matchDate', 'ASC']],
+      limit: 200,
+    });
+
+    const rows = matches.map((m) => {
+      const plain = m.get({ plain: true });
+      const d = plain.matchDate ? new Date(plain.matchDate) : null;
+      return {
+        id: plain.id,
+        stadiumId: plain.stadiumId,
+        tournamentId: plain.tournamentId,
+        tournamentName: plain.Tournament?.name || null,
+        homeUserId: plain.homeUserId,
+        awayUserId: plain.awayUserId,
+        homeTeam: teamLabel(plain.homeUser),
+        awayTeam: teamLabel(plain.awayUser),
+        matchDate: plain.matchDate,
+        status: plain.status,
+        scoreHome: plain.scoreHome,
+        scoreAway: plain.scoreAway,
+        round: plain.round,
+        day: d
+          ? d.toLocaleDateString('sq-AL', { weekday: 'long' })
+          : null,
+        dateLabel: d
+          ? d.toLocaleDateString('sq-AL', { day: 'numeric', month: 'long', year: 'numeric' })
+          : null,
+        timeLabel: d
+          ? d.toLocaleTimeString('sq-AL', { hour: '2-digit', minute: '2-digit' })
+          : null,
+        dateKey: d ? d.toISOString().slice(0, 10) : null,
+      };
+    });
+
+    res.json({ stadium: serializeStadium(req, stadium), matches: rows });
+  } catch (err) {
+    console.error('listStadiumMatches:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
 exports.createStadium = async (req, res) => {
   try {
     const name = String(req.body.name || '').trim();
