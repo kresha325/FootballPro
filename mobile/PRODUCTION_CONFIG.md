@@ -31,3 +31,15 @@ Confirm Render env has production LiveKit, Cloudinary, Stripe, JWT_SECRET, VAPID
 | `APPLE_IAP_SHARED_SECRET` | App Store Connect shared secret |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Optional until full Play verify |
 | `IAP_ALLOW_UNVERIFIED` | Staging only — never production |
+
+## Bare native folders (`ios/` + `android/`)
+
+EAS Build uses the committed native projects. Changes to `scheme`, `plugins`, `ios.entitlements`, etc. in `app.json` / `app.config.js` are **not** applied automatically until you run:
+
+```bash
+npx expo prebuild
+```
+
+or edit the native files directly (as done for `xtalenti` URL scheme + `aps-environment=production`).
+
+Deep-link prefixes in JS (`AppNavigator` linking) already include `xtalenti://` and `footballpro://`.

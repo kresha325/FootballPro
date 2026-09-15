@@ -2,7 +2,7 @@
   "expo": {
     "name": "X TALENTI",
     "slug": "x-talenti",
-    "scheme": "footballpro",
+    "scheme": ["xtalenti", "footballpro"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +24,14 @@
           "icon": "./assets/icon.png",
           "color": "#0f172a",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "X TALENTI ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.",
+          "cameraPermission": "X TALENTI ka nevojë për kamerën për live dhe video thirrje.",
+          "microphonePermission": "X TALENTI ka nevojë për mikrofonin për live dhe thirrje."
         }
       ],
       "@livekit/react-native-expo-plugin",
@@ -97,9 +105,7 @@
         "LSMinimumSystemVersion": "15.1"
       },
       "appleTeamId": "AM7TN896MK",
-      "entitlements": {
-        "aps-environment": "development"
-      },
+      "entitlements": {},
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyCollectedDataTypes": [],

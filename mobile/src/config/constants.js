@@ -9,7 +9,16 @@ const rawBackendUrl = (appExtra.BACKEND_URL || 'https://footballpro.onrender.com
  * Baza e axios; nëse mbaron me `/api`, thirrjet janë `baseURL` + `/api/...` (e pranuar).
  * Për skedarë statikë (uploads) nuk duhet `/api` në host — përdor `publicAssetBaseUrl()`.
  */
-export const BACKEND_URL = rawBackendUrl;
+function assertProductionBackend(url) {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) return url;
+  if (/(localhost|127\.0\.0\.1|192\.168\.|10\.\d+\.|0\.0\.0\.0)/i.test(url)) {
+    console.error('[constants] Refusing non-public BACKEND_URL in production build:', url);
+    return 'https://footballpro.onrender.com';
+  }
+  return url;
+}
+
+export const BACKEND_URL = assertProductionBackend(rawBackendUrl);
 
 /**
  * Origjina pa `/api` në fund — i njëjti server shërben `/uploads/...` në rrënjë, jo nën `/api/uploads`.

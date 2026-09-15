@@ -18,7 +18,7 @@ import {
 } from '../api/client';
 import { WEB_APP_URL, ALLOW_MOBILE_DIGITAL_PURCHASES } from '../config/constants';
 import { useAuth } from '../context/AuthContext';
-import { purchaseAndFulfill, loadIapProducts } from '../iap/purchase';
+import { purchaseAndFulfill, loadIapProducts, restorePremiumPurchases } from '../iap/purchase';
 import { premiumSkuForPlan } from '../iap/products';
 
 const PENDING_SESSION_KEY = 'premium_checkout_session_id';
@@ -148,6 +148,27 @@ export default function PremiumScreen() {
     }
   }, [pendingSessionId, refreshMe]);
 
+  const onRestore = useCallback(async () => {
+    if (!ALLOW_MOBILE_DIGITAL_PURCHASES) {
+      Alert.alert('Restore', 'Restore është i disponueshëm vetëm me IAP në këtë build.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { restored } = await restorePremiumPurchases();
+      await refreshMe();
+      if (restored > 0) {
+        Alert.alert('U rikthye', 'Abonimi Premium u rikthye nga App Store / Play.');
+      } else {
+        Alert.alert('Asnjë blerje', 'Nuk u gjet asnjë abonim aktiv Premium për këtë llogari store.');
+      }
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, err?.message || 'Restore dështoi'));
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshMe]);
+
   const isPremium = !!user?.premium;
   const selectedSku = premiumSkuForPlan(selectedPlan);
   const displayPrice = storePrices[selectedSku];
@@ -247,6 +268,12 @@ export default function PremiumScreen() {
       {!ALLOW_MOBILE_DIGITAL_PURCHASES && paymentsLive && pendingSessionId && !isPremium ? (
         <TouchableOpacity style={styles.verifyBtn} onPress={onVerifyPayment} disabled={loading}>
           <Text style={styles.verifyBtnText}>Kam përfunduar pagesën</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {ALLOW_MOBILE_DIGITAL_PURCHASES ? (
+        <TouchableOpacity style={styles.verifyBtn} onPress={onRestore} disabled={loading}>
+          <Text style={styles.verifyBtnText}>Rikthe blerjet (Restore)</Text>
         </TouchableOpacity>
       ) : null}
 

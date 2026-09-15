@@ -19,8 +19,9 @@
 
 ## Config
 
-- `app.json`: `expo-notifications` plugin, `UIBackgroundModes: remote-notification`, `extra.eas.projectId`
-- iOS local: `aps-environment` = `development` in entitlements (EAS production profile sets production via Apple)
+- `app.json` / `app.config.js`: `expo-notifications` plugin, `UIBackgroundModes: remote-notification`, `extra.eas.projectId`
+- iOS native (`ios/XTalenti/XTalenti.entitlements`): `aps-environment` = `production` for TestFlight/App Store (project uses committed `ios/` folder — EAS does not auto-sync app.config entitlements)
+- `app.config.js` still sets `aps-environment` for future prebuild regenerations (`production` when `EAS_BUILD_PROFILE=production`)
 - Android 13+: `POST_NOTIFICATIONS` comes from the notifications config plugin
 
 ## Rebuild required

@@ -27,6 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>xtalenti</string>
           <string>footballpro</string>
           <string>com.kresha325.xtalenti</string>
         </array>

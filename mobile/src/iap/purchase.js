@@ -7,6 +7,7 @@ import {
   finishTransaction,
   purchaseUpdatedListener,
   purchaseErrorListener,
+  getAvailablePurchases,
   ErrorCode,
 } from 'expo-iap';
 import { verifyIapPurchaseRequest } from '../api/client';
@@ -156,4 +157,49 @@ export async function purchaseAndFulfill(sku, { type = 'inapp' } = {}) {
   }
 
   return verifyRes?.data;
+}
+
+/**
+ * Restore active Premium subscriptions from the store, verify on backend, finish txs.
+ * Required by Apple for subscription apps. Idempotent server-side on transactionId.
+ */
+export async function restorePremiumPurchases() {
+  const ok = await ensureIapConnection();
+  if (!ok) {
+    throw new Error('IAP nuk është i disponueshëm në këtë build.');
+  }
+
+  const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: true });
+  const list = Array.isArray(purchases) ? purchases : [];
+  const premiumSet = new Set(PREMIUM_SKUS);
+  const premiumPurchases = list.filter((p) => {
+    const id = p?.productId || p?.id;
+    return id && premiumSet.has(String(id));
+  });
+
+  if (!premiumPurchases.length) {
+    return { restored: 0, results: [] };
+  }
+
+  const results = [];
+  for (const purchase of premiumPurchases) {
+    const productId = purchase.productId || purchase.id;
+    const transactionId = String(purchase.id || purchase.transactionId || '');
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    const verifyRes = await verifyIapPurchaseRequest({
+      platform,
+      productId,
+      transactionId,
+      purchaseToken: purchase.purchaseToken || null,
+      transactionReceipt: purchase.transactionReceipt || null,
+    });
+    try {
+      await finishTransaction({ purchase, isConsumable: false });
+    } catch (finishErr) {
+      console.warn('restore finishTransaction:', finishErr?.message || finishErr);
+    }
+    results.push(verifyRes?.data);
+  }
+
+  return { restored: results.length, results };
 }
