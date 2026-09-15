@@ -394,7 +394,16 @@ exports.getProfile = async (req, res) => {
     }
 
     // Calculate age and age group (athletes/people only — orgs get founding year)
-    const user = profile.User;
+    let user = profile.User;
+    if (user) {
+      try {
+        const { ensureClubVerifiedFromRoster } = require('../utils/userVerification');
+        await ensureClubVerifiedFromRoster(user);
+        await user.reload();
+      } catch (syncErr) {
+        console.warn('getProfile verification sync:', syncErr?.message || syncErr);
+      }
+    }
     const role = user ? user.role : null;
     const isOrg = isOrgProfileRole(role);
     const age = !isOrg && user && user.getAge ? user.getAge() : null;

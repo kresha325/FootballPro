@@ -81,6 +81,55 @@ async function markClubVerified(user) {
   return user;
 }
 
+/**
+ * If athlete is already approved on a club roster but clubVerified was never set
+ * (e.g. accepted before this feature), backfill the flag.
+ */
+async function ensureClubVerifiedFromRoster(user) {
+  if (!user || !isAthleteRole(user)) return user;
+  if (user.clubVerified) {
+    const before = Boolean(user.verified);
+    syncOverallVerified(user);
+    if (Boolean(user.verified) !== before) {
+      await user.save();
+    }
+    return user;
+  }
+
+  try {
+    const ClubMember = require('../models/ClubMember');
+    const member = await ClubMember.findOne({
+      where: { athleteId: user.id, status: 'approved' },
+      attributes: ['id'],
+    });
+    if (member) {
+      return markClubVerified(user);
+    }
+  } catch (err) {
+    console.warn('ensureClubVerifiedFromRoster ClubMember:', err?.message || err);
+  }
+
+  try {
+    const ClubRosterRequest = require('../models/ClubRosterRequest');
+    const request = await ClubRosterRequest.findOne({
+      where: { athleteId: user.id, status: 'approved' },
+      attributes: ['id'],
+    });
+    if (request) {
+      return markClubVerified(user);
+    }
+  } catch (err) {
+    console.warn('ensureClubVerifiedFromRoster roster request:', err?.message || err);
+  }
+
+  const before = Boolean(user.verified);
+  syncOverallVerified(user);
+  if (Boolean(user.verified) !== before) {
+    await user.save();
+  }
+  return user;
+}
+
 async function markParentVerified(user) {
   if (!user) return null;
   user.parentVerified = true;
@@ -115,6 +164,7 @@ module.exports = {
   effectiveVerified,
   syncOverallVerified,
   markClubVerified,
+  ensureClubVerifiedFromRoster,
   markParentVerified,
   markAdminVerified,
   syncAfterPremiumChange,

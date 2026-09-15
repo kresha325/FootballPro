@@ -855,20 +855,54 @@ export default function AdminDashboard() {
                             Banned
                           </span>
                         )}
-                        {u.verified && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircleIcon className="w-3 h-3 mr-1" />
-                            Verified
-                          </span>
+                        {String(u.role).toLowerCase() === 'athlete' ? (
+                          <>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                u.clubVerified
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {u.clubVerified ? '✓' : '○'} Klubi
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                u.parentVerified
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {u.parentVerified ? '✓' : '○'} Prindi
+                            </span>
+                            {u.verified && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <CheckCircleIcon className="w-3 h-3 mr-1" />
+                                Full
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {u.verified && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <CheckCircleIcon className="w-3 h-3 mr-1" />
+                                Verified
+                              </span>
+                            )}
+                            {u.adminVerified && !u.verified && (
+                              <span className="text-xs text-blue-600">Admin OK · pending premium</span>
+                            )}
+                            {!u.verified && !u.adminVerified && !u.bannedAt && (
+                              <span className="text-xs text-gray-400">Unverified</span>
+                            )}
+                          </>
                         )}
                         {u.premium && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                             <ShieldCheckIcon className="w-3 h-3 mr-1" />
                             Premium
                           </span>
-                        )}
-                        {!u.verified && !u.bannedAt && (
-                          <span className="text-xs text-gray-400">Unverified</span>
                         )}
                       </div>
                     </td>
