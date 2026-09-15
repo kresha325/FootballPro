@@ -870,10 +870,6 @@ exports.getTournamentStats = async (req, res) => {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
 
-    const participants = await TournamentParticipant.findAll({
-      where: { tournamentId: req.params.id },
-    });
-
     const matches = await Match.findAll({
       where: { tournamentId: req.params.id },
     });
