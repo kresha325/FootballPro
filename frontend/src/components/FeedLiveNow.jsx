@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import { streamsAPI } from '../services/api';
 import { dedupeLiveByStreamer } from '../utils/liveStreams';
 import { resolveStreamerPhotoUrl } from '../utils/avatarUrl';
+import PersonName from './PersonName';
 
 const POLL_MS = 8000;
 const LIMIT = 12;
@@ -135,9 +136,9 @@ export default function FeedLiveNow() {
                   Live
                 </span>
               </div>
-              <span className="mt-2.5 line-clamp-2 w-full text-center text-xs font-bold leading-tight text-white">
+              <PersonName className="mt-2.5 line-clamp-2 w-full text-center text-xs font-bold leading-tight text-white">
                 {name}
-              </span>
+              </PersonName>
               {(stream.viewers ?? 0) > 0 ? (
                 <span className="mt-0.5 text-[10px] font-semibold text-slate-400">{stream.viewers} watching</span>
               ) : null}

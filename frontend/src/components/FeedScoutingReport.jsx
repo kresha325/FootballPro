@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { scoutingAPI } from '../services/api';
 import { AGE_GROUP_OPTIONS, metricLabel, scoreTone, winnerForMetric } from '../utils/scoutingScore';
+import PersonName from './PersonName';
 
 function avatarOrFallback(url) {
   if (!url) return '/default-avatar.svg';
@@ -131,7 +132,7 @@ const FeedScoutingReport = () => {
                   className="mt-2 w-full min-h-11 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
                 >
                   {candidates.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} translate="no" className="notranslate">
                       {c.fullName} {c.position ? `· ${c.position}` : ''}
                     </option>
                   ))}
@@ -160,7 +161,9 @@ const FeedScoutingReport = () => {
                     className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-600"
                   />
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 dark:text-white truncate">{item.player?.fullName || '-'}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white truncate">
+                      <PersonName>{item.player?.fullName || '-'}</PersonName>
+                    </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {item.player?.position || 'Pa pozicion'} {item.player?.club ? `· ${item.player.club}` : ''}
                     </p>

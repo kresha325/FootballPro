@@ -17,6 +17,7 @@ import { profileAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import VerifiedBadge from './VerifiedBadge';
+import PersonName from './PersonName';
 
 
 const UserCardsSection = () => {
@@ -122,7 +123,9 @@ const UserCardsSection = () => {
 
             <div className="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/45 to-transparent">
               <div className="text-3xl font-bold text-white drop-shadow-lg leading-tight flex items-center gap-2">
-                {profile.firstName} {profile.lastName}
+                <PersonName>
+                  {profile.firstName} {profile.lastName}
+                </PersonName>
                 <VerifiedBadge verified={profile.verified} size="sm" tone="white" />
                 {onlineStatus[profile.id] === true ? (
                   <span title="Online" className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-white" />

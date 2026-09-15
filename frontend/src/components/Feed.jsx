@@ -16,6 +16,7 @@ import FeedScoutingReport from './FeedScoutingReport';
 import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import StadiumStrip from './StadiumStrip';
 import VerifiedBadge from './VerifiedBadge';
+import PersonName from './PersonName';
 import { API } from '../services/api';
 
 const Feed = () => {
@@ -588,9 +589,11 @@ const Feed = () => {
                     )}
                     <div className="ml-3">
                       <p className="font-semibold text-gray-900 dark:text-white hover:underline inline-flex items-center gap-1">
-                        {post.author?.firstName && post.author?.lastName 
-                          ? `${post.author.firstName} ${post.author.lastName}` 
-                          : 'I panjohur'}
+                        <PersonName>
+                          {post.author?.firstName && post.author?.lastName
+                            ? `${post.author.firstName} ${post.author.lastName}`
+                            : 'I panjohur'}
+                        </PersonName>
                         <VerifiedBadge verified={post.author?.verified} size="sm" />
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -852,7 +855,9 @@ const Feed = () => {
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
-                                {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
+                                <PersonName>
+                                  {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
+                                </PersonName>
                                 <VerifiedBadge verified={comment.User?.verified} size="sm" />
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
