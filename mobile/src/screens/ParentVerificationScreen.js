@@ -39,11 +39,13 @@ export default function ParentVerificationScreen({ navigation }) {
 
       setEmailSent(!!data.emailSent);
 
+      if (data.confirmUrl) setConfirmUrl(data.confirmUrl);
+      if (data.warning) setWarning(data.warning);
+
       if (data.emailSent) {
         Alert.alert(
           'U dërgua',
-          `Email u dërgua te ${email}. Kontrollo edhe Spam te prindi.`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          `Email u dërgua te ${email}. Mund ta ndash edhe linkun në WhatsApp nga ekrani.`
         );
         return;
       }
@@ -52,7 +54,6 @@ export default function ParentVerificationScreen({ navigation }) {
         data.warning ||
           'Email nuk u dërgua nga serveri. Kopjo linkun dhe ia dërgo prindit (WhatsApp).'
       );
-      if (data.confirmUrl) setConfirmUrl(data.confirmUrl);
     } catch (err) {
       Alert.alert('Gabim', extractErrorMessage(err, 'Server error'));
     } finally {
@@ -87,12 +88,17 @@ export default function ParentVerificationScreen({ navigation }) {
 
         {confirmUrl ? (
           <View style={styles.warnBox}>
-            <Text style={styles.warnText}>{warning}</Text>
+            <Text style={styles.warnText}>
+              {warning ||
+                (emailSent
+                  ? 'Email u dërgua. Mund ta dërgosh edhe në WhatsApp:'
+                  : 'Kopjo / ndaj linkun me prindin:')}
+            </Text>
             <Text style={styles.link} selectable>
               {confirmUrl}
             </Text>
             <TouchableOpacity style={styles.copyBtn} onPress={shareLink}>
-              <Text style={styles.copyBtnText}>Ndaj linkun me prindin</Text>
+              <Text style={styles.copyBtnText}>Ndaj në WhatsApp</Text>
             </TouchableOpacity>
           </View>
         ) : null}

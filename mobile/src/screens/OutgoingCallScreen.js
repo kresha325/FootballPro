@@ -47,6 +47,7 @@ export default function OutgoingCallScreen({ route, navigation }) {
   const [peerLabel, setPeerLabel] = useState('');
   const [error, setError] = useState('');
   const endingRef = useRef(false);
+  const callIdRef = useRef(null);
 
   const useNative = ensureLiveKitNative() && !forceWeb;
 
@@ -64,13 +65,14 @@ export default function OutgoingCallScreen({ route, navigation }) {
   const hangUp = useCallback(async () => {
     if (endingRef.current) return;
     endingRef.current = true;
+    const activeCallId = callIdRef.current || callId;
     try {
       const socket = getSocket?.();
       if (socket && targetUserId) {
         socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
       }
-      if (callId) {
-        await endVideoCallRequest(callId).catch(() => {});
+      if (activeCallId) {
+        await endVideoCallRequest(activeCallId).catch(() => {});
       }
     } finally {
       navigation.goBack();
@@ -102,8 +104,12 @@ export default function OutgoingCallScreen({ route, navigation }) {
         const startRes = await startVideoCallRequest(targetUserId);
         const createdCallId = startRes?.data?.id;
         if (!createdCallId) throw new Error('Nuk u krijua callId');
-        if (cancelled) return;
+        if (cancelled) {
+          endVideoCallRequest(createdCallId).catch(() => {});
+          return;
+        }
 
+        callIdRef.current = createdCallId;
         setCallId(createdCallId);
         setPhase('ringing');
 
@@ -131,7 +137,8 @@ export default function OutgoingCallScreen({ route, navigation }) {
         if (socket && targetUserId) {
           socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
         }
-        // callId may still be in closure from latest render via ref pattern — use state getter carefully
+        const id = callIdRef.current;
+        if (id) endVideoCallRequest(id).catch(() => {});
       } catch {
         /* ignore */
       }
@@ -147,8 +154,9 @@ export default function OutgoingCallScreen({ route, navigation }) {
       if (socket && targetUserId) {
         socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
       }
-      if (callId) {
-        endVideoCallRequest(callId).catch(() => {});
+      const id = callIdRef.current || callId;
+      if (id) {
+        endVideoCallRequest(id).catch(() => {});
       }
     });
     return unsub;

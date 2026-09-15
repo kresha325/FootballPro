@@ -27,17 +27,26 @@ function CallStage({ audioOnly, muted, videoOff, peerLabel }) {
     }
   }, [localParticipant, muted, videoOff, audioOnly]);
 
+  const multi = remote.length > 1;
+
   return (
     <View style={styles.stage}>
       {remote.length ? (
-        remote.map((trackRef) => (
-          <VideoTrack
-            key={`r-${trackRef.participant.identity}-${trackRef.publication?.trackSid || 'v'}`}
-            style={styles.remoteVideo}
-            trackRef={trackRef}
-            objectFit="cover"
-          />
-        ))
+        <View style={multi ? styles.remoteGrid : styles.remoteSingle}>
+          {remote.map((trackRef) => (
+            <View
+              key={`r-${trackRef.participant.identity}-${trackRef.publication?.trackSid || 'v'}`}
+              style={multi ? styles.remoteCell : styles.remoteFill}
+            >
+              <VideoTrack style={styles.remoteVideo} trackRef={trackRef} objectFit="cover" />
+              {multi ? (
+                <Text style={styles.remoteName} numberOfLines={1}>
+                  {trackRef.participant.name || trackRef.participant.identity || 'Anëtar'}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
       ) : (
         <View style={styles.placeholder}>
           <Text style={styles.placeholderTitle}>{peerLabel || 'Duke pritur…'}</Text>
@@ -57,10 +66,11 @@ function CallStage({ audioOnly, muted, videoOff, peerLabel }) {
 }
 
 /**
- * Publish+subscribe LiveKit room for call-{id}.
+ * Publish+subscribe LiveKit room for call-{id} or an explicit roomName (e.g. group-{conversationId}).
  */
 export default function NativeCallRoom({
   callId,
+  roomName: roomNameProp,
   audioOnly = false,
   participantName,
   peerLabel,
@@ -75,7 +85,10 @@ export default function NativeCallRoom({
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(!!audioOnly);
 
-  const roomName = useMemo(() => `call-${callId}`, [callId]);
+  const roomName = useMemo(
+    () => (roomNameProp ? String(roomNameProp) : `call-${callId}`),
+    [roomNameProp, callId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -198,7 +211,34 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   flex: { flex: 1 },
   stage: { flex: 1, backgroundColor: '#000' },
-  remoteVideo: { ...StyleSheet.absoluteFillObject },
+  remoteSingle: { flex: 1 },
+  remoteFill: { flex: 1 },
+  remoteGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  remoteCell: {
+    width: '50%',
+    height: '50%',
+    padding: 2,
+    position: 'relative',
+  },
+  remoteVideo: { width: '100%', height: '100%' },
+  remoteName: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+    maxWidth: '90%',
+  },
   localPip: {
     position: 'absolute',
     right: 12,

@@ -9,7 +9,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native';
 import {
   extractErrorMessage,
@@ -21,6 +20,7 @@ import {
   trendingSearchUsersRequest,
 } from '../api/client';
 import UserProfileBrowsePager, { useBrowseColors } from '../components/UserProfileBrowsePager';
+import { useTheme } from '../context/ThemeContext';
 
 function dedupeUsersById(list) {
   const seen = new Set();
@@ -44,8 +44,7 @@ const EXTRA_TABS = [
 ];
 
 export default function SearchScreen({ navigation, route }) {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
   const browseColors = useBrowseColors(isDark);
   const initialQuery = route?.params?.initialQuery || '';
 

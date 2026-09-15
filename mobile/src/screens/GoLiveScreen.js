@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   createStreamRequest,
   endStreamRequest,
@@ -13,6 +13,7 @@ import {
   uploadStreamRecordingRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 
@@ -22,8 +23,7 @@ const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
 export default function GoLiveScreen({ route, navigation }) {
   const { user, refreshMe } = useAuth();
   const [profileYoutubeId, setProfileYoutubeId] = useState(() => getProfileYoutubeChannelId(user));
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
   const [title, setTitle] = useState('Mobile Live Session');
   const [description, setDescription] = useState('Streaming from X TALENTI mobile app');
   const [loading, setLoading] = useState(false);

@@ -13,7 +13,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,6 +38,7 @@ import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import PostSponsorStrip from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 function postAuthorId(item) {
   if (!item || typeof item !== 'object') return null;
@@ -357,8 +357,7 @@ function FeedSkeleton({ isDark }) {
 
 export default function FeedScreen({ navigation }) {
   const { user } = useAuth();
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
   const navigateToGoLive = useCallback(
     (params) => {
       const parent = navigation.getParent?.();

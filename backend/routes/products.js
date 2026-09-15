@@ -6,7 +6,7 @@ const uploadLocal = require('../middleware/uploadLocal');
 
 router.get('/', getProducts);
 router.get('/:id', getProduct);
-router.post('/', uploadLocal.single('image'), createProduct);
+router.post('/', auth, uploadLocal.single('image'), createProduct);
 router.put('/:id', auth, uploadLocal.single('image'), updateProduct);
 router.delete('/:id', auth, deleteProduct);
 

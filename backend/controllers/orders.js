@@ -53,6 +53,7 @@ const buyerSellerInclude = [
 ];
 
 async function restoreStockForOrder(order, transaction) {
+  const { nextStockFields } = require('../utils/productStock');
   const lines = Array.isArray(order.products) ? order.products : [];
   for (const item of lines) {
     const productId = item?.productId;
@@ -65,7 +66,8 @@ async function restoreStockForOrder(order, transaction) {
     if (!product) continue;
     const stockN = product.stock == null || product.stock === '' ? 0 : parseInt(String(product.stock), 10);
     const base = Number.isFinite(stockN) ? stockN : 0;
-    await product.update({ stock: base + quantity }, { transaction });
+    const fields = nextStockFields(product.stock, product.outOfStockAt, base + quantity);
+    await product.update(fields, { transaction });
   }
 }
 
@@ -243,9 +245,11 @@ exports.createOrder = async (req, res) => {
         );
 
         for (const { product, quantity } of bucket.locked) {
+          const { nextStockFields } = require('../utils/productStock');
           const stockN = product.stock == null || product.stock === '' ? 0 : parseInt(String(product.stock), 10);
           const nextStock = Math.max(0, (Number.isFinite(stockN) ? stockN : 0) - quantity);
-          await product.update({ stock: nextStock }, { transaction: t });
+          const fields = nextStockFields(product.stock, product.outOfStockAt, nextStock);
+          await product.update(fields, { transaction: t });
         }
 
         orders.push(order);

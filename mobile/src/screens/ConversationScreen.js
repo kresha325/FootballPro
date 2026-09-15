@@ -33,6 +33,7 @@ import {
 } from '../api/client';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import {
   messageBelongsToConversation,
@@ -116,7 +117,7 @@ function MessageStatusTicks({ status, mine }) {
   return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" style={styles.statusIcon} />;
 }
 
-function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus, onOpenSenderProfile }) {
+function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus, onOpenSenderProfile, isDark }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
@@ -150,8 +151,14 @@ function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus
         delayLongPress={400}
         style={[styles.bubbleWrap, mine ? styles.bubbleWrapMine : styles.bubbleWrapOther]}
       >
-        {!mine ? <Text style={styles.sender}>{name}</Text> : null}
-        <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+        {!mine ? <Text style={[styles.sender, isDark && { color: '#94a3b8' }]}>{name}</Text> : null}
+        <View
+          style={[
+            styles.bubble,
+            mine ? styles.bubbleMine : styles.bubbleOther,
+            !mine && isDark && styles.bubbleOtherDark,
+          ]}
+        >
           {!deleted && message.replyTo ? (
             <View style={[styles.replyQuote, mine && styles.replyQuoteMine]}>
               <ReplyPreview message={message.replyTo} mine={mine} />
@@ -191,8 +198,20 @@ function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus
                   <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
                 </TouchableOpacity>
               ) : null}
-              {hasText ? (
-                <Text style={[styles.bubbleText, mine && styles.bubbleTextMine, fileUri && styles.bubbleTextAfterMedia]}>
+              {hasText && message.type !== 'call' ? (
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    mine && styles.bubbleTextMine,
+                    !mine && isDark && styles.bubbleTextDark,
+                    fileUri && styles.bubbleTextAfterMedia,
+                  ]}
+                >
+                  {message.content}
+                </Text>
+              ) : null}
+              {message.type === 'call' && message.content ? (
+                <Text style={[styles.callBubbleText, mine && styles.callBubbleTextMine]}>
                   {message.content}
                 </Text>
               ) : null}
@@ -221,6 +240,7 @@ export default function ConversationScreen({ route, navigation }) {
     title: paramTitle,
   } = route.params || {};
   const { user, getSocket, socketConnected } = useAuth();
+  const { colors, isDark } = useTheme();
   const [otherUserId, setOtherUserId] = useState(paramOtherUserId ?? null);
   const [isGroup, setIsGroup] = useState(!!paramIsGroup);
   const [messages, setMessages] = useState([]);
@@ -270,7 +290,15 @@ export default function ConversationScreen({ route, navigation }) {
   const openCall = useCallback(
     (audioOnly) => {
       if (isGroup) {
-        Alert.alert('Thirrje', 'Thirrjet audio/video janë vetëm për biseda 1-me-1.');
+        if (!conversationId) {
+          Alert.alert('Thirrje', 'Mungon ID e bisedës së grupit.');
+          return;
+        }
+        navigation.navigate('GroupCall', {
+          conversationId,
+          title: paramTitle || 'Grup',
+          audioOnly,
+        });
         return;
       }
       if (!otherUserId) {
@@ -289,7 +317,7 @@ export default function ConversationScreen({ route, navigation }) {
         audioOnly,
       });
     },
-    [isGroup, navigation, otherUserId]
+    [isGroup, navigation, otherUserId, conversationId, paramTitle]
   );
 
   useLayoutEffect(() => {
@@ -297,7 +325,7 @@ export default function ConversationScreen({ route, navigation }) {
       ...(paramTitle ? { title: paramTitle } : {}),
       headerRight: () => (
         <View style={styles.headerActions}>
-          {!isGroup && otherUserId ? (
+          {(isGroup && conversationId) || (!isGroup && otherUserId) ? (
             <>
               <TouchableOpacity
                 style={styles.headerIconBtn}
@@ -319,7 +347,7 @@ export default function ConversationScreen({ route, navigation }) {
         </View>
       ),
     });
-  }, [navigation, isGroup, otherUserId, openCall, paramTitle]);
+  }, [navigation, isGroup, otherUserId, conversationId, openCall, paramTitle]);
 
   /** Rend kronologjik: më të vjetrit lart, më të rinjtë poshtë (pa `inverted` / pa scaleY). */
   const listData = useMemo(() => {
@@ -804,8 +832,8 @@ export default function ConversationScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+      <View style={[styles.centered, { backgroundColor: colors.bgElevated }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -818,7 +846,7 @@ export default function ConversationScreen({ route, navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bgElevated }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
@@ -844,8 +872,8 @@ export default function ConversationScreen({ route, navigation }) {
           <RefreshControl
             refreshing={pullRefreshing}
             onRefresh={onPullRefresh}
-            colors={['#0f766e']}
-            tintColor="#0f766e"
+            colors={[isDark ? '#2dd4bf' : '#0f766e']}
+            tintColor={isDark ? '#2dd4bf' : '#0f766e'}
             progressViewOffset={Platform.OS === 'android' ? 48 : 0}
           />
         }
@@ -864,16 +892,31 @@ export default function ConversationScreen({ route, navigation }) {
             onLongPress={() => showMessageActions(item)}
             onOpenImage={setPreviewImageUri}
             onOpenSenderProfile={(uid) => openUserProfile(navigation, uid)}
+            isDark={isDark}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Ende nuk ka mesazhe.</Text>}
+        ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>Ende nuk ka mesazhe.</Text>}
       />
       {typingLine ? (
-        <View style={styles.typingBar}>
-          <Text style={styles.typingText}>{typingLine}</Text>
+        <View
+          style={[
+            styles.typingBar,
+            { backgroundColor: colors.bg, borderTopColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.typingText, { color: colors.muted }]}>{typingLine}</Text>
         </View>
       ) : null}
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View
+        style={[
+          styles.composer,
+          {
+            paddingBottom: Math.max(insets.bottom, 8),
+            backgroundColor: colors.card,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
         {replyTo && !editing ? (
           <View style={styles.replyBanner}>
             <View style={styles.replyBannerBody}>
@@ -940,10 +983,19 @@ export default function ConversationScreen({ route, navigation }) {
           ) : null}
           <TextInput
             ref={inputRef}
-            style={[styles.input, editing && styles.inputEditingOnly]}
+            style={[
+              styles.input,
+              editing && styles.inputEditingOnly,
+              {
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
             value={inputValue}
             onChangeText={setInputValue}
             placeholder={editing ? 'Ndrysho tekstin…' : 'Shkruaj mesazhin…'}
+            placeholderTextColor={colors.mutedSoft}
             multiline
             editable={!sending}
             onFocus={onInputFocus}
@@ -1003,8 +1055,12 @@ const styles = StyleSheet.create({
   bubble: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
   bubbleMine: { backgroundColor: '#0f766e' },
   bubbleOther: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
+  bubbleOtherDark: { backgroundColor: '#1e293b', borderColor: '#334155' },
   bubbleText: { color: '#111827' },
+  bubbleTextDark: { color: '#f8fafc' },
   bubbleTextMine: { color: '#fff' },
+  callBubbleText: { color: '#0f766e', fontWeight: '700', fontSize: 14, textAlign: 'center' },
+  callBubbleTextMine: { color: '#ccfbf1', fontWeight: '700', fontSize: 14, textAlign: 'center' },
   deletedText: { fontStyle: 'italic', opacity: 0.85 },
   editedHint: { fontSize: 10, color: '#64748b', marginTop: 4 },
   editedHintMine: { color: '#e0f2f1' },

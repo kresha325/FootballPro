@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UserProfileBrowsePager, { useBrowseColors } from '../components/UserProfileBrowsePager';
 import { extractErrorMessage, profilesRequest } from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 
 export default function BrowseProfilesScreen({ navigation }) {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
   const colors = useBrowseColors(isDark);
 
   const [items, setItems] = useState([]);

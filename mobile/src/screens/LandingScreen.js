@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
 
 const ROLE_GROUPS = {
@@ -88,6 +89,7 @@ function BrandMark() {
 
 export default function LandingScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef(null);
   const [pricingY, setPricingY] = useState(0);
   const [roleGroup, setRoleGroup] = useState('individual');
@@ -104,14 +106,23 @@ export default function LandingScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.nav}>
-        <BrandMark />
-        <TouchableOpacity style={styles.navCta} onPress={goLogin} activeOpacity={0.85}>
-          <Text style={styles.navCtaText}>Hyr</Text>
-        </TouchableOpacity>
+      <View style={[styles.nav, { paddingTop: insets.top }]}>
+        <View style={styles.navInner}>
+          <BrandMark />
+          <TouchableOpacity style={styles.navCta} onPress={goLogin} activeOpacity={0.85}>
+            <Text style={styles.navCtaText}>Hyr</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        bounces
+        nestedScrollEnabled
+      >
         <View style={styles.hero}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Platforma #1 për talente futbolli</Text>
@@ -273,14 +284,16 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFFFFF' },
   nav: {
-    height: 60,
     paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#F3F4F6',
     backgroundColor: 'rgba(255,255,255,0.96)',
+  },
+  navInner: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   brandMark: { fontSize: 22, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
   brandX: { color: '#F59E0B' },
@@ -292,7 +305,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   navCtaText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  scroll: { paddingBottom: 8 },
+  scrollView: { flex: 1 },
+  scroll: { flexGrow: 1, paddingBottom: 8 },
   hero: {
     backgroundColor: '#0F172A',
     paddingHorizontal: 20,

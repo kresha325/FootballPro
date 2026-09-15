@@ -1,6 +1,8 @@
 PODS:
   - boost (1.84.0)
   - DoubleConversion (1.1.6)
+  - EXApplication (6.1.5):
+    - ExpoModulesCore
   - EXAV (15.1.7):
     - ExpoModulesCore
     - ReactCommon/turbomodule/core
@@ -11,6 +13,8 @@ PODS:
     - React-Core
   - EXJSONUtils (0.15.0)
   - EXManifests (0.16.6):
+    - ExpoModulesCore
+  - EXNotifications (0.31.5):
     - ExpoModulesCore
   - Expo (53.0.27):
     - DoubleConversion
@@ -278,10 +282,15 @@ PODS:
     - ExpoModulesCore
   - ExpoAudio (0.4.9):
     - ExpoModulesCore
+  - ExpoDevice (7.1.4):
+    - ExpoModulesCore
   - ExpoFileSystem (18.1.11):
     - ExpoModulesCore
   - ExpoFont (13.3.2):
     - ExpoModulesCore
+  - ExpoIap (3.0.2):
+    - ExpoModulesCore
+    - openiap (= 1.1.9)
   - ExpoImagePicker (16.1.4):
     - ExpoModulesCore
   - ExpoModulesCore (2.5.0):
@@ -354,6 +363,7 @@ PODS:
     - ExpoModulesCore
     - livekit-react-native
     - livekit-react-native-webrtc
+  - openiap (1.1.9)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -2084,11 +2094,13 @@ PODS:
 DEPENDENCIES:
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
+  - EXApplication (from `../node_modules/expo-application/ios`)
   - EXAV (from `../node_modules/expo-av/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
   - EXJSONUtils (from `../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../node_modules/expo-manifests/ios`)
+  - EXNotifications (from `../node_modules/expo-notifications/ios`)
   - Expo (from `../node_modules/expo`)
   - expo-dev-client (from `../node_modules/expo-dev-client/ios`)
   - expo-dev-launcher (from `../node_modules/expo-dev-launcher`)
@@ -2096,8 +2108,10 @@ DEPENDENCIES:
   - expo-dev-menu-interface (from `../node_modules/expo-dev-menu-interface/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoAudio (from `../node_modules/expo-audio/ios`)
+  - ExpoDevice (from `../node_modules/expo-device/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
+  - ExpoIap (from `../node_modules/expo-iap/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
@@ -2184,6 +2198,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - openiap
     - SocketRocket
     - WebRTC-SDK
 
@@ -2192,6 +2207,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
     :podspec: "../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec"
+  EXApplication:
+    :path: "../node_modules/expo-application/ios"
   EXAV:
     :path: "../node_modules/expo-av/ios"
   EXConstants:
@@ -2202,6 +2219,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-json-utils/ios"
   EXManifests:
     :path: "../node_modules/expo-manifests/ios"
+  EXNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   Expo:
     :path: "../node_modules/expo"
   expo-dev-client:
@@ -2216,10 +2235,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-asset/ios"
   ExpoAudio:
     :path: "../node_modules/expo-audio/ios"
+  ExpoDevice:
+    :path: "../node_modules/expo-device/ios"
   ExpoFileSystem:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
+  ExpoIap:
+    :path: "../node_modules/expo-iap/ios"
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoModulesCore:
@@ -2387,11 +2410,13 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
+  EXApplication: 1e06972201838375ca1ec1ba34d586a98a5dc718
   EXAV: ae28256069c4cdde93d185c007d8f68d92902c2e
   EXConstants: d3d551cb154718f5161c4247304e96aa59f6cca7
   EXImageLoader: 4d3d3284141f1a45006cc4d0844061c182daf7ee
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 691a779b04e4f2c96da46fb9bef4f86174fefcb5
+  EXNotifications: 6770976336aacdc7dc7aed7b538dd8f7ad2c55e8
   Expo: e15de17105dff3775eb3dc0803907cfbfd8f1c93
   expo-dev-client: 9b1e78baf0dd87b005f035d180bbb07c05917fad
   expo-dev-launcher: a0979bd787f020f9783641c74c50984ad53cbad6
@@ -2399,8 +2424,10 @@ SPEC CHECKSUMS:
   expo-dev-menu-interface: 609c35ae8b97479cdd4c9e23c8cf6adc44beea0e
   ExpoAsset: ef06e880126c375f580d4923fdd1cdf4ee6ee7d6
   ExpoAudio: d98f922b17a945cd33f8462d086278dbd810c537
+  ExpoDevice: 7082f03af1c588333ef1417d5aa8287081d94b24
   ExpoFileSystem: 7f92f7be2f5c5ed40a7c9efc8fa30821181d9d63
   ExpoFont: cf508bc2e6b70871e05386d71cab927c8524cc8e
+  ExpoIap: 20516a64f79b4c48869ecc30ec2930bc668c427f
   ExpoImagePicker: 0963da31800c906e01c03e25d7c849f16ebf02a2
   ExpoModulesCore: f55e7872391bae03ee5547c83152c81750d89508
   ExpoSecureStore: 3f1b632d6d40bcc62b4983ef9199cd079592a50a
@@ -2414,6 +2441,7 @@ SPEC CHECKSUMS:
   livekit-react-native: 5f1f2d8422e0be5cd2f96304a4f3f0a8d20276a8
   livekit-react-native-webrtc: 5ff3e8d229a3fcd34f99fe4cb1c2c93f92017b0c
   LiveKitExpoPlugin: 244fe0ae6c8226121a2257a2408749ea10c5e11c
+  openiap: dcfa2a4dcf31259ec4b73658e7d1441babccce66
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: 9bc64754b40b86fa5e32f293ab3ea8eea2248339
   RCTRequired: ee36c1ce9a5e65a3f629c13f38a85308eb8eebda
@@ -2485,6 +2513,6 @@ SPEC CHECKSUMS:
   WebRTC-SDK: 1d7fc2ae91da6edd63e25f3882ff24f86a8d9d8b
   Yoga: dc7c21200195acacb62fa920c588e7c2106de45e
 
-PODFILE CHECKSUM: 6cb933053b6a60efeed72277f395afd87ecbab9f
+PODFILE CHECKSUM: 58614bddc6f9cbf975a50874115b7ed79f404225
 
 COCOAPODS: 1.16.2

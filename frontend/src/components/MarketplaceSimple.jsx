@@ -380,7 +380,7 @@ export default function MarketplaceSimple() {
                 {isSold && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="bg-red-600 text-white px-4 py-2 rounded-full font-bold text-lg">
-                      SHITUR
+                      PA STOK
                     </span>
                   </div>
                 )}
@@ -427,6 +427,12 @@ export default function MarketplaceSimple() {
                   {product.description}
                 </p>
 
+                {isSold && product.outOfStockHoursLeft != null ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 font-medium">
+                    Pa stok — fshihet pas ~{product.outOfStockHoursLeft}h nëse nuk restokohet (max 48h).
+                  </p>
+                ) : null}
+
                 {isOwner && (
                   <button
                     type="button"
@@ -436,7 +442,7 @@ export default function MarketplaceSimple() {
                     }}
                     className="w-full py-2 mb-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors"
                   >
-                    Ndrysho produktin
+                    Ndrysho / stok / fshi
                   </button>
                 )}
 
@@ -566,7 +572,9 @@ export default function MarketplaceSimple() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="10"
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sa njësi janë në dispozicion për shitje.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.
+                </p>
               </div>
 
               <div>
@@ -680,6 +688,9 @@ export default function MarketplaceSimple() {
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Restoko (stok &gt; 0) për ta mbajtur listimin. Pa stok fshihet automatikisht pas 48h.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategoria</label>

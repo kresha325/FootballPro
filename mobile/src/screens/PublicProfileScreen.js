@@ -14,11 +14,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import {
   addTransferHistoryRequest,
   clubMembersByClubRequest,
@@ -75,8 +75,7 @@ function roleLabel(role) {
 }
 
 export default function PublicProfileScreen({ route, navigation }) {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { user: me } = useAuth();
 
@@ -573,9 +572,6 @@ export default function PublicProfileScreen({ route, navigation }) {
   const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const contact = profile.contact && typeof profile.contact === 'object' ? profile.contact : {};
 
-  const bioSnippet =
-    profile.bio && profile.bio.length > 120 ? `${profile.bio.slice(0, 120)}…` : profile.bio;
-
   const Chip = ({ icon, imageUri, onPress, children }) => {
     if (!children) return null;
     const body = (
@@ -682,10 +678,6 @@ export default function PublicProfileScreen({ route, navigation }) {
           >
             <Text style={[styles.name, { color: theme.text }]}>{displayName}</Text>
             <Text style={styles.roleLine}>{roleLabel(profile.role)}</Text>
-
-            {profile.bio ? (
-              <Text style={[styles.bio, { color: theme.muted }]}>{bioSnippet}</Text>
-            ) : null}
 
             <View style={styles.chipRow}>
               {isOrgProfileRole(profile.role) ? (
@@ -1119,7 +1111,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
-  bio: { marginTop: 10, textAlign: 'center', lineHeight: 22, fontSize: 15 },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -1,13 +1,14 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const { sendEmail } = require('../services/emailService');
-const { isEmailConfigured, buildParentConfirmUrl } = require('../config/email');
+const { isEmailConfigured, buildParentConfirmUrl, getApiPublicBase } = require('../config/email');
 const { needsParentVerification, markParentVerified } = require('../utils/userVerification');
 
 function normalizeToken(raw) {
   return String(raw || '')
     .trim()
-    // WhatsApp / messengers sometimes append punctuation
+    // WhatsApp / messengers sometimes append punctuation or zero-width chars
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/[),.;]+$/g, '');
 }
 
@@ -19,42 +20,81 @@ async function findUserByParentToken(token) {
   return { user, clean, tokenHash };
 }
 
-function confirmPageHtml({ token, athleteName, error }) {
-  const safeToken = String(token || '')
+function escapeHtml(value) {
+  return String(value || '')
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;');
-  const name = String(athleteName || 'lojtari')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
-  if (error) {
-    return `<!DOCTYPE html>
-<html lang="sq"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>X TALENTI — Verifikim</title>
+function shellHtml({ title, body }) {
+  return `<!DOCTYPE html>
+<html lang="sq"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escapeHtml(title)}</title>
 <meta name="robots" content="noindex"/>
-</head><body style="font-family:system-ui,sans-serif;max-width:420px;margin:40px auto;padding:16px;color:#111">
-  <h1 style="font-size:1.25rem">Verifikimi i prindit</h1>
-  <p style="color:#b91c1c">${error}</p>
-  <p style="color:#6b7280;font-size:14px">Nëse e ke konfirmuar më parë, badge <strong>Prindi</strong> te profili duhet të jetë blu. Rifresko profilin e lojtarit.</p>
-</body></html>`;
+<meta property="og:title" content="X TALENTI — Konfirmim prindi"/>
+<meta property="og:description" content="Hap linkun dhe shtyp Konfirmo si prind. Preview në WhatsApp nuk e aktivizon automatikisht."/>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:440px;margin:40px auto;padding:16px;color:#111;background:#f8fafc}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px}
+  h1{font-size:1.25rem;margin:0 0 12px;color:#0f766e}
+  p{line-height:1.45;color:#334155}
+  .muted{color:#64748b;font-size:14px}
+  .err{color:#b91c1c}
+  .ok{color:#065f46}
+  button,.btn{
+    display:block;width:100%;box-sizing:border-box;text-align:center;
+    background:#0f766e;color:#fff;border:0;padding:14px 24px;border-radius:8px;
+    font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;margin-top:16px
+  }
+  .btn-secondary{background:#fff;color:#0f766e;border:1px solid #0f766e}
+</style>
+</head><body><div class="card">${body}</div></body></html>`;
+}
+
+function confirmPageHtml({ token, athleteName, error }) {
+  if (error) {
+    return shellHtml({
+      title: 'X TALENTI — Verifikim',
+      body: `
+  <h1>Verifikimi i prindit</h1>
+  <p class="err">${escapeHtml(error)}</p>
+  <p class="muted">Nëse e ke konfirmuar më parë, badge <strong>Prindi</strong> te profili duhet të jetë blu. Rifresko profilin e lojtarit.</p>`,
+    });
   }
 
-  return `<!DOCTYPE html>
-<html lang="sq"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>X TALENTI — Konfirmo si prind</title>
-<meta name="robots" content="noindex"/>
-</head><body style="font-family:system-ui,sans-serif;max-width:420px;margin:40px auto;padding:16px;color:#111">
-  <h1 style="font-size:1.25rem;color:#0f766e">Konfirmim prindi</h1>
+  const safeToken = escapeHtml(token);
+  const name = escapeHtml(athleteName || 'lojtari');
+  const actionUrl = escapeHtml(`${getApiPublicBase()}/api/verification/parent-confirm`);
+
+  return shellHtml({
+    title: 'X TALENTI — Konfirmo si prind',
+    body: `
+  <h1>Konfirmim prindi</h1>
   <p>Po konfirmon llogarinë e <strong>${name}</strong> në X TALENTI.</p>
-  <p style="color:#6b7280;font-size:14px">WhatsApp / preview nuk e aktivizon automatikisht — duhet të shtypësh butonin.</p>
-  <form method="POST" action="/api/verification/parent-confirm">
+  <p class="muted">Në WhatsApp hapet një faqe e përkohshme — <strong>duhet të shtypësh butonin</strong> (preview nuk e konfirmon vetë).</p>
+  <form method="POST" action="${actionUrl}" accept-charset="UTF-8">
     <input type="hidden" name="token" value="${safeToken}"/>
-    <button type="submit" style="background:#0f766e;color:#fff;border:0;padding:14px 24px;border-radius:8px;font-weight:700;width:100%;cursor:pointer;font-size:16px">
-      Konfirmo si prind
-    </button>
-  </form>
-</body></html>`;
+    <button type="submit">Konfirmo si prind</button>
+  </form>`,
+  });
+}
+
+function successPageHtml({ athleteName }) {
+  const name = escapeHtml(athleteName || 'lojtarit');
+  const site = escapeHtml((process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, ''));
+  return shellHtml({
+    title: 'X TALENTI — U konfirmua',
+    body: `
+  <h1 class="ok">✓ Faleminderit!</h1>
+  <p>Verifikimi i prindit për <strong>${name}</strong> u aktivizua.</p>
+  <p class="muted">Mund ta mbyllësh këtë faqe. Lojtari duhet të rifreskojë profilin në app.</p>
+  <a class="btn" href="${site}/parent-verified">Hap X TALENTI</a>
+  <a class="btn btn-secondary" href="${site}">Faqja kryesore</a>`,
+  });
 }
 
 // Request parental verification (authenticated athlete)
@@ -95,9 +135,9 @@ exports.parentRequest = async (req, res) => {
       return res.json({
         success: true,
         emailSent: true,
-        // Always return link so user can share on WhatsApp even if email works
+        // Always return link so user can also share on WhatsApp
         confirmUrl,
-        msg: 'Email-i u dërgua te prindi. Kontrollo edhe dosjen Spam.',
+        msg: 'Email-i u dërgua te prindi. Mund ta dërgosh edhe në WhatsApp me linkun e mëposhtëm.',
       });
     }
 
@@ -109,7 +149,7 @@ exports.parentRequest = async (req, res) => {
       emailConfigured: isEmailConfigured(),
       confirmUrl,
       warning: isEmailConfigured()
-        ? `Email-i nuk u dërgua (${emailResult.error || 'gabim SMTP'}). Kopjo linkun më poshtë dhe ia dërgo prindit.`
+        ? `Email-i nuk u dërgua (${emailResult.error || 'gabim SMTP'}). Kopjo linkun më poshtë dhe ia dërgo prindit në WhatsApp.`
         : 'Serveri nuk ka EMAIL_USER / EMAIL_PASSWORD (Gmail). Kopjo linkun dhe ia dërgo prindit (WhatsApp/SMS).',
       msg: 'Linku i konfirmimit u krijua',
     });
@@ -131,7 +171,6 @@ exports.parentConfirmPage = async (req, res) => {
 
     const { user } = await findUserByParentToken(token);
     if (!user) {
-      // Likely already confirmed (token cleared) — or invalid
       return res.status(400).send(
         confirmPageHtml({
           error:
@@ -154,6 +193,7 @@ exports.parentConfirmPage = async (req, res) => {
 
 /**
  * POST: actually confirm parent verification.
+ * Respond with same-origin HTML (WhatsApp in-app browser often breaks cross-domain redirects).
  */
 exports.parentConfirm = async (req, res) => {
   try {
@@ -176,10 +216,8 @@ exports.parentConfirm = async (req, res) => {
 
     await markParentVerified(user);
 
-    const redirectUrl = process.env.FRONTEND_URL
-      ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/parent-verified`
-      : 'https://xtalenti.com/parent-verified';
-    return res.redirect(302, redirectUrl);
+    const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
+    return res.status(200).send(successPageHtml({ athleteName }));
   } catch (err) {
     console.error('parentConfirm:', err);
     return res.status(500).send(confirmPageHtml({ error: 'Gabim serveri.' }));

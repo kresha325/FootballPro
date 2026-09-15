@@ -77,29 +77,35 @@ export default function ParentVerificationForm({ onDone, compact = false }) {
         </div>
       ) : null}
 
-      {emailSent === false && (warning || confirmUrl) ? (
+      {confirmUrl ? (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm space-y-3">
-          <p>{warning || 'Email nuk u dërgua nga serveri.'}</p>
-          {confirmUrl ? (
-            <>
-              <p className="font-semibold">Link për prindin:</p>
-              <a
-                href={confirmUrl}
-                className="block break-all text-teal-700 underline text-xs"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {confirmUrl}
-              </a>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="w-full py-2 bg-teal-700 text-white rounded-lg font-semibold text-sm"
-              >
-                Kopjo linkun për prindin
-              </button>
-            </>
-          ) : null}
+          <p>
+            {warning ||
+              (emailSent
+                ? 'Mund ta dërgosh edhe në WhatsApp (rekomanduar nëse prindi hap nga telefoni):'
+                : 'Email nuk u dërgua nga serveri. Dërgoje linkun në WhatsApp:')}
+          </p>
+          <a
+            href={confirmUrl}
+            className="block break-all text-teal-700 underline text-xs"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {confirmUrl}
+          </a>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="w-full py-2 bg-teal-700 text-white rounded-lg font-semibold text-sm"
+          >
+            Kopjo linkun për WhatsApp
+          </button>
+        </div>
+      ) : null}
+
+      {emailSent === false && warning && !confirmUrl ? (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
+          <p>{warning}</p>
         </div>
       ) : null}
 

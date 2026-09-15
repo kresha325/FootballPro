@@ -11,13 +11,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { ResizeMode, Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import {
   createCommentRequest,
   deleteCommentRequest,
@@ -345,8 +345,7 @@ export default function FeedPostPagerScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { height: winH, width: winW } = useWindowDimensions();
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useTheme();
 
   const { posts: routePosts = [], initialIndex = 0, onPostUpdated } = route.params || {};
 

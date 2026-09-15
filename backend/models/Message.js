@@ -30,7 +30,7 @@ const Message = sequelize.define('Message', {
   },
   content: DataTypes.TEXT,
   type: {
-    type: DataTypes.ENUM('text', 'image', 'file', 'audio', 'video'),
+    type: DataTypes.ENUM('text', 'image', 'file', 'audio', 'video', 'call'),
     defaultValue: 'text',
   },
   fileUrl: {

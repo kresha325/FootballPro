@@ -12,19 +12,35 @@ const MAX_GET_RETRIES = 2;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let onUnauthorized = null;
+let unauthorizedInFlight = false;
+
 export const setUnauthorizedHandler = (fn) => {
   onUnauthorized = typeof fn === 'function' ? fn : null;
 };
+
+function shouldSkipUnauthorized(error) {
+  const config = error?.config;
+  if (!config) return true;
+  if (config.skipUnauthorized) return true;
+  const url = String(config.url || '');
+  // Auth attempts and push clear must not trigger session logout (avoids kick-out loops).
+  if (/\/api\/auth\/(login|register|forgot-password|reset-password)/i.test(url)) return true;
+  if (/\/push-token/i.test(url)) return true;
+  return false;
+}
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error?.response?.status;
-    if (status === 401 && onUnauthorized) {
+    if (status === 401 && onUnauthorized && !unauthorizedInFlight && !shouldSkipUnauthorized(error)) {
+      unauthorizedInFlight = true;
       try {
         await onUnauthorized(error);
       } catch {
         /* ignore */
+      } finally {
+        unauthorizedInFlight = false;
       }
     }
 
@@ -173,6 +189,8 @@ export const startVideoCallRequest = (receiverId) => api.post('/api/video-calls/
 export const endVideoCallRequest = (callId) => api.put(`/api/video-calls/${callId}/end`);
 
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
+export const createGroupConversationRequest = (name, memberIds) =>
+  api.post('/api/messaging/conversations/group', { name, memberIds });
 export const conversationDetailRequest = (conversationId) =>
   api.get(`/api/messaging/conversations/detail/${conversationId}`);
 export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');
@@ -325,7 +343,11 @@ export const rejectTournamentParticipantRequest = (tournamentId, userId) =>
 export const publicConfigRequest = () => api.get('/api/config/public');
 
 export const registerPushTokenRequest = (token, type = 'mobile') =>
-  api.post('/api/profiles/me/push-token', { token: token || null, type });
+  api.post(
+    '/api/profiles/me/push-token',
+    { token: token || null, type },
+    { skipUnauthorized: true }
+  );
 
 export const premiumCheckoutRequest = (plan) => api.post('/api/premium/checkout', { plan });
 export const premiumVerifySessionRequest = (sessionId) => api.get(`/api/premium/verify-session/${sessionId}`);

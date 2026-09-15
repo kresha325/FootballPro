@@ -1,0 +1,63 @@
+/** Shared light/dark tokens — keep in sync with Feed / PublicProfile slate palette. */
+
+export const lightColors = {
+  bg: '#f1f5f9',
+  bgElevated: '#f8fafc',
+  card: '#ffffff',
+  border: '#e2e8f0',
+  borderStrong: '#cbd5e1',
+  text: '#0f172a',
+  textSecondary: '#334155',
+  muted: '#64748b',
+  mutedSoft: '#94a3b8',
+  primary: '#0f766e',
+  primarySoft: '#ecfeff',
+  primaryBorder: '#a5f3fc',
+  primaryText: '#155e75',
+  danger: '#dc2626',
+  dangerSoft: '#fff7f7',
+  dangerBorder: '#fecaca',
+  warningSoft: '#fef3c7',
+  warningBorder: '#fcd34d',
+  warningText: '#92400e',
+  tabBar: '#ffffff',
+  tabBarBorder: '#e2e8f0',
+  header: '#ffffff',
+  inputBg: '#ffffff',
+  inputBorder: '#cbd5e1',
+  skeleton: '#e2e8f0',
+  overlay: 'rgba(15,23,42,0.45)',
+};
+
+export const darkColors = {
+  bg: '#020617',
+  bgElevated: '#0b1220',
+  card: '#0f172a',
+  border: '#1e293b',
+  borderStrong: '#334155',
+  text: '#f8fafc',
+  textSecondary: '#e2e8f0',
+  muted: '#94a3b8',
+  mutedSoft: '#64748b',
+  primary: '#2dd4bf',
+  primarySoft: '#042f2e',
+  primaryBorder: '#115e59',
+  primaryText: '#99f6e4',
+  danger: '#f87171',
+  dangerSoft: '#450a0a',
+  dangerBorder: '#7f1d1d',
+  warningSoft: '#422006',
+  warningBorder: '#a16207',
+  warningText: '#fde68a',
+  tabBar: '#0f172a',
+  tabBarBorder: '#1e293b',
+  header: '#0f172a',
+  inputBg: '#0f172a',
+  inputBorder: '#334155',
+  skeleton: '#1e293b',
+  overlay: 'rgba(2,6,23,0.72)',
+};
+
+export function colorsFor(isDark) {
+  return isDark ? darkColors : lightColors;
+}

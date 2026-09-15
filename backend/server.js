@@ -65,6 +65,15 @@ if (db.Match) {
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
 setInterval(deleteExpiredAds, 60 * 60 * 1000);
+const { purgeExpiredOutOfStockProducts } = require('./utils/productStock');
+purgeExpiredOutOfStockProducts().catch((err) =>
+  console.warn('purgeExpiredOutOfStockProducts startup:', err?.message || err)
+);
+setInterval(() => {
+  purgeExpiredOutOfStockProducts().catch((err) =>
+    console.warn('purgeExpiredOutOfStockProducts:', err?.message || err)
+  );
+}, 60 * 60 * 1000);
 const { expireStaleLiveStreams } = require('./utils/streamLive');
 expireStaleLiveStreams()
   .then((n) => {
@@ -128,50 +137,90 @@ app.use(xss());
 // NoSQL/SQL injection protection
 app.use(mongoSanitize());
 
-// CORS configuration: use a dynamic origin function so preflight and actual
-// responses consistently return a valid Access-Control-Allow-Origin. In
-// development we allow requests from any origin; in production only configured
-// origins are accepted.
-const allowedOrigin =
-  process.env.CORS_ORIGIN ||
-  'https://xtalenti.com,https://www.xtalenti.com'; // GitHub Pages custom domain; set CORS_ORIGIN on Render
-const allowedOrigins = allowedOrigin === '*'
-  ? ['*']
-  : allowedOrigin.split(',').map((origin) => origin.trim()).filter(Boolean);
+// CORS: production allowlist + local Vite/dev hosts (common when UI hits Render API).
+const DEFAULT_CORS_ORIGINS = [
+  'https://xtalenti.com',
+  'https://www.xtalenti.com',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:4173',
+];
 
-function dynamicOrigin(origin, callback) {
-  // No origin (server-to-server or same-origin tools) -> allow
-  if (!origin) return callback(null, true);
-  // Development: allow any origin (echo handled by cors package)
-  if (process.env.NODE_ENV !== 'production') return callback(null, true);
-  // Production: only allow configured origins
-  if (allowedOrigins.includes(origin)) return callback(null, true);
-  return callback(new Error('Not allowed by CORS'));
+function normalizeOrigin(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\/$/, '');
 }
 
-app.use(cors({
+const corsEnvRaw = [
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+]
+  .filter(Boolean)
+  .join(',');
+
+const allowedOrigins = (() => {
+  if (corsEnvRaw.trim() === '*') return ['*'];
+  const fromEnv = corsEnvRaw
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
+  const merged = [...new Set([...DEFAULT_CORS_ORIGINS, ...fromEnv])];
+  return merged;
+})();
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  const normalized = normalizeOrigin(origin);
+  if (allowedOrigins.includes('*')) return true;
+  if (allowedOrigins.includes(normalized)) return true;
+  // Local LAN / Expo web during device testing
+  try {
+    const u = new URL(normalized);
+    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+  } catch (_e) {
+    /* ignore */
+  }
+  return false;
+}
+
+function dynamicOrigin(origin, callback) {
+  if (!origin) return callback(null, true);
+  if (process.env.NODE_ENV !== 'production') return callback(null, true);
+  if (isAllowedOrigin(origin)) return callback(null, true);
+  // Do not throw — cors package turns Error into opaque failures for browsers.
+  console.warn(`CORS blocked origin: ${origin}`);
+  return callback(null, false);
+}
+
+const corsOptions = {
   origin: dynamicOrigin,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200,
-}));
-app.options('*', cors());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
 // Socket.io CORS — lejo mobile (pa Origin) dhe frontend-in e konfiguruar.
-const socketCorsOrigin = (allowedOrigins.length === 1 && allowedOrigins[0] === '*') ? '*' : allowedOrigins;
 io = socketIo(server, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (socketCorsOrigin === '*') return callback(null, true);
-      if (Array.isArray(socketCorsOrigin) && socketCorsOrigin.includes(origin)) {
-        return callback(null, true);
-      }
+      if (process.env.NODE_ENV !== 'production') return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      console.warn(`Socket CORS blocked origin: ${origin}`);
       return callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

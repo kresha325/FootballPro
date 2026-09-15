@@ -18,6 +18,7 @@ import {
   deleteMyAccountRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import {
   disablePushNotifications,
@@ -45,7 +46,7 @@ function profileFromUser(user) {
 
 export default function SettingsScreen() {
   const { user, refreshMe, logout } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
+  const { colors, isDark, preference, setPreference, setDarkMode, darkModeEnabled } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushBusy, setPushBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -247,55 +248,90 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Appearance</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.bgElevated }]}
+      contentContainerStyle={styles.content}
+    >
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Appearance</Text>
         <View style={styles.rowBetween}>
-          <Text style={styles.label}>Dark mode</Text>
-          <Switch value={darkMode} onValueChange={setDarkMode} />
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Dark mode</Text>
+          <Switch
+            value={darkModeEnabled}
+            onValueChange={setDarkMode}
+            trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
+            thumbColor={darkModeEnabled ? (isDark ? '#2dd4bf' : '#0f766e') : '#f8fafc'}
+          />
         </View>
-        <Text style={styles.hint}>Dark mode në mobile vjen në një përditësim të ardhshëm.</Text>
+        <TouchableOpacity
+          onPress={() => setPreference('system')}
+          style={styles.systemBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Follow system appearance"
+        >
+          <Text style={[styles.systemBtnText, { color: colors.primary }]}>
+            {preference === 'system' ? 'Duke ndjekur sistemin ✓' : 'Ndjek pamjen e sistemit'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={[styles.hint, { color: colors.mutedSoft }]}>
+          Dark mode vlen për tab-in, header-at dhe ekranet e përshtatura. Disa module përditësohen gradualisht.
+        </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>Notifications</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
         <View style={styles.rowBetween}>
-          <Text style={styles.label}>Enable notifications</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Enable notifications</Text>
           <Switch
             value={notificationsEnabled}
             onValueChange={handleNotificationsToggle}
             disabled={pushBusy}
+            trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
+            thumbColor={notificationsEnabled ? (isDark ? '#2dd4bf' : '#0f766e') : '#f8fafc'}
           />
         </View>
-        <Text style={styles.hint}>
+        <Text style={[styles.hint, { color: colors.mutedSoft }]}>
           Njoftime push për like, komente, ndjekje, thirrje. Kërkon build me njoftime (jo Expo Go).
         </Text>
       </View>
 
-      <View style={[styles.card, styles.youtubeCard]}>
+      <View
+        style={[
+          styles.card,
+          styles.youtubeCard,
+          {
+            backgroundColor: isDark ? '#1c0a0a' : '#fffbfb',
+            borderColor: colors.dangerBorder,
+          },
+        ]}
+      >
         <View style={styles.youtubeHeader}>
           <Ionicons name="logo-youtube" size={22} color="#dc2626" />
-          <Text style={styles.title}>YouTube Live</Text>
+          <Text style={[styles.title, { color: colors.text }]}>YouTube Live</Text>
         </View>
-        <Text style={styles.youtubeLead}>
+        <Text style={[styles.youtubeLead, { color: colors.muted }]}>
           Për Go Live me OBS ose YouTube Studio — shikuesit në app shohin live-in të kanalit tënd.
         </Text>
 
-        <Text style={styles.fieldLabel}>Çfarë të vendosësh këtu</Text>
-        <Text style={styles.bullet}>
-          • <Text style={styles.mono}>Channel ID</Text> — fillon me <Text style={styles.mono}>UC</Text> (~24 shkronja
-          gjithsej, jo 22)
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>Çfarë të vendosësh këtu</Text>
+        <Text style={[styles.bullet, { color: colors.muted }]}>
+          • <Text style={[styles.mono, { color: colors.primary }]}>Channel ID</Text> — fillon me{' '}
+          <Text style={[styles.mono, { color: colors.primary }]}>UC</Text> (~24 shkronja gjithsej, jo 22)
         </Text>
-        <Text style={styles.bullet}>• Ose linku @emri / Share → shtyp «Gjej ID nga linku»</Text>
-        <Text style={styles.bullet}>• <Text style={styles.bold}>Jo</Text> video ID, jo stream key OBS</Text>
+        <Text style={[styles.bullet, { color: colors.muted }]}>
+          • Ose linku @emri / Share → shtyp «Gjej ID nga linku»
+        </Text>
+        <Text style={[styles.bullet, { color: colors.muted }]}>
+          • <Text style={styles.bold}>Jo</Text> video ID, jo stream key OBS
+        </Text>
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelTop]}>Ku e gjen në YouTube</Text>
-        <Text style={styles.step}>1. Hap YouTube → avatar → Settings → Advanced settings</Text>
-        <Text style={styles.step}>2. Kopjo “YouTube channel ID” (UC…)</Text>
-        <Text style={styles.step}>3. Ngjite më poshtë dhe shtyp Ruaj</Text>
+        <Text style={[styles.fieldLabel, styles.fieldLabelTop, { color: colors.text }]}>Ku e gjen në YouTube</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>1. Hap YouTube → avatar → Settings → Advanced settings</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>2. Kopjo “YouTube channel ID” (UC…)</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>3. Ngjite më poshtë dhe shtyp Ruaj</Text>
 
         <TouchableOpacity onPress={openYoutubeHelp} style={styles.linkBtn}>
-          <Text style={styles.linkBtnText}>Hap Advanced settings në YouTube</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Hap Advanced settings në YouTube</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -309,11 +345,15 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <TextInput
-          style={[styles.input, styles.monoInput]}
+          style={[
+            styles.input,
+            styles.monoInput,
+            { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text },
+          ]}
           value={profile.youtubeChannelId}
           onChangeText={(v) => setProfile((p) => ({ ...p, youtubeChannelId: v }))}
           placeholder="UCflsCrcGKQ85RYdNM5oW27w ose link @emri"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -335,51 +375,53 @@ export default function SettingsScreen() {
             </Text>
           )
         ) : (
-          <Text style={styles.hint}>Lëre bosh nëse përdor vetëm LiveKit (kamera në app).</Text>
+          <Text style={[styles.hint, { color: colors.mutedSoft }]}>
+            Lëre bosh nëse përdor vetëm LiveKit (kamera në app).
+          </Text>
         )}
 
-        <Text style={styles.obsNote}>
+        <Text style={[styles.obsNote, { color: colors.muted }]}>
           Stream key nga YouTube Studio përdoret vetëm në OBS — nuk vendoset këtu.
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>Profile</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.firstName}
           onChangeText={(v) => setProfile((p) => ({ ...p, firstName: v }))}
           placeholder="First name"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.lastName}
           onChangeText={(v) => setProfile((p) => ({ ...p, lastName: v }))}
           placeholder="Last name"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.bio}
           onChangeText={(v) => setProfile((p) => ({ ...p, bio: v }))}
           placeholder="Bio"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
           multiline
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.city}
           onChangeText={(v) => setProfile((p) => ({ ...p, city: v }))}
           placeholder="City"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.country}
           onChangeText={(v) => setProfile((p) => ({ ...p, country: v }))}
           placeholder="Country"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
         />
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
@@ -387,30 +429,36 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>Ligjore & komuniteti</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Ligjore & komuniteti</Text>
         <TouchableOpacity onPress={() => openExternal(COMMUNITY_GUIDELINES_URL)} style={styles.linkBtn}>
-          <Text style={styles.linkBtnText}>Udhëzuesit e komunitetit</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Udhëzuesit e komunitetit</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openExternal(PRIVACY_URL)} style={styles.linkBtn}>
-          <Text style={styles.linkBtnText}>Politika e privatësisë</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e privatësisë</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openExternal(TERMS_URL)} style={styles.linkBtn}>
-          <Text style={styles.linkBtnText}>Kushtet e përdorimit</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Kushtet e përdorimit</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.card, styles.dangerCard]}>
-        <Text style={styles.title}>Fshi llogarinë</Text>
-        <Text style={styles.hint}>
+      <View
+        style={[
+          styles.card,
+          styles.dangerCard,
+          { backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>Fshi llogarinë</Text>
+        <Text style={[styles.hint, { color: colors.mutedSoft }]}>
           Anonimizohen të dhënat personale. Transaksionet financiare ruhen sipas ligjit. Ky veprim nuk kthehet.
         </Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={deletePassword}
           onChangeText={setDeletePassword}
           placeholder="Fjalëkalimi yt"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.mutedSoft}
           secureTextEntry
           autoCapitalize="none"
         />
@@ -455,6 +503,8 @@ const styles = StyleSheet.create({
   errHint: { color: '#dc2626', fontSize: 12, marginTop: 6, fontWeight: '600' },
   obsNote: { color: '#64748b', fontSize: 11, marginTop: 8, fontStyle: 'italic', lineHeight: 15 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  systemBtn: { marginTop: 10, alignSelf: 'flex-start' },
+  systemBtnText: { fontWeight: '700', fontSize: 13 },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',

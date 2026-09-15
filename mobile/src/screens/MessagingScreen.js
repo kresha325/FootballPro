@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -11,9 +10,13 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../components/UserAvatar';
+import NotificationHeaderButton from '../components/NotificationHeaderButton';
+import CreateGroupModal from '../components/messaging/CreateGroupModal';
 import { conversationsRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL } from '../config/constants';
 import { openUserProfile } from '../utils/openUserProfile';
 import {
@@ -53,7 +56,7 @@ function formatConvTime(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function ConversationRow({ item, onPress, currentUserId, onOpenProfile }) {
+function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }) {
   const members = Array.isArray(item.members) ? item.members : [];
   let title = 'Bisedë';
   let other = null;
@@ -82,14 +85,14 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile }) {
 
   const photoRaw = item.isGroup ? item.avatar : memberPhoto(other);
   const photoUri = photoRaw ? resolvePhotoUrl(photoRaw) : null;
-  const initials = item.isGroup
-    ? (item.name || 'G').charAt(0).toUpperCase()
-    : `${(other?.firstName || 'U').charAt(0)}${(other?.lastName || '').charAt(0)}`.toUpperCase() || '?';
 
   const timeLabel = formatConvTime(item.lastMessageAt);
 
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}
+      onPress={onPress}
+    >
       <View style={styles.rowInner}>
         <UserAvatar
           uri={photoUri}
@@ -100,15 +103,15 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile }) {
         />
         <View style={styles.rowBody}>
           <View style={styles.rowTop}>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
               {title}
             </Text>
             <View style={styles.rowTopRight}>
-              {timeLabel ? <Text style={styles.time}>{timeLabel}</Text> : null}
+              {timeLabel ? <Text style={[styles.time, { color: colors.mutedSoft }]}>{timeLabel}</Text> : null}
               {!!item.unreadCount && <Text style={styles.badge}>{item.unreadCount > 9 ? '9+' : item.unreadCount}</Text>}
             </View>
           </View>
-          <Text style={styles.preview} numberOfLines={1}>
+          <Text style={[styles.preview, { color: colors.muted }]} numberOfLines={1}>
             {item.lastMessage || 'Ende pa mesazhe.'}
           </Text>
         </View>
@@ -119,12 +122,31 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile }) {
 
 export default function MessagingScreen({ navigation }) {
   const { user, getSocket, socketConnected } = useAuth();
+  const { colors, isDark } = useTheme();
   const [conversations, setConversations] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const hasFocusedOnce = useRef(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => setShowCreateGroup(true)}
+            accessibilityLabel="Krijo grup"
+          >
+            <Ionicons name="people-outline" size={22} color="#0f766e" />
+          </TouchableOpacity>
+          <NotificationHeaderButton />
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   const loadConversations = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -201,17 +223,19 @@ export default function MessagingScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+      <View style={[styles.centered, { backgroundColor: colors.bgElevated }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
+    <>
     <FlatList
       data={filtered}
       keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={styles.list}
+      style={{ backgroundColor: colors.bgElevated }}
+      contentContainerStyle={[styles.list, { backgroundColor: colors.bgElevated }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -219,7 +243,8 @@ export default function MessagingScreen({ navigation }) {
             setRefreshing(true);
             loadConversations({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={[isDark ? '#2dd4bf' : '#0f766e']}
+          tintColor={isDark ? '#2dd4bf' : '#0f766e'}
         />
       }
       ListHeaderComponent={
@@ -229,20 +254,28 @@ export default function MessagingScreen({ navigation }) {
             value={query}
             onChangeText={setQuery}
             placeholder="Kërko bisedë…"
-            placeholderTextColor="#94a3b8"
-            style={styles.search}
+            placeholderTextColor={colors.mutedSoft}
+            style={[
+              styles.search,
+              {
+                backgroundColor: colors.inputBg,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
             clearButtonMode="while-editing"
           />
         </View>
       }
       ListEmptyComponent={
-        <Text style={styles.empty}>
+        <Text style={[styles.empty, { color: colors.muted }]}>
           {conversations.length === 0 ? 'Ende nuk ke biseda.' : 'Nuk u gjet asgjë për këtë kërkim.'}
         </Text>
       }
       renderItem={({ item }) => (
         <ConversationRow
           item={item}
+          colors={colors}
           currentUserId={user?.id}
           onOpenProfile={(uid) => openUserProfile(navigation, uid)}
           onPress={() => {
@@ -265,28 +298,41 @@ export default function MessagingScreen({ navigation }) {
         />
       )}
     />
+    <CreateGroupModal
+      visible={showCreateGroup}
+      onClose={() => setShowCreateGroup(false)}
+      conversations={conversations}
+      currentUserId={user?.id}
+      onCreated={(created) => {
+        setConversations((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+        navigation.navigate('Conversation', {
+          conversationId: created.id,
+          title: created.name || 'Grup',
+          isGroup: true,
+          otherUserId: null,
+        });
+      }}
+    />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', paddingRight: 4 },
+  headerIconBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   headerBlock: { marginBottom: 10 },
   search: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
     fontSize: 15,
-    color: '#0f172a',
   },
-  list: { padding: 14, backgroundColor: '#f8fafc', minHeight: '100%' },
+  list: { padding: 14, minHeight: '100%' },
   row: {
-    backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
     padding: 12,
     marginBottom: 8,
   },
@@ -295,9 +341,9 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, minWidth: 0 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowTopRight: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
-  title: { fontWeight: '700', color: '#111827', flex: 1, minWidth: 0 },
-  time: { fontSize: 12, color: '#94a3b8', flexShrink: 0, marginRight: 8 },
-  preview: { color: '#6b7280', marginTop: 6, fontSize: 14 },
+  title: { fontWeight: '700', flex: 1, minWidth: 0 },
+  time: { fontSize: 12, flexShrink: 0, marginRight: 8 },
+  preview: { marginTop: 6, fontSize: 14 },
   badge: {
     minWidth: 22,
     paddingHorizontal: 6,
@@ -311,6 +357,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     overflow: 'hidden',
   },
-  empty: { textAlign: 'center', color: '#64748b', marginTop: 26 },
+  empty: { textAlign: 'center', marginTop: 26 },
   error: { color: '#b91c1c', marginBottom: 10, textAlign: 'center' },
 });

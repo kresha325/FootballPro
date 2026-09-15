@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
@@ -33,6 +34,7 @@ import GoLiveScreen from '../screens/GoLiveScreen';
 import GoLiveBroadcastScreen from '../screens/GoLiveBroadcastScreen';
 import MessagingScreen from '../screens/MessagingScreen';
 import ConversationScreen from '../screens/ConversationScreen';
+import GroupCallScreen from '../screens/GroupCallScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SponsorsScreen from '../screens/SponsorsScreen';
 import AdsScreen from '../screens/AdsScreen';
@@ -96,7 +98,22 @@ function tabProfilePhotoUri(user, imgErr) {
   return absoluteBackendUrl(s);
 }
 
+function useThemedStackOptions(extra = {}) {
+  const { colors, isDark } = useTheme();
+  return {
+    headerTitle: APP_BRAND_NAME,
+    headerTitleAlign: 'center',
+    headerStyle: { backgroundColor: colors.header },
+    headerTintColor: colors.text,
+    headerTitleStyle: { color: colors.text, fontWeight: '700' },
+    headerShadowVisible: !isDark,
+    contentStyle: { backgroundColor: colors.bg },
+    ...extra,
+  };
+}
+
 function ProfileTabBarIcon({ user, focused, size = 26 }) {
+  const { colors, isDark } = useTheme();
   const [imgErr, setImgErr] = React.useState(false);
   const raw =
     user?.Profile?.profilePhoto ||
@@ -110,10 +127,21 @@ function ProfileTabBarIcon({ user, focused, size = 26 }) {
   const uri = tabProfilePhotoUri(user, imgErr);
   const initial = String(user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase();
   const dim = Math.round(Math.max(24, Math.min(Number(size) + 6, 34)));
-  const borderColor = focused ? '#0f766e' : '#cbd5e1';
+  const borderColor = focused ? (isDark ? '#2dd4bf' : '#0f766e') : colors.borderStrong;
 
   return (
-    <View style={[profileTabStyles.ring, { width: dim, height: dim, borderRadius: dim / 2, borderColor }]}>
+    <View
+      style={[
+        profileTabStyles.ring,
+        {
+          width: dim,
+          height: dim,
+          borderRadius: dim / 2,
+          borderColor,
+          backgroundColor: colors.bg,
+        },
+      ]}
+    >
       {uri ? (
         <Image
           key={uri}
@@ -123,8 +151,18 @@ function ProfileTabBarIcon({ user, focused, size = 26 }) {
           onError={() => setImgErr(true)}
         />
       ) : (
-        <View style={[profileTabStyles.fallback, { width: dim, height: dim, borderRadius: dim / 2 }]}>
-          <Text style={profileTabStyles.initial}>{initial}</Text>
+        <View
+          style={[
+            profileTabStyles.fallback,
+            {
+              width: dim,
+              height: dim,
+              borderRadius: dim / 2,
+              backgroundColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={[profileTabStyles.initial, { color: colors.muted }]}>{initial}</Text>
         </View>
       )}
     </View>
@@ -158,14 +196,11 @@ const profileTabStyles = StyleSheet.create({
 });
 
 function MessagingNavigator() {
+  const themed = useThemedStackOptions({
+    headerRight: () => <NotificationHeaderButton />,
+  });
   return (
-    <MessagingStack.Navigator
-      screenOptions={{
-        headerTitle: APP_BRAND_NAME,
-        headerTitleAlign: 'center',
-        headerRight: () => <NotificationHeaderButton />,
-      }}
-    >
+    <MessagingStack.Navigator screenOptions={themed}>
       <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
       <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: APP_BRAND_NAME }} />
       <MessagingStack.Screen
@@ -173,13 +208,19 @@ function MessagingNavigator() {
         component={OutgoingCallScreen}
         options={{ title: 'Thirrje', headerShown: false }}
       />
+      <MessagingStack.Screen
+        name="GroupCall"
+        component={GroupCallScreen}
+        options={{ title: 'Thirrje grupi', headerShown: false }}
+      />
     </MessagingStack.Navigator>
   );
 }
 
 function FeedNavigator() {
+  const themed = useThemedStackOptions();
   return (
-    <FeedStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+    <FeedStack.Navigator screenOptions={themed}>
       <FeedStack.Screen name="FeedHome" component={FeedScreen} options={{ title: APP_BRAND_NAME }} />
       <FeedStack.Screen name="FeedPostPager" component={FeedPostPagerScreen} options={{ headerShown: false }} />
       <FeedStack.Screen
@@ -197,11 +238,11 @@ function FeedNavigator() {
 }
 
 function MarketplaceNavigator() {
+  const themed = useThemedStackOptions();
   return (
     <MarketplaceStack.Navigator
       screenOptions={({ route }) => ({
-        headerTitle: APP_BRAND_NAME,
-        headerTitleAlign: 'center',
+        ...themed,
         ...(route.name !== 'MarketplaceHome' ? { headerRight: () => <NotificationHeaderButton /> } : {}),
       })}
     >
@@ -223,9 +264,10 @@ function MarketplaceNavigator() {
 
 function ProfileNavigator() {
   const { logout } = useAuth();
+  const themed = useThemedStackOptions();
 
   return (
-    <ProfileStack.Navigator screenOptions={{ headerTitle: APP_BRAND_NAME, headerTitleAlign: 'center' }}>
+    <ProfileStack.Navigator screenOptions={themed}>
       <ProfileStack.Screen
         name="MyProfile"
         component={PublicProfileScreen}
@@ -273,14 +315,11 @@ function ProfileNavigator() {
 }
 
 function MoreNavigator() {
+  const themed = useThemedStackOptions({
+    headerRight: () => <NotificationHeaderButton />,
+  });
   return (
-    <MoreStack.Navigator
-      screenOptions={{
-        headerTitle: APP_BRAND_NAME,
-        headerTitleAlign: 'center',
-        headerRight: () => <NotificationHeaderButton />,
-      }}
-    >
+    <MoreStack.Navigator screenOptions={themed}>
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
@@ -316,6 +355,7 @@ function MoreNavigator() {
 function AppTabs() {
   const { getSocket, socketConnected } = useAuth();
   const { totalPieces } = useCart();
+  const { colors, isDark } = useTheme();
   const { notificationsCount, messagesCount, refresh: refreshBadges } = useUnreadBadges(
     getSocket,
     socketConnected
@@ -337,7 +377,16 @@ function AppTabs() {
         screenOptions={({ route }) => ({
           headerTitle: APP_BRAND_NAME,
           headerTitleAlign: 'center',
-          tabBarActiveTintColor: '#0f766e',
+          headerStyle: { backgroundColor: colors.header },
+          headerTintColor: colors.text,
+          headerTitleStyle: { color: colors.text, fontWeight: '700' },
+          headerShadowVisible: !isDark,
+          tabBarActiveTintColor: isDark ? '#2dd4bf' : '#0f766e',
+          tabBarInactiveTintColor: colors.muted,
+          tabBarStyle: {
+            backgroundColor: colors.tabBar,
+            borderTopColor: colors.tabBarBorder,
+          },
           tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
           tabBarHideOnKeyboard: true,
           tabBarIcon: ({ color, size }) => {
@@ -401,19 +450,44 @@ function AppTabs() {
 
 export default function AppNavigator() {
   const { token, isBootstrapping, pendingOnboarding } = useAuth();
+  const { isDark, colors } = useTheme();
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: isDark ? '#2dd4bf' : '#0f766e',
+        background: colors.bg,
+        card: colors.header,
+        text: colors.text,
+        border: colors.border,
+        notification: '#dc2626',
+      },
+    };
+  }, [isDark, colors]);
 
   if (isBootstrapping) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0f766e" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <NavigationContainer ref={navigationRef} linking={linking} style={{ flex: 1 }}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <NavigationContainer ref={navigationRef} linking={linking} theme={navTheme} style={{ flex: 1 }}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            headerStyle: { backgroundColor: colors.header },
+            headerTintColor: colors.text,
+            headerTitleStyle: { color: colors.text },
+            contentStyle: { backgroundColor: colors.bg },
+          }}
+        >
           {!token ? (
             <>
               <Stack.Screen name="Landing" component={LandingScreen} />

@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [requiresParentVerification, setRequiresParentVerification] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const socketRef = useRef(null);
+  const loggingOutRef = useRef(false);
 
   const disconnectSocket = () => {
     if (socketRef.current) {
@@ -76,17 +77,16 @@ export const AuthProvider = ({ children }) => {
   const getSocket = useCallback(() => socketRef.current, []);
 
   const logout = async () => {
-    try {
-      const { clearPushTokenFromBackend } = await import('../notifications/push');
-      await clearPushTokenFromBackend();
-    } catch (error) {
-      console.warn('Push token clear on logout failed:', error?.message || error);
-    }
+    if (loggingOutRef.current) return;
+    loggingOutRef.current = true;
 
+    // Drop auth first so push-clear / in-flight calls cannot re-trigger logout via 401.
     setToken(null);
     setUser(null);
     setAuthToken(null);
     disconnectSocket();
+    setPendingOnboarding(false);
+    setRequiresParentVerification(false);
 
     try {
       await SecureStore.deleteItemAsync('token');
@@ -95,12 +95,20 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.warn('Secure store cleanup failed:', error.message);
     }
-    setPendingOnboarding(false);
-    setRequiresParentVerification(false);
+
+    try {
+      const { clearPushTokenFromBackend } = await import('../notifications/push');
+      await clearPushTokenFromBackend();
+    } catch (error) {
+      console.warn('Push token clear on logout failed:', error?.message || error);
+    } finally {
+      loggingOutRef.current = false;
+    }
   };
 
   useEffect(() => {
     setUnauthorizedHandler(async () => {
+      if (loggingOutRef.current) return;
       await logout();
     });
     return () => setUnauthorizedHandler(null);

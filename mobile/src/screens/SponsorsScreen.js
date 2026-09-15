@@ -16,7 +16,7 @@ import {
   createSponsorRequest,
   deleteSponsorRequest,
   extractErrorMessage,
-  sponsorsRequest,
+  sponsorsByUserRequest,
   updateSponsorRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -59,10 +59,16 @@ export default function SponsorsScreen() {
   const [error, setError] = useState('');
 
   const loadSponsors = useCallback(async ({ silent } = { silent: false }) => {
+    if (!user?.id) {
+      setItems([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     if (!silent) setLoading(true);
     setError('');
     try {
-      const response = await sponsorsRequest();
+      const response = await sponsorsByUserRequest(user.id);
       setItems(Array.isArray(response?.data) ? response.data : []);
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load sponsors'));
@@ -70,7 +76,7 @@ export default function SponsorsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadSponsors();

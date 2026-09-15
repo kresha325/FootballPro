@@ -119,6 +119,9 @@ export default function CreateProductScreen({ navigation }) {
         placeholder="10"
         keyboardType="number-pad"
       />
+      <Text style={styles.hint}>
+        Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.
+      </Text>
       <Text style={styles.label}>Kategoria *</Text>
       <View style={styles.categoryRow}>
         {CATEGORIES.map((c) => (
@@ -153,6 +156,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   content: { padding: 16, paddingBottom: 32 },
   label: { color: '#0f172a', fontWeight: '700', marginBottom: 6, marginTop: 10 },
+  hint: { color: '#64748b', fontSize: 12, marginTop: 4, marginBottom: 4, lineHeight: 16 },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,

@@ -28,8 +28,10 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
   const [qty, setQty] = useState('1');
   const imageUri = absoluteBackendUrl(item?.imageUrl);
   const stock = Math.max(0, parseInt(String(item?.stock ?? 0), 10) || 0);
-  const isOwn = currentUserId && item?.sellerId === currentUserId;
+  const isOwn = currentUserId != null && Number(item?.sellerId) === Number(currentUserId);
   const priceN = Math.round(parseFloat(String(item?.price || 0)) * 100) / 100;
+  const hoursLeft =
+    stock < 1 && item?.outOfStockHoursLeft != null ? Number(item.outOfStockHoursLeft) : null;
 
   const onPressAdd = () => {
     const n = Math.max(1, parseInt(String(qty), 10) || 1);
@@ -48,6 +50,11 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
         </Text>
         <Text style={styles.stock}>Stok: {stock}</Text>
       </View>
+      {stock < 1 && hoursLeft != null ? (
+        <Text style={styles.oosHint}>
+          Pa stok — listimi fshihet pas ~{hoursLeft}h nëse nuk e përditëson.
+        </Text>
+      ) : null}
       {!isOwn && stock > 0 ? (
         <View style={styles.qtyRow}>
           <Text style={styles.qtyLabel}>Sasia</Text>
@@ -69,7 +76,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
             style={styles.editBtn}
             onPress={() => navigation.navigate('EditProduct', { productId: item.id })}
           >
-            <Text style={styles.editBtnText}>Ndrysho produktin</Text>
+            <Text style={styles.editBtnText}>Ndrysho / stok / fshi</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -292,6 +299,7 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   price: { color: '#15803d', fontWeight: '800' },
   stock: { color: '#64748b' },
+  oosHint: { color: '#b45309', fontSize: 12, fontWeight: '600', marginTop: 6, marginBottom: 4 },
   perUnit: { color: '#64748b', fontWeight: '600', fontSize: 13 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   qtyLabel: { color: '#334155', fontWeight: '600', marginRight: 10 },

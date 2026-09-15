@@ -17,6 +17,10 @@ export function messageBelongsToConversation(message, conversationId) {
 export function lastMessagePreview(message) {
   if (!message) return '';
   if (message.deleted) return 'Mesazhi u fshi';
+  if (message.type === 'call') {
+    const text = typeof message.content === 'string' ? message.content.trim() : '';
+    return text || '📞 Thirrje';
+  }
   const text = typeof message.content === 'string' ? message.content.trim() : '';
   if (text) return text;
   if (message.type === 'image' || message.type === 'video') return message.fileName || 'Media';

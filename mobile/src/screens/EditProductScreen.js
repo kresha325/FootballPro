@@ -11,7 +11,12 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { extractErrorMessage, productByIdRequest, updateProductRequest } from '../api/client';
+import {
+  deleteProductRequest,
+  extractErrorMessage,
+  productByIdRequest,
+  updateProductRequest,
+} from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { absoluteBackendUrl } from '../config/constants';
 
@@ -33,6 +38,8 @@ export default function EditProductScreen({ route, navigation }) {
   const [image, setImage] = useState(null);
   const [existingImageUrl, setExistingImageUrl] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [outOfStockHoursLeft, setOutOfStockHoursLeft] = useState(null);
 
   const load = useCallback(async () => {
     if (!productId) {
@@ -56,6 +63,9 @@ export default function EditProductScreen({ route, navigation }) {
       setCategory(p.category || 'gear');
       setExistingImageUrl(p.imageUrl ? absoluteBackendUrl(p.imageUrl) : null);
       setImage(null);
+      setOutOfStockHoursLeft(
+        Number(p.stock) <= 0 && p.outOfStockHoursLeft != null ? Number(p.outOfStockHoursLeft) : null
+      );
     } catch (err) {
       Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u ngarkua produkti.'));
       navigation.goBack();
@@ -124,6 +134,28 @@ export default function EditProductScreen({ route, navigation }) {
     }
   };
 
+  const onDelete = () => {
+    Alert.alert('Fshi produktin', 'Je i sigurt? Ky veprim nuk kthehet.', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Fshi',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteProductRequest(productId);
+            Alert.alert('U fshi', 'Produkti u hoq nga tregu.');
+            navigation.goBack();
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u fshi produkti.'));
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
+    ]);
+  };
+
   if (loading || !productId) {
     return (
       <View style={styles.centered}>
@@ -134,6 +166,14 @@ export default function EditProductScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {outOfStockHoursLeft != null ? (
+        <View style={styles.warnBox}>
+          <Text style={styles.warnTitle}>Pa stok</Text>
+          <Text style={styles.warnText}>
+            Nëse nuk e rrit stokun, listimi fshihet automatikisht pas ~{outOfStockHoursLeft} orësh (max 48h).
+          </Text>
+        </View>
+      ) : null}
       <Text style={styles.label}>Emri *</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Emri i produktit" />
       <Text style={styles.label}>Përshkrimi</Text>
@@ -145,14 +185,12 @@ export default function EditProductScreen({ route, navigation }) {
         multiline
       />
       <Text style={styles.label}>Çmim (XCoin) *</Text>
-      <TextInput
-        style={styles.input}
-        value={price}
-        onChangeText={setPrice}
-        keyboardType="decimal-pad"
-      />
+      <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
       <Text style={styles.label}>Gjendje (stok) *</Text>
       <TextInput style={styles.input} value={stock} onChangeText={setStock} keyboardType="number-pad" />
+      <Text style={styles.hint}>
+        Kur shton produktin, stoku krijohet këtu. Ndryshoje kur shet ose merr mall të ri.
+      </Text>
       <Text style={styles.label}>Kategoria *</Text>
       <View style={styles.categoryRow}>
         {CATEGORIES.map((c) => (
@@ -174,8 +212,11 @@ export default function EditProductScreen({ route, navigation }) {
       ) : existingImageUrl ? (
         <Image source={{ uri: existingImageUrl }} style={styles.preview} resizeMode="cover" />
       ) : null}
-      <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={saving}>
+      <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={saving || deleting}>
         {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Ruaj ndryshimet</Text>}
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} disabled={saving || deleting}>
+        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteBtnText}>Fshi produktin</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -185,7 +226,18 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
   container: { flex: 1, backgroundColor: '#f8fafc' },
   content: { padding: 16, paddingBottom: 32 },
+  warnBox: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#fdba74',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  warnTitle: { color: '#9a3412', fontWeight: '800', marginBottom: 4 },
+  warnText: { color: '#9a3412', lineHeight: 18 },
   label: { color: '#0f172a', fontWeight: '700', marginBottom: 6, marginTop: 10 },
+  hint: { color: '#64748b', fontSize: 12, marginTop: 4, lineHeight: 16 },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -221,4 +273,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  deleteBtn: {
+    marginTop: 12,
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
