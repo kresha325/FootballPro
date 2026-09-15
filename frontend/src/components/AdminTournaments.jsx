@@ -45,15 +45,42 @@ export default function AdminTournaments() {
   const fetchTournaments = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/tournaments', {
-        params: {
-          q: search || undefined,
-          status: statusFilter || undefined,
-          type: typeFilter || undefined,
-          limit: 200,
-        },
-      });
-      setTournaments(Array.isArray(res.data?.tournaments) ? res.data.tournaments : []);
+      // Prefer admin endpoint; fall back to /tournaments (same model) if Render
+      // has not redeployed the new /admin/tournaments routes yet.
+      let list = [];
+      try {
+        const res = await api.get('/admin/tournaments', {
+          params: {
+            q: search || undefined,
+            status: statusFilter || undefined,
+            type: typeFilter || undefined,
+            limit: 200,
+          },
+        });
+        list = Array.isArray(res.data?.tournaments) ? res.data.tournaments : [];
+      } catch (adminErr) {
+        if (adminErr?.response?.status !== 404) throw adminErr;
+        const res = await api.get('/tournaments');
+        list = Array.isArray(res.data) ? res.data : [];
+        const q = search.trim().toLowerCase();
+        if (q) {
+          list = list.filter(
+            (t) =>
+              String(t.name || '')
+                .toLowerCase()
+                .includes(q) ||
+              String(t.description || '')
+                .toLowerCase()
+                .includes(q) ||
+              String(t.season || '')
+                .toLowerCase()
+                .includes(q)
+          );
+        }
+        if (statusFilter) list = list.filter((t) => t.status === statusFilter);
+        if (typeFilter) list = list.filter((t) => t.type === typeFilter);
+      }
+      setTournaments(list);
     } catch (error) {
       window.alert(apiError(error, 'Nuk u ngarkuan turnetë'));
       setTournaments([]);
@@ -95,18 +122,24 @@ export default function AdminTournaments() {
       return;
     }
     setSaving(true);
+    const payload = {
+      name: form.name.trim(),
+      description: form.description,
+      type: form.type,
+      status: form.status,
+      season: form.season || null,
+      maxParticipants: form.maxParticipants === '' ? null : Number(form.maxParticipants),
+      participantType: form.participantType,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+    };
     try {
-      await api.put(`/admin/tournaments/${editingId}`, {
-        name: form.name.trim(),
-        description: form.description,
-        type: form.type,
-        status: form.status,
-        season: form.season || null,
-        maxParticipants: form.maxParticipants === '' ? null : Number(form.maxParticipants),
-        participantType: form.participantType,
-        startDate: form.startDate || null,
-        endDate: form.endDate || null,
-      });
+      try {
+        await api.put(`/admin/tournaments/${editingId}`, payload);
+      } catch (adminErr) {
+        if (adminErr?.response?.status !== 404) throw adminErr;
+        await api.put(`/tournaments/${editingId}`, payload);
+      }
       resetForm();
       await fetchTournaments();
     } catch (error) {
@@ -119,7 +152,12 @@ export default function AdminTournaments() {
   const handleDelete = async (t) => {
     if (!window.confirm(`Fshi turneun "${t.name}"? Kjo fshin edhe ndeshjet dhe pjesëmarrësit.`)) return;
     try {
-      await api.delete(`/admin/tournaments/${t.id}`);
+      try {
+        await api.delete(`/admin/tournaments/${t.id}`);
+      } catch (adminErr) {
+        if (adminErr?.response?.status !== 404) throw adminErr;
+        await api.delete(`/tournaments/${t.id}`);
+      }
       if (editingId === t.id) resetForm();
       await fetchTournaments();
     } catch (error) {
