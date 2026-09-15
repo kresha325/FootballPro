@@ -17,6 +17,9 @@ const {
   listInvoices,
   getInvoice,
   exportInvoicesCsv,
+  listTournaments,
+  adminUpdateTournament,
+  adminDeleteTournament,
 } = require('../controllers/admin');
 
 // All admin routes require admin middleware
@@ -35,6 +38,11 @@ router.delete('/users/:userId', deleteUser);
 // Content management
 router.get('/posts', getAllPosts);
 router.delete('/posts/:postId', deletePost);
+
+// Tournaments
+router.get('/tournaments', listTournaments);
+router.put('/tournaments/:id', adminUpdateTournament);
+router.delete('/tournaments/:id', adminDeleteTournament);
 
 // Analytics
 router.get('/analytics', getAnalytics);

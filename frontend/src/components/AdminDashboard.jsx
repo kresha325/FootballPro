@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
 import AdminStadiums from './AdminStadiums';
+import AdminTournaments from './AdminTournaments';
 import {
   UsersIcon,
   DocumentTextIcon,
@@ -18,6 +19,7 @@ import {
   MagnifyingGlassIcon,
   BanknotesIcon,
   BuildingLibraryIcon,
+  TrophyIcon,
 } from '@heroicons/react/24/outline';
 import {
   LineChart,
@@ -515,6 +517,17 @@ export default function AdminDashboard() {
         >
           <BuildingLibraryIcon className="w-5 h-5 inline mr-2" />
           Stadiume
+        </button>
+        <button
+          onClick={() => switchTab('tournaments')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'tournaments'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <TrophyIcon className="w-5 h-5 inline mr-2" />
+          Turne
         </button>
       </div>
 
@@ -1494,6 +1507,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {activeTab === 'tournaments' && (
+        <div className="lg:col-span-3">
+          <AdminTournaments />
+        </div>
+      )}
+
     {/* Sidebar - live snapshot */}
     <div className="lg:col-span-1 space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
@@ -1560,6 +1579,13 @@ export default function AdminDashboard() {
             className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
           >
             Stadiume
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('tournaments')}
+            className="w-full text-left text-sm px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800"
+          >
+            Turne
           </button>
           <button
             type="button"

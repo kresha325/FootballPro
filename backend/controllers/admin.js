@@ -3,7 +3,7 @@ const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const Like = require('../models/Like');
 const Match = require('../models/Match');
-const Tournament = require('../models/Tournament');
+const { Tournament, TournamentParticipant } = require('../models/Tournament');
 const Subscription = require('../models/Subscription');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
@@ -700,6 +700,97 @@ exports.exportInvoicesCsv = async (req, res) => {
     res.send(csv);
   } catch (error) {
     console.error('exportInvoicesCsv:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+/** List all tournaments for admin management. */
+exports.listTournaments = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const q = String(req.query.q || '').trim();
+    const where = {};
+    if (q) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${q}%` } },
+        { description: { [Op.iLike]: `%${q}%` } },
+        { season: { [Op.iLike]: `%${q}%` } },
+      ];
+    }
+    if (req.query.status) where.status = req.query.status;
+    if (req.query.type) where.type = req.query.type;
+
+    const tournaments = await Tournament.findAll({
+      where,
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: Math.min(parseInt(req.query.limit, 10) || 100, 300),
+    });
+    res.json({ tournaments });
+  } catch (error) {
+    console.error('listTournaments:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+/** Admin update tournament fields. */
+exports.adminUpdateTournament = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Turneu nuk u gjet.' });
+
+    const { name, description, type, status, season, maxParticipants, participantType, startDate, endDate } =
+      req.body;
+
+    if (name != null && String(name).trim()) tournament.name = String(name).trim();
+    if (description !== undefined) tournament.description = description;
+    if (type && ['league', 'cup', 'knockout'].includes(type)) tournament.type = type;
+    if (status && ['open', 'ongoing', 'finished'].includes(status)) tournament.status = status;
+    if (season !== undefined) tournament.season = season || null;
+    if (maxParticipants !== undefined) {
+      const n = parseInt(maxParticipants, 10);
+      tournament.maxParticipants = Number.isFinite(n) ? n : tournament.maxParticipants;
+    }
+    if (participantType && ['individual', 'club', 'mixed'].includes(participantType)) {
+      tournament.participantType = participantType;
+    }
+    if (startDate !== undefined) tournament.startDate = startDate || null;
+    if (endDate !== undefined) tournament.endDate = endDate || null;
+
+    await tournament.save();
+    res.json(tournament);
+  } catch (error) {
+    console.error('adminUpdateTournament:', error);
+    res.status(500).json({ msg: 'Server error', error: error.message });
+  }
+};
+
+/** Admin delete tournament + related matches / participants / brackets. */
+exports.adminDeleteTournament = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Turneu nuk u gjet.' });
+
+    const tid = tournament.id;
+    const MatchScorer = require('../models/MatchScorer');
+    const Bracket = require('../models/Bracket');
+
+    const matches = await Match.findAll({ where: { tournamentId: tid }, attributes: ['id'] });
+    const matchIds = matches.map((m) => m.id);
+
+    await Bracket.destroy({ where: { tournamentId: tid } });
+    if (matchIds.length) {
+      await MatchScorer.destroy({ where: { matchId: { [Op.in]: matchIds } } });
+      await Match.destroy({ where: { tournamentId: tid } });
+    }
+    await TournamentParticipant.destroy({ where: { tournamentId: tid } });
+    await tournament.destroy();
+
+    res.json({ msg: 'Turneu u fshi.', id: tid });
+  } catch (error) {
+    console.error('adminDeleteTournament:', error);
     res.status(500).json({ msg: 'Server error', error: error.message });
   }
 };

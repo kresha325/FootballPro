@@ -37,10 +37,27 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
-    if (tournament.creatorId !== req.user.id) return res.status(403).json({ error: 'Nuk keni të drejtë të fshini këtë turne.' });
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && tournament.creatorId !== req.user.id) {
+      return res.status(403).json({ error: 'Nuk keni të drejtë të fshini këtë turne.' });
+    }
+    const Match = require('../models/Match');
+    const MatchScorer = require('../models/MatchScorer');
+    const Bracket = require('../models/Bracket');
+    const { TournamentParticipant } = require('../models/Tournament');
+    const { Op } = require('sequelize');
+    const matches = await Match.findAll({ where: { tournamentId: tournament.id }, attributes: ['id'] });
+    const matchIds = matches.map((m) => m.id);
+    await Bracket.destroy({ where: { tournamentId: tournament.id } });
+    if (matchIds.length) {
+      await MatchScorer.destroy({ where: { matchId: { [Op.in]: matchIds } } });
+      await Match.destroy({ where: { tournamentId: tournament.id } });
+    }
+    await TournamentParticipant.destroy({ where: { tournamentId: tournament.id } });
     await tournament.destroy();
     res.json({ success: true });
   } catch (err) {
+    console.error('delete tournament:', err);
     res.status(500).json({ error: 'Nuk u fshi dot turneu.' });
   }
 });
