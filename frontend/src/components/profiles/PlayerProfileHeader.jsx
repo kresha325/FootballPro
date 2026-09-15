@@ -1,4 +1,5 @@
 import React from 'react';
+import VerifiedBadge from '../VerifiedBadge';
 
 const PlayerProfileHeader = ({ profile = {} }) => {
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
@@ -21,7 +22,10 @@ const PlayerProfileHeader = ({ profile = {} }) => {
           alt={profile.firstName + ' ' + profile.lastName}
           className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg bg-gray-200"
         />
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">{profile.firstName} {profile.lastName}</div>
+        <div className="text-2xl font-bold text-gray-900 dark:text-white inline-flex items-center gap-1.5">
+          {profile.firstName} {profile.lastName}
+          <VerifiedBadge verified={profile.verified} size="md" />
+        </div>
         <div className="text-base text-gray-600 dark:text-gray-300 font-medium">{profile.position || '-'}</div>
         <div className="text-sm text-gray-500 dark:text-gray-400">{profile.club ? profile.club : ''}{profile.city ? ', ' + profile.city : ''}{profile.country ? ', ' + profile.country : ''}</div>
         <div className="flex gap-4 mt-2">

@@ -7,6 +7,7 @@ import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'rea
 import VideoCallSimple from './VideoCallSimple';
 import VideoCallRoom from './VideoCallRoom';
 import ForwardButton from './ForwardButton';
+import VerifiedBadge from './VerifiedBadge';
 
 import { API_URL, BACKEND_URL } from '../config/api';
 
@@ -1031,8 +1032,9 @@ function Messaging() {
                       }`}
                     >
                       {!isMine && selectedConversation.isGroup && message.sender && (
-                        <p className="text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300">
+                        <p className="text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300 inline-flex items-center gap-1">
                           {message.sender.firstName} {message.sender.lastName}
+                          <VerifiedBadge verified={message.sender.verified} size="sm" />
                         </p>
                       )}
                       {renderMessageContent(message, isMine)}

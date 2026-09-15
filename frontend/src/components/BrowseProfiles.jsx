@@ -15,6 +15,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI } from '../services/api';
 import { ClubBadge } from '../utils/clubLogos';
+import VerifiedBadge from './VerifiedBadge';
 
 const BrowseProfiles = () => {
   const [profiles, setProfiles] = useState([]);
@@ -214,7 +215,10 @@ const BrowseProfiles = () => {
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <div className="text-xl font-bold text-white drop-shadow-lg">{profile.firstName} {profile.lastName}</div>
+                  <div className="text-xl font-bold text-white drop-shadow-lg inline-flex items-center gap-1.5">
+                    {profile.firstName} {profile.lastName}
+                    <VerifiedBadge verified={profile.verified} size="sm" tone="white" />
+                  </div>
                   <div className="text-white text-sm font-medium drop-shadow">{profile.position || '—'}</div>
                 </div>
               </div>

@@ -36,7 +36,7 @@ exports.searchEverything = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'createdAt'],
       limit: SEARCH_LIMIT,
     });
 
@@ -80,7 +80,7 @@ exports.searchEverything = async (req, res) => {
         {
           model: User,
           as: 'streamer',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           required: false,
         },
       ],
@@ -99,7 +99,7 @@ exports.searchEverything = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           required: false,
         },
       ],
@@ -110,8 +110,8 @@ exports.searchEverything = async (req, res) => {
     let matches = await Match.findAll({
       include: [
         { model: Tournament, attributes: ['id', 'name'] },
-        { model: User, as: 'homeUser', attributes: ['id', 'firstName', 'lastName'] },
-        { model: User, as: 'awayUser', attributes: ['id', 'firstName', 'lastName'] },
+        { model: User, as: 'homeUser', attributes: ['id', 'firstName', 'lastName', 'verified'] },
+        { model: User, as: 'awayUser', attributes: ['id', 'firstName', 'lastName', 'verified'] },
       ],
       limit: q ? 40 : SEARCH_LIMIT,
       order: [['matchDate', 'DESC']],
@@ -226,7 +226,7 @@ exports.searchUsers = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'createdAt'],
       order,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -311,7 +311,7 @@ exports.searchPosts = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [
             {
               model: Profile,
@@ -366,7 +366,7 @@ exports.getTrendingPosts = async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [
             {
               model: Profile,
@@ -457,7 +457,7 @@ exports.getTrendingUsers = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName'],
+      attributes: ['id', 'firstName', 'lastName', 'verified'],
     });
 
     const ranked = users
@@ -520,7 +520,7 @@ exports.getRecommendedUsers = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'city', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName'],
+      attributes: ['id', 'firstName', 'lastName', 'verified'],
       limit: 10,
     });
 
@@ -550,7 +550,7 @@ exports.getSearchSuggestions = async (req, res) => {
             { lastName: { [Op.iLike]: `${q}%` } },
           ],
         },
-        attributes: ['id', 'firstName', 'lastName'],
+        attributes: ['id', 'firstName', 'lastName', 'verified'],
         limit: 5,
       });
       suggestions.users = users;

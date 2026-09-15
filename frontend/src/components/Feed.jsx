@@ -15,6 +15,7 @@ import FeedLiveNow from './FeedLiveNow';
 import FeedScoutingReport from './FeedScoutingReport';
 import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import StadiumStrip from './StadiumStrip';
+import VerifiedBadge from './VerifiedBadge';
 import { API } from '../services/api';
 
 const Feed = () => {
@@ -586,10 +587,11 @@ const Feed = () => {
                       </div>
                     )}
                     <div className="ml-3">
-                      <p className="font-semibold text-gray-900 dark:text-white hover:underline">
+                      <p className="font-semibold text-gray-900 dark:text-white hover:underline inline-flex items-center gap-1">
                         {post.author?.firstName && post.author?.lastName 
                           ? `${post.author.firstName} ${post.author.lastName}` 
                           : 'I panjohur'}
+                        <VerifiedBadge verified={post.author?.verified} size="sm" />
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(post.createdAt).toLocaleDateString()}
@@ -849,8 +851,9 @@ const Feed = () => {
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                              <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
                                 {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
+                                <VerifiedBadge verified={comment.User?.verified} size="sm" />
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

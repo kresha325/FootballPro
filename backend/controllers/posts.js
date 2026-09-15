@@ -58,7 +58,7 @@ exports.getPosts = async (req, res) => {
         posts = await Post.findAll({
           where: { userId: followingIds },
           include: [
-            { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+            { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
             { model: Sponsor, through: { attributes: [] } }
           ],
           order: [['createdAt', 'DESC']]
@@ -68,7 +68,7 @@ exports.getPosts = async (req, res) => {
       posts = await Post.findAll({
         where: notBlockedWhere,
         include: [
-          { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+          { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
           { model: Sponsor, through: { attributes: [] } }
         ],
         order: [['createdAt', 'DESC']]
@@ -161,7 +161,7 @@ exports.getUserPosts = async (req, res) => {
     const posts = await Post.findAll({ 
       where: { userId },
       include: [
-        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
+        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
         { model: Sponsor, through: { attributes: [] } }
       ],
       order: [['createdAt', 'DESC']]
@@ -240,7 +240,7 @@ exports.getPost = async (req, res) => {
       include: [{ 
         model: User, 
         as: 'author',
-        attributes: ['id', 'firstName', 'lastName', 'email'] 
+        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'] 
       }] 
     });
     if (!post) return res.status(404).json({ msg: 'Post not found' });

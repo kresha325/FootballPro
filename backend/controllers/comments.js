@@ -6,7 +6,7 @@ const { sendEmail } = require('../services/emailService');
 
 exports.getComments = async (req, res) => {
   try {
-    const comments = await Comment.findAll({ where: { postId: req.params.postId }, include: [{ model: require('../models/User'), attributes: ['firstName', 'lastName'] }] });
+    const comments = await Comment.findAll({ where: { postId: req.params.postId }, include: [{ model: require('../models/User'), attributes: ['id', 'firstName', 'lastName', 'verified'] }] });
     res.json(comments);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });

@@ -23,6 +23,7 @@ import ProfileSponsorsPanel from './profile/ProfileSponsorsPanel';
 import ProfileGalleryPanel from './profile/ProfileGalleryPanel';
 import FollowListModal from './FollowListModal';
 import ShareProfileCvButton from './ShareProfileCvButton';
+import VerifiedBadge from './VerifiedBadge';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -640,9 +641,7 @@ const Profile = () => {
               {/* Verified Badge */}
               {profile.verified && (
                 <div className="absolute bottom-2 right-2 bg-blue-600 rounded-full p-1.5 border-2 border-white dark:border-gray-800">
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <VerifiedBadge verified size="md" tone="white" />
                 </div>
               )}
             </div>
@@ -653,10 +652,40 @@ const Profile = () => {
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                   {profile.firstName} {profile.lastName}
                 </h1>
-                {profile.verified && (
-                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                <VerifiedBadge verified={profile.verified} size="lg" />
+                {isAthlete && (
+                  <>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        profile.clubVerified
+                          ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200'
+                          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                      }`}
+                      title={
+                        profile.clubVerified
+                          ? 'I verifikuar nga klubi'
+                          : 'Në pritje të pranimit nga klubi'
+                      }
+                    >
+                      {profile.clubVerified ? '✓' : '○'} Klubi
+                    </span>
+                    {(profile.needsParentVerification || profile.parentVerified) && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          profile.parentVerified
+                            ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                        }`}
+                        title={
+                          profile.parentVerified
+                            ? 'I verifikuar nga prindi'
+                            : 'Verifikimi i prindit (nën 18 vjeç)'
+                        }
+                      >
+                        {profile.parentVerified ? '✓' : '○'} Prindi
+                      </span>
+                    )}
+                  </>
                 )}
                 {isSponsoredProfile && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
@@ -1013,8 +1042,9 @@ const Profile = () => {
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                      <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
                                         {comment.User ? `${comment.User.firstName} ${comment.User.lastName}` : 'I panjohur'}
+                                        <VerifiedBadge verified={comment.User?.verified} size="sm" />
                                       </span>
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {new Date(comment.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

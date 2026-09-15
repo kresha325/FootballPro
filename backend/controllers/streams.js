@@ -376,7 +376,7 @@ exports.getStreams = async (req, res) => {
         {
           model: User,
           as: 'streamer',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
         },
       ],
@@ -444,7 +444,7 @@ exports.getStream = async (req, res) => {
         {
           model: User,
           as: 'streamer',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
         },
       ],

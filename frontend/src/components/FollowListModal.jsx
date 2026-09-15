@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { profileAPI } from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
 import UserAvatarLink from './UserAvatarLink';
+import VerifiedBadge from './VerifiedBadge';
 
 function normalizeFollowRows(data, mode) {
   const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
@@ -14,6 +15,7 @@ function normalizeFollowRows(data, mode) {
         id: u.id,
         firstName: u.firstName,
         lastName: u.lastName,
+        verified: Boolean(u.verified),
         profilePhoto: u.Profile?.profilePhoto || u.profilePhoto || null,
         bio: u.Profile?.bio || u.bio || '',
       };
@@ -119,8 +121,9 @@ export default function FollowListModal({ userId, mode, onClose }) {
                         size={40}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-gray-900 dark:text-white truncate">
-                          {name}
+                        <span className="font-semibold text-gray-900 dark:text-white truncate inline-flex items-center gap-1 max-w-full">
+                          <span className="truncate">{name}</span>
+                          <VerifiedBadge verified={u.verified} size="sm" />
                         </span>
                         {u.bio ? (
                           <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">

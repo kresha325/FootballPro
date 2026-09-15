@@ -13,7 +13,7 @@ const { requireConversationMember } = require('../utils/conversationAcl');
 const SENDER_WITH_PROFILE = {
   model: User,
   as: 'sender',
-  attributes: ['id', 'firstName', 'lastName'],
+  attributes: ['id', 'firstName', 'lastName', 'verified'],
   include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
 };
 
@@ -25,7 +25,7 @@ const REPLY_TO_WITH_SENDER = {
     {
       model: User,
       as: 'sender',
-      attributes: ['firstName', 'lastName'],
+      attributes: ['id', 'firstName', 'lastName', 'verified'],
       include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
     },
   ],
@@ -99,7 +99,7 @@ exports.getConversations = async (req, res) => {
         {
           model: User,
           as: 'members',
-          attributes: ['id', 'firstName', 'lastName', 'role'],
+          attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
           through: { attributes: [] },
         },
@@ -203,7 +203,7 @@ exports.getOrCreateConversation = async (req, res) => {
           {
             model: User,
             as: 'members',
-            attributes: ['id', 'firstName', 'lastName'],
+            attributes: ['id', 'firstName', 'lastName', 'verified'],
             include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
             through: { attributes: [] },
           },
@@ -237,7 +237,7 @@ exports.getOrCreateConversation = async (req, res) => {
           {
             model: User,
             as: 'members',
-            attributes: ['id', 'firstName', 'lastName'],
+            attributes: ['id', 'firstName', 'lastName', 'verified'],
             include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
             through: { attributes: [] },
           },
@@ -293,7 +293,7 @@ exports.getConversationById = async (req, res) => {
         {
           model: User,
           as: 'members',
-          attributes: ['id', 'firstName', 'lastName', 'role'],
+          attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
           through: { attributes: [] },
         },
@@ -567,7 +567,7 @@ exports.createGroup = async (req, res) => {
         {
           model: User,
           as: 'members',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
           through: { attributes: ['role'] },
         },

@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import PropTypes from 'prop-types';
+import VerifiedBadge from './VerifiedBadge';
 
 const Videos = ({ userId, onlyUserVideos }) => {
   const navigate = useNavigate();
@@ -146,8 +147,9 @@ const Videos = ({ userId, onlyUserVideos }) => {
             </div>
           )}
           <div>
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-gray-900 inline-flex items-center gap-1">
               {video.User?.firstName} {video.User?.lastName}
+              <VerifiedBadge verified={video.User?.verified} size="sm" />
             </p>
           </div>
         </div>

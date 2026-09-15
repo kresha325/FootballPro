@@ -6,6 +6,7 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import { searchAPI } from '../services/api';
+import VerifiedBadge from './VerifiedBadge';
 
 const TABS = [
   { id: 'discover', label: 'Zbulo', icon: SparklesIcon },
@@ -308,8 +309,9 @@ function UserResults({ users, getFullUrl, compact }) {
               )}
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-gray-900 dark:text-white truncate">
-                {user.firstName} {user.lastName}
+              <p className="font-bold text-gray-900 dark:text-white truncate inline-flex items-center gap-1 max-w-full">
+                <span className="truncate">{user.firstName} {user.lastName}</span>
+                <VerifiedBadge verified={user.verified} size="sm" />
               </p>
               <p className="text-sm text-gray-500 capitalize">
                 {ROLE_ICONS[user.role] || '👤'} {user.role}
@@ -336,8 +338,9 @@ function PostResults({ posts, compact }) {
             to={`/feed?post=${post.id}`}
             className="block p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
           >
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 inline-flex items-center gap-1">
               {post.User?.firstName} {post.User?.lastName}
+              <VerifiedBadge verified={post.User?.verified} size="sm" />
             </p>
             <p className="text-gray-700 dark:text-gray-300 line-clamp-2 mt-1">{post.content}</p>
           </Link>

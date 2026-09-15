@@ -221,16 +221,12 @@ exports.approveRequest = async (req, res) => {
       await athleteProfile.save();
     }
 
-    // Mark athlete's club verification and finalize `verified` if parent already confirmed
+    // Mark athlete's club verification and finalize `verified` if requirements met
     try {
+      const { markClubVerified } = require('../utils/userVerification');
       const athleteUser = await User.findByPk(request.athleteId);
       if (athleteUser) {
-        athleteUser.clubVerified = true;
-        athleteUser.clubVerifiedAt = new Date();
-        if (athleteUser.parentVerified) {
-          athleteUser.verified = true;
-        }
-        await athleteUser.save();
+        await markClubVerified(athleteUser);
       }
     } catch (e) {
       console.error('Failed to set athlete club verification:', e && e.message);

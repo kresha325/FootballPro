@@ -132,6 +132,7 @@ exports.register = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         dateOfBirth: user.dateOfBirth || null,
+        verified: Boolean(user.verified),
       },
     });
   } catch (err) {
@@ -221,6 +222,7 @@ exports.login = async (req, res) => {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        verified: Boolean(user.verified),
       },
     });
 

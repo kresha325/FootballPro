@@ -7,8 +7,8 @@ export default function ParentVerified() {
         <div className="text-5xl mb-4">✓</div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Faleminderit!</h1>
         <p className="text-gray-600 mb-6">
-          Konfirmimi i prindit u regjistrua. Llogaria e fëmijës mund të përdorë X TALENTI sipas rregullave të
-          platformës.
+          Verifikimi i prindit u aktivizua. Për verifikimin e plotë të profilit (✓), klubi duhet ta ketë
+          pranuar lojtarin në skuadër.
         </p>
         <Link
           to="/login"

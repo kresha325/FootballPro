@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { sendEmail } = require('../services/emailService');
 const { isEmailConfigured, buildParentConfirmUrl } = require('../config/email');
+const { needsParentVerification, markParentVerified } = require('../utils/userVerification');
 
 // Request parental verification (authenticated athlete)
 exports.parentRequest = async (req, res) => {
@@ -17,6 +18,12 @@ exports.parentRequest = async (req, res) => {
 
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!needsParentVerification(user)) {
+      return res.status(400).json({
+        error: 'Verifikimi i prindit vlen vetëm për moshat e vogla (nën 18 vjeç).',
+      });
+    }
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -39,7 +46,6 @@ exports.parentRequest = async (req, res) => {
       });
     }
 
-    // Email nuk u dërgua — jep linkun e konfirmimit që ta ndajë lojtari (WhatsApp, etj.)
     console.warn('Parent verification email not sent:', emailResult.error, '→', normalizedParent);
 
     return res.json({
@@ -72,15 +78,7 @@ exports.parentConfirm = async (req, res) => {
       return res.status(400).send('Token expired');
     }
 
-    user.parentVerified = true;
-    user.parentVerificationToken = null;
-    user.parentVerificationExpire = null;
-
-    if (user.clubVerified) {
-      user.verified = true;
-    }
-
-    await user.save();
+    await markParentVerified(user);
 
     const redirectUrl = process.env.FRONTEND_URL
       ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/parent-verified`

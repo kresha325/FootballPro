@@ -385,7 +385,7 @@ exports.getProfile = async (req, res) => {
       where: { userId }, 
       include: [{
         model: User,
-        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance']
+        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance', 'verified', 'parentVerified', 'clubVerified', 'clubVerifiedAt']
       }]
     });
 
@@ -438,6 +438,18 @@ exports.getProfile = async (req, res) => {
       email: user ? user.email : null,
       dateOfBirth: user ? user.dateOfBirth : null,
       gender: user ? user.gender : null,
+      verified: Boolean(user?.verified),
+      parentVerified: Boolean(user?.parentVerified),
+      clubVerified: Boolean(user?.clubVerified),
+      clubVerifiedAt: user?.clubVerifiedAt || null,
+      needsParentVerification: (() => {
+        try {
+          const { needsParentVerification } = require('../utils/userVerification');
+          return needsParentVerification(user);
+        } catch {
+          return false;
+        }
+      })(),
       age,
       ageGroup,
       role,
@@ -524,6 +536,8 @@ exports.getPublicProfileCv = async (req, res) => {
           'dateOfBirth',
           'gender',
           'verified',
+          'parentVerified',
+          'clubVerified',
           'bannedAt',
           'deletedAt',
         ],
@@ -581,6 +595,8 @@ exports.getPublicProfileCv = async (req, res) => {
       lastName: user.lastName,
       role,
       verified: Boolean(user.verified),
+      parentVerified: Boolean(user.parentVerified),
+      clubVerified: Boolean(user.clubVerified),
       gender: user.gender || null,
       dateOfBirth: isOrg ? null : user.dateOfBirth || null,
       age,
@@ -1463,7 +1479,7 @@ exports.getFollowers = async (req, res) => {
       include: [{
         model: User,
         as: 'follower',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'],
         required: true,
         where: { deletedAt: null },
         include: [{
@@ -1501,7 +1517,7 @@ exports.getFollowing = async (req, res) => {
       include: [{
         model: User,
         as: 'following',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'],
         required: true,
         where: { deletedAt: null },
         include: [{

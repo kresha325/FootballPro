@@ -141,7 +141,7 @@ exports.getVideos = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'] }],
         },
       ],
@@ -165,7 +165,7 @@ exports.getVideo = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club'] }],
         },
       ],
@@ -281,7 +281,7 @@ exports.getTrendingVideos = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'] }],
         },
       ],

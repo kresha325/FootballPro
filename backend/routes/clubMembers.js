@@ -328,6 +328,13 @@ router.put('/:membershipId/status', protect, async (req, res) => {
 
     if (status === 'approved') {
       try {
+        const { markClubVerified } = require('../utils/userVerification');
+        const athleteUser = await User.findByPk(membership.athleteId);
+        if (athleteUser) await markClubVerified(athleteUser);
+      } catch (verErr) {
+        console.error('markClubVerified on membership approve:', verErr);
+      }
+      try {
         const { syncClubMemberToLigaTournaments } = require('../utils/ligaTournaments');
         await syncClubMemberToLigaTournaments(membership);
       } catch (syncErr) {
