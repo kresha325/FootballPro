@@ -24,6 +24,7 @@ import ProfileGalleryPanel from './profile/ProfileGalleryPanel';
 import FollowListModal from './FollowListModal';
 import ShareProfileCvButton from './ShareProfileCvButton';
 import VerifiedBadge from './VerifiedBadge';
+import ParentVerificationModal from './ParentVerificationModal';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -101,6 +102,8 @@ const Profile = () => {
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [followListMode, setFollowListMode] = useState(null); // 'followers' | 'following' | null
+  const [parentVerifyOpen, setParentVerifyOpen] = useState(false);
+  const [clubVerifyHintOpen, setClubVerifyHintOpen] = useState(false);
   const livePreviewRef = useRef(null);
 
   useEffect(() => {
@@ -648,49 +651,77 @@ const Profile = () => {
 
               {isAthlete ? (
                 <div className="mt-2 flex flex-row flex-wrap justify-center gap-1.5 max-w-[11rem] md:max-w-[12rem]">
-                  <span
+                  <button
+                    type="button"
+                    disabled={profile.clubVerified || !isOwner}
+                    onClick={() => {
+                      if (!isOwner || profile.clubVerified) return;
+                      setClubVerifyHintOpen(true);
+                    }}
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                       profile.clubVerified
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                        ? 'bg-blue-600 text-white border-blue-600 cursor-default'
+                        : isOwner
+                          ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 cursor-default'
                     }`}
                     title={
                       profile.clubVerified
                         ? 'I verifikuar nga klubi'
-                        : 'Në pritje të pranimit nga klubi'
+                        : isOwner
+                          ? 'Kliko për udhëzime — pranim nga klubi'
+                          : 'Në pritje të pranimit nga klubi'
                     }
                   >
                     {profile.clubVerified ? '✓' : '○'} Klubi
-                  </span>
+                  </button>
                   {(profile.needsParentVerification || profile.parentVerified) && (
-                    <span
+                    <button
+                      type="button"
+                      disabled={profile.parentVerified || !isOwner}
+                      onClick={() => {
+                        if (!isOwner || profile.parentVerified) return;
+                        setParentVerifyOpen(true);
+                      }}
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                         profile.parentVerified
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                          ? 'bg-blue-600 text-white border-blue-600 cursor-default'
+                          : isOwner
+                            ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer'
+                            : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 cursor-default'
                       }`}
                       title={
                         profile.parentVerified
                           ? 'I verifikuar nga prindi'
-                          : 'Verifikimi i prindit (nën 18 vjeç)'
+                          : isOwner
+                            ? 'Kliko për të dërguar email prindit'
+                            : 'Verifikimi i prindit (nën 18 vjeç)'
                       }
                     >
                       {profile.parentVerified ? '✓' : '○'} Prindi
-                    </span>
+                    </button>
                   )}
                 </div>
               ) : profile.role && profile.role !== 'admin' ? (
                 <div className="mt-2 flex flex-row flex-wrap justify-center gap-1.5 max-w-[11rem] md:max-w-[12rem]">
-                  <span
+                  <button
+                    type="button"
+                    disabled={profile.premium || !isOwner}
+                    onClick={() => {
+                      if (!isOwner || profile.premium) return;
+                      navigate('/premium');
+                    }}
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                       profile.premium
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                        ? 'bg-blue-600 text-white border-blue-600 cursor-default'
+                        : isOwner
+                          ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 cursor-default'
                     }`}
-                    title={profile.premium ? 'Abonimi aktiv' : 'Duhet pagesa e abonimit'}
+                    title={profile.premium ? 'Abonimi aktiv' : isOwner ? 'Kliko për abonim' : 'Duhet pagesa e abonimit'}
                   >
                     {profile.premium ? '✓' : '○'} Abonim
-                  </span>
+                  </button>
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                       profile.adminVerified
@@ -1298,6 +1329,54 @@ const Profile = () => {
           mode={followListMode}
           onClose={() => setFollowListMode(null)}
         />
+      )}
+
+      <ParentVerificationModal
+        open={parentVerifyOpen}
+        onClose={() => {
+          setParentVerifyOpen(false);
+          // Refresh profile so Prindi badge updates after parent confirms later
+          if (id) {
+            profileAPI.getProfile(id).then((res) => setProfile(res.data)).catch(() => {});
+          }
+        }}
+      />
+
+      {clubVerifyHintOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
+          onClick={() => setClubVerifyHintOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-5 border border-gray-200 dark:border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Verifikimi i klubit</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Badge <strong>Klubi</strong> aktivizohet kur klubi të pranon në skuadër (roster).
+              Nëse ke zgjedhur klubin në profil, prit miratimin nga klubi — ose përditëso klubin te Edit Profile.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setClubVerifyHintOpen(false);
+                  setEditOpen(true);
+                }}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold"
+              >
+                Edit Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setClubVerifyHintOpen(false)}
+                className="flex-1 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+              >
+                Mbyll
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {editOpen && profile && (

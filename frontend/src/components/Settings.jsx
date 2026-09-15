@@ -4,6 +4,8 @@ import { profileAPI, youtubeAPI } from '../services/api';
 import api from '../services/api';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import ParentVerificationForm from './ParentVerificationForm';
+import { Link } from 'react-router-dom';
 
 const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
 
@@ -17,6 +19,14 @@ const Settings = () => {
     bio: '',
     youtubeChannelId: '',
   });
+  const [verification, setVerification] = useState({
+    needsParentVerification: false,
+    parentVerified: false,
+    clubVerified: false,
+    verified: false,
+    role: '',
+  });
+  const [showParentForm, setShowParentForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -39,6 +49,19 @@ const Settings = () => {
       bio: user.bio || '',
       youtubeChannelId: user.youtubeChannelId || '',
     });
+    profileAPI
+      .getProfile(user.id)
+      .then((res) => {
+        const p = res.data || {};
+        setVerification({
+          needsParentVerification: Boolean(p.needsParentVerification),
+          parentVerified: Boolean(p.parentVerified),
+          clubVerified: Boolean(p.clubVerified),
+          verified: Boolean(p.verified),
+          role: p.role || user.role || '',
+        });
+      })
+      .catch(() => {});
   }, [user]);
 
   const toggleDarkMode = () => {
@@ -218,6 +241,86 @@ const Settings = () => {
               }`}
             />
           </button>
+        </div>
+      </div>
+
+      {/* Verification (existing users) */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
+          <ShieldCheckIcon className="w-6 h-6 mr-2" />
+          Verifikimi
+        </h2>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-white dark:bg-gray-800">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${
+                verification.clubVerified ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {verification.clubVerified ? '✓' : '○'} Klubi
+            </span>
+            {(verification.needsParentVerification || verification.parentVerified) && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${
+                  verification.parentVerified ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {verification.parentVerified ? '✓' : '○'} Prindi
+              </span>
+            )}
+            {verification.verified ? (
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold bg-green-100 text-green-800">
+                ✓ I verifikuar plotësisht
+              </span>
+            ) : null}
+          </div>
+
+          {verification.needsParentVerification && !verification.parentVerified ? (
+            <div>
+              {!showParentForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowParentForm(true)}
+                  className="w-full sm:w-auto px-4 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold"
+                >
+                  Dërgo verifikimin e prindit
+                </button>
+              ) : (
+                <ParentVerificationForm
+                  compact
+                  onDone={(ok) => {
+                    if (ok) {
+                      setVerification((v) => ({ ...v }));
+                    }
+                  }}
+                />
+              )}
+              <p className="mt-2 text-xs text-gray-500">
+                Ose hap faqen{' '}
+                <Link to="/parent-verification" className="text-teal-700 underline">
+                  /parent-verification
+                </Link>
+              </p>
+            </div>
+          ) : verification.parentVerified ? (
+            <p className="text-sm text-green-700 dark:text-green-300">Prindi është verifikuar.</p>
+          ) : String(verification.role).toLowerCase() === 'athlete' ? (
+            <p className="text-sm text-gray-500">Verifikimi i prindit nuk kërkohet (18+).</p>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Për role të tjera: abonim + konfirmim admin. Shiko{' '}
+              <Link to="/premium" className="text-teal-700 underline">
+                Premium
+              </Link>
+              .
+            </p>
+          )}
+
+          {!verification.clubVerified && String(verification.role).toLowerCase() === 'athlete' ? (
+            <p className="text-xs text-gray-500">
+              Badge Klubi aktivizohet kur klubi të pranon në skuadër.
+            </p>
+          ) : null}
         </div>
       </div>
 
