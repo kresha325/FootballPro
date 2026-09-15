@@ -397,8 +397,12 @@ exports.getProfile = async (req, res) => {
     let user = profile.User;
     if (user) {
       try {
-        const { ensureClubVerifiedFromRoster } = require('../utils/userVerification');
-        await ensureClubVerifiedFromRoster(user);
+        const { ensureClubVerifiedFromRoster, ensureVerifiedSynced, isAthleteRole } = require('../utils/userVerification');
+        if (isAthleteRole(user)) {
+          await ensureClubVerifiedFromRoster(user);
+        } else {
+          await ensureVerifiedSynced(user);
+        }
         await user.reload();
       } catch (syncErr) {
         console.warn('getProfile verification sync:', syncErr?.message || syncErr);

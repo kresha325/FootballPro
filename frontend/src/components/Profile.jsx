@@ -718,24 +718,16 @@ const Profile = () => {
                           ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer'
                           : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 cursor-default'
                     }`}
-                    title={profile.premium ? 'Abonimi aktiv' : isOwner ? 'Kliko për abonim' : 'Duhet pagesa e abonimit'}
+                    title={
+                      profile.premium
+                        ? 'Abonim aktiv — profil i verifikuar'
+                        : isOwner
+                          ? 'Kliko për abonim (verifikimi)'
+                          : 'Duhet pagesa e abonimit'
+                    }
                   >
                     {profile.premium ? '✓' : '○'} Abonim
                   </button>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
-                      profile.adminVerified
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
-                    }`}
-                    title={
-                      profile.adminVerified
-                        ? 'I konfirmuar nga admin'
-                        : 'Në pritje të konfirmimit nga admin'
-                    }
-                  >
-                    {profile.adminVerified ? '✓' : '○'} Admin
-                  </span>
                 </div>
               ) : null}
             </div>

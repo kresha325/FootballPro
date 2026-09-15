@@ -34,7 +34,7 @@ function needsParentVerification(user) {
  * Fully verified (blue check):
  * - Athlete minor: club + parent
  * - Athlete adult: club only
- * - Other roles: premium subscription + admin confirmation
+ * - Other roles (coach, referee, club, …): premium subscription alone
  * - Admin role: always
  */
 function effectiveVerified(user) {
@@ -47,12 +47,11 @@ function effectiveVerified(user) {
     }
     return Boolean(user.clubVerified);
   }
-  return Boolean(user.premium && user.adminVerified);
+  return Boolean(user.premium);
 }
 
 /**
  * Sync DB `verified` to the effective badge state.
- * For non-athletes, `adminVerified` stores admin approval; `verified` is the public badge.
  */
 function syncOverallVerified(user) {
   if (!user) return user;
@@ -68,7 +67,8 @@ function syncOverallVerified(user) {
     return user;
   }
 
-  user.verified = Boolean(user.premium && user.adminVerified);
+  // Coach, referee, club, scout, … — abonimi mjafton
+  user.verified = Boolean(user.premium);
   return user;
 }
 
@@ -155,6 +155,17 @@ async function syncAfterPremiumChange(user) {
   return user;
 }
 
+/** Persist verified flag if out of sync (e.g. after rule change). */
+async function ensureVerifiedSynced(user) {
+  if (!user) return user;
+  const before = Boolean(user.verified);
+  syncOverallVerified(user);
+  if (Boolean(user.verified) !== before) {
+    await user.save();
+  }
+  return user;
+}
+
 module.exports = {
   PARENT_VERIFICATION_MAX_AGE,
   resolveAge,
@@ -168,4 +179,5 @@ module.exports = {
   markParentVerified,
   markAdminVerified,
   syncAfterPremiumChange,
+  ensureVerifiedSynced,
 };

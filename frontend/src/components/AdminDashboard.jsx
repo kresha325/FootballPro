@@ -890,11 +890,10 @@ export default function AdminDashboard() {
                                 Verified
                               </span>
                             )}
-                            {u.adminVerified && !u.verified && (
-                              <span className="text-xs text-blue-600">Admin OK · pending premium</span>
-                            )}
-                            {!u.verified && !u.adminVerified && !u.bannedAt && (
-                              <span className="text-xs text-gray-400">Unverified</span>
+                            {!u.verified && !u.bannedAt && (
+                              <span className="text-xs text-gray-400">
+                                {u.premium ? 'Premium' : 'Pa abonim'}
+                              </span>
                             )}
                           </>
                         )}

@@ -449,12 +449,15 @@ exports.verifyUser = async (req, res) => {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    const { isAthleteRole, markAdminVerified, markClubVerified } = require('../utils/userVerification');
+    const { isAthleteRole, markClubVerified, syncOverallVerified } = require('../utils/userVerification');
     if (isAthleteRole(user)) {
       // Club side of athlete verification (parent still needs parent confirm for minors)
       await markClubVerified(user);
     } else {
-      await markAdminVerified(user);
+      // Coach / referee / club / … — abonimi mjafton; admin mund ta aktivizojë premium
+      user.premium = true;
+      syncOverallVerified(user);
+      await user.save();
     }
 
     await user.reload();
@@ -463,7 +466,7 @@ exports.verifyUser = async (req, res) => {
         ? 'User verified successfully'
         : isAthleteRole(user)
           ? 'Klubi u verifikua. Për moshat e vogla duhet edhe verifikimi i prindit.'
-          : 'Admin confirmation saved. Badge activates after premium subscription payment.',
+          : 'Aktivizo Premium që profili të verifikohet.',
       user,
     });
   } catch (error) {
