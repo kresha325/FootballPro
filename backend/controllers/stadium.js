@@ -90,7 +90,12 @@ exports.updateStadium = async (req, res) => {
     if (req.body.country !== undefined) patch.country = String(req.body.country || '').trim() || null;
     if (req.body.capacity !== undefined) patch.capacity = parseCapacity(req.body.capacity);
     if (req.body.address !== undefined) patch.address = String(req.body.address || '').trim() || null;
-    if (req.body.photo !== undefined) patch.photo = String(req.body.photo || '').trim() || null;
+    if (req.body.clearPhoto === '1' || req.body.clearPhoto === 'true') {
+      patch.photo = null;
+    } else if (req.body.photo !== undefined) {
+      const p = String(req.body.photo || '').trim();
+      if (p) patch.photo = p;
+    }
 
     await stadium.update(patch);
     res.json(serializeStadium(req, stadium));

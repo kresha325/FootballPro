@@ -145,6 +145,8 @@ function cloudinaryFields(fields) {
 								folder = 'videos';
 							} else if (field.name === 'image') {
 								folder = 'posts';
+							} else if (field.name === 'photo') {
+								folder = 'stadiums';
 							}
 								const uploadOptions = {
 									resource_type,

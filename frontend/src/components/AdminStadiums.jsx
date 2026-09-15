@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import { getFullUrl } from '../utils/mediaUrl';
 
 function apiError(error, fallback = 'Veprimi dështoi') {
   return (
@@ -17,6 +18,7 @@ const emptyForm = {
   country: 'Kosovë',
   capacity: '',
   address: '',
+  photo: '',
 };
 
 export default function AdminStadiums() {
@@ -26,6 +28,9 @@ export default function AdminStadiums() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [clearPhoto, setClearPhoto] = useState(false);
 
   const fetchStadiums = useCallback(async () => {
     setLoading(true);
@@ -47,6 +52,17 @@ export default function AdminStadiums() {
   const resetForm = () => {
     setForm(emptyForm);
     setEditingId(null);
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setClearPhoto(false);
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setClearPhoto(false);
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {
@@ -57,17 +73,28 @@ export default function AdminStadiums() {
     }
     setSaving(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        city: form.city.trim() || null,
-        country: form.country.trim() || null,
-        capacity: form.capacity === '' ? null : form.capacity,
-        address: form.address.trim() || null,
-      };
+      const fd = new FormData();
+      fd.append('name', form.name.trim());
+      fd.append('city', form.city.trim());
+      fd.append('country', form.country.trim());
+      fd.append('capacity', form.capacity === '' ? '' : String(form.capacity));
+      fd.append('address', form.address.trim());
+      if (photoFile) {
+        fd.append('photo', photoFile);
+      } else if (clearPhoto) {
+        fd.append('clearPhoto', '1');
+      } else if (form.photo && /^https?:\/\//i.test(form.photo.trim())) {
+        fd.append('photo', form.photo.trim());
+      }
+
       if (editingId) {
-        await api.put(`/stadiums/${editingId}`, payload);
+        await api.put(`/stadiums/${editingId}`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
-        await api.post('/stadiums', payload);
+        await api.post('/stadiums', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
       resetForm();
       await fetchStadiums();
@@ -86,7 +113,11 @@ export default function AdminStadiums() {
       country: s.country || '',
       capacity: s.capacity != null ? String(s.capacity) : '',
       address: s.address || '',
+      photo: s.photo || '',
     });
+    setPhotoFile(null);
+    setClearPhoto(false);
+    setPhotoPreview(s.photo ? getFullUrl(s.photo) : '');
   };
 
   const handleDelete = async (id, name) => {
@@ -100,6 +131,13 @@ export default function AdminStadiums() {
     }
   };
 
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setForm((prev) => ({ ...prev, photo: '' }));
+    if (editingId) setClearPhoto(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
@@ -109,7 +147,7 @@ export default function AdminStadiums() {
         <p className="text-sm text-gray-500 mb-4">
           Katalogu i stadiumeve — klubet i zgjedhin nga Edit Profile.
         </p>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4" encType="multipart/form-data">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-1">Emri *</label>
             <input
@@ -156,6 +194,53 @@ export default function AdminStadiums() {
               className="w-full p-2 border border-gray-300 rounded"
             />
           </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">Foto e stadiumit</label>
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              {photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="Stadium"
+                  className="w-40 h-28 object-cover rounded-lg border border-gray-200 bg-slate-50"
+                />
+              ) : (
+                <div className="w-40 h-28 rounded-lg border border-dashed border-gray-300 bg-slate-50 flex items-center justify-center text-xs text-gray-400">
+                  Pa foto
+                </div>
+              )}
+              <div className="flex-1 space-y-2 w-full">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="block w-full text-sm text-gray-600"
+                />
+                <input
+                  type="url"
+                  value={!photoFile ? form.photo : ''}
+                  onChange={(e) => {
+                    setPhotoFile(null);
+                    setClearPhoto(false);
+                    setForm({ ...form, photo: e.target.value });
+                    setPhotoPreview(e.target.value ? getFullUrl(e.target.value) : '');
+                  }}
+                  placeholder="ose ngjit URL të fotos (https://…)"
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                />
+                {(photoPreview || form.photo) && (
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="text-sm text-red-600 hover:underline"
+                  >
+                    Hiq foton
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="md:col-span-2 flex gap-2">
             <button
               type="submit"
@@ -196,6 +281,7 @@ export default function AdminStadiums() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-gray-600">
+                  <th className="py-2 pr-4">Foto</th>
                   <th className="py-2 pr-4">Emri</th>
                   <th className="py-2 pr-4">Qyteti</th>
                   <th className="py-2 pr-4">Kapaciteti</th>
@@ -205,6 +291,17 @@ export default function AdminStadiums() {
               <tbody>
                 {stadiums.map((s) => (
                   <tr key={s.id} className="border-b border-gray-100">
+                    <td className="py-2.5 pr-4">
+                      {s.photo ? (
+                        <img
+                          src={getFullUrl(s.photo)}
+                          alt=""
+                          className="w-14 h-10 object-cover rounded border border-gray-200"
+                        />
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="py-2.5 pr-4 font-medium text-gray-900">{s.name}</td>
                     <td className="py-2.5 pr-4 text-gray-600">
                       {[s.city, s.country].filter(Boolean).join(', ') || '—'}
