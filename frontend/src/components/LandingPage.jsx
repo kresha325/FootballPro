@@ -112,43 +112,29 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#070b12] via-[#070b12]/55 to-[#070b12]/25 md:bg-gradient-to-r md:from-[#070b12]/90 md:via-[#070b12]/45 md:to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 pb-16 pt-28 text-center md:mx-0 md:max-w-xl md:px-10 md:pb-28 md:pt-28 md:text-left lg:px-16">
-          <div className="mb-6 flex flex-col items-center gap-3 animate-[fadeIn_0.7s_ease-out] md:items-start">
-            <img
-              src={APP_LOGO_SRC}
-              alt=""
-              className="h-14 w-14 object-contain drop-shadow-lg md:h-16 md:w-16"
-              width={64}
-              height={64}
-              decoding="async"
-            />
-            <p className="text-2xl font-extrabold uppercase tracking-[0.12em] text-white md:text-3xl">
-              {APP_BRAND_NAME}
-            </p>
-          </div>
-
-          <h1 className="mb-4 text-3xl font-extrabold leading-tight tracking-tight text-white animate-[fadeIn_0.9s_ease-out] md:text-5xl">
-            Zbulo. Zhvillo. <span className="text-amber-400">Shko Më Tej.</span>
-          </h1>
-
-          <p className="mx-auto mb-8 max-w-md text-base text-slate-200 animate-[fadeIn_1.1s_ease-out] md:mx-0 md:text-lg">
-            Lidh lojtarët, trajnerët, skautët dhe klubet — për të ndarë talentin dhe për të ndërtuar
-            karrierën në futboll.
+        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 pb-16 pt-28 text-left md:mx-0 md:max-w-xl md:px-10 md:pb-28 md:pt-28 lg:px-16">
+          <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.35em] text-amber-400 animate-[fadeIn_0.7s_ease-out] md:text-xs">
+            Talent has a future
           </p>
 
-          <div className="flex flex-col items-stretch justify-center gap-3 animate-[fadeIn_1.25s_ease-out] sm:flex-row sm:items-center md:justify-start">
+          <h1 className="mb-6 text-5xl font-extrabold leading-[1.05] tracking-tight text-white animate-[fadeIn_0.9s_ease-out] md:text-6xl lg:text-7xl">
+            <span className="block">Zbulo.</span>
+            <span className="block">Zhvillo.</span>
+            <span className="block text-amber-400">Shko Më Tej.</span>
+          </h1>
+
+          <p className="mb-8 max-w-md text-base leading-relaxed text-slate-200 animate-[fadeIn_1.1s_ease-out] md:text-lg">
+            Lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme — për të ndarë
+            talentin, për t&apos;u zbuluar dhe për të ndërtuar karrierën në futboll.
+          </p>
+
+          <div className="animate-[fadeIn_1.25s_ease-out]">
             <Link
               to="/register"
-              className="rounded-lg bg-amber-500 px-8 py-3.5 text-center font-bold text-slate-900 shadow-lg shadow-amber-500/25 transition-colors hover:bg-amber-400"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-8 py-3.5 text-base font-bold text-slate-900 shadow-lg shadow-amber-500/25 transition-colors hover:bg-amber-300"
             >
-              Regjistrohu Falas
+              Regjistrohu Falas <span aria-hidden>→</span>
             </Link>
-            <a
-              href="#cmimet"
-              className="rounded-lg border border-white/30 bg-black/25 px-8 py-3.5 text-center font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/40"
-            >
-              Shiko Çmimet
-            </a>
           </div>
         </div>
       </section>
