@@ -382,7 +382,9 @@ const Feed = () => {
       {/* Player Cards Section */}
       <UserCardsSection />
 
-      <FeedScoutingReport />
+      {['federation', 'scout', 'manager'].includes(String(user?.role || '').toLowerCase()) ? (
+        <FeedScoutingReport />
+      ) : null}
 
       <FeedLiveNow />
 

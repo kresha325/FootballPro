@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { scoutingAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { AGE_GROUP_OPTIONS, metricLabel, scoreTone, winnerForMetric } from '../utils/scoutingScore';
 import PersonName from './PersonName';
 
@@ -11,8 +12,12 @@ function avatarOrFallback(url) {
 }
 
 const METRICS = ['goals', 'assists', 'likes', 'followers'];
+const SCOUTING_REPORT_ROLES = new Set(['federation', 'scout', 'manager']);
 
 const FeedScoutingReport = () => {
+  const { user } = useAuth();
+  const canUseReport = SCOUTING_REPORT_ROLES.has(String(user?.role || '').toLowerCase());
+
   const [ageGroup, setAgeGroup] = useState('all');
   const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [candidates, setCandidates] = useState([]);
@@ -31,6 +36,10 @@ const FeedScoutingReport = () => {
   }, [candidates]);
 
   useEffect(() => {
+    if (!canUseReport) {
+      setLoadingCandidates(false);
+      return undefined;
+    }
     let cancelled = false;
 
     const loadCandidates = async () => {
@@ -66,7 +75,9 @@ const FeedScoutingReport = () => {
     return () => {
       cancelled = true;
     };
-  }, [ageGroup]);
+  }, [ageGroup, canUseReport]);
+
+  if (!canUseReport) return null;
 
   const runCompare = async () => {
     if (!canCompare) return;

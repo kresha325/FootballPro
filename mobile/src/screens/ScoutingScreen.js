@@ -33,7 +33,9 @@ function RecommendationCard({ item, onAiSummary, aiLoadingId }) {
 
 export default function ScoutingScreen() {
   const { user } = useAuth();
-  const canUseScouting = user?.role === 'scout' || user?.role === 'club';
+  const canUseScouting = ['scout', 'manager', 'federation'].includes(
+    String(user?.role || '').toLowerCase()
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -86,7 +88,9 @@ export default function ScoutingScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.accessTitle}>Scouting access is restricted</Text>
-        <Text style={styles.accessText}>Only users with scout or club role can use scouting recommendations.</Text>
+        <Text style={styles.accessText}>
+          Vetëm federation, scout dhe manager mund të përdorin scouting.
+        </Text>
       </View>
     );
   }
