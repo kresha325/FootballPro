@@ -1,23 +1,60 @@
 const db = require('../models');
+const path = require('path');
+const os = require('os');
 const Sponsor = db.Sponsor;
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 
 const serverError = (res, err) =>
   res.status(500).json({ msg: 'Gabim në server', error: err?.message });
 
+/** Local OS temp paths must never be persisted or served as logo URLs. */
+const isUnusableImagePath = (value) => {
+  if (!value || typeof value !== 'string') return true;
+  const s = value.trim();
+  if (!s) return true;
+  if (/^https?:\/\//i.test(s)) return false;
+  if (s.includes('/uploads/') || s.startsWith('uploads/')) return false;
+  const tmp = os.tmpdir() || '/tmp';
+  if (s.startsWith('/tmp/') || s.startsWith(tmp) || s.includes('/var/folders/')) return true;
+  // Absolute non-uploads filesystem paths
+  if (path.isAbsolute(s) && !s.startsWith('/uploads/')) return true;
+  return false;
+};
+
+const normalizeSponsorImage = (req, image) => {
+  if (!image || isUnusableImagePath(image)) return null;
+  return toAbsoluteUploadsUrl(req, image);
+};
+
 const normalizeSponsors = (req, sponsors) =>
   sponsors.map((s) => {
-    const sponsorObj = s.toJSON ? s.toJSON() : s;
-    if (sponsorObj.image) {
-      sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
-    }
+    const sponsorObj = s.toJSON ? s.toJSON() : { ...s };
+    sponsorObj.image = normalizeSponsorImage(req, sponsorObj.image);
     return sponsorObj;
   });
 
+/**
+ * Prefer Cloudinary/local URL written onto req.body by upload middleware.
+ * Never prefer multer's file.path (OS temp) — that was breaking sponsor logos.
+ */
 const resolveUploadedImage = (req) => {
+  const bodyImage = typeof req.body?.image === 'string' ? req.body.image.trim() : '';
+  if (bodyImage && !isUnusableImagePath(bodyImage)) {
+    return bodyImage;
+  }
+
   const file = req.files?.image?.[0] || req.file;
-  if (!file) return req.body?.image || null;
-  return file.path || file.secure_url || file.url || (file.filename ? `/uploads/${file.filename}` : null);
+  if (!file) return null;
+
+  if (file.secure_url && /^https?:\/\//i.test(file.secure_url)) return file.secure_url;
+  if (file.url && /^https?:\/\//i.test(file.url)) return file.url;
+  if (file.filename) return `/uploads/${file.filename}`;
+
+  // Local uploads disk only (not OS temp)
+  if (file.path && String(file.path).includes(`${path.sep}uploads${path.sep}`)) {
+    return `/uploads/${path.basename(file.path)}`;
+  }
+  return null;
 };
 
 const assertOwner = (sponsor, user) => {
@@ -75,7 +112,9 @@ exports.createSponsor = async (req, res) => {
       startDate: resolvedStart,
       endDate: resolvedEnd,
     });
-    res.status(201).json(sponsor);
+    const payload = sponsor.toJSON();
+    payload.image = normalizeSponsorImage(req, payload.image);
+    res.status(201).json(payload);
   } catch (err) {
     console.error('SPONSOR CREATE ERROR:', err);
     serverError(res, err);
@@ -100,7 +139,9 @@ exports.updateSponsor = async (req, res) => {
       startDate: startDate ?? sponsor.startDate,
       endDate: endDate ?? sponsor.endDate,
     });
-    res.json(sponsor);
+    const payload = sponsor.toJSON();
+    payload.image = normalizeSponsorImage(req, payload.image);
+    res.json(payload);
   } catch (err) {
     serverError(res, err);
   }

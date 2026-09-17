@@ -83,6 +83,12 @@ const Feed = () => {
   const [commentInputs, setCommentInputs] = useState({});
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletingComment, setDeletingComment] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editFile, setEditFile] = useState(null);
+  const [editFilePreview, setEditFilePreview] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [feedSearch, setFeedSearch] = useState('');
   // feed filter is controlled from Navbar (reads/writes localStorage)
 
@@ -229,19 +235,82 @@ const Feed = () => {
   }, [highlightedPostId, allPosts]);
 
   const handleDeletePost = async (postId) => {
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    if (!window.confirm('Je i sigurt që do ta fshish këtë postim?')) return;
     
     setDeletingPost(postId);
     try {
       await postsAPI.deletePost(postId);
       const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
-      await fetchPosts({ followedOnly }); // Refresh posts
-      alert('Post deleted successfully!');
+      await fetchPosts({ followedOnly });
+      alert('Postimi u fshi!');
     } catch (error) {
       console.error('Error deleting post:', error);
-      alert('Failed to delete post');
+      alert('Nuk u fshi postimi');
     } finally {
       setDeletingPost(null);
+    }
+  };
+
+  const openEditPost = (post) => {
+    setEditingPost(post);
+    setEditContent(post.content || '');
+    setEditLocation(post.location || '');
+    setEditFile(null);
+    setEditFilePreview(post.imageUrl || post.videoUrl || null);
+  };
+
+  const closeEditPost = () => {
+    setEditingPost(null);
+    setEditContent('');
+    setEditLocation('');
+    setEditFile(null);
+    setEditFilePreview(null);
+  };
+
+  const handleEditFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const isVideo = String(file.type || '').startsWith('video/');
+    const maxBytes = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      alert(isVideo ? 'Videoja është shumë e madhe (max 100MB).' : 'Fotoja është shumë e madhe (max 10MB).');
+      e.target.value = '';
+      return;
+    }
+    setEditFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setEditFilePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEditPost = async (e) => {
+    e.preventDefault();
+    if (!editingPost) return;
+    if (!editContent.trim() && !editFile && !editFilePreview) {
+      alert('Postimi duhet të ketë tekst ose media.');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const formData = new FormData();
+      formData.append('content', editContent);
+      formData.append('location', editLocation.trim());
+      if (editFile) {
+        if (String(editFile.type || '').startsWith('video/')) {
+          formData.append('video', editFile);
+        } else {
+          formData.append('image', editFile);
+        }
+      }
+      await postsAPI.updatePost(editingPost.id, formData);
+      closeEditPost();
+      const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
+      await fetchPosts({ followedOnly });
+    } catch (error) {
+      console.error('Error updating post:', error);
+      alert('Nuk u përditësua postimi');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -620,6 +689,13 @@ const Feed = () => {
                       S
                     </button>
                     <button
+                      onClick={() => openEditPost(post)}
+                      className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                      title="Ndrysho postimin"
+                    >
+                      ✏️
+                    </button>
+                    <button
                       onClick={() => handleDeletePost(post.id)}
                       disabled={deletingPost === post.id}
                       className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
@@ -902,6 +978,78 @@ const Feed = () => {
         )}
       </div>
     </div>
+
+    {editingPost && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg relative p-6">
+          <button
+            type="button"
+            className="absolute top-2 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-2xl"
+            onClick={closeEditPost}
+            aria-label="Mbyll"
+          >
+            &times;
+          </button>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Ndrysho postimin</h2>
+          <form onSubmit={handleSaveEditPost} className="space-y-4">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              placeholder="Shkruaj postimin…"
+            />
+            <input
+              type="text"
+              value={editLocation}
+              onChange={(e) => setEditLocation(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              placeholder="Lokacioni (opsionale)"
+            />
+            {editFilePreview && (
+              <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                {editFile && String(editFile.type || '').startsWith('video/') ? (
+                  <video src={editFilePreview} controls className="w-full max-h-56 object-contain bg-black" />
+                ) : String(editFilePreview).match(/\.(mp4|mov|webm)(\?|$)/i) ||
+                  (editingPost?.videoUrl && !editFile) ? (
+                  <video
+                    src={getFullUrl(editFilePreview)}
+                    controls
+                    className="w-full max-h-56 object-contain bg-black"
+                  />
+                ) : (
+                  <img
+                    src={getCloudinarySafeUrl(getFullUrl(editFilePreview))}
+                    alt="Preview"
+                    className="w-full max-h-56 object-contain"
+                  />
+                )}
+              </div>
+            )}
+            <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer">
+              <input type="file" accept="image/*,video/*" className="hidden" onChange={handleEditFileSelect} />
+              Ndrysho foton / videon
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={closeEditPost}
+                className="px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Anulo
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingEdit ? 'Duke ruajtur…' : 'Ruaj'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
 
     {/* Sidebar - Marketing Spaces */}
     <div className="lg:col-span-1 space-y-4 hidden lg:block">

@@ -28,13 +28,16 @@ export default function ProfileSponsorsPanel({
           className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
         >
           <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-            {sponsor.image ? (
+            {sponsor.image && getFullUrl(sponsor.image) && !String(sponsor.image).startsWith('/tmp/') ? (
               <img
                 src={getFullUrl(sponsor.image)}
                 alt={sponsor.name}
                 className="w-full h-full object-cover"
                 loading="lazy"
                 decoding="async"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             ) : (
               <span className="text-2xl">🎯</span>

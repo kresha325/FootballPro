@@ -3,10 +3,19 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { BACKEND_URL } from '../config/constants';
 
 function sponsorImageUri(s) {
-  const raw = s?.imagePreview || s?.image;
+  const raw = s?.imagePreview || s?.image || s?.logo || s?.logoUrl;
   if (!raw || typeof raw !== 'string') return null;
-  if (raw.startsWith('http')) return raw;
-  const path = raw.startsWith('/') ? raw : `/${raw}`;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (
+    trimmed.startsWith('/tmp/') ||
+    trimmed.includes('/var/folders/') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('/uploads/') && !/^https?:\/\//i.test(trimmed))
+  ) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return `${BACKEND_URL}${path}`;
 }
 

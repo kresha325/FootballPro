@@ -160,6 +160,14 @@ export const postsAPI = {
     return API.post('/posts', data);
   },
   deletePost: (id) => API.delete(`/posts/${id}`),
+  updatePost: (id, data) => {
+    if (data instanceof FormData) {
+      return API.put(`/posts/${id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return API.put(`/posts/${id}`, data);
+  },
   likePost: (id) => API.post(`/likes/${id}`),
   unlikePost: (id) => API.delete(`/likes/${id}`),
   getComments: (postId) => API.get(`/comments/${postId}`),

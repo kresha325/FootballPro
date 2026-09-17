@@ -5,6 +5,7 @@ import {
   Animated,
   FlatList,
   Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -26,6 +27,7 @@ import {
   likePostRequest,
   postCommentsRequest,
   unlikePostRequest,
+  updatePostRequest,
 } from '../api/client';
 import ReportSheet from '../components/ReportSheet';
 import PostSponsorStrip, { SponsoredLabel } from '../components/PostSponsorStrip';
@@ -75,6 +77,7 @@ function FeedPagerPage({
   onOpenAuthorProfile,
   currentUserId,
   onDeletePost,
+  onEditPost,
   onDeleteComment,
   onReportPost,
   deletingPostId,
@@ -200,16 +203,30 @@ function FeedPagerPage({
               <Ionicons name={userMuted ? 'volume-mute' : 'volume-high'} size={22} color="#fff" />
             </TouchableOpacity>
           ) : null}
-          {isOwnPost && onDeletePost ? (
-            <TouchableOpacity
-              onPress={() => onDeletePost(item)}
-              style={styles.deleteBtn}
-              disabled={deletingPostId === item.id}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel="Delete post"
-            >
-              <Ionicons name="trash-outline" size={24} color="#fca5a5" />
-            </TouchableOpacity>
+          {isOwnPost && (onEditPost || onDeletePost) ? (
+            <>
+              {onEditPost ? (
+                <TouchableOpacity
+                  onPress={() => onEditPost(item)}
+                  style={styles.deleteBtn}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityLabel="Ndrysho postimin"
+                >
+                  <Ionicons name="create-outline" size={24} color="#93c5fd" />
+                </TouchableOpacity>
+              ) : null}
+              {onDeletePost ? (
+                <TouchableOpacity
+                  onPress={() => onDeletePost(item)}
+                  style={styles.deleteBtn}
+                  disabled={deletingPostId === item.id}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityLabel="Fshi postimin"
+                >
+                  <Ionicons name="trash-outline" size={24} color="#fca5a5" />
+                </TouchableOpacity>
+              ) : null}
+            </>
           ) : !isOwnPost && onReportPost ? (
             <TouchableOpacity
               onPress={() => onReportPost(item)}
@@ -410,6 +427,10 @@ export default function FeedPostPagerScreen() {
   const [reportTarget, setReportTarget] = useState(null);
   const [deletingCommentId, setDeletingCommentId] = useState(null);
   const [sharingPostId, setSharingPostId] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const onToggleShare = useCallback((postId) => {
     setSharingPostId((prev) => (prev === postId ? null : postId));
@@ -579,6 +600,46 @@ export default function FeedPostPagerScreen() {
     [navigation, user?.id]
   );
 
+  const onEditPost = useCallback((post) => {
+    if (!post?.id) return;
+    setEditingPost(post);
+    setEditContent(post.content || '');
+    setEditLocation(post.location || '');
+  }, []);
+
+  const onSaveEditPost = useCallback(async () => {
+    if (!editingPost?.id || savingEdit) return;
+    if (!String(editContent || '').trim() && !editingPost.imageUrl && !editingPost.videoUrl) {
+      Alert.alert('Gabim', 'Postimi duhet të ketë tekst ose media.');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await updatePostRequest(editingPost.id, {
+        content: editContent,
+        location: editLocation,
+      });
+      const updated = res?.data || {};
+      const next = {
+        ...editingPost,
+        content: updated.content ?? editContent,
+        location: updated.location ?? editLocation,
+        imageUrl: updated.imageUrl ?? editingPost.imageUrl,
+        videoUrl: updated.videoUrl ?? editingPost.videoUrl,
+      };
+      setPosts((prev) => prev.map((p) => (p.id === editingPost.id ? next : p)));
+      notifyParent(editingPost.id, {
+        content: next.content,
+        location: next.location,
+      });
+      setEditingPost(null);
+    } catch (err) {
+      setBannerError(extractErrorMessage(err, 'Nuk u përditësua postimi'));
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [editContent, editLocation, editingPost, notifyParent, savingEdit]);
+
   const onDeletePost = useCallback(
     (post) => {
       if (!post?.id || deletingPostId) return;
@@ -708,6 +769,7 @@ export default function FeedPostPagerScreen() {
         onOpenAuthorProfile={openAuthorProfile}
         currentUserId={user?.id}
         onDeletePost={onDeletePost}
+        onEditPost={onEditPost}
         onDeleteComment={onDeleteComment}
         onReportPost={onReportPost}
         deletingPostId={deletingPostId}
@@ -727,6 +789,7 @@ export default function FeedPostPagerScreen() {
       isDark,
       onDeleteComment,
       onDeletePost,
+      onEditPost,
       onReportPost,
       user?.id,
       navigation,
@@ -798,6 +861,36 @@ export default function FeedPostPagerScreen() {
         targetId={reportTarget}
         title="Raporto postimin"
       />
+      <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>
+        <View style={styles.editModalBackdrop}>
+          <View style={styles.editModalCard}>
+            <Text style={styles.editModalTitle}>Ndrysho postimin</Text>
+            <TextInput
+              value={editContent}
+              onChangeText={setEditContent}
+              multiline
+              style={styles.editModalInput}
+              placeholder="Shkruaj postimin…"
+              placeholderTextColor="#94a3b8"
+            />
+            <TextInput
+              value={editLocation}
+              onChangeText={setEditLocation}
+              style={[styles.editModalInput, styles.editModalLocation]}
+              placeholder="Lokacioni (opsionale)"
+              placeholderTextColor="#94a3b8"
+            />
+            <View style={styles.editModalActions}>
+              <TouchableOpacity onPress={() => setEditingPost(null)} style={styles.editModalCancel}>
+                <Text style={styles.editModalCancelText}>Anulo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onSaveEditPost} disabled={savingEdit} style={styles.editModalSave}>
+                <Text style={styles.editModalSaveText}>{savingEdit ? 'Duke ruajtur…' : 'Ruaj'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -859,6 +952,63 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  editModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  editModalCard: {
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#f8fafc',
+  },
+  editModalInput: {
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 10,
+    padding: 12,
+    minHeight: 90,
+    textAlignVertical: 'top',
+    color: '#f8fafc',
+    marginBottom: 10,
+    backgroundColor: '#020617',
+  },
+  editModalLocation: {
+    minHeight: 44,
+  },
+  editModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 4,
+  },
+  editModalCancel: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  editModalCancelText: {
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  editModalSave: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  editModalSaveText: {
+    color: '#fff',
+    fontWeight: '700',
   },
   noMedia: {
     ...StyleSheet.absoluteFillObject,

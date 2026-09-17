@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   Linking,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -29,6 +30,7 @@ import {
   postsRequest,
   streamsRequest,
   unlikePostRequest,
+  updatePostRequest,
 } from '../api/client';
 import FeedAdSlot from '../components/FeedAdSlot';
 import ListSearchBar from '../components/ListSearchBar';
@@ -99,6 +101,7 @@ function PostCard({
   onOpenAuthorProfile,
   currentUserId,
   onDeletePost,
+  onEditPost,
   onDeleteComment,
   deletingPostId,
   deletingCommentId,
@@ -183,16 +186,30 @@ function PostCard({
               <PostSponsorStrip sponsors={sponsors} isDark={isDark} variant="overlay" />
             </View>
           ) : null}
-          {isOwnPost && onDeletePost ? (
-            <TouchableOpacity
-              style={styles.deletePostBtn}
-              onPress={() => onDeletePost(item)}
-              disabled={deletingPostId === item.id}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Delete post"
-            >
-              <Ionicons name="trash-outline" size={20} color="#dc2626" />
-            </TouchableOpacity>
+          {isOwnPost ? (
+            <View style={styles.ownerActions}>
+              {onEditPost ? (
+                <TouchableOpacity
+                  style={styles.deletePostBtn}
+                  onPress={() => onEditPost(item)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Ndrysho postimin"
+                >
+                  <Ionicons name="create-outline" size={20} color="#2563eb" />
+                </TouchableOpacity>
+              ) : null}
+              {onDeletePost ? (
+                <TouchableOpacity
+                  style={styles.deletePostBtn}
+                  onPress={() => onDeletePost(item)}
+                  disabled={deletingPostId === item.id}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Fshi postimin"
+                >
+                  <Ionicons name="trash-outline" size={20} color="#dc2626" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : null}
         </View>
       </TouchableOpacity>
@@ -383,6 +400,10 @@ export default function FeedScreen({ navigation }) {
   const [sendingCommentPostId, setSendingCommentPostId] = useState(null);
   const [deletingPostId, setDeletingPostId] = useState(null);
   const [deletingCommentId, setDeletingCommentId] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [liveStreams, setLiveStreams] = useState([]);
   const [feedAds, setFeedAds] = useState([]);
   const [feedScope, setFeedScope] = useState('all');
@@ -649,12 +670,53 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
+  const onEditPost = (post) => {
+    if (!post?.id) return;
+    setEditingPost(post);
+    setEditContent(post.content || '');
+    setEditLocation(post.location || '');
+  };
+
+  const onSaveEditPost = async () => {
+    if (!editingPost?.id || savingEdit) return;
+    if (!String(editContent || '').trim() && !editingPost.imageUrl && !editingPost.videoUrl) {
+      Alert.alert('Gabim', 'Postimi duhet të ketë tekst ose media.');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await updatePostRequest(editingPost.id, {
+        content: editContent,
+        location: editLocation,
+      });
+      const updated = res?.data || {};
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === editingPost.id
+            ? {
+                ...p,
+                content: updated.content ?? editContent,
+                location: updated.location ?? editLocation,
+                imageUrl: updated.imageUrl ?? p.imageUrl,
+                videoUrl: updated.videoUrl ?? p.videoUrl,
+              }
+            : p
+        )
+      );
+      setEditingPost(null);
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Nuk u përditësua postimi'));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const onDeletePost = (post) => {
     if (!post?.id || deletingPostId) return;
-    Alert.alert('Delete post', 'Are you sure you want to delete this post?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Fshi postimin', 'Je i sigurt?', [
+      { text: 'Anulo', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Fshi',
         style: 'destructive',
         onPress: async () => {
           setDeletingPostId(post.id);
@@ -718,6 +780,7 @@ export default function FeedScreen({ navigation }) {
   }
 
   return (
+    <>
     <FlatList
       data={feedListData}
       keyExtractor={(item) => item.key}
@@ -807,6 +870,7 @@ export default function FeedScreen({ navigation }) {
             onOpenAuthorProfile={openAuthorProfile}
             currentUserId={user?.id}
             onDeletePost={onDeletePost}
+            onEditPost={onEditPost}
             onDeleteComment={onDeleteComment}
             deletingPostId={deletingPostId}
             deletingCommentId={deletingCommentId}
@@ -827,6 +891,37 @@ export default function FeedScreen({ navigation }) {
       }
       ListEmptyComponent={<Text style={styles.empty}>No posts yet.</Text>}
     />
+    <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>
+      <View style={styles.editModalBackdrop}>
+        <View style={[styles.editModalCard, isDark && styles.cardDark]}>
+          <Text style={[styles.editModalTitle, isDark && styles.textPrimaryDark]}>Ndrysho postimin</Text>
+          <TextInput
+            value={editContent}
+            onChangeText={setEditContent}
+            multiline
+            style={[styles.editModalInput, isDark && styles.editModalInputDark]}
+            placeholder="Shkruaj postimin…"
+            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+          />
+          <TextInput
+            value={editLocation}
+            onChangeText={setEditLocation}
+            style={[styles.editModalInput, styles.editModalLocation, isDark && styles.editModalInputDark]}
+            placeholder="Lokacioni (opsionale)"
+            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+          />
+          <View style={styles.editModalActions}>
+            <TouchableOpacity onPress={() => setEditingPost(null)} style={styles.editModalCancel}>
+              <Text style={styles.editModalCancelText}>Anulo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onSaveEditPost} disabled={savingEdit} style={styles.editModalSave}>
+              <Text style={styles.editModalSaveText}>{savingEdit ? 'Duke ruajtur…' : 'Ruaj'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -906,6 +1001,69 @@ const styles = StyleSheet.create({
   deletePostBtn: {
     marginLeft: 8,
     padding: 4,
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  editModalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#0f172a',
+  },
+  editModalInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    padding: 12,
+    minHeight: 90,
+    textAlignVertical: 'top',
+    color: '#0f172a',
+    marginBottom: 10,
+  },
+  editModalLocation: {
+    minHeight: 44,
+  },
+  editModalInputDark: {
+    borderColor: '#334155',
+    color: '#f8fafc',
+    backgroundColor: '#020617',
+  },
+  editModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 4,
+  },
+  editModalCancel: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  editModalCancelText: {
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  editModalSave: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  editModalSaveText: {
+    color: '#fff',
+    fontWeight: '700',
   },
   headerSponsorWrap: {
     marginLeft: 8,

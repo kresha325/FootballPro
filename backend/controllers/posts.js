@@ -129,7 +129,17 @@ exports.getPosts = async (req, res) => {
       const normalizedSponsors = allSponsors.map(s => {
         const sponsorObj = s.toJSON ? s.toJSON() : s;
         if (sponsorObj.image) {
-          sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+          const img = String(sponsorObj.image);
+          // Drop broken OS-temp paths saved before Cloudinary URL fix
+          if (
+            img.startsWith('/tmp/') ||
+            img.includes('/var/folders/') ||
+            (img.startsWith('/') && !img.startsWith('/uploads/') && !/^https?:\/\//i.test(img))
+          ) {
+            sponsorObj.image = null;
+          } else {
+            sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+          }
         }
         return sponsorObj;
       });
@@ -214,7 +224,16 @@ exports.getUserPosts = async (req, res) => {
       const normalizedSponsors = sponsors.map(s => {
         const sponsorObj = s.toJSON ? s.toJSON() : s;
         if (sponsorObj.image) {
-          sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+          const img = String(sponsorObj.image);
+          if (
+            img.startsWith('/tmp/') ||
+            img.includes('/var/folders/') ||
+            (img.startsWith('/') && !img.startsWith('/uploads/') && !/^https?:\/\//i.test(img))
+          ) {
+            sponsorObj.image = null;
+          } else {
+            sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
+          }
         }
         return sponsorObj;
       });
@@ -411,6 +430,80 @@ exports.deletePost = async (req, res) => {
     res.json({ msg: 'Post deleted' });
   } catch (err) {
     console.error('Delete post error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+exports.updatePost = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ msg: 'Unauthorized' });
+    }
+
+    const post = await Post.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!post) return res.status(404).json({ msg: 'Post not found' });
+
+    const { content, location, locationLat, locationLng, removeImage, removeVideo } = req.body;
+
+    if (content !== undefined) {
+      post.content = content;
+    }
+    if (location !== undefined) {
+      post.location = location === '' || location === null ? null : String(location).trim();
+    }
+    if (locationLat !== undefined) {
+      post.locationLat = locationLat === '' || locationLat === null ? null : locationLat;
+    }
+    if (locationLng !== undefined) {
+      post.locationLng = locationLng === '' || locationLng === null ? null : locationLng;
+    }
+
+    let imageUrl = post.imageUrl;
+    let videoUrl = post.videoUrl;
+
+    if (removeImage === true || removeImage === 'true') {
+      imageUrl = null;
+    }
+    if (removeVideo === true || removeVideo === 'true') {
+      videoUrl = null;
+    }
+
+    // Prefer body URLs set by upload middleware (Cloudinary / local)
+    if (req.body.image) {
+      imageUrl = req.body.image;
+      videoUrl = null;
+    }
+    if (req.body.video) {
+      videoUrl = req.body.video;
+      imageUrl = null;
+    }
+
+    if (req.files) {
+      if (!req.body.image && req.files.image && req.files.image[0]) {
+        imageUrl = `/uploads/${req.files.image[0].filename}`;
+        videoUrl = null;
+      }
+      if (!req.body.video && req.files.video && req.files.video[0]) {
+        videoUrl = `/uploads/${req.files.video[0].filename}`;
+        imageUrl = null;
+      }
+    }
+
+    const nextContent = post.content || '';
+    if (!nextContent.trim() && !imageUrl && !videoUrl) {
+      return res.status(400).json({ msg: 'Post must have content, image, or video' });
+    }
+
+    post.imageUrl = imageUrl;
+    post.videoUrl = videoUrl;
+    await post.save();
+
+    const postObj = post.toJSON();
+    if (postObj.imageUrl) postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
+    if (postObj.videoUrl) postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
+    res.json(postObj);
+  } catch (err) {
+    console.error('Update post error:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };

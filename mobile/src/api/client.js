@@ -143,6 +143,18 @@ export const unlikePostRequest = (postId) => api.delete(`/api/likes/${postId}`);
 export const postCommentsRequest = (postId) => api.get(`/api/comments/${postId}`);
 export const createCommentRequest = (postId, content) => api.post(`/api/comments/${postId}`, { content });
 export const deletePostRequest = (postId) => api.delete(`/api/posts/${postId}`);
+export const updatePostRequest = (postId, payload = {}) => {
+  const form = new FormData();
+  if (payload.content !== undefined) form.append('content', String(payload.content ?? ''));
+  if (payload.location !== undefined) form.append('location', String(payload.location ?? ''));
+  if (payload.removeImage) form.append('removeImage', 'true');
+  if (payload.removeVideo) form.append('removeVideo', 'true');
+  if (payload.image) form.append('image', payload.image);
+  if (payload.video) form.append('video', payload.video);
+  return api.put(`/api/posts/${postId}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const deleteCommentRequest = (commentId) => api.delete(`/api/comments/${commentId}`);
 export const followUserRequest = (userId) => api.post(`/api/profiles/${userId}/follow`);
 export const unfollowUserRequest = (userId) => api.delete(`/api/profiles/${userId}/unfollow`);

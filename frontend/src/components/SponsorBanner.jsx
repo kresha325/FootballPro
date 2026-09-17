@@ -1,4 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getFullUrl } from '../utils/mediaUrl';
+
+function sponsorLogoUrl(sponsor) {
+  const raw = sponsor?.imagePreview || sponsor?.image || sponsor?.logo || sponsor?.logoUrl;
+  if (!raw || typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  // Never try to load OS temp paths that were wrongly saved historically
+  if (
+    trimmed.startsWith('/tmp/') ||
+    trimmed.includes('/var/folders/') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('/uploads/') && !/^https?:\/\//i.test(trimmed))
+  ) {
+    return '';
+  }
+  return getFullUrl(trimmed);
+}
+
+const SponsorLogo = ({ sponsor, className }) => {
+  const [failed, setFailed] = useState(false);
+  const src = sponsorLogoUrl(sponsor);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return <span className={className?.includes('w-16') ? 'text-2xl' : 'text-lg'}>🎯</span>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={sponsor?.name || 'Sponsor'}
+      className={className}
+      onError={() => setFailed(true)}
+    />
+  );
+};
 
 const SponsorBanner = ({ sponsors, compact }) => {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -7,13 +46,12 @@ const SponsorBanner = ({ sponsors, compact }) => {
   useEffect(() => {
     if (sponsors.length > 1) {
       intervalRef.current = setInterval(() => {
-        setActiveIdx(idx => (idx + 1) % sponsors.length);
+        setActiveIdx((idx) => (idx + 1) % sponsors.length);
       }, 3000);
       return () => clearInterval(intervalRef.current);
-    } else {
-      setActiveIdx(0);
-      if (intervalRef.current) clearInterval(intervalRef.current);
     }
+    setActiveIdx(0);
+    if (intervalRef.current) clearInterval(intervalRef.current);
   }, [sponsors]);
 
   if (!sponsors.length) return null;
@@ -29,27 +67,17 @@ const SponsorBanner = ({ sponsors, compact }) => {
         title={sponsor.name}
         style={{ minHeight: 32 }}
       >
-        {(sponsor.imagePreview || sponsor.image) ? (
-          <img
-            src={
-              (sponsor.imagePreview || sponsor.image)
-                ? ((sponsor.imagePreview || sponsor.image).startsWith('http')
-                    ? (sponsor.imagePreview || sponsor.image)
-                    : `${import.meta.env.VITE_API_URL.replace('/api','')}${(sponsor.imagePreview || sponsor.image).startsWith('/') ? (sponsor.imagePreview || sponsor.image) : '/' + (sponsor.imagePreview || sponsor.image)}`)
-                : undefined
-            }
-            alt="Sponsor"
-            className="w-8 h-6 rounded object-cover border border-yellow-400 shadow"
-          />
-        ) : (
-          <span className="text-lg">🎯</span>
-        )}
+        <SponsorLogo
+          sponsor={sponsor}
+          className="w-8 h-6 rounded object-cover border border-yellow-400 shadow"
+        />
         <span className="font-bold text-xs text-gray-800 text-center break-words" style={{ maxWidth: 80 }}>
           {sponsor.name}
         </span>
       </a>
     );
   }
+
   return (
     <div className="flex justify-center mt-2 w-full">
       <a
@@ -60,21 +88,10 @@ const SponsorBanner = ({ sponsors, compact }) => {
         title={sponsor.name}
         style={{ minHeight: 56 }}
       >
-        {(sponsor.imagePreview || sponsor.image) ? (
-          <img
-            src={
-              (sponsor.imagePreview || sponsor.image)
-                ? ((sponsor.imagePreview || sponsor.image).startsWith('http')
-                    ? (sponsor.imagePreview || sponsor.image)
-                    : `${import.meta.env.VITE_API_URL.replace('/api','')}${(sponsor.imagePreview || sponsor.image).startsWith('/') ? (sponsor.imagePreview || sponsor.image) : '/' + (sponsor.imagePreview || sponsor.image)}`)
-                : undefined
-            }
-            alt="Sponsor"
-            className="w-16 h-10 rounded object-cover border border-yellow-400 shadow"
-          />
-        ) : (
-          <span className="text-2xl">🎯</span>
-        )}
+        <SponsorLogo
+          sponsor={sponsor}
+          className="w-16 h-10 rounded object-cover border border-yellow-400 shadow"
+        />
         <span className="font-bold text-base text-gray-800 text-center break-words" style={{ maxWidth: 180 }}>
           {sponsor.name}
         </span>
