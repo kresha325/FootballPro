@@ -56,3 +56,34 @@ const auth = async (req, res, next) => {
 
 module.exports = auth;
 module.exports.protect = auth;
+
+/** Attach req.user when a valid Bearer token is present; never fail the request. */
+module.exports.optionalAuth = async (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return next();
+  try {
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret);
+    const userId = decoded?.user?.id;
+    if (!userId) return next();
+    const dbUser = await User.findByPk(userId, {
+      attributes: [
+        'id',
+        'role',
+        'firstName',
+        'lastName',
+        'email',
+        'premium',
+        'verified',
+        'bannedAt',
+        'deletedAt',
+      ],
+    });
+    if (dbUser && !dbUser.deletedAt && !dbUser.bannedAt) {
+      req.user = dbUser.get({ plain: true });
+    }
+  } catch (_) {
+    /* ignore invalid token for optional auth */
+  }
+  return next();
+};

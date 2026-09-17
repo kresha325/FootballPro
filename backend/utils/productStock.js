@@ -55,6 +55,17 @@ function hoursLeftUntilExpiry(product, now = new Date()) {
 }
 
 async function purgeExpiredOutOfStockProducts() {
+  // Stamp unmarked zero-stock rows so the 48h TTL can start (legacy / missed updates).
+  const unmarked = await Product.findAll({
+    where: {
+      stock: { [Op.lte]: 0 },
+      outOfStockAt: null,
+    },
+  });
+  for (const product of unmarked) {
+    await product.update({ outOfStockAt: new Date() });
+  }
+
   const cutoff = new Date(Date.now() - OUT_OF_STOCK_TTL_MS);
   const expired = await Product.findAll({
     where: {

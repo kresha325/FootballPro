@@ -40,22 +40,21 @@ function productIncludeSeller() {
   ];
 }
 
-/** Hide listings that have been out of stock longer than TTL (cleanup may lag). */
+/** Storefront: only products with available stock. OOS rows stay in DB (seller can edit/restock) until TTL purge. */
 function activeListingWhere() {
-  const cutoff = new Date(Date.now() - OUT_OF_STOCK_TTL_HOURS * 60 * 60 * 1000);
   return {
-    [Op.or]: [
-      { stock: { [Op.gt]: 0 } },
-      { outOfStockAt: null },
-      { outOfStockAt: { [Op.gt]: cutoff } },
-    ],
+    stock: { [Op.gt]: 0 },
   };
 }
 
 exports.getProducts = async (req, res) => {
   try {
-    // Best-effort purge so storefront stays clean even if interval missed a beat.
-    purgeExpiredOutOfStockProducts().catch(() => {});
+    // Await purge so expired OOS rows are removed before we read the catalog.
+    try {
+      await purgeExpiredOutOfStockProducts();
+    } catch (_) {
+      /* best-effort */
+    }
 
     const products = await Product.findAll({
       where: activeListingWhere(),
@@ -77,13 +76,22 @@ exports.getProduct = async (req, res) => {
     if (!product) return res.status(404).json({ msg: 'Product not found' });
 
     const stockN = parseStock(product.stock, 0) ?? 0;
+    const isOwner = req.user?.id != null && Number(req.user.id) === Number(product.sellerId);
     const expired =
       stockN <= 0 &&
       product.outOfStockAt &&
       Date.now() - new Date(product.outOfStockAt).getTime() >
         OUT_OF_STOCK_TTL_HOURS * 60 * 60 * 1000;
-    if (expired) {
-      // Soft-hide until purge interval removes it.
+
+    // Public catalog: hide out-of-stock. Owner can still open during the 48h restock window.
+    if (stockN <= 0 && (!isOwner || expired)) {
+      if (expired) {
+        try {
+          await product.destroy();
+        } catch (_) {
+          /* ignore */
+        }
+      }
       return res.status(404).json({ msg: 'Product not found' });
     }
 

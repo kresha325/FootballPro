@@ -58,12 +58,15 @@ exports.searchEverything = async (req, res) => {
     });
 
     const products = await Product.findAll({
-      where: q ? {
-        [Op.or]: [
-          { name: { [Op.iLike]: `%${q}%` } },
-          { description: { [Op.iLike]: `%${q}%` } },
-        ],
-      } : {},
+      where: q
+        ? {
+            stock: { [Op.gt]: 0 },
+            [Op.or]: [
+              { name: { [Op.iLike]: `%${q}%` } },
+              { description: { [Op.iLike]: `%${q}%` } },
+            ],
+          }
+        : { stock: { [Op.gt]: 0 } },
       attributes: ['id', 'name', 'description', 'price', 'category', 'imageUrl', 'stock', 'sellerId'],
       limit: SEARCH_LIMIT,
     });
