@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "X TALENTI",
-    "slug": "x-talenti",
+    "slug": "footballpro-mobile",
     "scheme": ["xtalenti", "footballpro"],
     "version": "1.0.0",
     "orientation": "portrait",

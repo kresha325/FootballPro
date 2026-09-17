@@ -63,6 +63,7 @@ import PublicProfileVideosTab from '../components/publicProfile/PublicProfileVid
 import { useAuth } from '../context/AuthContext';
 import { openTournamentDetail, openUserProfile } from '../utils/openUserProfile';
 import { APP_BRAND_NAME } from '../config/branding';
+import NotificationHeaderButton from '../components/NotificationHeaderButton';
 
 const COVER_HEIGHT = 168;
 const AVATAR_SIZE = 96;
@@ -77,7 +78,7 @@ function roleLabel(role) {
 export default function PublicProfileScreen({ route, navigation }) {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { user: me } = useAuth();
+  const { user: me, logout } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [postCount, setPostCount] = useState(0);
@@ -160,13 +161,37 @@ export default function PublicProfileScreen({ route, navigation }) {
       headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
       headerRight: profile && isSelf
         ? () => (
-            <TouchableOpacity
-              onPress={() => promptShareProfileCv(profile)}
-              style={{ paddingHorizontal: 12 }}
-              accessibilityLabel="CV dixhitale"
-            >
-              <Ionicons name="share-outline" size={22} color="#0f766e" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
+              <NotificationHeaderButton />
+              <TouchableOpacity
+                onPress={() => promptShareProfileCv(profile)}
+                style={{ paddingHorizontal: 8 }}
+                accessibilityLabel="CV dixhitale"
+              >
+                <Ionicons name="share-outline" size={22} color="#0f766e" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert('Dil', 'Dal nga llogaria?', [
+                    { text: 'Anulo', style: 'cancel' },
+                    { text: 'Dil', style: 'destructive', onPress: () => logout() },
+                  ]);
+                }}
+                style={{ paddingHorizontal: 6 }}
+                accessibilityLabel="Dil"
+              >
+                <View
+                  style={{
+                    backgroundColor: '#ef4444',
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Dil</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           )
         : !isSelf && userId
           ? () => (
@@ -210,6 +235,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     isSelf,
     userId,
     iBlocked,
+    logout,
   ]);
 
   useEffect(() => {

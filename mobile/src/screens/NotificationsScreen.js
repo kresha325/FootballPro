@@ -148,16 +148,34 @@ export default function NotificationsScreen() {
     );
   }
 
+  const goBackToMoreMenu = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('MoreHome');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <TouchableOpacity
+          onPress={goBackToMoreMenu}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Kthehu te More"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={24} color="#0f766e" />
+          <Text style={styles.backLabel}>Menu</Text>
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Njoftimet</Text>
           {notificationsCount > 0 ? (
             <Text style={styles.unreadHint}>{notificationsCount} të palexuara</Text>
           ) : null}
         </View>
-        <TouchableOpacity onPress={onMarkAll} disabled={markingAll}>
+        <TouchableOpacity onPress={onMarkAll} disabled={markingAll} style={styles.markAllBtn}>
           <Text style={styles.headerAction}>{markingAll ? '...' : 'Shënoji të gjitha'}</Text>
         </TouchableOpacity>
       </View>
@@ -200,16 +218,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingHorizontal: 10,
+    paddingTop: 10,
     paddingBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 6,
   },
+  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 64 },
+  backLabel: { color: '#0f766e', fontWeight: '700', fontSize: 15 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  markAllBtn: { minWidth: 64, alignItems: 'flex-end' },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
   unreadHint: { color: '#dc2626', fontWeight: '700', fontSize: 13, marginTop: 2 },
-  headerAction: { color: '#0f766e', fontWeight: '700' },
+  headerAction: { color: '#0f766e', fontWeight: '700', fontSize: 12 },
   list: { padding: 12 },
   row: {
     backgroundColor: '#fff',

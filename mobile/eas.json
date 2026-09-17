@@ -7,6 +7,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "node": "22.22.0",
       "android": {
         "buildType": "apk"
       },
@@ -19,6 +20,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "node": "22.22.0",
       "android": {
         "buildType": "apk"
       },
@@ -31,17 +33,20 @@
     },
     "production": {
       "autoIncrement": true,
+      "node": "22.22.0",
       "android": {
         "buildType": "app-bundle"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "BACKEND_URL": "https://footballpro.onrender.com",
         "WEB_APP_URL": "https://xtalenti.com",
         "ALLOW_MOBILE_DIGITAL_PURCHASES": "true",
-        "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
+        "EAS_PROJECT_ID": "3352bbbe-2f86-4665-9a67-e0499d1051bc",
+        "YARN_IGNORE_ENGINES": "1"
       }
     }
   },

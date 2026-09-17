@@ -60,7 +60,13 @@ export async function ensurePushPermissions() {
   const current = await Notifications.getPermissionsAsync();
   let status = current.status;
   if (status !== 'granted') {
-    const requested = await Notifications.requestPermissionsAsync();
+    const requested = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
     status = requested.status;
   }
 

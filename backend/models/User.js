@@ -126,6 +126,11 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  /** Last time the user went fully offline (no sockets left). */
+  lastSeenAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

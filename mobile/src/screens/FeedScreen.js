@@ -227,6 +227,8 @@ function PostCard({
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
             isLooping={false}
+            isMuted={false}
+            volume={1}
           />
           {onOpenPost ? (
             <TouchableOpacity
@@ -408,16 +410,20 @@ export default function FeedScreen({ navigation }) {
 
   const openPostFullscreen = useCallback(
     (post) => {
-      const index = posts.findIndex((p) => p.id === post.id);
+      if (!post?.id) return;
+      const index = posts.findIndex((p) => String(p.id) === String(post.id));
       navigation.navigate('FeedPostPager', {
         posts,
-        initialIndex: Math.max(0, index),
+        initialPostId: post.id,
+        initialIndex: index >= 0 ? index : 0,
         onPostUpdated: (postId, updates) => {
           if (updates?.deleted) {
-            setPosts((prev) => prev.filter((p) => p.id !== postId));
+            setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
             return;
           }
-          setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...updates } : p)));
+          setPosts((prev) =>
+            prev.map((p) => (String(p.id) === String(postId) ? { ...p, ...updates } : p))
+          );
         },
       });
     },

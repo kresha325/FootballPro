@@ -135,6 +135,8 @@ export default function PublicProfilePostsTab({ posts = [], theme }) {
                   useNativeControls
                   resizeMode={ResizeMode.CONTAIN}
                   isLooping={false}
+                  isMuted={false}
+                  volume={1}
                 />
               </View>
             ) : null}

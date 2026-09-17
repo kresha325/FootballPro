@@ -186,8 +186,17 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        keyboardDismissMode="on-drag"
+      >
         {navigation.canGoBack() ? (
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="chevron-back" size={20} color="#0F172A" />
@@ -275,7 +284,12 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
           keyboardType="email-address"
+          spellCheck={false}
+          importantForAutofill="yes"
         />
         {mode !== 'forgot' ? (
           <>
@@ -285,6 +299,10 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="password"
             />
             {mode === 'register' ? (
               <TextInput
@@ -293,6 +311,9 @@ export default function LoginScreen() {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="newPassword"
               />
             ) : null}
           </>
@@ -328,7 +349,13 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#f0fdfa' },
-  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'flex-start',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 40,
+  },
   backBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 12 },
   backText: { color: '#0F172A', fontWeight: '600', fontSize: 15 },
   title: { fontSize: 30, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' },

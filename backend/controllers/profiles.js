@@ -1550,12 +1550,12 @@ exports.getFollowing = async (req, res) => {
       include: [{
         model: User,
         as: 'following',
-        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'],
+        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
         required: true,
         where: { deletedAt: null },
         include: [{
           model: Profile,
-          attributes: ['profilePhoto', 'bio', 'city', 'country'],
+          attributes: ['profilePhoto', 'bio', 'position', 'club', 'city', 'country'],
         }],
       }],
     });

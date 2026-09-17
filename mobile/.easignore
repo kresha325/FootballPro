@@ -1,0 +1,43 @@
+# When .easignore exists it replaces .gitignore for the upload.
+# Keep this complete so node_modules / Pods are never uploaded.
+
+# Dependencies & caches
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.*
+yarn-error.log
+yarn.lock
+.pnpm-store/
+
+# Native build artifacts (rebuilt on EAS)
+ios/Pods/
+ios/Pods/**
+ios/build/
+ios/build/**
+ios/**/*.xcworkspace/xcuserdata/
+ios/**/DerivedData/
+android/.gradle/
+android/app/build/
+android/build/
+android/.cxx/
+**/Pods/
+**/.gradle/
+
+# Local / docs / secrets
+dist/
+dist-check/
+dist-export-ios/
+.tmp-bundle/
+docs/
+mobile/docs/
+**/*.jks
+**/*.p8
+**/*.p12
+**/*.key
+**/*.mobileprovision
+.env
+.env.*
+!.env.remote.example
+.DS_Store
+*.orig.*

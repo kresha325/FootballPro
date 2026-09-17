@@ -264,6 +264,56 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
     const type = String(data?.type || '').toLowerCase();
     const safeBody = type === 'message' ? 'Ke një mesazh të ri' : body;
 
+    // App icon badge = unread bell notifications + unread chat messages
+    let badge = 0;
+    try {
+      const notifUnread = await Notification.count({
+        where: {
+          userId,
+          isRead: false,
+          type: { [Op.ne]: 'message' },
+        },
+      });
+      badge = Number(notifUnread) || 0;
+      // Best-effort message unread (same idea as /api/messaging/unread-count)
+      try {
+        const { Conversation, ConversationMember } = require('../models/Conversation');
+        const Message = require('../models/Message');
+        const conversations = await Conversation.findAll({
+          attributes: ['id'],
+          include: [
+            {
+              model: ConversationMember,
+              as: 'memberships',
+              where: { userId },
+              attributes: ['lastReadAt'],
+            },
+          ],
+        });
+        const msgCounts = await Promise.all(
+          conversations.map(async (conv) => {
+            const membership = conv.memberships && conv.memberships[0];
+            if (!membership) return 0;
+            return Message.count({
+              where: {
+                conversationId: conv.id,
+                senderId: { [Op.ne]: userId },
+                deleted: false,
+                createdAt: {
+                  [Op.gt]: membership.lastReadAt || new Date(0),
+                },
+              },
+            });
+          })
+        );
+        badge += msgCounts.reduce((a, b) => a + b, 0);
+      } catch (msgErr) {
+        console.warn('Push badge message count skipped:', msgErr?.message || msgErr);
+      }
+    } catch (badgeErr) {
+      console.warn('Push badge count failed:', badgeErr?.message || badgeErr);
+    }
+
     // Send to mobile
     if (user.pushTokenMobile && Expo.isExpoPushToken(user.pushTokenMobile)) {
       const message = {
@@ -272,6 +322,8 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
         title,
         body: safeBody,
         data,
+        badge,
+        priority: 'high',
       };
       await expo.sendPushNotificationsAsync([message]);
     }
@@ -284,6 +336,7 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
         body: safeBody,
         icon: '/icon.png', // Add icon
         data,
+        badge,
       });
       await webPush.sendNotification(subscription, payload);
     }

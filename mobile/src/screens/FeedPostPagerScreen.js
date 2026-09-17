@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -83,8 +83,14 @@ function FeedPagerPage({
   onToggleShare,
 }) {
   const [chromeHidden, setChromeHidden] = useState(false);
+  const [userMuted, setUserMuted] = useState(false);
   const bottomChromeAnim = useRef(new Animated.Value(0)).current;
   const topChromeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // New page becomes active → start with sound on (unless user muted).
+    if (isActive) setUserMuted(false);
+  }, [isActive]);
 
   const author = item?.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
   const authorId = postAuthorId(item);
@@ -157,7 +163,8 @@ function FeedPagerPage({
                 resizeMode={ResizeMode.CONTAIN}
                 isLooping
                 shouldPlay={isActive}
-                isMuted={!isActive}
+                isMuted={!isActive || userMuted}
+                volume={userMuted ? 0 : 1}
                 useNativeControls={false}
               />
             </View>
@@ -182,26 +189,38 @@ function FeedPagerPage({
         >
           <Ionicons name="chevron-down" size={28} color="#fff" />
         </TouchableOpacity>
-        {isOwnPost && onDeletePost ? (
-          <TouchableOpacity
-            onPress={() => onDeletePost(item)}
-            style={styles.deleteBtn}
-            disabled={deletingPostId === item.id}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Delete post"
-          >
-            <Ionicons name="trash-outline" size={24} color="#fca5a5" />
-          </TouchableOpacity>
-        ) : !isOwnPost && onReportPost ? (
-          <TouchableOpacity
-            onPress={() => onReportPost(item)}
-            style={styles.deleteBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Report post"
-          >
-            <Ionicons name="flag-outline" size={24} color="#fde68a" />
-          </TouchableOpacity>
-        ) : null}
+        <View style={styles.closeBarRight}>
+          {hasVideo ? (
+            <TouchableOpacity
+              onPress={() => setUserMuted((m) => !m)}
+              style={styles.muteBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel={userMuted ? 'Unmute' : 'Mute'}
+            >
+              <Ionicons name={userMuted ? 'volume-mute' : 'volume-high'} size={22} color="#fff" />
+            </TouchableOpacity>
+          ) : null}
+          {isOwnPost && onDeletePost ? (
+            <TouchableOpacity
+              onPress={() => onDeletePost(item)}
+              style={styles.deleteBtn}
+              disabled={deletingPostId === item.id}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Delete post"
+            >
+              <Ionicons name="trash-outline" size={24} color="#fca5a5" />
+            </TouchableOpacity>
+          ) : !isOwnPost && onReportPost ? (
+            <TouchableOpacity
+              onPress={() => onReportPost(item)}
+              style={styles.deleteBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Report post"
+            >
+              <Ionicons name="flag-outline" size={24} color="#fde68a" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       <Animated.View
@@ -347,17 +366,39 @@ export default function FeedPostPagerScreen() {
   const { height: winH, width: winW } = useWindowDimensions();
   const { isDark } = useTheme();
 
-  const { posts: routePosts = [], initialIndex = 0, onPostUpdated } = route.params || {};
+  const {
+    posts: routePosts = [],
+    initialIndex = 0,
+    initialPostId = null,
+    onPostUpdated,
+  } = route.params || {};
 
-  const rawLenInit = Array.isArray(routePosts) ? routePosts.length : 0;
-  const initialStartIdx = rawLenInit === 0 ? 0 : Math.min(Math.max(0, initialIndex), rawLenInit - 1);
-
-  const [posts, setPosts] = useState(() =>
-    (Array.isArray(routePosts) ? routePosts : []).map((p) => normalizePostSponsors(p))
+  const resolvedPosts = useMemo(
+    () => (Array.isArray(routePosts) ? routePosts : []).map((p) => normalizePostSponsors(p)),
+    [routePosts]
   );
+
+  const resolveStartIndex = useCallback(
+    (list) => {
+      const len = Array.isArray(list) ? list.length : 0;
+      if (len === 0) return 0;
+      if (initialPostId != null) {
+        const byId = list.findIndex((p) => String(p?.id) === String(initialPostId));
+        if (byId >= 0) return byId;
+      }
+      return Math.min(Math.max(0, Number(initialIndex) || 0), len - 1);
+    },
+    [initialIndex, initialPostId]
+  );
+
+  const initialStartIdx = resolveStartIndex(resolvedPosts);
+
+  const [posts, setPosts] = useState(resolvedPosts);
   const [activeIndex, setActiveIndex] = useState(initialStartIdx);
   const activeIndexRef = useRef(initialStartIdx);
+  const postsRef = useRef(resolvedPosts);
   const flatRef = useRef(null);
+  const initialScrollDoneRef = useRef(false);
   const [viewport, setViewport] = useState({ w: winW, h: winH });
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
   const [commentsByPostId, setCommentsByPostId] = useState({});
@@ -385,7 +426,9 @@ export default function FeedPostPagerScreen() {
 
   const patchPost = useCallback(
     (postId, updates) => {
-      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...updates } : p)));
+      setPosts((prev) =>
+        prev.map((p) => (String(p.id) === String(postId) ? { ...p, ...updates } : p))
+      );
       notifyParent(postId, updates);
     },
     [notifyParent]
@@ -395,9 +438,33 @@ export default function FeedPostPagerScreen() {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
+  useEffect(() => {
+    postsRef.current = posts;
+  }, [posts]);
+
+  const scrollToStartIndex = useCallback(
+    (idx, animated = false) => {
+      if (!flatRef.current || viewport.h <= 0 || !postsRef.current.length) return;
+      const len = postsRef.current.length;
+      const safe = Math.min(Math.max(0, idx), len - 1);
+      activeIndexRef.current = safe;
+      setActiveIndex(safe);
+      try {
+        flatRef.current.scrollToIndex({ index: safe, animated });
+      } catch (_e) {
+        flatRef.current.scrollToOffset({
+          offset: safe * viewport.h,
+          animated,
+        });
+      }
+    },
+    [viewport.h]
+  );
+
   useFocusEffect(
     useCallback(() => {
-      const nextIdx = Math.min(Math.max(0, initialIndex ?? 0), Math.max(0, posts.length - 1));
+      const nextIdx = resolveStartIndex(postsRef.current);
+      initialScrollDoneRef.current = false;
       activeIndexRef.current = nextIdx;
       setActiveIndex(nextIdx);
 
@@ -406,11 +473,19 @@ export default function FeedPostPagerScreen() {
       const p2 = p1?.getParent?.();
       p2?.setOptions?.({ tabBarStyle: { display: 'none', height: 0 } });
 
+      const t = requestAnimationFrame(() => {
+        scrollToStartIndex(nextIdx, false);
+        setTimeout(() => {
+          initialScrollDoneRef.current = true;
+        }, 150);
+      });
+
       return () => {
+        cancelAnimationFrame(t);
         p1?.setOptions?.({ tabBarStyle: undefined });
         p2?.setOptions?.({ tabBarStyle: undefined });
       };
-    }, [navigation, initialIndex, posts.length])
+    }, [navigation, initialPostId, initialIndex, resolveStartIndex, scrollToStartIndex])
   );
 
   const onRootLayout = useCallback((e) => {
@@ -424,15 +499,15 @@ export default function FeedPostPagerScreen() {
 
   useLayoutEffect(() => {
     if (!posts.length || viewport.h <= 0) return;
+    const idx = activeIndexRef.current;
     requestAnimationFrame(() => {
-      flatRef.current?.scrollToOffset({
-        offset: activeIndexRef.current * viewport.h,
-        animated: false,
-      });
+      scrollToStartIndex(idx, false);
+      initialScrollDoneRef.current = true;
     });
-  }, [viewport.h, viewport.w, posts.length]);
+  }, [viewport.h, viewport.w, posts.length, scrollToStartIndex]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (!initialScrollDoneRef.current) return;
     const i = viewableItems[0]?.index;
     if (typeof i === 'number') {
       setActiveIndex(i);
@@ -700,11 +775,21 @@ export default function FeedPostPagerScreen() {
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
         bounces={false}
+        initialScrollIndex={initialStartIdx > 0 ? initialStartIdx : undefined}
         getItemLayout={getItemLayout}
+        onScrollToIndexFailed={(info) => {
+          const wait = new Promise((r) => setTimeout(r, 80));
+          wait.then(() => {
+            flatRef.current?.scrollToOffset({
+              offset: (info.index || 0) * viewport.h,
+              animated: false,
+            });
+          });
+        }}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         keyboardShouldPersistTaps="handled"
-        extraData={`${viewport.h}-${viewport.w}`}
+        extraData={`${viewport.h}-${viewport.w}-${activeIndex}`}
       />
       <ReportSheet
         visible={reportTarget != null}
@@ -753,6 +838,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 50,
     elevation: 50,
+  },
+  closeBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  muteBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteBtn: {
     width: 44,

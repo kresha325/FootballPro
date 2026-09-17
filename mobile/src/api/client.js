@@ -214,6 +214,7 @@ export const markConversationReadRequest = (conversationId) =>
 export const editMessageRequest = (messageId, content) =>
   api.put(`/api/messaging/messages/${messageId}`, { content });
 export const deleteMessageRequest = (messageId) => api.delete(`/api/messaging/messages/${messageId}`);
+export const userOnlineStatusRequest = (userId) => api.get(`/api/users/${userId}/online`);
 
 export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });
 export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');

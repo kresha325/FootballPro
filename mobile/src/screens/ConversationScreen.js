@@ -30,8 +30,8 @@ import {
   extractErrorMessage,
   markConversationReadRequest,
   sendConversationMessageRequest,
+  userOnlineStatusRequest,
 } from '../api/client';
-import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
@@ -39,9 +39,13 @@ import {
   messageBelongsToConversation,
   normalizeMessagePayload,
 } from '../utils/messagingRealtime';
+import { formatPresenceLabel } from '../utils/presenceLabel';
 import ForwardMessageModal from '../components/messaging/ForwardMessageModal';
+import MessageActionsSheet from '../components/messaging/MessageActionsSheet';
 import ReplyPreview from '../components/messaging/ReplyPreview';
 import { mergeOthersRead, outboundMessageStatus } from '../utils/messageStatus';
+import * as Clipboard from 'expo-clipboard';
+import { replyPreviewText } from '../utils/messageActions';
 
 const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
 
@@ -117,7 +121,7 @@ function MessageStatusTicks({ status, mine }) {
   return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" style={styles.statusIcon} />;
 }
 
-function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus, onOpenSenderProfile, isDark }) {
+function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStatus, onOpenSenderProfile, isDark }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
@@ -125,6 +129,7 @@ function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus
   const timeLabel = formatMessageTime(message?.createdAt);
   const fileUri = messageFileUrl(message);
   const hasText = !!(message?.content && String(message.content).trim());
+  const openActions = !deleted ? onOpenActions : undefined;
 
   const openFileLink = () => {
     if (fileUri) Linking.openURL(fileUri).catch(() => {});
@@ -145,89 +150,125 @@ function MessageBubble({ message, mine, onLongPress, onOpenImage, outboundStatus
           }
         />
       ) : null}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onLongPress={!deleted ? onLongPress : undefined}
-        delayLongPress={400}
-        style={[styles.bubbleWrap, mine ? styles.bubbleWrapMine : styles.bubbleWrapOther]}
-      >
-        {!mine ? <Text style={[styles.sender, isDark && { color: '#94a3b8' }]}>{name}</Text> : null}
-        <View
-          style={[
-            styles.bubble,
-            mine ? styles.bubbleMine : styles.bubbleOther,
-            !mine && isDark && styles.bubbleOtherDark,
-          ]}
+      <View style={[styles.bubbleWrap, mine ? styles.bubbleWrapMine : styles.bubbleWrapOther]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onLongPress={openActions}
+          delayLongPress={350}
         >
-          {!deleted && message.replyTo ? (
-            <View style={[styles.replyQuote, mine && styles.replyQuoteMine]}>
-              <ReplyPreview message={message.replyTo} mine={mine} />
-            </View>
-          ) : null}
-          {deleted ? (
-            <Text style={[styles.bubbleText, mine && styles.bubbleTextMine, styles.deletedText]}>Mesazhi u fshi</Text>
-          ) : (
-            <>
-              {!deleted && fileUri && message.type === 'image' ? (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => onOpenImage?.(fileUri)}
-                  style={styles.mediaWrap}
-                >
-                  <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
-                </TouchableOpacity>
-              ) : null}
-              {!deleted && fileUri && message.type === 'video' ? (
-                <Video
-                  source={{ uri: fileUri }}
-                  style={styles.msgVideo}
-                  useNativeControls
-                  resizeMode={ResizeMode.CONTAIN}
-                />
-              ) : null}
-              {!deleted && fileUri && message.type === 'file' ? (
-                <TouchableOpacity style={styles.fileRow} onPress={openFileLink}>
-                  <Ionicons name="document-outline" size={22} color={mine ? '#e0f2f1' : '#0f766e'} />
-                  <Text style={[styles.fileName, mine && styles.fileNameMine]} numberOfLines={2}>
-                    {message.fileName || 'Skedar'}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-              {!deleted && fileUri && !message.type ? (
-                <TouchableOpacity activeOpacity={0.9} onPress={() => onOpenImage?.(fileUri)} style={styles.mediaWrap}>
-                  <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
-                </TouchableOpacity>
-              ) : null}
-              {hasText && message.type !== 'call' ? (
-                <Text
-                  style={[
-                    styles.bubbleText,
-                    mine && styles.bubbleTextMine,
-                    !mine && isDark && styles.bubbleTextDark,
-                    fileUri && styles.bubbleTextAfterMedia,
-                  ]}
-                >
-                  {message.content}
-                </Text>
-              ) : null}
-              {message.type === 'call' && message.content ? (
-                <Text style={[styles.callBubbleText, mine && styles.callBubbleTextMine]}>
-                  {message.content}
-                </Text>
-              ) : null}
-            </>
-          )}
-          {!deleted && message?.edited ? (
-            <Text style={[styles.editedHint, mine && styles.editedHintMine]}>(ndryshuar)</Text>
-          ) : null}
-          <View style={styles.msgMetaRow}>
-            {timeLabel ? (
-              <Text style={[styles.msgTime, mine && styles.msgTimeMine]}>{timeLabel}</Text>
+          {!mine ? <Text style={[styles.sender, isDark && { color: '#94a3b8' }]}>{name}</Text> : null}
+          <View
+            style={[
+              styles.bubble,
+              mine ? styles.bubbleMine : styles.bubbleOther,
+              !mine && isDark && styles.bubbleOtherDark,
+            ]}
+          >
+            {!deleted && message.replyTo ? (
+              <View style={[styles.replyQuote, mine && styles.replyQuoteMine]}>
+                <ReplyPreview message={message.replyTo} mine={mine} />
+              </View>
             ) : null}
-            <MessageStatusTicks status={outboundStatus} mine={mine} />
+            {deleted ? (
+              <Text style={[styles.bubbleText, mine && styles.bubbleTextMine, styles.deletedText]}>
+                Mesazhi u fshi
+              </Text>
+            ) : (
+              <>
+                {fileUri && message.type === 'image' ? (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => onOpenImage?.(fileUri)}
+                    onLongPress={openActions}
+                    delayLongPress={350}
+                    style={styles.mediaWrap}
+                  >
+                    <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
+                  </TouchableOpacity>
+                ) : null}
+                {fileUri && message.type === 'video' ? (
+                  <Video
+                    source={{ uri: fileUri }}
+                    style={styles.msgVideo}
+                    useNativeControls
+                    resizeMode={ResizeMode.CONTAIN}
+                    isMuted={false}
+                    volume={1}
+                  />
+                ) : null}
+                {fileUri && message.type === 'file' ? (
+                  <TouchableOpacity
+                    style={styles.fileRow}
+                    onPress={openFileLink}
+                    onLongPress={openActions}
+                    delayLongPress={350}
+                  >
+                    <Ionicons name="document-outline" size={22} color={mine ? '#e0f2f1' : '#0f766e'} />
+                    <Text style={[styles.fileName, mine && styles.fileNameMine]} numberOfLines={2}>
+                      {message.fileName || 'Skedar'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                {fileUri && !message.type ? (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => onOpenImage?.(fileUri)}
+                    onLongPress={openActions}
+                    delayLongPress={350}
+                    style={styles.mediaWrap}
+                  >
+                    <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
+                  </TouchableOpacity>
+                ) : null}
+                {hasText && message.type !== 'call' ? (
+                  <Text
+                    style={[
+                      styles.bubbleText,
+                      mine && styles.bubbleTextMine,
+                      !mine && isDark && styles.bubbleTextDark,
+                      fileUri && styles.bubbleTextAfterMedia,
+                    ]}
+                  >
+                    {message.content}
+                  </Text>
+                ) : null}
+                {message.type === 'call' && message.content ? (
+                  <Text style={[styles.callBubbleText, mine && styles.callBubbleTextMine]}>
+                    {message.content}
+                  </Text>
+                ) : null}
+              </>
+            )}
+            {!deleted && message?.edited ? (
+              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>(ndryshuar)</Text>
+            ) : null}
+            <View style={styles.msgMetaRow}>
+              {timeLabel ? (
+                <Text style={[styles.msgTime, mine && styles.msgTimeMine]}>{timeLabel}</Text>
+              ) : (
+                <View />
+              )}
+              <View style={styles.metaRight}>
+                <MessageStatusTicks status={outboundStatus} mine={mine} />
+                {openActions ? (
+                  <TouchableOpacity
+                    onPress={openActions}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.moreBtn}
+                    accessibilityLabel="Veprime mesazhi"
+                  >
+                    <Ionicons
+                      name="ellipsis-horizontal"
+                      size={16}
+                      color={mine ? 'rgba(255,255,255,0.9)' : '#64748b'}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -243,6 +284,18 @@ export default function ConversationScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
   const [otherUserId, setOtherUserId] = useState(paramOtherUserId ?? null);
   const [isGroup, setIsGroup] = useState(!!paramIsGroup);
+  const [peerTitle, setPeerTitle] = useState(paramTitle || '');
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [peerLastSeen, setPeerLastSeen] = useState(null);
+
+  useEffect(() => {
+    if (paramTitle) setPeerTitle(paramTitle);
+  }, [paramTitle]);
+
+  useEffect(() => {
+    if (paramOtherUserId != null) setOtherUserId(paramOtherUserId);
+  }, [paramOtherUserId]);
+
   const [messages, setMessages] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -257,6 +310,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [previewImageUri, setPreviewImageUri] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [forwardMessage, setForwardMessage] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
   const [othersRead, setOthersRead] = useState([]);
   const [typingByUserId, setTypingByUserId] = useState({});
   const typingTimeoutRef = useRef(null);
@@ -268,24 +322,50 @@ export default function ConversationScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (paramOtherUserId != null || paramIsGroup) return undefined;
     let cancelled = false;
     conversationDetailRequest(conversationId)
       .then((res) => {
         if (cancelled) return;
         const data = res?.data;
-        setIsGroup(!!data?.isGroup);
-        if (!data?.isGroup && user?.id != null) {
-          const members = Array.isArray(data?.members) ? data.members : [];
-          const other = members.find((m) => Number(m.id) !== Number(user.id));
-          if (other?.id != null) setOtherUserId(other.id);
+        const group = !!data?.isGroup;
+        setIsGroup(group);
+        if (group) {
+          const name = data?.name || paramTitle || 'Grup';
+          setPeerTitle(name);
+          return;
+        }
+        if (user?.id == null) return;
+        const members = Array.isArray(data?.members) ? data.members : [];
+        const other = members.find((m) => Number(m.id) !== Number(user.id));
+        if (other?.id != null) {
+          setOtherUserId(other.id);
+          const name = `${other.firstName || ''} ${other.lastName || ''}`.trim();
+          if (name) setPeerTitle(name);
         }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [conversationId, paramOtherUserId, paramIsGroup, user?.id]);
+  }, [conversationId, paramTitle, user?.id]);
+
+  const refreshPeerPresence = useCallback(async (uid) => {
+    if (uid == null) return;
+    try {
+      const res = await userOnlineStatusRequest(uid);
+      setPeerOnline(!!res?.data?.online);
+      setPeerLastSeen(res?.data?.lastSeenAt || null);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isGroup || otherUserId == null) return undefined;
+    refreshPeerPresence(otherUserId);
+    const t = setInterval(() => refreshPeerPresence(otherUserId), 45000);
+    return () => clearInterval(t);
+  }, [isGroup, otherUserId, refreshPeerPresence, socketConnected]);
 
   const openCall = useCallback(
     (audioOnly) => {
@@ -296,7 +376,7 @@ export default function ConversationScreen({ route, navigation }) {
         }
         navigation.navigate('GroupCall', {
           conversationId,
-          title: paramTitle || 'Grup',
+          title: peerTitle || paramTitle || 'Grup',
           audioOnly,
         });
         return;
@@ -317,12 +397,63 @@ export default function ConversationScreen({ route, navigation }) {
         audioOnly,
       });
     },
-    [isGroup, navigation, otherUserId, conversationId, paramTitle]
+    [isGroup, navigation, otherUserId, conversationId, peerTitle, paramTitle]
   );
+
+  const headerName = useMemo(() => {
+    if (isGroup) return peerTitle || paramTitle || 'Grup';
+    return peerTitle || paramTitle || 'Bisedë';
+  }, [isGroup, peerTitle, paramTitle]);
+
+  const headerSubtitle = useMemo(() => {
+    if (isGroup) return 'Grup';
+    const peerTyping = Object.keys(typingByUserId).some(
+      (id) => Number(id) !== Number(user?.id) && Number(id) === Number(otherUserId)
+    );
+    return formatPresenceLabel({
+      online: peerOnline,
+      lastSeenAt: peerLastSeen,
+      typing: peerTyping,
+    });
+  }, [isGroup, typingByUserId, user?.id, otherUserId, peerOnline, peerLastSeen]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      ...(paramTitle ? { title: paramTitle } : {}),
+      title: headerName,
+      headerTitleAlign: 'center',
+      headerTitle: () => (
+        <TouchableOpacity
+          activeOpacity={otherUserId && !isGroup ? 0.7 : 1}
+          onPress={() => {
+            if (!isGroup && otherUserId) openUserProfile(navigation, otherUserId);
+          }}
+          style={styles.headerTitleWrap}
+          disabled={isGroup || otherUserId == null}
+        >
+          <Text style={[styles.headerTitleName, { color: colors.text }]} numberOfLines={1}>
+            {headerName}
+          </Text>
+          <View style={styles.headerSubtitleRow}>
+            {!isGroup ? (
+              <View
+                style={[
+                  styles.presenceDot,
+                  { backgroundColor: peerOnline ? '#22c55e' : colors.muted },
+                ]}
+              />
+            ) : null}
+            <Text
+              style={[
+                styles.headerTitleSub,
+                { color: peerOnline && !isGroup ? '#16a34a' : colors.muted },
+              ]}
+              numberOfLines={1}
+            >
+              {headerSubtitle}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <View style={styles.headerActions}>
           {(isGroup && conversationId) || (!isGroup && otherUserId) ? (
@@ -343,11 +474,21 @@ export default function ConversationScreen({ route, navigation }) {
               </TouchableOpacity>
             </>
           ) : null}
-          <NotificationHeaderButton />
         </View>
       ),
     });
-  }, [navigation, isGroup, otherUserId, conversationId, openCall, paramTitle]);
+  }, [
+    navigation,
+    isGroup,
+    otherUserId,
+    conversationId,
+    openCall,
+    headerName,
+    headerSubtitle,
+    peerOnline,
+    colors.text,
+    colors.muted,
+  ]);
 
   /** Rend kronologjik: më të vjetrit lart, më të rinjtë poshtë (pa `inverted` / pa scaleY). */
   const listData = useMemo(() => {
@@ -594,7 +735,9 @@ export default function ConversationScreen({ route, navigation }) {
       if (!messageBelongsToConversation(payload, conversationId)) return;
       const mid = payload?.messageId;
       if (mid == null) return;
-      setMessages((prev) => prev.filter((m) => m.id !== mid));
+      setMessages((prev) =>
+        prev.map((m) => (m.id === mid ? { ...m, deleted: true, content: '' } : m))
+      );
     };
 
     const onUserTyping = ({ userId, userName }) => {
@@ -618,12 +761,21 @@ export default function ConversationScreen({ route, navigation }) {
       setOthersRead((prev) => mergeOthersRead(prev, userId, readAt));
     };
 
+    const onPresenceUpdate = (payload) => {
+      if (payload?.userId == null || otherUserId == null) return;
+      if (Number(payload.userId) !== Number(otherUserId)) return;
+      setPeerOnline(!!payload.online);
+      if (payload.lastSeenAt) setPeerLastSeen(payload.lastSeenAt);
+      else if (payload.online) setPeerLastSeen(null);
+    };
+
     socket.on('newMessage', onNewMessage);
     socket.on('messageUpdated', onMessageUpdated);
     socket.on('messageDeleted', onMessageDeleted);
     socket.on('userTyping', onUserTyping);
     socket.on('userStoppedTyping', onUserStoppedTyping);
     socket.on('conversationRead', onConversationRead);
+    socket.on('presence:update', onPresenceUpdate);
 
     return () => {
       socket.off('connect', rejoinConversationRoom);
@@ -636,10 +788,11 @@ export default function ConversationScreen({ route, navigation }) {
       socket.off('userTyping', onUserTyping);
       socket.off('userStoppedTyping', onUserStoppedTyping);
       socket.off('conversationRead', onConversationRead);
+      socket.off('presence:update', onPresenceUpdate);
       emitStopTypingRef.current();
       socket.emit('leaveConversation', roomId);
     };
-  }, [conversationId, getSocket, socketConnected, user?.id]);
+  }, [conversationId, getSocket, socketConnected, user?.id, otherUserId]);
 
   const onSend = async () => {
     if (editing) {
@@ -783,7 +936,9 @@ export default function ConversationScreen({ route, navigation }) {
         onPress: async () => {
           try {
             await deleteMessageRequest(messageId);
-            setMessages((prev) => prev.filter((m) => m.id !== messageId));
+            setMessages((prev) =>
+              prev.map((m) => (m.id === messageId ? { ...m, deleted: true, content: '' } : m))
+            );
           } catch (err) {
             setError(extractErrorMessage(err, 'Nuk u fshi mesazhi'));
           }
@@ -792,43 +947,27 @@ export default function ConversationScreen({ route, navigation }) {
     ]);
   };
 
-  const showMessageActions = useCallback(
-    (message) => {
-      if (message?.deleted) return;
-      const mine = isMineMessage(message, user?.id);
-      const canEdit = mine && !message?.fileUrl && !!(message?.content || '').trim();
-      const buttons = [
-        {
-          text: 'Përgjigju',
-          onPress: () => {
-            setReplyTo(message);
-            setShowEmojiBar(false);
-            requestAnimationFrame(() => inputRef.current?.focus());
-          },
-        },
-        {
-          text: 'Përcjell',
-          onPress: () => setForwardMessage(message),
-        },
-      ];
-      if (canEdit) {
-        buttons.push({
-          text: 'Ndrysho',
-          onPress: () => setEditing({ id: message.id, text: message.content || '' }),
-        });
+  const copyMessageText = useCallback(async (message) => {
+    const text = (message?.content && String(message.content).trim()) || replyPreviewText(message);
+    if (!text) {
+      Alert.alert('Kopjo', 'Ky mesazh nuk ka tekst për të kopjuar.');
+      return;
+    }
+    try {
+      await Clipboard.setStringAsync(text);
+      if (Platform.OS === 'android') {
+        // ToastAndroid not always imported; Alert is fine
       }
-      if (mine) {
-        buttons.push({
-          text: 'Fshi',
-          style: 'destructive',
-          onPress: () => confirmDelete(message.id),
-        });
-      }
-      buttons.push({ text: 'Anulo', style: 'cancel' });
-      Alert.alert('Mesazhi', undefined, buttons);
-    },
-    [user?.id]
-  );
+      Alert.alert('Kopjuar', 'Teksti u kopjua.');
+    } catch (err) {
+      Alert.alert('Kopjo', extractErrorMessage(err, 'Nuk u kopjua teksti'));
+    }
+  }, []);
+
+  const openMessageActions = useCallback((message) => {
+    if (!message || message.deleted) return;
+    setActionMessage(message);
+  }, []);
 
   if (loading) {
     return (
@@ -889,7 +1028,7 @@ export default function ConversationScreen({ route, navigation }) {
             message={item}
             mine={isMineMessage(item, user?.id)}
             outboundStatus={outboundMessageStatus(item, othersRead, user?.id)}
-            onLongPress={() => showMessageActions(item)}
+            onOpenActions={() => openMessageActions(item)}
             onOpenImage={setPreviewImageUri}
             onOpenSenderProfile={(uid) => openUserProfile(navigation, uid)}
             isDark={isDark}
@@ -1021,6 +1160,35 @@ export default function ConversationScreen({ route, navigation }) {
         currentUserId={user?.id}
         onClose={() => setForwardMessage(null)}
       />
+      <MessageActionsSheet
+        visible={!!actionMessage}
+        message={actionMessage}
+        mine={isMineMessage(actionMessage, user?.id)}
+        colors={colors}
+        onClose={() => setActionMessage(null)}
+        onReply={(msg) => {
+          if (!msg) return;
+          setReplyTo(msg);
+          setEditing(null);
+          setShowEmojiBar(false);
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        onForward={(msg) => {
+          if (msg) setForwardMessage(msg);
+        }}
+        onCopy={(msg) => {
+          if (msg) copyMessageText(msg);
+        }}
+        onEdit={(msg) => {
+          if (!msg) return;
+          setReplyTo(null);
+          setEditing({ id: msg.id, text: msg.content || '' });
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        onDelete={(msg) => {
+          if (msg?.id != null) confirmDelete(msg.id);
+        }}
+      />
       <Modal visible={!!previewImageUri} transparent animationType="fade" onRequestClose={() => setPreviewImageUri(null)}>
         <TouchableOpacity style={styles.imageModalBackdrop} activeOpacity={1} onPress={() => setPreviewImageUri(null)}>
           {previewImageUri ? (
@@ -1035,6 +1203,34 @@ export default function ConversationScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   headerIconBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  headerTitleWrap: {
+    maxWidth: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  headerTitleName: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  headerSubtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    gap: 5,
+  },
+  presenceDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  headerTitleSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   container: { flex: 1, backgroundColor: '#f8fafc' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listFlex: { flex: 1 },
@@ -1067,9 +1263,18 @@ const styles = StyleSheet.create({
   msgMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 6,
-    gap: 4,
+    justifyContent: 'space-between',
+    marginTop: 4,
+    gap: 8,
+  },
+  metaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  moreBtn: {
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   msgTime: {
     fontSize: 10,

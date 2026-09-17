@@ -19,16 +19,29 @@ export default function NotificationHeaderButton() {
   const openNotifications = () => {
     const state = navigation.getState?.();
     const names = state?.routeNames;
-    if (Array.isArray(names) && names.includes('Notifications')) {
-      navigation.navigate('Notifications');
+    // Already inside More stack — push with MoreHome underneath for a reliable back target.
+    if (Array.isArray(names) && names.includes('Notifications') && names.includes('MoreHome')) {
+      navigation.navigate({
+        name: 'Notifications',
+        // Keep stack: MoreHome → Notifications (so back / More tab return to burger menu)
+      });
       return;
     }
     const parent = navigation.getParent?.();
+    const openInMore = (nav) => {
+      // Explicit stack so opening from Feed/Messages never leaves Notifications without back.
+      nav.navigate('More', {
+        state: {
+          routes: [{ name: 'MoreHome' }, { name: 'Notifications' }],
+          index: 1,
+        },
+      });
+    };
     if (parent?.navigate) {
-      parent.navigate('More', { screen: 'Notifications' });
+      openInMore(parent);
       return;
     }
-    navigation.navigate('More', { screen: 'Notifications' });
+    openInMore(navigation);
   };
 
   return (

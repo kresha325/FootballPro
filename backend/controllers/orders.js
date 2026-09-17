@@ -164,10 +164,11 @@ exports.createOrder = async (req, res) => {
 
       for (const productId of sortedProductIds) {
         const quantity = quantityByProductId[productId];
+        // Lock Product alone — Postgres rejects FOR UPDATE on the nullable side of an OUTER JOIN
+        // (Sequelize LEFT JOIN User as Seller when include + lock are combined).
         const product = await Product.findByPk(productId, {
           transaction: t,
           lock: t.LOCK.UPDATE,
-          include: [{ model: User, as: 'Seller', attributes: ['id', 'firstName', 'lastName'] }],
         });
 
         if (!product) {
@@ -190,7 +191,14 @@ exports.createOrder = async (req, res) => {
         const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
         const sellerId = product.sellerId;
         if (!bySeller.has(sellerId)) {
-          bySeller.set(sellerId, { lines: [], locked: [], total: 0, seller: product.Seller });
+          const seller =
+            sellerId != null
+              ? await User.findByPk(sellerId, {
+                  attributes: ['id', 'firstName', 'lastName'],
+                  transaction: t,
+                })
+              : null;
+          bySeller.set(sellerId, { lines: [], locked: [], total: 0, seller });
         }
         const bucket = bySeller.get(sellerId);
         bucket.lines.push({

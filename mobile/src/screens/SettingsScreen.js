@@ -442,6 +442,21 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Llogaria</Text>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => {
+            Alert.alert('Dil', 'Dal nga llogaria?', [
+              { text: 'Anulo', style: 'cancel' },
+              { text: 'Dil', style: 'destructive', onPress: () => logout() },
+            ]);
+          }}
+        >
+          <Text style={styles.logoutButtonText}>Dil nga llogaria</Text>
+        </TouchableOpacity>
+      </View>
+
       <View
         style={[
           styles.card,
@@ -535,6 +550,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   dangerButtonText: { color: '#fff', fontWeight: '800' },
+  logoutButton: {
+    marginTop: 4,
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  logoutButtonText: { color: '#fff', fontWeight: '800' },
   saveButton: {
     marginTop: 6,
     backgroundColor: '#0f766e',

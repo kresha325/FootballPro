@@ -202,7 +202,15 @@ function MessagingNavigator() {
   return (
     <MessagingStack.Navigator screenOptions={themed}>
       <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
-      <MessagingStack.Screen name="Conversation" component={ConversationScreen} options={{ title: APP_BRAND_NAME }} />
+      <MessagingStack.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={{
+          title: 'Bisedë',
+          headerTitle: 'Bisedë',
+          headerRight: () => null,
+        }}
+      />
       <MessagingStack.Screen
         name="OutgoingCall"
         component={OutgoingCallScreen}
@@ -263,7 +271,6 @@ function MarketplaceNavigator() {
 }
 
 function ProfileNavigator() {
-  const { logout } = useAuth();
   const themed = useThemedStackOptions();
 
   return (
@@ -274,16 +281,6 @@ function ProfileNavigator() {
         initialParams={{ ownProfile: true }}
         options={{
           title: 'Profili im',
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
-              <NotificationHeaderButton />
-              <TouchableOpacity onPress={logout} style={{ paddingHorizontal: 8 }}>
-                <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Dil</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          ),
         }}
       />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: APP_BRAND_NAME }} />
@@ -331,7 +328,11 @@ function MoreNavigator() {
       />
       <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videot' }} />
       <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Njoftimet', headerBackTitle: 'Menu' }}
+      />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen
         name="GoLiveBroadcast"
@@ -443,6 +444,18 @@ function AppTabs() {
           headerShown: false,
           tabBarBadge: formatBadge(notificationsCount),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const moreRoute = state?.routes?.find((r) => r.name === 'More');
+            const nestedIndex = moreRoute?.state?.index ?? 0;
+            // Second tap / when nested (e.g. Notifications) → return to burger menu
+            if (nestedIndex > 0) {
+              e.preventDefault();
+              navigation.navigate('More', { screen: 'MoreHome' });
+            }
+          },
+        })}
       />
     </Tabs.Navigator>
   );

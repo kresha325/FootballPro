@@ -69,6 +69,8 @@ export default function PublicProfileVideosTab({ videos = [], liveVideos = [], t
                   resizeMode={ResizeMode.CONTAIN}
                   useNativeControls
                   shouldPlay={false}
+                  isMuted={false}
+                  volume={1}
                 />
               </View>
               {v.title ? (

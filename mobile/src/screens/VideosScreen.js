@@ -34,7 +34,15 @@ function VideoCard({ item, onLike }) {
       <Text style={styles.author}>By: {author}</Text>
       {videoUri ? (
         <View style={styles.videoWrap}>
-          <Video source={{ uri: videoUri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+          <Video
+            source={{ uri: videoUri }}
+            style={styles.video}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            isLooping={false}
+            isMuted={false}
+            volume={1}
+          />
         </View>
       ) : null}
       <View style={styles.rowBetween}>

@@ -512,12 +512,29 @@ app.get('/share/cv/:id', async (req, res) => {
 
 
 // Endpoint për të kontrolluar nëse një user është online
-app.get('/api/users/:userId/online', (req, res) => {
+app.get('/api/users/:userId/online', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { isUserOnline } = require('./utils/socket');
-    const isOnline = isUserOnline(userId);
-    res.json({ userId, online: isOnline });
+    const { isUserOnline, getLastSeen, setLastSeenCache } = require('./utils/socket');
+    const online = isUserOnline(userId);
+    let lastSeenAt = getLastSeen(userId);
+    if (!online && !lastSeenAt) {
+      try {
+        const User = require('./models/User');
+        const row = await User.findByPk(userId, { attributes: ['lastSeenAt'] });
+        if (row?.lastSeenAt) {
+          lastSeenAt = row.lastSeenAt;
+          setLastSeenCache(userId, row.lastSeenAt);
+        }
+      } catch (_) {
+        /* column may not exist yet on older DBs */
+      }
+    }
+    res.json({
+      userId: Number(userId) || userId,
+      online,
+      lastSeenAt: lastSeenAt ? new Date(lastSeenAt).toISOString() : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -537,6 +554,28 @@ const {
 } = require('./utils/socket');
 
 const VideoCall = require('./models/VideoCall');
+const UserModel = require('./models/User');
+
+async function persistLastSeen(userId, lastSeenAt) {
+  if (userId == null || !lastSeenAt) return;
+  try {
+    await UserModel.update({ lastSeenAt }, { where: { id: Number(userId) } });
+  } catch (err) {
+    console.warn('persistLastSeen failed:', err?.message || err);
+  }
+}
+
+function emitPresence(userId, online, lastSeenAt) {
+  try {
+    io.emit('presence:update', {
+      userId: Number(userId) || userId,
+      online: !!online,
+      lastSeenAt: lastSeenAt ? new Date(lastSeenAt).toISOString() : null,
+    });
+  } catch (_) {
+    /* ignore */
+  }
+}
 
 io.on('connection', (socket) => {
   // Identity comes only from verified JWT (socketAuth middleware)
@@ -544,7 +583,8 @@ io.on('connection', (socket) => {
   if (authenticatedUserId) {
     socket.join(authenticatedUserId);
     userSockets.set(authenticatedUserId, socket.id);
-    markUserOnline(authenticatedUserId, socket.id);
+    const { becameOnline } = markUserOnline(authenticatedUserId, socket.id);
+    if (becameOnline) emitPresence(authenticatedUserId, true, null);
   }
   logSocketEvent(socket, 'connected', { userId: authenticatedUserId });
 
@@ -602,7 +642,8 @@ io.on('connection', (socket) => {
     socket.userId = authenticatedUserId;
     socket.join(authenticatedUserId);
     userSockets.set(authenticatedUserId, socket.id);
-    markUserOnline(authenticatedUserId, socket.id);
+    const { becameOnline } = markUserOnline(authenticatedUserId, socket.id);
+    if (becameOnline) emitPresence(authenticatedUserId, true, null);
     logSocketEvent(socket, 'join', { userId: authenticatedUserId, room: authenticatedUserId });
   });
 
@@ -645,8 +686,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const uid = authenticatedUserId || (socket.userId ? String(socket.userId) : '');
     if (uid) {
-      markUserOffline(uid, socket.id);
-      if (!isUserRealtimeOnline(uid)) userSockets.delete(uid);
+      const { becameOffline, lastSeenAt } = markUserOffline(uid, socket.id);
+      if (becameOffline) {
+        userSockets.delete(uid);
+        emitPresence(uid, false, lastSeenAt);
+        persistLastSeen(uid, lastSeenAt);
+      }
       logSocketEvent(socket, 'disconnect', { userId: uid });
     }
     logSocketEvent(socket, 'socket-disconnected', {});

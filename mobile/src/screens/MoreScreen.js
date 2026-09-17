@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -29,7 +29,7 @@ function MenuButton({ title, subtitle, onPress, badge, colors }) {
 }
 
 export default function MoreScreen({ navigation }) {
-  const { user, getSocket, socketConnected } = useAuth();
+  const { user, getSocket, socketConnected, logout } = useAuth();
   const { colors } = useTheme();
   const { notificationsCount, messagesCount, refresh } = useUnreadBadges(getSocket, socketConnected);
 
@@ -103,7 +103,10 @@ export default function MoreScreen({ navigation }) {
         title: 'Notifications',
         subtitle: 'Like, comment, follow, turne…',
         badge: notificationsCount,
-        onPress: () => navigation.navigate('Notifications'),
+        onPress: () =>
+          navigation.navigate({
+            name: 'Notifications',
+          }),
       })}
       {btn({
         title: 'Messages',
@@ -146,6 +149,16 @@ export default function MoreScreen({ navigation }) {
       {btn({ title: 'Sponsors', subtitle: 'Manage your sponsor deals', onPress: () => navigation.navigate('Sponsors') })}
       {btn({ title: 'Ads', subtitle: 'Create and view active ads', onPress: () => navigation.navigate('Ads') })}
       {btn({ title: 'Settings', subtitle: 'Profile and app preferences', onPress: () => navigation.navigate('Settings') })}
+      {btn({
+        title: 'Dil nga llogaria',
+        subtitle: 'Logout',
+        onPress: () => {
+          Alert.alert('Dil', 'Dal nga llogaria?', [
+            { text: 'Anulo', style: 'cancel' },
+            { text: 'Dil', style: 'destructive', onPress: () => logout() },
+          ]);
+        },
+      })}
       {canUseParentVerification
         ? btn({
             title: 'Parent Verification',

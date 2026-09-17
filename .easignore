@@ -1,0 +1,40 @@
+# EAS uploads from the git root. Keep the archive to the mobile app only.
+# (mobile/.easignore alone is not enough for this monorepo layout.)
+
+# Everything outside the app
+/backend/
+/frontend/
+/docs/
+/deployment/
+/mediasoup-server/
+/infra/
+/scripts/
+/*.md
+/*.txt
+/bash.exe.stackdump
+
+# Mobile: heavy / rebuildable paths
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/.expo-shared/
+/mobile/dist/
+/mobile/dist-check/
+/mobile/dist-export-ios/
+/mobile/.tmp-bundle/
+/mobile/docs/
+/mobile/ios/Pods/
+/mobile/ios/build/
+/mobile/android/.gradle/
+/mobile/android/app/build/
+/mobile/android/build/
+/mobile/android/.cxx/
+/mobile/**/*.jks
+/mobile/**/*.p8
+/mobile/**/*.p12
+/mobile/**/*.mobileprovision
+/mobile/.env
+/mobile/.env.*
+!/mobile/.env.remote.example
+**/.DS_Store
+**/npm-debug.*
+**/yarn-error.log
