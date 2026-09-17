@@ -124,11 +124,34 @@ export async function navigateFromNotification(notification, navigation) {
     return true;
   }
 
+  if (
+    link.includes('/club-roster') ||
+    notification?.metadata?.kind === 'club_membership_request' ||
+    notification?.entityType === 'club_member' ||
+    notification?.entityType === 'club_roster_request'
+  ) {
+    const tabMatch = link.match(/[?&]tab=([a-z_]+)/i)?.[1];
+    const tab = tabMatch === 'staff' || tabMatch === 'pending' || tabMatch === 'approved'
+      ? tabMatch
+      : 'pending';
+    tabs.navigate('More', {
+      screen: 'ClubRoster',
+      params: { tab },
+    });
+    return true;
+  }
+
   return false;
 }
 
 export function getNotificationIcon(notification) {
   if (notification?.metadata?.type === 'missed_call') return '📞';
+  if (
+    notification?.metadata?.kind === 'club_membership_request' ||
+    String(notification?.link || '').includes('/club-roster')
+  ) {
+    return '👥';
+  }
   switch (notification?.type) {
     case 'like':
       return '👍';

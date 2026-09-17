@@ -6,6 +6,30 @@ const ClubMember = require('../models/ClubMember');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { Op } = require('sequelize');
+const { createNotification } = require('../controllers/notifications');
+
+const notifyClubMembershipRequest = async ({ clubId, athleteId, membershipId, position }) => {
+  try {
+    const athlete = await User.findByPk(athleteId, {
+      attributes: ['id', 'firstName', 'lastName'],
+    });
+    if (!athlete || !clubId) return;
+    const pos = position ? ` si ${position}` : '';
+    await createNotification({
+      userId: clubId,
+      actorId: athleteId,
+      type: 'system',
+      title: 'Kërkesë anëtarësimi',
+      message: `${athlete.firstName} ${athlete.lastName} dëshiron të bashkohet me klubin${pos}`,
+      link: '/club-roster?tab=pending',
+      entityType: 'club_member',
+      entityId: membershipId,
+      metadata: { kind: 'club_membership_request' },
+    });
+  } catch (err) {
+    console.error('notifyClubMembershipRequest:', err?.message || err);
+  }
+};
 
 const hydrateAgeGroup = async (membership) => {
   if (!membership || !membership.athlete || !membership.athlete.Profile) {
@@ -243,6 +267,12 @@ router.post('/request', protect, async (req, res) => {
         if (position) existing.position = position;
         if (jerseyNumber !== undefined) existing.jerseyNumber = jerseyNumber;
         await existing.save();
+        await notifyClubMembershipRequest({
+          clubId: clubUser.id,
+          athleteId: req.user.id,
+          membershipId: existing.id,
+          position: existing.position || position,
+        });
       }
 
       const existingWithDetails = await ClubMember.findByPk(existing.id, {
@@ -266,6 +296,13 @@ router.post('/request', protect, async (req, res) => {
       status: 'pending',
       position,
       jerseyNumber,
+    });
+
+    await notifyClubMembershipRequest({
+      clubId: clubUser.id,
+      athleteId: req.user.id,
+      membershipId: membership.id,
+      position,
     });
 
     const membershipWithDetails = await ClubMember.findByPk(membership.id, {
@@ -314,7 +351,19 @@ router.put('/:membershipId/status', protect, async (req, res) => {
       if (req.body.competitionCategory) {
         membership.competitionCategory = String(req.body.competitionCategory).trim().toLowerCase();
       } else if (req.body.teamType && !membership.competitionCategory) {
-        membership.competitionCategory = req.body.teamType === 'first_team' ? 'senior' : req.body.teamType;
+        // first_team maps to senior only when explicitly first team; youth u* keep their band
+        const tt = String(req.body.teamType).trim().toLowerCase();
+        membership.competitionCategory = tt === 'first_team' ? 'senior' : tt;
+      }
+      if (req.body.teamType) {
+        membership.teamType = req.body.teamType;
+      }
+      // Youth competition categories must not stay as first_team
+      const cat = membership.competitionCategory
+        ? String(membership.competitionCategory).trim().toLowerCase()
+        : '';
+      if (cat.startsWith('u') && membership.teamType === 'first_team') {
+        membership.teamType = cat;
       }
       const clubProfile = await Profile.findOne({ where: { userId: membership.clubId } });
       const athleteProfile = await Profile.findOne({ where: { userId: membership.athleteId } });
@@ -382,6 +431,15 @@ router.patch('/:membershipId', protect, async (req, res) => {
       membership.competitionCategory = competitionCategory
         ? String(competitionCategory).trim().toLowerCase()
         : null;
+    }
+    // Align First Team with seniors only when liga category is youth
+    const cat = membership.competitionCategory
+      ? String(membership.competitionCategory).trim().toLowerCase()
+      : '';
+    if (cat.startsWith('u') && membership.teamType === 'first_team') {
+      membership.teamType = cat;
+    } else if (cat === 'senior' && (!teamType || teamType === 'first_team')) {
+      membership.teamType = 'first_team';
     }
     if (position) membership.position = position;
     if (jerseyNumber !== undefined) membership.jerseyNumber = jerseyNumber;

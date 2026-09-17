@@ -80,6 +80,12 @@ const Notifications = () => {
 
   const getNotificationIcon = (notification) => {
     if (notification?.metadata?.type === 'missed_call') return '📞';
+    if (
+      notification?.metadata?.kind === 'club_membership_request' ||
+      String(notification?.link || '').includes('/club-roster')
+    ) {
+      return '👥';
+    }
     switch (notification?.type) {
       case 'like': return '👍';
       case 'comment': return '💬';

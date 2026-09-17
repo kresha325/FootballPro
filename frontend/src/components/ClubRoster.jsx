@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { clubMembersAPI, clubStaffAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
+
+const VALID_ROSTER_TABS = new Set(['approved', 'pending', 'staff']);
 
 function ClubRoster() {
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
@@ -19,6 +22,8 @@ function ClubRoster() {
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
   const [members, setMembers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
@@ -26,7 +31,9 @@ function ClubRoster() {
   const [pendingStaffRoles, setPendingStaffRoles] = useState({});
   const [pendingStaffTeams, setPendingStaffTeams] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('approved'); // approved, pending, staff
+  const [activeTab, setActiveTab] = useState(
+    VALID_ROSTER_TABS.has(tabFromUrl) ? tabFromUrl : 'approved'
+  ); // approved, pending, staff
   const [teamFilter, setTeamFilter] = useState('all'); // all, first_team, women, men, youth teams
   const [listSearch, setListSearch] = useState('');
   const [showTeamSelectModal, setShowTeamSelectModal] = useState(false);
@@ -48,7 +55,6 @@ function ClubRoster() {
     { id: 'u15', label: 'U15', icon: '🎯' },
     { id: 'u13', label: 'U13', icon: '🎯' },
     { id: 'u11', label: 'U11', icon: '🎯' },
-    { id: 'u10', label: 'U10', icon: '🎯' },
     { id: 'u9', label: 'U9', icon: '🎯' },
   ];
 
@@ -62,7 +68,6 @@ function ClubRoster() {
     { id: 'u15', label: 'U15' },
     { id: 'u13', label: 'U13' },
     { id: 'u11', label: 'U11' },
-    { id: 'u10', label: 'U10' },
     { id: 'u9', label: 'U9' },
   ];
 
@@ -112,31 +117,93 @@ function ClubRoster() {
 
   const normalizeGroup = (value) => (value || '').toString().trim().toLowerCase();
 
+  const normalizeGender = (value) => {
+    const s = normalizeGroup(value);
+    if (!s) return '';
+    if (['m', 'male', 'mashkull', 'mask', 'man'].includes(s)) return 'male';
+    if (['f', 'female', 'femër', 'femer', 'woman', 'girl'].includes(s)) return 'female';
+    return s;
+  };
+
+  const memberAgeGroup = (membership) =>
+    normalizeGroup(membership?.athlete?.Profile?.ageGroup || membership?.athlete?.ageGroup);
+
+  const memberCompetitionCategory = (membership) =>
+    normalizeGroup(membership?.competitionCategory);
+
+  /** Club assignment wins over DOB ageGroup once liga/team is set. */
+  const clubAssignedBand = (membership) => {
+    const cat = memberCompetitionCategory(membership);
+    const teamType = normalizeGroup(membership?.teamType);
+    if (cat.startsWith('u') || cat === 'senior') return cat;
+    if (teamType.startsWith('u')) return teamType;
+    if (teamType === 'women' || teamType === 'men' || teamType === 'youth') return teamType;
+    return '';
+  };
+
+  const isSeniorMember = (membership) => {
+    const assigned = clubAssignedBand(membership);
+    if (assigned) return assigned === 'senior';
+    return memberAgeGroup(membership) === 'senior';
+  };
+
+  /** Badge label: youth must not show as First Team even if DB default is first_team. */
+  const teamBadgeForMember = (membership) => {
+    const teamType = membership?.teamType;
+    const ageGroup = memberAgeGroup(membership);
+    const assigned = clubAssignedBand(membership);
+
+    if (teamType === 'first_team' && !isSeniorMember(membership)) {
+      const youthId = assigned && assigned !== 'open' ? assigned : ageGroup;
+      const fromCat = competitionCategories.find((c) => c.id === youthId);
+      if (fromCat) return { id: fromCat.id, label: fromCat.label, icon: '🎯' };
+      const fromTeam = teamTypes.find((t) => t.id === youthId);
+      if (fromTeam) return fromTeam;
+      return { id: youthId || 'youth', label: (youthId || 'Youth').toUpperCase(), icon: '🎯' };
+    }
+
+    const fromTeam = teamTypes.find((t) => t.id === teamType);
+    if (fromTeam) return fromTeam;
+    return { id: teamType, label: teamType || 'Team', icon: '⚽' };
+  };
+
   const matchesTeamFilter = (membership) => {
     if (teamFilter === 'all') return true;
 
-    const teamType = membership?.teamType;
-    const gender = membership?.athlete?.gender;
-    const ageGroup = normalizeGroup(membership?.athlete?.Profile?.ageGroup);
-
-    if (teamType === teamFilter) return true;
-
-    if (teamFilter === 'men') return gender === 'male';
-    if (teamFilter === 'women') return gender === 'female';
-
-    if (teamFilter === 'youth') {
-      return ageGroup.startsWith('u');
-    }
+    const teamType = normalizeGroup(membership?.teamType);
+    const gender = normalizeGender(membership?.athlete?.gender);
+    const ageGroup = memberAgeGroup(membership);
+    const assigned = clubAssignedBand(membership);
 
     if (teamFilter === 'first_team') {
-      return ageGroup === 'senior' || teamType === 'first_team';
+      return isSeniorMember(membership);
+    }
+
+    if (teamFilter === 'men') {
+      if (gender === 'male' || teamType === 'men') return true;
+      if (gender === 'female' || teamType === 'women') return false;
+      return teamType !== 'women';
+    }
+
+    if (teamFilter === 'women') {
+      return gender === 'female' || teamType === 'women';
+    }
+
+    if (teamFilter === 'youth') {
+      const band = assigned || ageGroup;
+      return teamType === 'youth' || band.startsWith('u');
     }
 
     if (teamFilter.startsWith('u')) {
+      // Prefer club-approved liga/team over birthdate age band.
+      if (assigned.startsWith('u') || assigned === 'senior') {
+        return assigned === teamFilter;
+      }
+      if (teamType.startsWith('u')) return teamType === teamFilter;
       return ageGroup === teamFilter;
     }
 
-    return false;
+    return teamType === teamFilter;
   };
 
   const approvedMembersFiltered = useMemo(() => {
@@ -151,40 +218,49 @@ function ClubRoster() {
   }, [members, teamFilter, listSearch]);
 
   useEffect(() => {
-    if (user && user.role === 'club') {
-      fetchMembers();
+    if (VALID_ROSTER_TABS.has(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
     }
-  }, [user, activeTab]);
+  }, [tabFromUrl]);
 
-  const fetchMembers = async () => {
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'approved') next.delete('tab');
+    else next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'club') {
+      fetchRosterData();
+    }
+  }, [user]);
+
+  const fetchRosterData = async () => {
     try {
       setLoading(true);
-      if (activeTab === 'staff') {
-        const [activeRes, pendingRes] = await Promise.all([
-          clubStaffAPI.getClubStaff(user.id, { status: 'active' }),
-          clubStaffAPI.getClubStaff(user.id, { status: 'pending' })
-        ]);
-        setStaffMembers(activeRes.data || []);
-        setPendingStaff(pendingRes.data || []);
-        const roleMap = {};
-        const teamMap = {};
-        (pendingRes.data || []).forEach((staff) => {
-          roleMap[staff.id] = staff.staffRole || 'assistant_coach';
-          teamMap[staff.id] = staff.teamType || 'first_team';
-        });
-        setPendingStaffRoles(roleMap);
-        setPendingStaffTeams(teamMap);
-        return;
-      }
+      // Always load approved + pending (+ staff) so tab badges stay correct without clicking.
+      const [approvedRes, pendingRes, staffActiveRes, staffPendingRes] = await Promise.all([
+        clubMembersAPI.getClubMembers(user.id, 'approved'),
+        clubMembersAPI.getClubMembers(user.id, 'pending'),
+        clubStaffAPI.getClubStaff(user.id, { status: 'active' }),
+        clubStaffAPI.getClubStaff(user.id, { status: 'pending' }),
+      ]);
 
-      const status = activeTab === 'approved' ? 'approved' : 'pending';
-      const response = await clubMembersAPI.getClubMembers(user.id, status);
+      setMembers(approvedRes.data || []);
+      setPendingRequests(pendingRes.data || []);
+      setStaffMembers(staffActiveRes.data || []);
+      setPendingStaff(staffPendingRes.data || []);
 
-      if (activeTab === 'approved') {
-        setMembers(response.data);
-      } else {
-        setPendingRequests(response.data);
-      }
+      const roleMap = {};
+      const teamMap = {};
+      (staffPendingRes.data || []).forEach((staff) => {
+        roleMap[staff.id] = staff.staffRole || 'assistant_coach';
+        teamMap[staff.id] = staff.teamType || 'first_team';
+      });
+      setPendingStaffRoles(roleMap);
+      setPendingStaffTeams(teamMap);
     } catch (error) {
       console.error('Error fetching members:', error);
     } finally {
@@ -201,17 +277,37 @@ function ClubRoster() {
 
   const confirmApprove = async () => {
     try {
+      const isYouthCategory = selectedCompetitionCategory?.startsWith?.('u');
+      const isSeniorCategory =
+        selectedCompetitionCategory === 'senior' || selectedCompetitionCategory === 'open';
+      // First Team is seniors only; youth assignments use age/category teamType.
+      let teamTypeToSave = selectedTeamType;
+      if (selectedTeamType === 'first_team' && isYouthCategory) {
+        teamTypeToSave = selectedCompetitionCategory;
+      } else if (
+        selectedTeamType === 'first_team' &&
+        !isSeniorCategory &&
+        selectedCompetitionCategory !== 'open'
+      ) {
+        teamTypeToSave = selectedCompetitionCategory || 'youth';
+      }
+
       await clubMembersAPI.updateMembershipStatus(selectedMembership.id, 'approved');
       await clubMembersAPI.updateMember(selectedMembership.id, {
-        teamType: selectedTeamType,
-        competitionCategory: selectedCompetitionCategory,
+        teamType: teamTypeToSave,
+        competitionCategory:
+          selectedTeamType === 'first_team' && !isYouthCategory
+            ? selectedCompetitionCategory === 'open'
+              ? 'senior'
+              : selectedCompetitionCategory
+            : selectedCompetitionCategory,
       });
       
       setShowTeamSelectModal(false);
       setSelectedMembership(null);
       setSelectedTeamType('first_team');
       setSelectedCompetitionCategory('open');
-      fetchMembers();
+      fetchRosterData();
       alert('Athlete approved successfully!');
     } catch (error) {
       console.error('Error approving member:', error);
@@ -221,9 +317,13 @@ function ClubRoster() {
 
   const openCategoryModal = (membership) => {
     setSelectedMembership(membership);
+    const ageGroup = memberAgeGroup(membership);
     const fallback =
       membership.competitionCategory ||
-      (membership.teamType === 'first_team' ? 'senior' : membership.teamType) ||
+      (isSeniorMember(membership) ? 'senior' : ageGroup && ageGroup !== 'n/a' ? ageGroup : null) ||
+      (membership.teamType === 'first_team' && isSeniorMember(membership)
+        ? 'senior'
+        : membership.teamType) ||
       'open';
     setSelectedCompetitionCategory(fallback);
     setShowCategoryModal(true);
@@ -231,12 +331,18 @@ function ClubRoster() {
 
   const confirmCategoryChange = async () => {
     try {
-      await clubMembersAPI.updateMember(selectedMembership.id, {
-        competitionCategory: selectedCompetitionCategory,
-      });
+      const cat = String(selectedCompetitionCategory || '').trim().toLowerCase();
+      const patch = { competitionCategory: selectedCompetitionCategory };
+      // Keep teamType aligned: First Team only for seniors; youth liga → youth age team.
+      if (cat.startsWith('u')) {
+        patch.teamType = cat;
+      } else if (cat === 'senior') {
+        patch.teamType = 'first_team';
+      }
+      await clubMembersAPI.updateMember(selectedMembership.id, patch);
       setShowCategoryModal(false);
       setSelectedMembership(null);
-      fetchMembers();
+      fetchRosterData();
     } catch (error) {
       console.error('Error updating competition category:', error);
       alert('Nuk u përditësua kategoria e ligës');
@@ -246,7 +352,7 @@ function ClubRoster() {
   const handleReject = async (membershipId) => {
     try {
       await clubMembersAPI.updateMembershipStatus(membershipId, 'rejected');
-      fetchMembers();
+      fetchRosterData();
       alert('Request rejected');
     } catch (error) {
       console.error('Error rejecting member:', error);
@@ -261,7 +367,7 @@ function ClubRoster() {
 
     try {
       await clubMembersAPI.removeMember(membershipId);
-      fetchMembers();
+      fetchRosterData();
       alert('Athlete removed from club');
     } catch (error) {
       console.error('Error removing member:', error);
@@ -276,7 +382,7 @@ function ClubRoster() {
         staffRole: pendingStaffRoles[staffId] || undefined,
         teamType: pendingStaffTeams[staffId] || undefined,
       });
-      fetchMembers();
+      fetchRosterData();
       alert('Staff approved successfully!');
     } catch (error) {
       console.error('Error approving staff:', error);
@@ -287,7 +393,7 @@ function ClubRoster() {
   const handleRejectStaff = async (staffId) => {
     try {
       await clubStaffAPI.updateStaff(staffId, { status: 'inactive' });
-      fetchMembers();
+      fetchRosterData();
       alert('Staff request rejected');
     } catch (error) {
       console.error('Error rejecting staff:', error);
@@ -324,7 +430,7 @@ function ClubRoster() {
       {/* Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
         <button
-          onClick={() => setActiveTab('approved')}
+          onClick={() => selectTab('approved')}
           className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition text-sm ${
             activeTab === 'approved'
               ? 'bg-blue-600 text-white'
@@ -334,7 +440,7 @@ function ClubRoster() {
           👥 Squad ({members.length})
         </button>
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => selectTab('pending')}
           className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition relative text-sm ${
             activeTab === 'pending'
               ? 'bg-blue-600 text-white'
@@ -349,7 +455,7 @@ function ClubRoster() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('staff')}
+          onClick={() => selectTab('staff')}
           className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition text-sm ${
             activeTab === 'staff'
               ? 'bg-blue-600 text-white'
@@ -400,7 +506,9 @@ function ClubRoster() {
               </p>
             </div>
           ) : (
-            approvedMembersFiltered.map((membership) => (
+            approvedMembersFiltered.map((membership) => {
+              const teamBadge = teamBadgeForMember(membership);
+              return (
               <div
                 key={membership.id}
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition"
@@ -425,14 +533,14 @@ function ClubRoster() {
                       {membership.athlete?.firstName} {membership.athlete?.lastName}
                       {membership.athlete?.gender && (
                         <span className="ml-2 text-sm font-normal">
-                          {membership.athlete.gender === 'male' ? '👨' : membership.athlete.gender === 'female' ? '👩' : ''}
+                          {normalizeGender(membership.athlete.gender) === 'male' ? '👨' : normalizeGender(membership.athlete.gender) === 'female' ? '👩' : ''}
                         </span>
                       )}
                     </h3>
                     <div className="flex gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                       {membership.teamType && (
                         <span className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full font-medium">
-                          {teamTypes.find(t => t.id === membership.teamType)?.icon || '⚽'} {teamTypes.find(t => t.id === membership.teamType)?.label || membership.teamType}
+                          {teamBadge.icon} {teamBadge.label}
                         </span>
                       )}
                       <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
@@ -483,7 +591,8 @@ function ClubRoster() {
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
@@ -725,7 +834,7 @@ function ClubRoster() {
 
             {/* Team Type Selection */}
             <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-              {teamTypes.filter(t => t.id !== 'all' && t.id !== 'u10').map((team) => (
+              {teamTypes.filter(t => t.id !== 'all').map((team) => (
                 <button
                   key={team.id}
                   type="button"

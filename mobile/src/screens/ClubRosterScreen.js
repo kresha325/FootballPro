@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import {
   approveClubRosterRequest,
   clubRosterByClubRequest,
@@ -16,12 +17,17 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ClubRosterScreen() {
   const { user } = useAuth();
+  const route = useRoute();
   const [requests, setRequests] = useState([]);
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const initialTab =
+    route?.params?.tab === 'staff' || route?.params?.tab === 'approved' || route?.params?.tab === 'pending'
+      ? route.params.tab
+      : 'pending';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [athleteForm, setAthleteForm] = useState({ clubId: '', position: '', jerseyNumber: '', message: '' });
   const [publicRoster, setPublicRoster] = useState([]);
   const [staffActive, setStaffActive] = useState([]);
@@ -63,6 +69,13 @@ export default function ClubRosterScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const tab = route?.params?.tab;
+    if (tab === 'staff' || tab === 'approved' || tab === 'pending') {
+      setActiveTab(tab);
+    }
+  }, [route?.params?.tab]);
 
   const approved = useMemo(() => requests.filter((r) => r?.status === 'approved'), [requests]);
   const myRequests = useMemo(() => requests.filter((r) => r?.athleteId === user?.id), [requests, user?.id]);

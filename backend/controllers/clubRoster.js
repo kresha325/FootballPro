@@ -1,7 +1,7 @@
 const ClubRosterRequest = require('../models/ClubRosterRequest');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
-const { sendNotification } = require('./notifications');
+const { createNotification } = require('./notifications');
 const { sendEmail } = require('../services/emailService');
 const { PROFILE_ROSTER_ATTRIBUTES } = require('../utils/profileFields');
 
@@ -40,14 +40,20 @@ exports.submitRosterRequest = async (req, res) => {
       status: 'pending',
     });
 
-    // Notify club
+    // Notify club (in-app + push)
     const athlete = await User.findByPk(athleteId);
-    await sendNotification(
-      clubId,
-      'Roster Request',
-      `${athlete.firstName} ${athlete.lastName} wants to join your roster as ${position}`,
-      `/roster/requests`
-    );
+    const pos = position ? ` as ${position}` : '';
+    await createNotification({
+      userId: clubId,
+      actorId: athleteId,
+      type: 'system',
+      title: 'Kërkesë anëtarësimi',
+      message: `${athlete.firstName} ${athlete.lastName} dëshiron të bashkohet me klubin${pos}`,
+      link: '/club-roster?tab=pending',
+      entityType: 'club_roster_request',
+      entityId: request.id,
+      metadata: { kind: 'club_membership_request' },
+    });
 
     // Send email to club
     await sendEmail(
@@ -195,12 +201,17 @@ exports.approveRequest = async (req, res) => {
     await request.save();
 
     // Notify athlete
-    await sendNotification(
-      request.athleteId,
-      'Roster Request Approved! 🎉',
-      `${request.club.firstName} has approved your roster request as ${request.position}`,
-      `/profile/${clubId}`
-    );
+    await createNotification({
+      userId: request.athleteId,
+      actorId: clubId,
+      type: 'system',
+      title: 'Kërkesa u aprovua',
+      message: `${request.club.firstName} ka aprovuar kërkesën tuaj si ${request.position}`,
+      link: `/profile/${clubId}`,
+      entityType: 'club_roster_request',
+      entityId: request.id,
+      metadata: { kind: 'club_membership_approved' },
+    });
 
     // Send email to athlete
     await sendEmail(
@@ -282,12 +293,17 @@ exports.rejectRequest = async (req, res) => {
     await request.save();
 
     // Notify athlete
-    await sendNotification(
-      request.athleteId,
-      'Roster Request Update',
-      `${request.club.firstName} has reviewed your roster request`,
-      `/roster/my-requests`
-    );
+    await createNotification({
+      userId: request.athleteId,
+      actorId: clubId,
+      type: 'system',
+      title: 'Përditësim i kërkesës',
+      message: `${request.club.firstName} ka shqyrtuar kërkesën tuaj për formacion`,
+      link: '/club-roster',
+      entityType: 'club_roster_request',
+      entityId: request.id,
+      metadata: { kind: 'club_membership_rejected' },
+    });
 
     // Send email to athlete
     await sendEmail(
@@ -366,12 +382,17 @@ exports.removeFromRoster = async (req, res) => {
     await request.destroy();
 
     // Notify athlete
-    await sendNotification(
-      request.athleteId,
-      'Roster Update',
-      `You have been removed from the roster`,
-      `/profile`
-    );
+    await createNotification({
+      userId: request.athleteId,
+      actorId: clubId,
+      type: 'system',
+      title: 'Përditësim i formacionit',
+      message: 'Jeni hequr nga formacioni i klubit',
+      link: '/profile',
+      entityType: 'club_roster_request',
+      entityId: request.id,
+      metadata: { kind: 'club_membership_removed' },
+    });
 
     res.json({ msg: 'Player removed from roster' });
   } catch (error) {
