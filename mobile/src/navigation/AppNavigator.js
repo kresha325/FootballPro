@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
+import WelcomeOnboardingScreen, { WELCOME_ONBOARDING_KEY } from '../screens/WelcomeOnboardingScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import FeedScreen from '../screens/FeedScreen';
 import FeedPostPagerScreen from '../screens/FeedPostPagerScreen';
@@ -464,6 +466,25 @@ function AppTabs() {
 export default function AppNavigator() {
   const { token, isBootstrapping, pendingOnboarding } = useAuth();
   const { isDark, colors } = useTheme();
+  const [welcomeReady, setWelcomeReady] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const done = await AsyncStorage.getItem(WELCOME_ONBOARDING_KEY);
+        if (alive) setShowWelcome(done !== '1');
+      } catch (_e) {
+        if (alive) setShowWelcome(false);
+      } finally {
+        if (alive) setWelcomeReady(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const navTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;
@@ -481,7 +502,7 @@ export default function AppNavigator() {
     };
   }, [isDark, colors]);
 
-  if (isBootstrapping) {
+  if (isBootstrapping || !welcomeReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -502,15 +523,21 @@ export default function AppNavigator() {
           }}
         >
           {!token ? (
-            <>
-              <Stack.Screen name="Landing" component={LandingScreen} />
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen
-                name="ResetPassword"
-                component={ResetPasswordScreen}
-                options={{ headerShown: true, title: 'Rivendos fjalëkalimin' }}
-              />
-            </>
+            showWelcome ? (
+              <Stack.Screen name="WelcomeOnboarding">
+                {() => <WelcomeOnboardingScreen onDone={() => setShowWelcome(false)} />}
+              </Stack.Screen>
+            ) : (
+              <>
+                <Stack.Screen name="Landing" component={LandingScreen} />
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen
+                  name="ResetPassword"
+                  component={ResetPasswordScreen}
+                  options={{ headerShown: true, title: 'Rivendos fjalëkalimin' }}
+                />
+              </>
+            )
           ) : pendingOnboarding ? (
             <Stack.Screen
               name="RegisterOnboarding"

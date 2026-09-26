@@ -11,6 +11,8 @@ import ResetPassword from './components/ResetPassword';
 import ParentVerification from './components/ParentVerification';
 import ParentVerified from './components/ParentVerified';
 import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
+import WelcomeOnboarding, { isWelcomeOnboardingDone } from './components/WelcomeOnboarding';
+import LandingPage from './components/LandingPage';
 import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -48,7 +50,6 @@ import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import LandingPage from './components/LandingPage';
 import AuthCallback from './components/AuthCallback';
 import { APP_BRAND_NAME } from './config/branding';
 
@@ -167,7 +168,19 @@ function App() {
             <Route path="/terms" element={<LegalPage kind="terms" />} />
 
             {/* ROOT - landing page e re, ose feed nëse je i loguar */}
-            <Route path="/" element={user ? <Navigate to="/feed" /> : <LandingPage />} />
+            <Route path="/welcome" element={user ? <Navigate to="/feed" /> : <WelcomeOnboarding />} />
+            <Route
+              path="/"
+              element={
+                user ? (
+                  <Navigate to="/feed" />
+                ) : isWelcomeOnboardingDone() ? (
+                  <LandingPage />
+                ) : (
+                  <Navigate to="/welcome" replace />
+                )
+              }
+            />
 
             </Routes>
           </Suspense>
