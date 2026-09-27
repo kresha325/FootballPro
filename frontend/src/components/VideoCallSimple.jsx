@@ -856,10 +856,10 @@ export default function VideoCallSimple({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--xt-color-canvas)] text-white">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[var(--xt-color-gold)]"></div>
         </div>
       )}
       {/* Remote Video (Full Screen) */}
@@ -929,25 +929,25 @@ export default function VideoCallSimple({
 
         {/* Call Status Indicator - Mobile */}
         {callStatus === 'connected' && (
-          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
+          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-[var(--xt-color-success)] text-slate-950 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
             <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
             Lidhur
           </div>
         )}
         {/* Server-connected badge */}
         {serverConnected && (
-          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-green-600 text-white px-3 py-1 rounded-full z-60 text-sm">
+          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-gold-bright)] px-3 py-1 rounded-full z-60 text-sm border border-[var(--xt-color-border)]">
             Lidhuar (server)
           </div>
         )}
       </div>
 
       {/* Controls - Mobile Optimized */}
-      <div className="bg-gray-800 p-4 sm:p-6 flex justify-center items-center gap-3 sm:gap-4 pb-safe">
+      <div className="bg-[var(--xt-color-surface)] p-4 sm:p-6 flex justify-center items-center gap-3 sm:gap-4 pb-[max(env(safe-area-inset-bottom),1rem)] border-t border-[var(--xt-color-border)]">
         {callStatus === 'idle' && (
           <button
             onClick={startCall}
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-green-500 active:bg-green-600 flex items-center justify-center text-white shadow-lg"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--xt-color-gold)] active:bg-[var(--xt-color-gold-bright)] flex items-center justify-center text-white shadow-lg"
             aria-label="Thirr"
           >
             <PhoneIcon className="h-7 w-7 sm:h-8 sm:w-8" />
@@ -959,7 +959,7 @@ export default function VideoCallSimple({
             <button
               onClick={toggleMute}
               className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${
-                isMuted ? 'bg-red-500' : 'bg-gray-600 active:bg-gray-700'
+                isMuted ? 'bg-red-500' : 'bg-[var(--xt-color-surface-hover)] active:bg-[var(--xt-color-surface-raised)]'
               } text-white shadow-lg transition-colors`}
               aria-label={isMuted ? 'Hiq mute' : 'Mute'}
             >
@@ -978,7 +978,7 @@ export default function VideoCallSimple({
               <button
                 onClick={toggleVideo}
                 className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center ${
-                  isVideoOff ? 'bg-red-500' : 'bg-gray-600 active:bg-gray-700'
+                  isVideoOff ? 'bg-red-500' : 'bg-[var(--xt-color-surface-hover)] active:bg-[var(--xt-color-surface-raised)]'
                 } text-white shadow-lg transition-colors`}
                 aria-label={isVideoOff ? 'Aktivizo kamerën' : 'Fik kamerën'}
               >

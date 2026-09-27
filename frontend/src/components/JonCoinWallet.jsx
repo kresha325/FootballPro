@@ -17,6 +17,12 @@ function orderLinesText(o) {
   return lines.map((l) => `${l.name || 'Produkt'} × ${l.quantity}`).join(', ') || '—';
 }
 
+function transactionFlow(type) {
+  if (['purchase', 'reward'].includes(String(type || '').toLowerCase())) return 'incoming';
+  if (['spend', 'withdrawal'].includes(String(type || '').toLowerCase())) return 'outgoing';
+  return 'activity';
+}
+
 const JonCoinWallet = () => {
   const [balance, setBalance] = useState(0);
   const [withdrawFeePct, setWithdrawFeePct] = useState(5);
@@ -172,28 +178,29 @@ const JonCoinWallet = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 px-4 pb-12">
+    <div className="mx-auto min-h-screen max-w-5xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">XCoin Wallet</h2>
+        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Wallet</p><h1 className="mt-1 text-3xl font-black text-white">XCoin</h1></div>
         <Link
           to="/marketplace"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700"
+          className="btn btn-outline min-h-11 text-sm"
         >
           Shko te marketplace
         </Link>
       </div>
+      <div className="flex flex-wrap gap-2"><Link to="/marketplace" className="xt-badge hover:border-[var(--xt-color-gold)]">Tregu XCoin</Link><Link to="/premium" className="xt-badge hover:border-[var(--xt-color-gold)]">Abonimi Premium</Link></div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">1 XCoin = 1 € (referencë)</div>
-          <div className="mb-6 text-lg text-gray-900 dark:text-white">
-            Balanca: <span className="font-mono text-green-600 dark:text-green-400">{balance}</span>{' '}
-            <span className="text-gray-600 dark:text-gray-300">XCoin</span>
+        <div className="xt-card p-4 sm:p-6">
+          <div className="mb-2 text-sm text-[var(--xt-color-text-muted)]">Bilanci i disponueshëm</div>
+          <div className="mb-6 flex items-baseline gap-2 text-white">
+            <span className="font-mono text-4xl font-black tabular-nums text-[var(--xt-color-gold-bright)]">{balance}</span>
+            <span className="font-semibold text-[var(--xt-color-text-muted)]">XCoin</span>
           </div>
 
           <form onSubmit={handleBuy} className="space-y-3 mb-6">
-            <div className="font-semibold text-gray-900 dark:text-white">Bli XCoin</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="font-semibold text-[var(--xt-color-text)]">Bli XCoin</div>
+            <p className="text-xs text-[var(--xt-color-text-subtle)]">
               Në prodhim, blerjet mund të jenë në pritje derisa admin t’i konfirmojë, përveç nëse përdoret auto-approve në server.
             </p>
             <input
@@ -201,20 +208,20 @@ const JonCoinWallet = () => {
               placeholder="Shuma"
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input"
               min="1"
               required
             />
-            <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+            <button type="submit" className="btn btn-primary w-full">
               Bli XCoin
             </button>
           </form>
 
           <form onSubmit={handleWithdraw} className="space-y-3 mb-6">
-            <div className="font-semibold text-gray-900 dark:text-white">
+            <div className="font-semibold text-[var(--xt-color-text)]">
               Tërhiq ({withdrawFeePct}% komision në tërheqje)
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-[var(--xt-color-text-subtle)]">
               Nga shuma që tërheq nga wallet zbatohet komisioni; shitjet në marketplace nuk kanë komision veçmas.
             </p>
             <input
@@ -222,23 +229,23 @@ const JonCoinWallet = () => {
               placeholder="Shuma"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input"
               min="1"
               required
             />
-            <button type="submit" className="w-full bg-yellow-600 text-white py-2 rounded hover:bg-yellow-700">
+            <button type="submit" className="btn btn-outline w-full">
               Tërhiq
             </button>
           </form>
 
           <form onSubmit={handleTransfer} className="space-y-3">
-            <div className="font-semibold text-gray-900 dark:text-white">Transfer te përdorues tjetër</div>
+            <div className="font-semibold text-[var(--xt-color-text)]">Transfer te përdorues tjetër</div>
             <input
               type="number"
               placeholder="ID e marrësit"
               value={toUserId}
               onChange={(e) => setToUserId(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input"
               required
             />
             <input
@@ -246,19 +253,19 @@ const JonCoinWallet = () => {
               placeholder="Shuma"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="input"
               required
             />
-            <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+            <button type="submit" className="btn btn-primary w-full">
               Transfero
             </button>
           </form>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
+        <div className="xt-card space-y-6 p-4 sm:p-6">
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-1">Shitjet e mia (prano / refuzo)</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <div className="font-semibold text-[var(--xt-color-text)] mb-1">Shitjet e mia (prano / refuzo)</div>
+            <p className="text-xs text-[var(--xt-color-text-subtle)] mb-3">
               Kur pranon, XCoin transferohen. Deri atëherë porosia është pending.
             </p>
             <div className="space-y-3 max-h-72 overflow-y-auto text-xs">
@@ -270,23 +277,23 @@ const JonCoinWallet = () => {
                   key={`sale-${o.id}`}
                   className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-1"
                 >
-                  <div className="flex justify-between gap-2 font-semibold text-gray-900 dark:text-white">
+                  <div className="flex justify-between gap-2 font-semibold text-[var(--xt-color-text)]">
                     <span>#{o.id} · {o.totalAmount} XCoin</span>
                     <span className="capitalize text-amber-600">{o.status}</span>
                   </div>
-                  <p className="text-gray-700 dark:text-gray-300">
+                  <p className="text-[var(--xt-color-text-muted)]">
                     Nga: <strong>{o.buyerName || `User #${o.userId}`}</strong>
                   </p>
-                  <p className="text-gray-600 dark:text-gray-400">{orderLinesText(o)}</p>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-[var(--xt-color-text-muted)]">{orderLinesText(o)}</p>
+                  <p className="text-[var(--xt-color-text-muted)]">
                     {deliveryLabel(o.deliveryMethod)}
                     {o.buyerContact ? ` · ${o.buyerContact}` : ''}
                   </p>
                   {o.deliveryAddress ? (
-                    <p className="text-gray-600 dark:text-gray-400">Adresa: {o.deliveryAddress}</p>
+                    <p className="text-[var(--xt-color-text-muted)]">Adresa: {o.deliveryAddress}</p>
                   ) : null}
                   {o.deliveryNotes ? (
-                    <p className="text-gray-600 dark:text-gray-400">Shënim: {o.deliveryNotes}</p>
+                    <p className="text-[var(--xt-color-text-muted)]">Shënim: {o.deliveryNotes}</p>
                   ) : null}
                   {o.status === 'pending' ? (
                     <div className="flex gap-2 pt-2">
@@ -302,7 +309,7 @@ const JonCoinWallet = () => {
                         type="button"
                         disabled={orderBusyId === o.id}
                         onClick={() => handleRejectSale(o.id)}
-                        className="flex-1 py-1.5 rounded bg-red-600 text-white font-semibold disabled:opacity-50"
+                        className="btn btn-outline min-h-10 flex-1 disabled:opacity-50"
                       >
                         Refuzo
                       </button>
@@ -314,7 +321,7 @@ const JonCoinWallet = () => {
           </div>
 
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-3">Blerjet e mia</div>
+            <div className="font-semibold text-[var(--xt-color-text)] mb-3">Blerjet e mia</div>
             <div className="space-y-3 max-h-64 overflow-y-auto text-xs">
               {orders.length === 0 && (
                 <p className="text-gray-500 text-center py-4">Nuk ka porosi ende. Bli nga marketplace.</p>
@@ -324,15 +331,15 @@ const JonCoinWallet = () => {
                   key={`buy-${o.id}`}
                   className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-1"
                 >
-                  <div className="flex justify-between gap-2 font-semibold text-gray-900 dark:text-white">
+                  <div className="flex justify-between gap-2 font-semibold text-[var(--xt-color-text)]">
                     <span>#{o.id} · {o.totalAmount} XCoin</span>
                     <span className="capitalize">{o.status}</span>
                   </div>
-                  <p className="text-gray-700 dark:text-gray-300">
+                  <p className="text-[var(--xt-color-text-muted)]">
                     Shitësi: <strong>{o.sellerName || `User #${o.sellerId}`}</strong>
                   </p>
-                  <p className="text-gray-600 dark:text-gray-400">{orderLinesText(o)}</p>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-[var(--xt-color-text-muted)]">{orderLinesText(o)}</p>
+                  <p className="text-[var(--xt-color-text-muted)]">
                     {deliveryLabel(o.deliveryMethod)}
                     {o.buyerContact ? ` · ${o.buyerContact}` : ''}
                   </p>
@@ -354,15 +361,15 @@ const JonCoinWallet = () => {
       </div>
 
       {message && (
-        <div className="mt-4 text-center text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg py-2 px-3">
+        <div className="mt-4 text-center text-sm text-[var(--xt-color-gold-bright)] bg-blue-50 dark:bg-blue-900/30 rounded-lg py-2 px-3">
           {message}
         </div>
       )}
 
-      <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="font-semibold text-gray-900 dark:text-white mb-2">Historiku i transaksioneve</div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs">
+      <div className="xt-card mt-5 p-4 sm:p-6">
+        <div className="font-semibold text-[var(--xt-color-text)] mb-2">Historiku i transaksioneve</div>
+        <div className="xt-table-wrap overflow-x-auto">
+          <table className="xt-table min-w-[640px] text-xs">
             <thead>
               <tr className="bg-gray-100 dark:bg-gray-700">
                 <th className="px-2 py-1 text-left">Data</th>
@@ -383,8 +390,8 @@ const JonCoinWallet = () => {
               {transactions.map((tx) => (
                 <tr key={tx.id} className="border-b border-gray-100 dark:border-gray-700">
                   <td className="px-2 py-1">{new Date(tx.createdAt).toLocaleString()}</td>
-                  <td className="px-2 py-1">{tx.type}</td>
-                  <td className="px-2 py-1">{tx.amount}</td>
+                  <td className="px-2 py-1"><span className={`xt-badge ${transactionFlow(tx.type) === 'incoming' ? 'xt-badge-gold' : ''}`}>{transactionFlow(tx.type) === 'incoming' ? 'Hyrje' : transactionFlow(tx.type) === 'outgoing' ? 'Dalje' : 'Aktivitet'}</span><span className="ml-2 text-[var(--xt-color-text-subtle)]">{tx.type}</span></td>
+                  <td className={`px-2 py-1 font-mono font-semibold tabular-nums ${transactionFlow(tx.type) === 'incoming' ? 'text-[var(--xt-color-success)]' : transactionFlow(tx.type) === 'outgoing' ? 'text-[var(--xt-color-warning)]' : 'text-[var(--xt-color-text)]'}`}>{transactionFlow(tx.type) === 'incoming' ? '+' : transactionFlow(tx.type) === 'outgoing' ? '−' : ''}{tx.amount} XCoin</td>
                   <td className="px-2 py-1">{tx.status}</td>
                   <td className="px-2 py-1 max-w-[180px] truncate" title={tx.description}>
                     {tx.description || '—'}

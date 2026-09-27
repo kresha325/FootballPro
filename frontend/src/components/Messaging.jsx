@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import api from '../services/api';
 import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
@@ -164,6 +164,8 @@ function Messaging() {
         otherMember.Profile?.profilePhoto ||
         '',
       id: otherMember.id || null,
+      role: otherMember.role || null,
+      club: otherMember.Profile?.club || otherMember.club || null,
     };
   };
 
@@ -582,12 +584,12 @@ function Messaging() {
       return <span className="italic text-gray-400">Message deleted</span>;
     }
     const fileLinkClass = isMine
-      ? 'flex items-center gap-2 text-blue-100 hover:underline mb-2'
-      : 'flex items-center gap-2 text-blue-500 hover:underline mb-2';
+      ? 'flex items-center gap-2 text-slate-900 hover:underline mb-2'
+      : 'flex items-center gap-2 text-[var(--xt-color-gold-bright)] hover:underline mb-2';
     return (
       <>
         {message.replyTo && (
-          <div className="mb-1 pl-2 border-l-2 border-blue-500 text-sm text-gray-500 flex items-center gap-2">
+          <div className="mb-1 flex items-center gap-2 border-l-2 border-[var(--xt-color-gold-deep)] pl-2 text-sm text-[var(--xt-color-text-subtle)]">
             {message.replyTo.sender && message.replyTo.sender.profilePhoto ? (
               <img
                 src={getFullUrl(message.replyTo.sender.profilePhoto)}
@@ -596,7 +598,7 @@ function Messaging() {
                 onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
               />
             ) : (
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+              <div className="grid h-6 w-6 place-items-center rounded-full bg-[var(--xt-color-surface-hover)] text-xs font-bold text-[var(--xt-color-gold-bright)]">
                 {`${message.replyTo.sender?.firstName?.charAt(0)?.toUpperCase() || ''}${message.replyTo.sender?.lastName?.charAt(0)?.toUpperCase() || ''}`}
               </div>
             )}
@@ -637,16 +639,16 @@ function Messaging() {
           </a>
         )}
         {message.content && (
-          <p className={`whitespace-pre-wrap break-words ${isMine ? 'text-white' : ''}`}>
+          <p className={`whitespace-pre-wrap break-words ${isMine ? 'text-slate-950' : ''}`}>
             <Linkify
               text={message.content}
-              className={isMine ? 'text-white' : ''}
-              linkClassName={isMine ? 'underline break-all text-blue-100 hover:text-white' : 'underline break-all opacity-95 hover:opacity-100'}
+              className={isMine ? 'text-slate-950' : ''}
+              linkClassName={isMine ? 'underline break-all text-slate-900 hover:text-black' : 'underline break-all opacity-95 hover:opacity-100'}
             />
           </p>
         )}
         {message.edited && (
-          <span className={`text-xs ml-2 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>(edited)</span>
+          <span className={`ml-2 text-xs ${isMine ? 'text-slate-700' : 'text-[var(--xt-color-text-subtle)]'}`}>(edited)</span>
         )}
         <ForwardButton message={message} />
       </>
@@ -724,18 +726,18 @@ function Messaging() {
     );
   }
   return (
-    <div className="flex h-[calc(100vh-64px)] relative">
+    <div className="mx-auto flex h-[calc(100dvh-64px)] min-h-[420px] max-w-[1600px] overflow-hidden border-y border-[var(--xt-color-border)] bg-[var(--xt-color-canvas)] text-[var(--xt-color-text)] relative">
       {modalImage && <MediaModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
       {showCall && selectedConversation && (
         selectedConversation.isGroup ? (
-          <div className="fixed inset-0 z-50 bg-black/85 p-3">
-            <div className="h-full w-full rounded-xl bg-white p-3 overflow-auto">
+          <div className="fixed inset-0 z-50 bg-black/85 p-2 sm:p-4">
+            <div className="xt-card h-full w-full overflow-auto p-3 sm:p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold">Group Video Call: {selectedConversation.name || 'Group'}</h3>
                 <button
                   type="button"
                   onClick={() => setShowCall(false)}
-                  className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm"
+                  className="btn btn-quiet min-h-10 px-3 text-sm"
                 >
                   Close
                 </button>
@@ -762,14 +764,14 @@ function Messaging() {
         )
       )}
       {/* Conversations List */}
-      <div className="w-80 border-r bg-white dark:bg-gray-800 flex flex-col min-h-0">
+      <div className={`w-full shrink-0 border-r border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] flex-col min-h-0 md:flex md:w-80 ${selectedConversation ? 'hidden' : 'flex'}`}>
         <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-xl font-bold dark:text-white">Mesazhet</h2>
             <button
               type="button"
               onClick={() => setShowCreateGroup(true)}
-              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-blue-700"
+              className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
             >
               <FiUsers className="w-4 h-4" />
               New Group
@@ -782,7 +784,7 @@ function Messaging() {
               value={conversationSearch}
               onChange={e => setConversationSearch(e.target.value)}
               placeholder="Kërko bisedë…"
-              className="w-full pl-9 pr-3 py-2 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input pl-9 pr-3 text-sm"
             />
           </div>
         </div>
@@ -792,11 +794,11 @@ function Messaging() {
             <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 mb-2">Ende nuk ke biseda</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">Fillo nga profili i një përdoruesi</p>
+            <p className="text-[var(--xt-color-text-subtle)] mb-2">Ende nuk ke biseda</p>
+            <p className="text-sm text-[var(--xt-color-text-subtle)]">Fillo nga profili i një përdoruesi</p>
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">Nuk u gjet asnjë bisedë për këtë kërkim.</div>
+          <div className="p-6 text-center text-sm text-[var(--xt-color-text-subtle)]">Nuk u gjet asnjë bisedë për këtë kërkim.</div>
         ) : (
           filteredConversations.map(conv => {
             const other = getOtherMember(conv);
@@ -805,7 +807,7 @@ function Messaging() {
                 key={conv.id}
                 onClick={() => setSelectedConversation(conv)}
                 className={`p-4 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                  selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  selectedConversation?.id === conv.id ? 'bg-[var(--xt-color-gold)]/10' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -817,7 +819,7 @@ function Messaging() {
                         className={`w-12 h-12 rounded-full object-cover border-4 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
+                      <div className="w-12 h-12 rounded-full bg-[var(--xt-color-gold)] text-slate-950 flex items-center justify-center font-bold text-lg">
                         {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                       </div>
                     )}
@@ -834,12 +836,12 @@ function Messaging() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate dark:text-white">{other.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-sm text-[var(--xt-color-text-subtle)] truncate">
                       {conv.lastMessage || 'Start the conversation'}
                     </p>
                   </div>
                   {conv.lastMessageAt && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                    <span className="text-xs text-[var(--xt-color-text-subtle)] flex-shrink-0">
                       {formatTime(conv.lastMessageAt)}
                     </span>
                   )}
@@ -853,14 +855,14 @@ function Messaging() {
 
       {showCreateGroup ? (
         <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-3">
-          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-md bg-[var(--xt-color-surface)] rounded-xl shadow-lg p-4 max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-bold dark:text-white mb-3">Krijo Group Chat</h3>
             <input
               type="text"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="Emri i grupit"
-              className="w-full mb-3 px-3 py-2 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white"
+              className="w-full mb-3 px-3 py-2 rounded-lg border dark:border-gray-600 bg-[var(--xt-color-canvas)] dark:text-white"
             />
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Zgjidh anëtarët:</p>
             <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
@@ -900,7 +902,7 @@ function Messaging() {
                 type="button"
                 onClick={createGroupConversation}
                 disabled={creatingGroup}
-                className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-60"
+                className="px-3 py-2 rounded-lg bg-[var(--xt-color-gold)] hover:bg-[var(--xt-color-gold-bright)] text-slate-950 text-sm disabled:opacity-60"
               >
                 {creatingGroup ? 'Creating...' : 'Create Group'}
               </button>
@@ -911,15 +913,16 @@ function Messaging() {
 
       {/* Messages Area */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 relative min-h-0">
+        <div className="flex-1 flex flex-col bg-[var(--xt-color-canvas)] relative min-h-0">
           {/* Header */}
-          <div className="p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 space-y-2 flex-shrink-0">
+          <div className="p-3 border-b border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] space-y-2 flex-shrink-0">
             <div className="flex items-center gap-3 justify-between min-w-0">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {(() => {
                   const other = getOtherMember(selectedConversation);
                   return (
                     <>
+                      <button type="button" onClick={() => setSelectedConversation(null)} className="btn btn-quiet min-h-10 px-3 md:hidden" aria-label="Kthehu te bisedat">‹</button>
                       <div className="relative flex-shrink-0">
                         {other.profilePhoto ? (
                           <img
@@ -928,7 +931,7 @@ function Messaging() {
                             className={`w-10 h-10 rounded-full object-cover border-2 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'}`}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">
+                          <div className="w-10 h-10 rounded-full bg-[var(--xt-color-gold)] text-slate-950 flex items-center justify-center font-bold text-sm">
                             {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                           </div>
                         )}
@@ -937,7 +940,10 @@ function Messaging() {
                           className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${onlineStatus[other.id] === true ? 'bg-green-500' : 'bg-gray-400'}`}
                         />
                       </div>
-                      <h3 className="font-semibold dark:text-white truncate">{other.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-[var(--xt-color-text)]">{other.id ? <Link to={`/profile/${other.id}`} className="hover:text-[var(--xt-color-gold-bright)]">{other.name}</Link> : other.name}</h3>
+                        {other.club && <p className="truncate text-xs text-[var(--xt-color-text-subtle)]">{other.club}</p>}
+                      </div>
                     </>
                   );
                 })()}
@@ -949,7 +955,7 @@ function Messaging() {
                   className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
                   onClick={() => startCall(false)}
                 >
-                  <FiPhone className="w-5 h-5 text-blue-500" />
+                  <FiPhone className="w-5 h-5 text-[var(--xt-color-gold-bright)]" />
                 </button>
                 <button
                   type="button"
@@ -957,7 +963,7 @@ function Messaging() {
                   className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
                   onClick={() => startCall(true)}
                 >
-                  <FiVideo className="w-5 h-5 text-blue-500" />
+                  <FiVideo className="w-5 h-5 text-[var(--xt-color-gold-bright)]" />
                 </button>
               </div>
             </div>
@@ -968,7 +974,7 @@ function Messaging() {
                 value={threadSearch}
                 onChange={e => setThreadSearch(e.target.value)}
                 placeholder="Kërko në këtë bisedë…"
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input pl-8 pr-3 text-sm"
               />
             </div>
           </div>
@@ -989,7 +995,7 @@ function Messaging() {
                   type="button"
                   onClick={loadOlderMessages}
                   disabled={loadingOlder}
-                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 px-3 py-1 rounded-full bg-white dark:bg-gray-800 shadow border dark:border-gray-700"
+                  className="text-sm font-medium text-[var(--xt-color-gold-bright)] hover:underline disabled:opacity-50 px-3 py-1 rounded-full bg-[var(--xt-color-surface)] shadow border dark:border-gray-700"
                 >
                   {loadingOlder ? 'Duke ngarkuar…' : 'Mesazhe më të vjetra'}
                 </button>
@@ -1003,7 +1009,7 @@ function Messaging() {
                 <Fragment key={message.id || `m-${idx}`}>
                   {showDay && (
                     <div className="flex justify-center my-5">
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-3 py-1 rounded-full shadow-sm border dark:border-gray-700">
+                      <span className="text-xs font-medium text-[var(--xt-color-text-subtle)] bg-white/90 dark:bg-gray-800/90 px-3 py-1 rounded-full shadow-sm border dark:border-gray-700">
                         {dayDividerLabel(message.createdAt)}
                       </span>
                     </div>
@@ -1027,8 +1033,8 @@ function Messaging() {
                     <div
                       className={`max-w-[min(85%,28rem)] rounded-2xl px-3 py-2 shadow-md ${
                         isMine
-                          ? 'bg-blue-600 text-white rounded-br-md'
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border dark:border-gray-700 rounded-bl-md'
+                          ? 'bg-[var(--xt-color-gold)] text-slate-950 rounded-br-md'
+                          : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)] border border-[var(--xt-color-border)] rounded-bl-md'
                       }`}
                     >
                       {!isMine && selectedConversation.isGroup && message.sender && (
@@ -1043,11 +1049,11 @@ function Messaging() {
                           isMine ? 'border-white/20' : 'border-gray-100 dark:border-gray-700'
                         }`}
                       >
-                        <span className={`text-[11px] tabular-nums ${isMine ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                        <span className={`text-[11px] tabular-nums ${isMine ? 'text-blue-100' : 'text-[var(--xt-color-text-subtle)]'}`}>
                           {formatTime(message.createdAt)}
                         </span>
                         {!message.deleted && (
-                          <div className={`flex flex-wrap gap-2 text-[11px] ${isMine ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                          <div className={`flex flex-wrap gap-2 text-[11px] ${isMine ? 'text-blue-100' : 'text-[var(--xt-color-text-subtle)]'}`}>
                             <button type="button" className="hover:underline" onClick={() => setReplyTo(message)}>
                               Përgjigju
                             </button>
@@ -1079,7 +1085,7 @@ function Messaging() {
               );
             })}
             {typingDisplay && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic py-2">{typingDisplay}</p>
+              <p className="text-sm text-[var(--xt-color-text-subtle)] italic py-2">{typingDisplay}</p>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -1089,7 +1095,7 @@ function Messaging() {
               type="button"
               aria-label="Shko poshtë"
               onClick={() => scrollToBottom(false)}
-              className="absolute bottom-40 right-4 z-40 rounded-full bg-blue-600 text-white p-3 shadow-lg hover:bg-blue-700 transition md:bottom-36"
+              className="absolute bottom-40 right-4 z-40 rounded-full bg-[var(--xt-color-gold)] p-3 text-slate-950 shadow-lg transition md:bottom-36"
             >
               <FiChevronDown className="w-5 h-5" />
             </button>
@@ -1098,18 +1104,18 @@ function Messaging() {
           {/* Input */}
           <form
             onSubmit={sendMessage}
-            className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto flex-shrink-0"
+            className="p-4 bg-[var(--xt-color-surface)] border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto flex-shrink-0"
           >
             {editingMessage && (
               <div className="mb-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl flex justify-between items-start gap-2">
                 <div className="text-sm dark:text-gray-200 min-w-0">
                   <span className="font-medium text-amber-800 dark:text-amber-200">Po ndryshon mesazhin</span>
-                  <p className="text-gray-600 dark:text-gray-400 truncate mt-0.5">{editingMessage.content}</p>
+                  <p className="text-[var(--xt-color-text-muted)] truncate mt-0.5">{editingMessage.content}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditingMessage(null)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 flex-shrink-0"
+                  className="text-[var(--xt-color-text-subtle)] hover:text-gray-800 dark:hover:text-gray-100 flex-shrink-0"
                   aria-label="Anulo ndryshimin"
                 >
                   ✕
@@ -1120,12 +1126,12 @@ function Messaging() {
               <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center gap-2">
                 <div className="text-sm dark:text-gray-200 min-w-0">
                   <span className="font-medium">Përgjigje te:</span>{' '}
-                  <span className="text-gray-600 dark:text-gray-400 truncate">{replyTo.content}</span>
+                  <span className="text-[var(--xt-color-text-muted)] truncate">{replyTo.content}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setReplyTo(null)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex-shrink-0"
+                  className="text-[var(--xt-color-text-subtle)] hover:text-gray-700 dark:hover:text-gray-200 flex-shrink-0"
                 >
                   ✕
                 </button>
@@ -1140,14 +1146,14 @@ function Messaging() {
                     setFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  className="text-[var(--xt-color-text-subtle)] hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   ✕
                 </button>
               </div>
             )}
             {showEmojiBar && !editingMessage && (
-              <div className="mb-2 flex flex-wrap gap-1 p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700">
+              <div className="mb-2 flex flex-wrap gap-1 p-2 bg-[var(--xt-color-canvas)] rounded-xl border dark:border-gray-700">
                 {QUICK_EMOJIS.map(em => (
                   <button
                     key={em}
@@ -1177,7 +1183,7 @@ function Messaging() {
                 title="Bashkëngjit skedar"
                 disabled={!!editingMessage}
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40"
+                className="p-2 text-[var(--xt-color-text-subtle)] hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -1188,7 +1194,7 @@ function Messaging() {
                 title="Emoji të shpejta"
                 disabled={!!editingMessage}
                 onClick={() => setShowEmojiBar(v => !v)}
-                className={`p-2 rounded-lg ${showEmojiBar ? 'bg-blue-100 dark:bg-blue-900 text-blue-600' : 'text-gray-500 dark:text-gray-400'} hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40`}
+                className={`p-2 rounded-lg ${showEmojiBar ? 'bg-blue-100 dark:bg-blue-900 text-blue-600' : 'text-[var(--xt-color-text-subtle)]'} hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40`}
               >
                 <FiSmile className="w-6 h-6" />
               </button>
@@ -1216,7 +1222,7 @@ function Messaging() {
                   }
                 }}
                 placeholder={editingMessage ? 'Ndrysho mesazhin…' : 'Shkruaj mesazhin… (⌘/Ctrl+Enter për dërguar)'}
-                className="flex-1 border dark:border-gray-600 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white resize-none min-h-[44px] max-h-32"
+                className="input min-h-[44px] max-h-32 flex-1 resize-none"
               />
               <button
                 type="submit"
@@ -1224,7 +1230,7 @@ function Messaging() {
                   sending ||
                   (editingMessage ? !editingMessage.content?.trim() : !messageContent.trim() && !file)
                 }
-                className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="btn btn-primary min-h-11 shrink-0 px-4 disabled:cursor-not-allowed"
               >
                 {sending ? '…' : editingMessage ? 'Ruaj' : 'Dërgo'}
               </button>
@@ -1232,13 +1238,13 @@ function Messaging() {
           </form>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-[var(--xt-color-canvas)]">
           <div className="text-center">
             <svg className="w-20 h-20 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 text-lg">Zgjidh një bisedë për të vazhduar</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2 max-w-sm mx-auto">
+            <p className="text-[var(--xt-color-text-subtle)] text-lg">Zgjidh një bisedë për të vazhduar</p>
+            <p className="text-sm text-[var(--xt-color-text-subtle)] mt-2 max-w-sm mx-auto">
               Nëse ke lidhur nga një link me <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">conversationId</code> ose{' '}
               <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">userId</code>, biseda duhet të hapet automatikisht pasi të ngarkohet lista.
             </p>
