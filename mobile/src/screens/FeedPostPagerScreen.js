@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 10,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1173,7 +1173,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
@@ -1225,7 +1225,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   backLinkText: {
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '700',
   },
 });

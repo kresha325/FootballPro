@@ -129,7 +129,7 @@ function ProfileTabBarIcon({ user, focused, size = 26 }) {
   const uri = tabProfilePhotoUri(user, imgErr);
   const initial = String(user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase();
   const dim = Math.round(Math.max(24, Math.min(Number(size) + 6, 34)));
-  const borderColor = focused ? (isDark ? '#2dd4bf' : '#0f766e') : colors.borderStrong;
+  const borderColor = focused ? colors.primary : colors.borderStrong;
 
   return (
     <View
@@ -384,7 +384,7 @@ function AppTabs() {
           headerTintColor: colors.text,
           headerTitleStyle: { color: colors.text, fontWeight: '700' },
           headerShadowVisible: !isDark,
-          tabBarActiveTintColor: isDark ? '#2dd4bf' : '#0f766e',
+          tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.muted,
           tabBarStyle: {
             backgroundColor: colors.tabBar,
@@ -492,7 +492,7 @@ export default function AppNavigator() {
       ...base,
       colors: {
         ...base.colors,
-        primary: isDark ? '#2dd4bf' : '#0f766e',
+        primary: colors.primary,
         background: colors.bg,
         card: colors.header,
         text: colors.text,

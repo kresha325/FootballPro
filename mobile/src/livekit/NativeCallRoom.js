@@ -158,7 +158,7 @@ export default function NativeCallRoom({
   if (!LiveKitRoomComp || !creds) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
         <Text style={styles.loadingText}>Duke u lidhur me thirrjen…</Text>
       </View>
     );

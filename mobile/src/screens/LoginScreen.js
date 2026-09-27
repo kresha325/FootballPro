@@ -47,7 +47,7 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
                   {item.hint ? <Text style={styles.modalRowHint}>{item.hint}</Text> : null}
                 </View>
                 {item.value === selectedValue ? (
-                  <Ionicons name="checkmark" size={20} color="#0f766e" />
+                  <Ionicons name="checkmark" size={20} color="#9A6B12" />
                 ) : null}
               </TouchableOpacity>
             )}
@@ -321,7 +321,7 @@ export default function LoginScreen() {
 
         {mode === 'register' ? (
           <View style={styles.termsRow}>
-            <Switch value={acceptedTerms} onValueChange={setAcceptedTerms} trackColor={{ true: '#0f766e' }} />
+            <Switch value={acceptedTerms} onValueChange={setAcceptedTerms} trackColor={{ true: '#9A6B12' }} />
             <Text style={styles.termsText}>Pranoj kushtet e përdorimit dhe privatësinë</Text>
           </View>
         ) : null}
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   segmentBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  segmentBtnActive: { backgroundColor: '#0f766e' },
+  segmentBtnActive: { backgroundColor: '#9A6B12' },
   segmentText: { color: '#334155', fontWeight: '600', fontSize: 13 },
   segmentTextActive: { color: '#fff' },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 6 },
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   inlineError: { marginBottom: 12, color: '#b91c1c', fontWeight: '600' },
   button: {
     marginTop: 8,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 14,

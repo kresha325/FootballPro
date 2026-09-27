@@ -25,6 +25,7 @@ import FollowListModal from './FollowListModal';
 import ShareProfileCvButton from './ShareProfileCvButton';
 import VerifiedBadge from './VerifiedBadge';
 import ParentVerificationModal from './ParentVerificationModal';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -619,9 +620,9 @@ const Profile = () => {
         className={`xt-card relative z-10 -mt-5 overflow-visible ${isSponsoredProfile ? 'border-[var(--xt-color-gold)]' : ''}`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
+          <div className="-mt-16 flex flex-col items-center pb-6 md:mt-0 md:flex-row md:items-start">
             {/* Avatar + verification chips under photo */}
-            <div className="flex flex-col items-center shrink-0">
+            <div className="flex shrink-0 flex-col items-center md:-mt-20">
               <div className="relative">
                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
                   {profile.profilePhoto && !avatarBroken ? (
@@ -741,7 +742,7 @@ const Profile = () => {
             </div>
 
             {/* Name, XCoin Balance, and Stats */}
-            <div className="flex-1 md:ml-6 mt-4 md:mt-0 text-center md:text-left">
+            <div className="mt-4 min-w-0 flex-1 text-center md:ml-6 md:mt-0 md:pt-6 md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white inline-flex items-center gap-2">
                   {profile.firstName} {profile.lastName}
@@ -767,12 +768,11 @@ const Profile = () => {
                       🏛️ Themeluar {profile.foundingYear || getFoundingYear(profile)}
                     </span>
                   )
-                ) : (
-                  profile.age && profile.ageGroup && (
-                    <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                      🎂 {profile.age} years ({profile.ageGroup})
-                    </span>
-                  )
+                ) : null}
+                {isAthlete && profile.age && profile.ageGroup && (
+                  <span className="xt-badge xt-badge-gold px-3 py-1 text-sm">
+                    {profile.age} vjeç · {profile.ageGroup}
+                  </span>
                 )}
                 {profile.position && !isOrgProfileRole(profile.role) && (
                   <span className="xt-badge xt-badge-gold px-3 py-1 text-sm">
@@ -827,8 +827,9 @@ const Profile = () => {
                   </span>
                 )}
                 {profile.city && (
-                  <span className="flex items-center gap-1 text-sm">
-                    📍 {profile.city}{profile.country && `, ${profile.country}`}
+                  <span className="inline-flex items-center gap-1 text-sm text-[var(--xt-color-text-muted)]">
+                    <MapPinIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {profile.city}{profile.country && `, ${profile.country}`}
                   </span>
                 )}
               </div>

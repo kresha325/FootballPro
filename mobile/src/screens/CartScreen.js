@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: '#fff',
   },
-  methodChipOn: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  methodChipOn: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   methodChipText: { color: '#334155', fontSize: 12, fontWeight: '600' },
   methodChipTextOn: { color: '#fff' },
   input: {
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e8f0',
   },
   totalLabel: { color: '#64748b', fontSize: 13 },
-  totalVal: { fontSize: 22, fontWeight: '800', color: '#0f766e', marginBottom: 4 },
+  totalVal: { fontSize: 22, fontWeight: '800', color: '#9A6B12', marginBottom: 4 },
   pendingHint: { color: '#b45309', fontSize: 11, marginBottom: 10 },
   payBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   emptySub: { marginTop: 6, color: '#64748b', textAlign: 'center' },
   backBtn: {
     marginTop: 18,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,

@@ -159,7 +159,7 @@ export default function VideosScreen() {
             setRefreshing(true);
             loadVideos({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -217,15 +217,15 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   secondaryBtn: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 9,
     alignItems: 'center',
   },
-  secondaryBtnText: { color: '#0f766e', fontWeight: '700' },
+  secondaryBtnText: { color: '#9A6B12', fontWeight: '700' },
   primaryBtn: {
     marginTop: 8,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 9,
     alignItems: 'center',

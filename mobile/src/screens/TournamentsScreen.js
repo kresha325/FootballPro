@@ -179,7 +179,7 @@ export default function TournamentsScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -197,7 +197,7 @@ export default function TournamentsScreen({ navigation }) {
               setRefreshing(true);
               loadData({ silent: true });
             }}
-            colors={['#0f766e']}
+            colors={['#9A6B12']}
           />
         }
         ListHeaderComponent={
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   headerSub: { color: '#155e75', marginTop: 4 },
   createHeaderBtn: {
     marginTop: 10,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
@@ -364,13 +364,13 @@ const styles = StyleSheet.create({
   detailBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 9,
     alignItems: 'center',
   },
-  detailBtnText: { color: '#0f766e', fontWeight: '700' },
-  joinBtn: { flex: 1, backgroundColor: '#0f766e', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
+  detailBtnText: { color: '#9A6B12', fontWeight: '700' },
+  joinBtn: { flex: 1, backgroundColor: '#9A6B12', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
   joinBtnText: { color: '#fff', fontWeight: '700' },
   joinedTag: { color: '#16a34a', fontWeight: '700', paddingHorizontal: 8 },
   error: { marginTop: 6, color: '#b91c1c' },
@@ -391,15 +391,15 @@ const styles = StyleSheet.create({
   },
   textArea: { minHeight: 72, textAlignVertical: 'top' },
   label: { color: '#475569', fontWeight: '600', marginBottom: 6 },
-  seasonPreview: { color: '#0f766e', fontWeight: '700', marginBottom: 10, fontSize: 13 },
+  seasonPreview: { color: '#9A6B12', fontWeight: '700', marginBottom: 10, fontSize: 13 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f1f5f9' },
-  chipActive: { backgroundColor: '#0f766e' },
+  chipActive: { backgroundColor: '#9A6B12' },
   chipText: { color: '#334155', fontWeight: '600', fontSize: 12 },
   chipTextActive: { color: '#fff' },
   modalActions: { flexDirection: 'row', gap: 8 },
   cancelBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1' },
   cancelBtnText: { color: '#475569', fontWeight: '700' },
-  saveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#0f766e' },
+  saveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#9A6B12' },
   saveBtnText: { color: '#fff', fontWeight: '700' },
 });

@@ -260,7 +260,7 @@ export default function SettingsScreen() {
             value={darkModeEnabled}
             onValueChange={setDarkMode}
             trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
-            thumbColor={darkModeEnabled ? (isDark ? '#2dd4bf' : '#0f766e') : '#f8fafc'}
+            thumbColor={darkModeEnabled ? (isDark ? '#D9A441' : '#9A6B12') : '#f8fafc'}
           />
         </View>
         <TouchableOpacity
@@ -287,7 +287,7 @@ export default function SettingsScreen() {
             onValueChange={handleNotificationsToggle}
             disabled={pushBusy}
             trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
-            thumbColor={notificationsEnabled ? (isDark ? '#2dd4bf' : '#0f766e') : '#f8fafc'}
+            thumbColor={notificationsEnabled ? (isDark ? '#D9A441' : '#9A6B12') : '#f8fafc'}
           />
         </View>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
@@ -510,10 +510,10 @@ const styles = StyleSheet.create({
   fieldLabelTop: { marginTop: 8 },
   bullet: { color: '#475569', fontSize: 13, lineHeight: 19, marginBottom: 2 },
   step: { color: '#64748b', fontSize: 13, lineHeight: 19, marginBottom: 2 },
-  mono: { fontFamily: 'Menlo', fontSize: 12, color: '#0f766e' },
+  mono: { fontFamily: 'Menlo', fontSize: 12, color: '#9A6B12' },
   bold: { fontWeight: '700' },
   hint: { color: '#94a3b8', fontSize: 12, marginTop: 6, lineHeight: 16 },
-  okHint: { color: '#0f766e', fontSize: 12, marginTop: 6, fontWeight: '600' },
+  okHint: { color: '#9A6B12', fontSize: 12, marginTop: 6, fontWeight: '600' },
   pendingHint: { color: '#b45309', fontSize: 12, marginTop: 6, fontWeight: '600' },
   errHint: { color: '#dc2626', fontSize: 12, marginTop: 6, fontWeight: '600' },
   obsNote: { color: '#64748b', fontSize: 11, marginTop: 8, fontStyle: 'italic', lineHeight: 15 },
@@ -532,10 +532,10 @@ const styles = StyleSheet.create({
   },
   monoInput: { fontFamily: 'Menlo', fontSize: 13 },
   linkBtn: { marginVertical: 8 },
-  linkBtnText: { color: '#0f766e', fontWeight: '600', fontSize: 13 },
+  linkBtnText: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },
   resolveBtn: {
     marginBottom: 10,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 11,
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   logoutButtonText: { color: '#fff', fontWeight: '800' },
   saveButton: {
     marginTop: 6,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 12,

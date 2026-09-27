@@ -98,7 +98,7 @@ export default function AdminDashboardScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     borderColor: '#bae6fd',
     backgroundColor: '#f0f9ff',
   },
-  tabActive: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  tabActive: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   tabTxt: { color: '#155e75', fontWeight: '700' },
   tabTxtActive: { color: '#fff' },
   searchInput: {
@@ -324,14 +324,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   action: { borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
   verify: { backgroundColor: '#2563eb' },
-  premium: { backgroundColor: '#0f766e' },
+  premium: { backgroundColor: '#9A6B12' },
   ban: { backgroundColor: '#d97706' },
   role: { backgroundColor: '#7c3aed' },
   reset: { backgroundColor: '#4f46e5' },
   remove: { backgroundColor: '#dc2626' },
   actionText: { color: '#fff', fontWeight: '700' },
   paginationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  pageBtn: { backgroundColor: '#0f766e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  pageBtn: { backgroundColor: '#9A6B12', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   pageDisabled: { opacity: 0.4 },
   pageTxt: { color: '#fff', fontWeight: '700' },
   pageIndicator: { color: '#334155', fontWeight: '700' },

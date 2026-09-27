@@ -140,13 +140,13 @@ export default function MessagingScreen({ navigation }) {
             onPress={() => setShowCreateGroup(true)}
             accessibilityLabel="Krijo grup"
           >
-            <Ionicons name="people-outline" size={22} color="#0f766e" />
+            <Ionicons name="people-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <NotificationHeaderButton />
         </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors.primary]);
 
   const loadConversations = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -243,8 +243,8 @@ export default function MessagingScreen({ navigation }) {
             setRefreshing(true);
             loadConversations({ silent: true });
           }}
-          colors={[isDark ? '#2dd4bf' : '#0f766e']}
-          tintColor={isDark ? '#2dd4bf' : '#0f766e'}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
         />
       }
       ListHeaderComponent={

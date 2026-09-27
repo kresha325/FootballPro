@@ -40,7 +40,7 @@ export default function BrowseProfilesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   searchBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 12,
     width: 48,
     height: 48,

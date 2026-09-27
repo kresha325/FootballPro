@@ -143,7 +143,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -166,7 +166,7 @@ export default function NotificationsScreen() {
           accessibilityLabel="Kthehu te More"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-back" size={24} color="#0f766e" />
+          <Ionicons name="chevron-back" size={24} color="#9A6B12" />
           <Text style={styles.backLabel}>Menu</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -197,7 +197,7 @@ export default function NotificationsScreen() {
               setRefreshing(true);
               loadNotifications({ silent: true });
             }}
-            colors={['#0f766e']}
+            colors={['#9A6B12']}
           />
         }
         renderItem={({ item }) => (
@@ -227,12 +227,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 64 },
-  backLabel: { color: '#0f766e', fontWeight: '700', fontSize: 15 },
+  backLabel: { color: '#9A6B12', fontWeight: '700', fontSize: 15 },
   headerCenter: { flex: 1, alignItems: 'center' },
   markAllBtn: { minWidth: 64, alignItems: 'flex-end' },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
   unreadHint: { color: '#dc2626', fontWeight: '700', fontSize: 13, marginTop: 2 },
-  headerAction: { color: '#0f766e', fontWeight: '700', fontSize: 12 },
+  headerAction: { color: '#9A6B12', fontWeight: '700', fontSize: 12 },
   list: { padding: 12 },
   row: {
     backgroundColor: '#fff',

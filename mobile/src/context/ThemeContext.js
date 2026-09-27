@@ -11,7 +11,9 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const systemScheme = useColorScheme();
-  const [preference, setPreferenceState] = useState(/** @type {ThemePreference} */ ('system'));
+  // X TALENTI opens in its premium dark appearance for new installs. Existing saved
+  // preferences (including system mode) continue to take precedence.
+  const [preference, setPreferenceState] = useState(/** @type {ThemePreference} */ ('dark'));
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function ThemeProvider({ children }) {
     [setPreference]
   );
 
-  const resolvedScheme = preference === 'system' ? systemScheme || 'light' : preference;
+  const resolvedScheme = preference === 'system' ? systemScheme || 'dark' : preference;
   const isDark = resolvedScheme === 'dark';
   const colors = useMemo(() => colorsFor(isDark), [isDark]);
 

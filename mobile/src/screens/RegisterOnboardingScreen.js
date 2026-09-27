@@ -172,7 +172,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
               maxLength={500}
             />
             <View style={styles.tips}>
-              <Ionicons name="videocam" size={20} color="#0f766e" />
+              <Ionicons name="videocam" size={20} color="#9A6B12" />
               <Text style={styles.tipText}>Pas kësaj: ngarko video ose nis LIVE nga profili.</Text>
             </View>
             <TouchableOpacity
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   container: { padding: 24, paddingBottom: 40 },
   progress: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   dot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#cbd5e1' },
-  dotActive: { backgroundColor: '#0f766e' },
+  dotActive: { backgroundColor: '#9A6B12' },
   welcome: { fontSize: 26, fontWeight: '800', color: '#0f172a' },
   roleBadgeWrap: {
     alignSelf: 'flex-start',
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
   },
-  roleBadgeText: { color: '#0f766e', fontWeight: '700', fontSize: 13 },
+  roleBadgeText: { color: '#9A6B12', fontWeight: '700', fontSize: 13 },
   title: { fontSize: 20, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 14, color: '#64748b', lineHeight: 20, marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 8 },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderColor: '#cbd5e1',
     backgroundColor: '#fff',
   },
-  chipActive: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  chipActive: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   chipText: { color: '#334155', fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   tips: {
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   tipText: { flex: 1, fontSize: 13, color: '#475569', lineHeight: 18 },
   primaryBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -260,5 +260,5 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   secondaryBtn: { paddingVertical: 12, alignItems: 'center' },
-  secondaryBtnText: { color: '#0f766e', fontWeight: '700' },
+  secondaryBtnText: { color: '#9A6B12', fontWeight: '700' },
 });

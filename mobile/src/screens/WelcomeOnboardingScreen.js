@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   brandX: {
-    color: '#0f766e',
+    color: '#9A6B12',
   },
   brandRest: {
     color: '#0f172a',
@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 22,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
   },
   cta: {
     marginHorizontal: 20,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

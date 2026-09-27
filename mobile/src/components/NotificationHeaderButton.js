@@ -51,7 +51,7 @@ export default function NotificationHeaderButton() {
       accessibilityRole="button"
       accessibilityLabel="Notifications"
     >
-      <Ionicons name="notifications-outline" size={24} color="#0f766e" />
+      <Ionicons name="notifications-outline" size={24} color="#9A6B12" />
       {count > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{count > 99 ? '99+' : String(count)}</Text>

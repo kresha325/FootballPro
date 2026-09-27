@@ -182,7 +182,7 @@ export default function MatchesScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#0f172a',
   },
-  primaryBtn: { backgroundColor: '#0f766e', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  primaryBtn: { backgroundColor: '#9A6B12', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
   editBtn: { marginTop: 8, backgroundColor: '#2563eb', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
   editBtnText: { color: '#fff', fontWeight: '700' },

@@ -29,7 +29,7 @@ export default function AiBioButton({ hints = {}, onBio, style }) {
     <View style={[styles.wrap, style]}>
       <TouchableOpacity style={styles.btn} onPress={onPress} disabled={loading}>
         {loading ? (
-          <ActivityIndicator size="small" color="#0f766e" />
+          <ActivityIndicator size="small" color="#9A6B12" />
         ) : (
           <Text style={styles.btnText}>✨ Gjenero bio me AI</Text>
         )}
@@ -42,12 +42,12 @@ const styles = StyleSheet.create({
   wrap: { alignSelf: 'flex-start', marginBottom: 8 },
   btn: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 36,
     justifyContent: 'center',
   },
-  btnText: { color: '#0f766e', fontWeight: '600', fontSize: 13 },
+  btnText: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },
 });

@@ -493,7 +493,7 @@ export default function EditProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
   pickerBtn: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -863,14 +863,14 @@ const styles = StyleSheet.create({
   pickerBtnText: { color: '#0f172a', fontWeight: '600' },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
     backgroundColor: '#fff',
     marginBottom: 10,
   },
-  secondaryButtonText: { color: '#0f766e', fontWeight: '700' },
+  secondaryButtonText: { color: '#9A6B12', fontWeight: '700' },
   avatarPreview: {
     width: 90,
     height: 90,
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
   suggestText: { fontSize: 14, color: '#0f172a' },
   button: {
     marginTop: 8,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 12,

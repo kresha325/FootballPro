@@ -111,7 +111,7 @@ export default function AdsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -144,7 +144,7 @@ export default function AdsScreen() {
             setRefreshing(true);
             loadAds({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       renderItem={({ item }) => <AdRow item={item} />}
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   primaryBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
   primaryText: { color: '#fff', fontWeight: '700' },
   secondaryBtn: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
     marginTop: 4,
   },
-  secondaryText: { color: '#0f766e', fontWeight: '700' },
+  secondaryText: { color: '#9A6B12', fontWeight: '700' },
   btnDisabled: { opacity: 0.7 },
   row: {
     backgroundColor: '#fff',

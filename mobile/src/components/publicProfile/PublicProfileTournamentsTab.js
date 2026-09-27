@@ -28,23 +28,23 @@ export default function PublicProfileTournamentsTab({
           <Text style={[styles.totalsTitle, { color: theme.text }]}>Totals from tournaments</Text>
           <View style={styles.totalsGrid}>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.tournamentsPlayed ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.tournamentsPlayed ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Tournaments</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.points ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.points ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Points</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.goalsFor ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.goalsFor ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Team goals</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.scorerGoals ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.scorerGoals ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Personal goals</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#0f766e' }]}>{totals.scorerAssists ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.scorerAssists ?? 0}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Assists</Text>
             </View>
           </View>
@@ -118,12 +118,12 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   name: { flex: 1, fontWeight: '800', fontSize: 16 },
   rank: {
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '800',
     fontSize: 16,
   },
   meta: { marginTop: 4, fontSize: 13 },
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
   stat: { fontWeight: '700', fontSize: 13 },
-  tapHint: { marginTop: 8, fontSize: 12, color: '#0f766e', fontWeight: '600' },
+  tapHint: { marginTop: 8, fontSize: 12, color: '#9A6B12', fontWeight: '600' },
 });

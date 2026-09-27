@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   roundTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f766e',
+    color: '#9A6B12',
     textAlign: 'center',
     marginBottom: 10,
   },
