@@ -9,10 +9,10 @@ import BusinessProfile from './BusinessProfile';
 import LigaProfile from './LigaProfile';
 import FederationProfile from './FederationProfile';
 
-const ProfileSelector = ({ user, profile, isOwner, onEdit }) => {
+const ProfileSelector = ({ user, profile, isOwner, onEdit, tournamentSummary, gallery, onShowVideos, onShowGallery }) => {
   switch (user.role) {
     case 'athlete':
-      return <PlayerProfile profile={profile} />;
+      return <PlayerProfile profile={profile} tournamentSummary={tournamentSummary} gallery={gallery} onShowVideos={onShowVideos} onShowGallery={onShowGallery} />;
     case 'coach':
     case 'trajner':
       return <CoachProfile profile={profile} />;

@@ -59,7 +59,7 @@ const Profile = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('posts');
+  const [activeTab, setActiveTab] = useState('overview');
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [expandedComments, setExpandedComments] = useState(new Set());
   const [commentInputs, setCommentInputs] = useState({});
@@ -514,6 +514,10 @@ const Profile = () => {
         profile={profile}
         isOwner={isOwner}
         onEdit={() => setEditOpen(true)}
+        tournamentSummary={tournamentSummary}
+        gallery={gallery}
+        onShowVideos={() => setActiveTab('videos')}
+        onShowGallery={() => setActiveTab('gallery')}
       />
     );
   };
@@ -537,42 +541,50 @@ const Profile = () => {
 
 
   if (loading) return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-
+    <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6" aria-label="Po ngarkohet profili">
+      <div className="xt-skeleton h-52 w-full rounded-xl" />
+      <div className="xt-skeleton h-40 w-full rounded-xl" />
+      <div className="grid gap-4 sm:grid-cols-2"><div className="xt-skeleton h-40 rounded-xl" /><div className="xt-skeleton h-40 rounded-xl" /></div>
     </div>
   );
   
   if (!profile) return (
     <div className="flex items-center justify-center h-screen">
-      <p className="text-xl text-gray-500">Profili nuk u gjet</p>
+      <p className="xt-error-state xt-card text-xl">Profili nuk u gjet</p>
     </div>
   );
 
   const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
   const isSponsoredProfile = sponsorList.length > 0;
+  const completionFields = [
+    Boolean(profile.profilePhoto), Boolean(profile.bio), Boolean(profile.position),
+    Boolean(profile.dateOfBirth), Boolean(profile.country), Boolean(profile.city),
+    Boolean(profile.club), Boolean(profile.stats?.preferredFoot), Boolean(profile.stats?.height),
+    gallery.length > 0,
+  ];
+  const profileCompletion = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
   const tabs = [
-    { key: 'overview', label: '🏠 Overview' },
-    { key: 'posts', label: '📝 Postime' },
+    { key: 'overview', label: isAthlete ? 'CV i lojtarit' : 'Përmbledhje' },
+    { key: 'posts', label: 'Postime' },
   ];
   if (isAthlete) {
-    tabs.push({ key: 'tournaments', label: '🏆 Tournaments' });
+    tabs.push({ key: 'stats', label: 'Performanca' }, { key: 'tournaments', label: 'Turnet' });
   }
   tabs.push(
-    { key: 'gallery', label: '🖼️ Gallery' },
-    { key: 'videos', label: '🎥 Videos' },
-    { key: 'about', label: 'ℹ️ About' },
-    { key: 'contact', label: '✉️ Contact' },
+    { key: 'gallery', label: 'Galeria' },
+    { key: 'videos', label: 'Videot' },
+    { key: 'about', label: isAthlete ? 'Karriera' : 'Rreth' },
+    { key: 'contact', label: 'Kontakt' },
   );
   if (isOwner) {
-    tabs.push({ key: 'sponsors', label: '🤝 Sponsors' });
+    tabs.push({ key: 'sponsors', label: 'Sponsorët' });
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6">
 
       {/* Cover Photo */}
-      <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 relative flex items-center justify-center overflow-hidden">
+      <div className="relative flex h-52 items-center justify-center overflow-hidden rounded-t-xl bg-[var(--xt-color-surface-raised)] sm:h-64">
         {profile.coverPhoto && (
           <img
             src={getFullUrl(profile.coverPhoto)}
@@ -580,7 +592,7 @@ const Profile = () => {
             className="w-full h-full object-cover bg-black/10 rounded-md cursor-pointer"
             loading="lazy"
             decoding="async"
-            style={{ background: '#f3f4f6' }}
+            style={{ background: 'var(--xt-color-surface-raised)' }}
             title="View full size"
             tabIndex={0}
             role="button"
@@ -597,20 +609,16 @@ const Profile = () => {
         {isOwner && (
           <div className="absolute bottom-4 right-4">
             <input type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" id="cover-upload-input" />
-            <label htmlFor="cover-upload-input" className="cursor-pointer bg-blue-500 text-white px-3 py-1 rounded text-sm shadow">Ndrysho Cover</label>
+            <label htmlFor="cover-upload-input" className="btn btn-quiet cursor-pointer">Ndrysho kopertinën</label>
           </div>
         )}
       </div>
 
       {/* Profile Header */}
       <div
-        className={`shadow mt-28 bg-white dark:bg-gray-800 border rounded-xl ${
-          isSponsoredProfile
-            ? 'border-emerald-200 dark:border-emerald-800'
-            : 'border-gray-200 dark:border-gray-700'
-        }`}
+        className={`xt-card relative z-10 -mt-5 overflow-visible ${isSponsoredProfile ? 'border-[var(--xt-color-gold)]' : ''}`}
       >
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 pb-6">
             {/* Avatar + verification chips under photo */}
             <div className="flex flex-col items-center shrink-0">
@@ -769,8 +777,8 @@ const Profile = () => {
                   )
                 )}
                 {profile.position && !isOrgProfileRole(profile.role) && (
-                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                    ⚽ {profile.position}
+                  <span className="xt-badge xt-badge-gold px-3 py-1 text-sm">
+                    {profile.position}
                   </span>
                 )}
                 {profile.club && !isOrgProfileRole(profile.role) && (
@@ -895,6 +903,17 @@ const Profile = () => {
                   )}
                 </div>
               )}
+
+              {isOwner && isAthlete && (
+                <div className="mx-auto mt-5 max-w-md md:mx-0">
+                  <div className="mb-1 flex items-center justify-between text-xs text-[var(--xt-color-text-muted)]">
+                    <span>Plotësia e profilit</span><span>{profileCompletion}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[var(--xt-color-surface-raised)]" role="progressbar" aria-label="Plotësia e profilit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileCompletion}>
+                    <div className="h-full rounded-full bg-[var(--xt-color-gold)] transition-[width]" style={{ width: `${profileCompletion}%` }} />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -959,22 +978,24 @@ const Profile = () => {
       </div>
 
       {/* Tabs & Content */}
-      <div className="max-w-6xl mx-auto mt-6 px-6">
+      <div className="mx-auto mt-6 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content - Tabs */}
           <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="xt-card overflow-hidden">
               {/* Tab Navigation */}
               <div className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex gap-8 px-6 overflow-x-auto">
+            <div role="tablist" aria-label="Seksionet e profilit" className="hide-scrollbar-mobile flex gap-2 overflow-x-auto px-3 sm:px-5">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
+                  role="tab"
+                  aria-selected={activeTab === tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`py-4 font-medium capitalize transition whitespace-nowrap ${
+                  className={`min-h-12 whitespace-nowrap border-b-2 px-3 py-3 font-medium transition ${
                     activeTab === tab.key
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                      ? 'border-[var(--xt-color-gold)] text-[var(--xt-color-gold-bright)]'
+                      : 'border-transparent text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
                   }`}
                 >
                   {tab.label}
@@ -984,7 +1005,7 @@ const Profile = () => {
           </div>
 
           {/* Tab Content */}
-          <div className={activeTab === 'overview' ? '' : 'p-6'}>
+          <div className={activeTab === 'overview' ? '' : 'p-4 sm:p-6'}>
             {activeTab === 'overview' && renderProfileContent()}
             
             {activeTab === 'posts' && (
@@ -1232,23 +1253,34 @@ const Profile = () => {
             )}
 
             {activeTab === 'stats' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {profile.stats?.height && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-blue-600">{profile.stats.height} cm</div>
-                    <div className="text-gray-600 dark:text-gray-400 mt-1">Height</div>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="mb-4 text-lg font-semibold">Statistikat e lojës</h2>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {[
+                      ['Ndeshje', profile.stats?.appearances],
+                      ['Gola', profile.stats?.goals ?? tournamentSummary.totals?.scorerGoals],
+                      ['Asiste', profile.stats?.assists ?? tournamentSummary.totals?.scorerAssists],
+                      ['Minuta', profile.stats?.minutes],
+                      ['Pikë', tournamentSummary.totals?.points],
+                      ['Turne', tournamentSummary.totals?.tournamentsPlayed],
+                    ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
+                      <div className="xt-stat-card" key={label}>
+                        <div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div>
+                        <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--xt-color-text-muted)]">{label}</div>
+                      </div>
+                    ))}
                   </div>
-                )}
-                {profile.stats?.weight && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-green-600">{profile.stats.weight} kg</div>
-                    <div className="text-gray-600 dark:text-gray-400 mt-1">Weight</div>
-                  </div>
-                )}
-                {profile.stats?.jerseyNumber && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-purple-600">#{profile.stats.jerseyNumber}</div>
-                    <div className="text-gray-600 dark:text-gray-400 mt-1">Jersey Number</div>
+                </div>
+                {(profile.stats?.height || profile.stats?.weight || profile.stats?.jerseyNumber || profile.stats?.preferredFoot) && (
+                  <div>
+                    <h2 className="mb-3 text-lg font-semibold">Të dhënat fizike dhe teknike</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.stats?.height && <span className="xt-badge">Gjatësia: {profile.stats.height} cm</span>}
+                      {profile.stats?.weight && <span className="xt-badge">Pesha: {profile.stats.weight} kg</span>}
+                      {profile.stats?.jerseyNumber && <span className="xt-badge">Numri: #{profile.stats.jerseyNumber}</span>}
+                      {profile.stats?.preferredFoot && <span className="xt-badge">Këmba: {profile.stats.preferredFoot}</span>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1256,10 +1288,16 @@ const Profile = () => {
 
             {activeTab === 'contact' && (
               <div className="space-y-4">
-                {(profile.User?.email || profile.email) && (
+                {isOwner && (profile.User?.email || profile.email) && (
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">📧</span>
+                    <span aria-hidden="true" className="text-[var(--xt-color-gold-bright)]">Email</span>
                     <span>{profile.User?.email || profile.email}</span>
+                  </div>
+                )}
+                {profile.contact?.email && (
+                  <div className="flex items-center gap-3">
+                    <span aria-hidden="true" className="text-[var(--xt-color-gold-bright)]">Email</span>
+                    <a className="text-[var(--xt-color-gold-bright)] hover:underline" href={`mailto:${profile.contact.email}`}>{profile.contact.email}</a>
                   </div>
                 )}
                 {profile.contact?.phone && (
@@ -1292,7 +1330,7 @@ const Profile = () => {
                     </a>
                   </div>
                 )}
-                {!profile.User?.email && !profile.email && !profile.contact?.phone && !profile.contact?.instagram && !profile.contact?.twitter && !profile.contact?.facebook && (
+                {!(isOwner && (profile.User?.email || profile.email)) && !profile.contact?.email && !profile.contact?.phone && !profile.contact?.instagram && !profile.contact?.twitter && !profile.contact?.facebook && (
                   <p className="text-center text-gray-500 py-8">No contact information available</p>
                 )}
               </div>
