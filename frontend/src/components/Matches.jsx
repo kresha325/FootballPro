@@ -4,8 +4,9 @@ import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { CalendarIcon, MapPinIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import ParticipantPickGrid from './ParticipantPickGrid';
+import { Link } from 'react-router-dom';
 
 // Helper: fetch tournaments and participants
 const fetchTournaments = async () => {
@@ -16,6 +17,11 @@ const fetchParticipants = async (tournamentId) => {
   if (!tournamentId) return [];
   const res = await api.get(`/tournaments/${tournamentId}`);
   return res.data?.participants || [];
+};
+
+const isUpcomingMatch = (match) => {
+  const timestamp = new Date(match.matchDate || match.scheduledAt).getTime();
+  return Number.isFinite(timestamp) && timestamp > Date.now();
 };
 
 function EditMatchModal({ isOpen, onClose, match, tournaments, participants, stadiums, onSave }) {
@@ -153,7 +159,8 @@ function Matches() {
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeTab = 'upcoming';
+  const [loadError, setLoadError] = useState('');
+  const [activeTab, setActiveTab] = useState('upcoming');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [tournaments, setTournaments] = useState([]);
   const [participants, setParticipants] = useState([]);
@@ -219,8 +226,10 @@ function Matches() {
     try {
       const response = await api.get('/matches');
       setMatches(response.data || []);
+      setLoadError('');
     } catch (err) {
       console.error('Error fetching matches:', err);
+      setLoadError('Ndeshjet nuk mund të ngarkoheshin. Kontrollo lidhjen dhe provo përsëri.');
     } finally {
       setLoading(false);
     }
@@ -246,17 +255,28 @@ function Matches() {
     }
   };
 
-  const now = new Date();
+  const liveMatches = useMemo(() => filterBySearch(
+    matches.filter((m) => ['ongoing', 'live'].includes(String(m.status || '').toLowerCase())),
+    listSearch,
+    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.awayUser?.firstName, m.awayUser?.lastName, m.Tournament?.name, m.Stadium?.name, m.status]
+  ), [matches, listSearch]);
   const upcomingMatches = useMemo(() => {
-    const base = matches.filter((m) => new Date(m.scheduledAt || m.matchDate) > now);
+    const base = matches.filter((m) => !['finished', 'ongoing', 'live'].includes(String(m.status || '').toLowerCase()) && isUpcomingMatch(m));
     return filterBySearch(base, listSearch, (m) => [
-      m.homeTeam,
-      m.awayTeam,
+      m.homeUser?.firstName, m.homeUser?.lastName,
+      m.awayUser?.firstName, m.awayUser?.lastName,
       m.location,
       m.status,
       m.Tournament?.name,
     ]);
   }, [matches, listSearch]);
+  const completedMatches = useMemo(() => filterBySearch(
+    matches.filter((m) => String(m.status || '').toLowerCase() === 'finished'),
+    listSearch,
+    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.awayUser?.firstName, m.awayUser?.lastName, m.Tournament?.name, m.Stadium?.name]
+  ), [matches, listSearch]);
+  const visibleMatches = activeTab === 'live' ? liveMatches : activeTab === 'results' ? completedMatches : upcomingMatches;
+  const teamName = (team) => [team?.firstName, team?.lastName].filter(Boolean).join(' ').trim() || '—';
 
   useEffect(() => {
     fetchMatches();
@@ -322,105 +342,74 @@ function Matches() {
 
   // JSX rendering
   return (
-    <div>
-      {/* Create Match Button (visible for all, or add role check if needed) */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <main className="mx-auto min-h-screen max-w-7xl space-y-5 px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
+      <header className="xt-card relative overflow-hidden p-5 sm:p-7">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-[var(--xt-color-gold)]/10 to-transparent" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · Match Center</p><h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Ndeshjet</h1><p className="mt-2 max-w-xl text-sm text-[var(--xt-color-text-muted)]">Kalendar, ndeshje live dhe rezultatet e turneve.</p></div>
+          {canCreateMatch && <button onClick={() => setShowCreateModal(true)} className="btn btn-primary min-h-11 shrink-0">+ Krijo ndeshje</button>}
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <ListSearchBar value={listSearch} onChange={setListSearch} placeholder="Kërko ndeshje, ekip, vend…" className="mb-0 flex-1" />
-        {canCreateMatch && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow shrink-0"
-          >
-            Krijo Ndeshje
-          </button>
-        )}
       </div>
 
-      {/* Upcoming Matches List */}
-      {activeTab === 'upcoming' && (
-        <div className="space-y-4">
+      <nav className="xt-card grid grid-cols-3 gap-1 p-1" aria-label="Filtrim i ndeshjeve">
+        {[['upcoming', 'Kalendar', upcomingMatches.length], ['live', 'Live', liveMatches.length], ['results', 'Rezultatet', completedMatches.length]].map(([id, label, count]) => <button key={id} type="button" aria-pressed={activeTab === id} onClick={() => setActiveTab(id)} className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition ${activeTab === id ? 'bg-[var(--xt-color-gold)] text-slate-950' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5'}`}>{label}<span className="ml-2 tabular-nums opacity-75">{count}</span></button>)}
+      </nav>
+
+      <section className="space-y-3" aria-live="polite">
           {loading ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center text-gray-500">
-              Duke ngarkuar ndeshjet…
-            </div>
-          ) : upcomingMatches.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
-              <CalendarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">Nuk ka ndeshje të ardhshme të planifikuara</p>
+            <div className="xt-card space-y-3 p-5" aria-label="Po ngarkohen ndeshjet">{[0, 1, 2].map((key) => <div key={key} className="xt-skeleton h-24" />)}</div>
+          ) : loadError ? (
+            <div className="xt-error-state xt-card"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchMatches(); }}>Provo përsëri</button></div>
+          ) : visibleMatches.length === 0 ? (
+            <div className="xt-empty-state xt-card">
+              <CalendarIcon className="h-12 w-12 text-[var(--xt-color-gold)]" aria-hidden="true" />
+              <p>{activeTab === 'live' ? 'Nuk ka ndeshje live tani.' : activeTab === 'results' ? 'Nuk ka rezultate të regjistruara.' : 'Nuk ka ndeshje të ardhshme të planifikuara.'}</p>
             </div>
           ) : (
-            upcomingMatches.map((match) => (
+            visibleMatches.map((match) => (
               <div
                 key={match.id}
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition"
+                className="xt-card overflow-hidden p-4 transition hover:border-[var(--xt-color-gold)]/40 sm:p-5"
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  {/* Teams */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
-                    <div className="flex-1 text-center sm:text-right min-w-0">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
-                        {match.homeTeam}
-                      </h3>
-                      <span className="text-sm text-gray-500">Vendas</span>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+                    <div className="min-w-0 text-center sm:text-right">
+                      <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.homeUser)}</h2>
+                      <span className="text-xs text-[var(--xt-color-text-subtle)]">Vendas</span>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-bold text-gray-400 text-center shrink-0">VS</div>
-                    <div className="flex-1 text-center sm:text-left min-w-0">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
-                        {match.awayTeam}
-                      </h3>
-                      <span className="text-sm text-gray-500">Mysafir</span>
+                    <div className="min-w-16 text-center font-mono text-2xl font-black tabular-nums text-white sm:text-3xl" aria-label="Rezultati">
+                      {match.scoreHome != null && match.scoreAway != null ? `${match.scoreHome} : ${match.scoreAway}` : <span className="text-base text-[var(--xt-color-gold-bright)]">VS</span>}
+                    </div>
+                    <div className="min-w-0 text-center sm:text-left">
+                      <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.awayUser)}</h2>
+                      <span className="text-xs text-[var(--xt-color-text-subtle)]">Mysafir</span>
                     </div>
                   </div>
-                  {/* Match Info */}
-                  <div className="flex flex-col gap-2 w-full md:w-64">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <CalendarIcon className="h-5 w-5 shrink-0" />
-                      <span className="text-sm">
-                        {new Date(match.scheduledAt).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <ClockIcon className="h-5 w-5 shrink-0" />
-                      <span className="text-sm">
-                        {new Date(match.scheduledAt).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    {match.Stadium?.name || match.location ? (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <MapPinIcon className="h-5 w-5 shrink-0" />
-                        <span className="text-sm break-words">{match.Stadium?.name || match.location}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {/* Status Badge */}
-                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                    <span className="inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium">
-                      {match.status || 'E planifikuar'}
-                    </span>
-                    {canEditThisMatch(match) && (
-                      <button className="px-3 py-2 bg-yellow-400 text-white rounded hover:bg-yellow-500 text-sm font-medium" onClick={() => handleEditMatch(match)}>
-                        Ndrysho
-                      </button>
-                    )}
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[var(--xt-color-text-muted)] sm:justify-end">
+                    {match.matchDate || match.scheduledAt ? <span className="inline-flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{new Date(match.matchDate || match.scheduledAt).toLocaleString('sq-AL', { dateStyle: 'medium', timeStyle: 'short' })}</span> : null}
+                    {match.Stadium?.name || match.location ? <span className="inline-flex items-center gap-1.5"><MapPinIcon className="h-4 w-4" />{match.Stadium?.name || match.location}</span> : null}
+                    {match.Tournament?.name && <span className="xt-badge xt-badge-gold">{match.Tournament.name}</span>}
                   </div>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--xt-color-border)] pt-3">
+                  <span className={`xt-badge ${activeTab === 'live' ? 'xt-badge-gold' : ''}`}>{activeTab === 'live' ? 'LIVE' : match.status || 'E planifikuar'}</span>
+                  {match.round != null && <span className="text-xs text-[var(--xt-color-text-subtle)]">Raundi {match.round}</span>}
+                  {activeTab === 'upcoming' && canEditThisMatch(match) && <button className="btn btn-quiet min-h-10 px-3 text-sm" onClick={() => handleEditMatch(match)}>Ndrysho ndeshjen</button>}
+                  {match.tournamentId && <Link className="btn btn-quiet min-h-10 px-3 text-sm" to={`/tournaments?tournamentId=${match.tournamentId}`}>Qendra e ndeshjes</Link>}
+                </div>
                 {match.description && (
-                  <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm">
+                  <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">
                     {match.description}
                   </p>
                 )}
               </div>
             ))
           )}
-        </div>
-      )}
+      </section>
 
       <EditMatchModal
         isOpen={editModalOpen}
@@ -544,7 +533,7 @@ function Matches() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

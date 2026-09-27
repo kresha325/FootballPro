@@ -14,6 +14,7 @@ import {
 } from '../utils/footballSeason';
 import axios from 'axios';
 import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
+import { TrophyIcon, ShieldCheckIcon, BoltIcon } from '@heroicons/react/24/outline';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -100,7 +101,7 @@ function MatchBroadcastModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto" onClick={onClose} role="presentation">
       <div
-        className="w-full max-w-2xl max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white shadow-2xl ring-1 ring-white/10"
+        className="w-full max-w-2xl max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl bg-[var(--xt-color-surface)] text-[var(--xt-color-text)] shadow-2xl ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -109,7 +110,7 @@ function MatchBroadcastModal({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/40 via-transparent to-transparent" />
           <div className="relative flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400/90">Ndeshje zyrtare</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Ndeshje zyrtare</p>
               <p className="text-sm text-slate-300 break-words">{tName}</p>
               <p className="mt-1 text-xs text-slate-400">
                 {m?.matchDate ? new Date(m.matchDate).toLocaleString() : '—'} · Raundi {m?.round ?? '—'}
@@ -118,7 +119,7 @@ function MatchBroadcastModal({
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20"
+              className="shrink-0 rounded-lg btn btn-quiet min-h-10 px-3 text-sm"
             >
               Mbyll
             </button>
@@ -159,7 +160,7 @@ function MatchBroadcastModal({
                   <span
                     className={`mb-2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                       m.status === 'finished'
-                        ? 'bg-emerald-500/20 text-emerald-300'
+                        ? 'bg-[var(--xt-color-gold)]/10 text-[var(--xt-color-gold-bright)]'
                         : m.status === 'ongoing'
                           ? 'bg-amber-500/20 text-amber-200'
                           : 'bg-slate-600 text-slate-300'
@@ -193,7 +194,7 @@ function MatchBroadcastModal({
 
             <div className="grid gap-0 border-t border-white/10 sm:grid-cols-2">
               <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r sm:p-5">
-                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-400/90">Golashënues — vendas</h4>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">Golashënues — vendas</h4>
                 {scH.length === 0 ? (
                   <p className="text-sm text-slate-500">Nuk ka të dhëna të detajuara.</p>
                 ) : (
@@ -201,14 +202,14 @@ function MatchBroadcastModal({
                     {scH.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
                         <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
-                        <span className="shrink-0 rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300">{row.goals ?? 1}</span>
+                        <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
               <div className="p-4 sm:p-5">
-                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-cyan-400/90">Golashënues — mysafir</h4>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">Golashënues — mysafir</h4>
                 {scA.length === 0 ? (
                   <p className="text-sm text-slate-500">Nuk ka të dhëna të detajuara.</p>
                 ) : (
@@ -216,7 +217,7 @@ function MatchBroadcastModal({
                     {scA.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
                         <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
-                        <span className="shrink-0 rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-cyan-200">{row.goals ?? 1}</span>
+                        <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}
                   </ul>
@@ -235,8 +236,8 @@ function MatchBroadcastModal({
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
                   <p className="text-[10px] uppercase text-slate-500">Gola (golashënues)</p>
-                  <p className="text-lg font-bold tabular-nums text-emerald-200">
-                    {data?.scorerTotals?.home ?? 0} – {data?.scorerTotals?.away ?? 0}
+                  <p className="text-lg font-bold tabular-nums text-[var(--xt-color-gold-bright)]">
+                    {data?.scorerTotals?.home ?? '—'} – {data?.scorerTotals?.away ?? '—'}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
@@ -259,14 +260,14 @@ function MatchBroadcastModal({
 
             {canEdit ? (
               <div className="border-t border-white/10 bg-slate-950/80 px-4 py-5 sm:px-6">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-emerald-300">Raporto rezultatin</h4>
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">Raporto rezultatin</h4>
                 <div className="mb-4 flex items-center justify-center gap-3">
                   <input
                     type="number"
                     min="0"
                     value={scoreHomeInput}
                     onChange={(e) => setScoreHomeInput(e.target.value)}
-                    className="w-20 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-xl font-bold text-white"
+                    className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
                   />
                   <span className="text-2xl font-bold text-slate-400">:</span>
@@ -275,7 +276,7 @@ function MatchBroadcastModal({
                     min="0"
                     value={scoreAwayInput}
                     onChange={(e) => setScoreAwayInput(e.target.value)}
-                    className="w-20 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-xl font-bold text-white"
+                    className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
                   />
                 </div>
@@ -330,6 +331,7 @@ export default function TournamentSimple() {
   const [tournaments, setTournaments] = useState([]);
   const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTournament, setEditTournament] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -342,6 +344,8 @@ export default function TournamentSimple() {
   });
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [detailRetry, setDetailRetry] = useState(0);
   const [detailExtras, setDetailExtras] = useState({
     standings: null,
     matches: [],
@@ -380,6 +384,7 @@ export default function TournamentSimple() {
       const response = await API.get('/tournaments');
       const list = response.data || [];
       setTournaments(list);
+      setLoadError('');
       const deepLinkId = searchParams.get('tournamentId');
       if (deepLinkId) {
         const found = list.find((t) => String(t.id) === String(deepLinkId));
@@ -397,6 +402,7 @@ export default function TournamentSimple() {
       }
     } catch (error) {
       console.error('Error fetching tournaments:', error);
+      setLoadError('Turnetë nuk mund të ngarkoheshin. Provo përsëri.');
     } finally {
       setLoading(false);
     }
@@ -408,6 +414,7 @@ export default function TournamentSimple() {
     let cancelled = false;
     (async () => {
       setDetailLoading(true);
+      setDetailError('');
       try {
         const [tRes, stRes, mRes, statRes] = await Promise.all([
           API.get(`/tournaments/${id}`),
@@ -423,7 +430,10 @@ export default function TournamentSimple() {
           stats: statRes.data,
         });
       } catch (error) {
-        if (!cancelled) console.error('Tournament detail:', error);
+        if (!cancelled) {
+          console.error('Tournament detail:', error);
+          setDetailError('Të dhënat e turneut nuk mund të ngarkoheshin.');
+        }
       } finally {
         if (!cancelled) setDetailLoading(false);
       }
@@ -431,7 +441,7 @@ export default function TournamentSimple() {
     return () => {
       cancelled = true;
     };
-  }, [selectedTournament?.id]);
+  }, [selectedTournament?.id, detailRetry]);
 
   const closeMatchModal = () => setMatchModal({ open: false, loading: false, error: null, data: null });
 
@@ -598,29 +608,12 @@ export default function TournamentSimple() {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'open':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'ongoing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'finished':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    return status === 'ongoing' ? 'xt-badge xt-badge-gold' : 'xt-badge';
   };
 
   const getTypeIcon = (type) => {
-    switch (type) {
-      case 'league':
-        return '🏆';
-      case 'cup':
-        return '🏅';
-      case 'knockout':
-        return '⚔️';
-      default:
-        return '🎮';
-    }
+    const Icon = type === 'league' ? TrophyIcon : type === 'cup' ? ShieldCheckIcon : type === 'knockout' ? BoltIcon : TrophyIcon;
+    return <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[var(--xt-color-gold)]/25 bg-[var(--xt-color-gold)]/10 text-[var(--xt-color-gold-bright)]"><Icon className="h-5 w-5" aria-hidden="true" /></span>;
   };
 
   const filteredTournaments = useMemo(
@@ -638,9 +631,9 @@ export default function TournamentSimple() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-950">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--xt-color-canvas)]">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-emerald-400 border-t-transparent" />
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-[var(--xt-color-gold)] border-t-transparent" />
           <p className="text-sm font-semibold tracking-wide text-emerald-200/80">Duke ngarkuar turnetë…</p>
         </div>
       </div>
@@ -648,29 +641,28 @@ export default function TournamentSimple() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20">
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-500/20 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-5 sm:p-8 shadow-2xl shadow-emerald-900/20">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
+    <div className="min-h-screen bg-[var(--xt-color-canvas)] text-[var(--xt-color-text)]">
+    <div className="mx-auto max-w-7xl px-4 py-5 pb-24 sm:px-6 sm:py-8 lg:px-8">
+      <div className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-5 sm:p-8 shadow-2xl shadow-emerald-900/20">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[var(--xt-color-gold)]/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-[var(--xt-color-gold)]/5 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-400/90">X TALENTI · Competitions</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--xt-color-gold-bright)]">X TALENTI · Competition Center</p>
             <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
             <p className="mt-2 sm:mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
-              Ligë, cup dhe knockout — tabela live, raport golash, minuta dhe asiste direkt në profilin e atletit.
+              Turnetë, rezultatet, renditjet dhe performanca e regjistruar në platformë.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-white/10">{tournaments.length} turne</span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-cyan-200 ring-1 ring-white/10">Sezon FIFA</span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-white/10">Stats Pro</span>
+              <span className="xt-badge xt-badge-gold">{tournaments.length} turne</span>
+              <span className="xt-badge">Liga · Kupa · Knockout</span>
             </div>
           </div>
           {canCreateTournament && (
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:scale-[1.02] hover:brightness-110"
+              className="btn btn-primary min-h-11 shrink-0"
             >
               + Krijo turne
             </button>
@@ -683,6 +675,8 @@ export default function TournamentSimple() {
         onChange={setListSearch}
         placeholder="Kërko turne sipas emrit, sezonit, statusit…"
       />
+
+      {loadError && <div className="xt-error-state xt-card mb-5" role="alert"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchTournaments(); }}>Provo përsëri</button></div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTournaments.map((tournament) => {
@@ -700,14 +694,14 @@ export default function TournamentSimple() {
           return (
             <div
               key={tournament.id}
-              className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-500/10 dark:border-slate-700/80 dark:bg-slate-900/80 dark:shadow-black/20"
+              className="xt-card group relative overflow-hidden p-5 transition hover:border-[var(--xt-color-gold)]/40 sm:p-6"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl">{getTypeIcon(tournament.type)}</span>
+                  {getTypeIcon(tournament.type)}
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white min-w-0 break-words">{formatTournamentTitle(tournament)}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--xt-color-text)] min-w-0 break-words">{formatTournamentTitle(tournament)}</h3>
+                    <p className="text-sm text-[var(--xt-color-text-subtle)]">
                       by {tournament.creator?.firstName} {tournament.creator?.lastName}
                     </p>
                   </div>
@@ -715,16 +709,16 @@ export default function TournamentSimple() {
               </div>
 
               {tournament.description && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{tournament.description}</p>
+                <p className="text-sm text-[var(--xt-color-text-muted)] mb-4 line-clamp-2">{tournament.description}</p>
               )}
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Lloji</span>
-                  <span className="font-medium text-gray-900 dark:text-white capitalize">{tournament.type}</span>
+                  <span className="text-[var(--xt-color-text-muted)]">Lloji</span>
+                  <span className="font-medium text-[var(--xt-color-text)] capitalize">{tournament.type}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Pjesëmarrja</span>
+                  <span className="text-[var(--xt-color-text-muted)]">Pjesëmarrja</span>
                   <span
                     className={`font-medium rounded px-2 py-0.5 text-xs ${
                       pt === 'club'
@@ -738,21 +732,21 @@ export default function TournamentSimple() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Pjesëmarrës</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="text-[var(--xt-color-text-muted)]">Pjesëmarrës</span>
+                  <span className="font-medium text-[var(--xt-color-text)]">
                     {participantCount}/{tournament.maxParticipants}
                   </span>
                 </div>
                 {tournament.season && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">{tournament.type === 'league' ? 'Sezoni' : 'Edicioni'}</span>
+                    <span className="text-[var(--xt-color-text-muted)]">{tournament.type === 'league' ? 'Sezoni' : 'Edicioni'}</span>
                     <span className="font-medium text-emerald-700 dark:text-emerald-400">{tournament.season}</span>
                   </div>
                 )}
                 {tournament.startDate && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Fillimi</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="text-[var(--xt-color-text-muted)]">Fillimi</span>
+                    <span className="font-medium text-[var(--xt-color-text)]">
                       {new Date(tournament.startDate).toLocaleDateString()}
                     </span>
                   </div>
@@ -778,7 +772,7 @@ export default function TournamentSimple() {
                     <button
                       type="button"
                       onClick={() => joinTournament(tournament.id)}
-                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                      className="btn btn-primary min-h-11 w-full"
                     >
                     {pt === 'club' ? 'Bashkohu si klub' : pt === 'mixed' ? 'Bashkohu (klub ose atlet)' : 'Bashkohu'}
                   </button>
@@ -832,7 +826,7 @@ export default function TournamentSimple() {
                   <button
                     type="button"
                     onClick={() => openTournamentModal(tournament, 'overview')}
-                    className="py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                    className="py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
                   >
                     Përmbledhje
                   </button>
@@ -853,8 +847,8 @@ export default function TournamentSimple() {
       {tournaments.length === 0 && (
         <div className="text-center py-20">
           <div className="text-6xl mb-4">🏆</div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Nuk ka turne</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Nuk ka turne</h3>
+          <p className="text-[var(--xt-color-text-muted)] mb-6">
             {canCreateTournament
               ? 'Bëhu i pari që krijon një turne!'
               : 'Turnetë krijohen nga ligat, klubet ose scoutët.'}
@@ -874,11 +868,11 @@ export default function TournamentSimple() {
       {showCreateModal && canCreateTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">Krijo Turne të Ri</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--xt-color-text)] mb-4 sm:mb-6">Krijo Turne të Ri</h2>
 
             <form onSubmit={createTournament} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Emri</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Emri</label>
                 {isLigaCreator ? (
                   <p className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
                     Turneu i ligës merr automatikisht emrin e ligës suaj.
@@ -889,28 +883,28 @@ export default function TournamentSimple() {
                     value={newTournament.name}
                     onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={`p.sh. Kupa ${APP_BRAND_NAME} U15`}
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Përshkrimi</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Përshkrimi</label>
                 <textarea
                   value={newTournament.description}
                   onChange={(e) => setNewTournament({ ...newTournament, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategoria (edicion)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kategoria (edicion)</label>
                 <select
                   value={newTournament.category}
                   onChange={(e) => setNewTournament({ ...newTournament, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="open">Open</option>
                   <option value="senior">Senior</option>
@@ -928,28 +922,28 @@ export default function TournamentSimple() {
 
               {!isLigaCreator && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kush merr pjesë</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kush merr pjesë</label>
                 <select
                   value={newTournament.participantType}
                   onChange={(e) => setNewTournament({ ...newTournament, participantType: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="individual">Individë / talente (pa klub si entitet pjesëmarrës)</option>
                   <option value="club">Vetëm klube (llogari «club»)</option>
                   <option value="mixed">Klube + athletë (të dy rolet mund të bashkohen)</option>
                 </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
                   Në «klub + athletë», një turne mund të ketë njëkohësisht klube dhe lojtarë të regjistruar si pjesëmarrës (p.sh. kupa me skuadra dhe individë).
                 </p>
               </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lloji i turneut</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Lloji i turneut</label>
                 <select
                   value={newTournament.type}
                   onChange={(e) => setNewTournament({ ...newTournament, type: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="knockout">Knockout (⚔️)</option>
                   <option value="league">Ligë — tabelë me pikë (🏆)</option>
@@ -958,11 +952,11 @@ export default function TournamentSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Maks. pjesëmarrës</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Maks. pjesëmarrës</label>
                 <select
                   value={newTournament.maxParticipants}
                   onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value, 10) })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={4}>4</option>
                   <option value={8}>8</option>
@@ -973,12 +967,12 @@ export default function TournamentSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data e fillimit</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Data e fillimit</label>
                 <input
                   type="date"
                   value={newTournament.startDate}
                   onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   {seasonLabel(newTournament.type)}: {createSeasonPreview || '—'}
@@ -992,7 +986,7 @@ export default function TournamentSimple() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                 >
                   Anulo
                 </button>
@@ -1008,7 +1002,7 @@ export default function TournamentSimple() {
       {editTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4">Edito turneun</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-[var(--xt-color-text)] mb-4">Edito turneun</h2>
             <form onSubmit={saveEditTournament} className="space-y-3">
               {!(editTournament.ligaId || editTournament.sourceRole === 'liga') ? (
                 <div>
@@ -1021,7 +1015,7 @@ export default function TournamentSimple() {
                   />
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-[var(--xt-color-text-muted)]">
                   Emri i turneut të ligës mbetet emri i ligës.
                 </p>
               )}
@@ -1077,11 +1071,11 @@ export default function TournamentSimple() {
 
       {selectedTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-3xl w-full p-4 sm:p-6 max-h-[92dvh] overflow-y-auto overscroll-contain">
+          <div className="xt-card w-full max-w-3xl rounded-t-2xl p-4 shadow-2xl sm:rounded-xl sm:p-6 max-h-[92dvh] overflow-y-auto overscroll-contain">
             <div className="flex justify-between items-start gap-3 mb-4">
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{formatTournamentTitle(selectedTournament)}</h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words">
+                <h2 className="text-xl sm:text-2xl font-bold text-[var(--xt-color-text)] mb-1 break-words">{formatTournamentTitle(selectedTournament)}</h2>
+                <p className="text-xs sm:text-sm text-[var(--xt-color-text-muted)] break-words">
                   {selectedTournament.creator?.firstName} {selectedTournament.creator?.lastName} ·{' '}
                   <span className="capitalize">{selectedTournament.type}</span>
                   {selectedTournament.season ? ` · ${selectedTournament.season}` : ''} ·{' '}
@@ -1107,18 +1101,18 @@ export default function TournamentSimple() {
             </div>
 
             {selectedTournament.description && (
-              <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">{selectedTournament.description}</p>
+              <p className="text-[var(--xt-color-text-muted)] mb-4 text-sm">{selectedTournament.description}</p>
             )}
 
             {detailLoading && (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
-              </div>
+              <div className="space-y-3 py-4" aria-label="Po ngarkohen të dhënat"><div className="xt-skeleton h-12" /><div className="xt-skeleton h-24" /><div className="xt-skeleton h-40" /></div>
             )}
+
+            {detailError && !detailLoading && <div className="xt-error-state rounded-xl border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-danger)]/5" role="alert"><p>{detailError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => setDetailRetry((value) => value + 1)}>Provo përsëri</button></div>}
 
             {!detailLoading && (
               <nav
-                className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-900/60 sm:grid-cols-4"
+                className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1 sm:grid-cols-4"
                 aria-label="Seksione turneu"
               >
                 {[
@@ -1133,8 +1127,8 @@ export default function TournamentSimple() {
                     onClick={() => setDetailTab(id)}
                     className={`min-h-10 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition sm:text-sm ${
                       detailTab === id
-                        ? 'bg-white text-blue-700 shadow-sm dark:bg-gray-800 dark:text-blue-300'
-                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                        ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-sm'
+                        : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     {label}
@@ -1145,28 +1139,28 @@ export default function TournamentSimple() {
 
             {detailTab === 'overview' && !detailLoading && detailExtras.stats && (
               <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-gray-200 bg-white p-3 text-center dark:border-gray-600 dark:bg-gray-900/50">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ndeshje</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="xt-stat-card p-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Ndeshje</p>
+                  <p className="text-xl font-bold text-[var(--xt-color-text)]">
                     {detailExtras.stats.finishedMatches}/{detailExtras.stats.totalMatches}
                   </p>
                   <p className="text-[10px] text-gray-500">përfunduar</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-3 text-center dark:border-gray-600 dark:bg-gray-900/50">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gola</p>
+                <div className="xt-stat-card p-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Gola</p>
                   <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{detailExtras.stats.totalGoals}</p>
                   <p className="text-[10px] text-gray-500">në turne</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-3 text-center dark:border-gray-600 dark:bg-gray-900/50">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Top golashënues</p>
-                  <p className="truncate text-sm font-bold text-gray-900 dark:text-white" title={detailExtras.stats.topScorerName || ''}>
+                <div className="xt-stat-card p-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Top golashënues</p>
+                  <p className="truncate text-sm font-bold text-[var(--xt-color-text)]" title={detailExtras.stats.topScorerName || ''}>
                     {detailExtras.stats.topScorerName || `#${detailExtras.stats.topScorerId || '—'}`}
                   </p>
                   <p className="text-[10px] text-gray-500">{detailExtras.stats.topScorerGoals} gola</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-3 text-center dark:border-gray-600 dark:bg-gray-900/50">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Kryesues pikësh</p>
-                  <p className="truncate text-sm font-bold text-gray-900 dark:text-white" title={detailExtras.stats.topTeamName || ''}>
+                <div className="xt-stat-card p-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Kryesues pikësh</p>
+                  <p className="truncate text-sm font-bold text-[var(--xt-color-text)]" title={detailExtras.stats.topTeamName || ''}>
                     {detailExtras.stats.topTeamName || `#${detailExtras.stats.topTeamId || '—'}`}
                   </p>
                   <p className="text-[10px] text-gray-500">{detailExtras.stats.topTeamPoints} pikë</p>
@@ -1176,7 +1170,7 @@ export default function TournamentSimple() {
 
             {detailTab === 'overview' && !detailLoading && detailExtras.stats?.recentResults?.length > 0 && (
               <div className="mb-6">
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rezultatet e fundit</h3>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Rezultatet e fundit</h3>
                 <div className="flex flex-wrap gap-2">
                   {detailExtras.stats.recentResults.map((r) => (
                     <button
@@ -1185,7 +1179,7 @@ export default function TournamentSimple() {
                       onClick={() => openMatchDetail(r.id)}
                       className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-xs transition hover:border-emerald-500/50 hover:bg-emerald-50/80 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
                     >
-                      <span className="block font-mono font-bold text-gray-900 dark:text-white">
+                      <span className="block font-mono font-bold text-[var(--xt-color-text)]">
                         {r.scoreHome} – {r.scoreAway}
                       </span>
                       <span className="mt-0.5 block max-w-[140px] truncate text-gray-600 dark:text-gray-300">
@@ -1199,12 +1193,12 @@ export default function TournamentSimple() {
 
             {detailTab === 'overview' && !detailLoading && detailExtras.stats && (
               <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-600 dark:bg-gray-900/40">
-                <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">Përmbledhje turneu</h3>
-                <p className="text-gray-700 dark:text-gray-300">
+                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">Përmbledhje turneu</h3>
+                <p className="text-[var(--xt-color-text-muted)]">
                   Pjesëmarrës: {detailExtras.stats.totalParticipants} · Ndeshje gjithsej: {detailExtras.stats.totalMatches} · Në program:{' '}
                   {detailExtras.stats.scheduledMatches ?? '—'} · Mesatarja e golave / ndeshje të përfunduar: {detailExtras.stats.avgGoalsPerMatch}
                 </p>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-2 text-xs text-[var(--xt-color-text-subtle)]">
                   Për renditjen sipas pikëve (klube + të tjerë) hap skedën <strong>Tabela · pikë</strong>.
                 </p>
               </div>
@@ -1212,14 +1206,14 @@ export default function TournamentSimple() {
 
             {detailTab === 'table' && !detailLoading && (
               <div className="mb-8">
-                <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">Tabela — renditja sipas pikëve</h3>
-                <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">Tabela — renditja sipas pikëve</h3>
+                <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">
                   {['club', 'mixed'].includes(selectedTournament.participantType || '')
                     ? 'Klubet (dhe athletët në turne «mixed») renditen sipas pikëve në ligë (3-1-0, pastaj diferenca e golave). Në cup/knockout, tabela pasqyron përmbledhjen nga ndeshjet e përfunduara.'
                     : 'Pjesëmarrësit renditen sipas pikëve në ligë; në cup/knockout sipas statistikave të nxjerra nga ndeshjet e përfunduara.'}
                 </p>
                 {detailExtras.standings?.caption && (
-                  <p className="mb-4 text-xs text-gray-500 dark:text-gray-400 border-l-4 border-emerald-500 pl-3">{detailExtras.standings.caption}</p>
+                  <p className="mb-4 text-xs text-[var(--xt-color-text-subtle)] border-l-4 border-emerald-500 pl-3">{detailExtras.standings.caption}</p>
                 )}
                 {detailExtras.standings?.rows?.length > 0 ? (
                   <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600">
@@ -1245,7 +1239,7 @@ export default function TournamentSimple() {
                           return (
                             <tr key={row.userId} className="border-t border-gray-100 dark:border-gray-600">
                               <td className="px-3 py-2">{row.rank}</td>
-                              <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                              <td className="px-3 py-2 font-medium text-[var(--xt-color-text)]">
                                 <div className="flex items-center gap-2">
                                   <UserAvatarLink user={u} userId={row.userId} size={32} />
                                   {row.userId ? (
@@ -1281,8 +1275,8 @@ export default function TournamentSimple() {
 
             {detailTab === 'matches' && !detailLoading && detailExtras.matches?.length > 0 && (
               <div className="mb-8">
-                <h3 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">Të gjitha ndeshjet</h3>
-                <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Kliko një rresht për statistika të plota si ndeshje profesionale.</p>
+                <h3 className="mb-1 text-lg font-bold text-[var(--xt-color-text)]">Të gjitha ndeshjet</h3>
+                <p className="mb-3 text-xs text-[var(--xt-color-text-subtle)]">Kliko një rresht për statistika të plota si ndeshje profesionale.</p>
                 <ul className="space-y-2">
                   {detailExtras.matches.map((m) => {
                     const when = m.matchDate ? new Date(m.matchDate) : null;
@@ -1303,7 +1297,7 @@ export default function TournamentSimple() {
                         onClick={() => openMatchDetail(m.id)}
                         className="flex w-full flex-col gap-2 rounded-lg border border-gray-200 px-3 py-3 text-left text-sm transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-gray-700/80"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--xt-color-text-subtle)]">
                           <span className="font-semibold shrink-0">R{m.round ?? '—'}</span>
                           {dateLabel ? (
                             <span className="min-w-0 truncate">{dateLabel}</span>
@@ -1313,14 +1307,14 @@ export default function TournamentSimple() {
                           <span className="text-[10px] font-semibold uppercase tracking-wide">{m.status}</span>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gray-900 dark:text-white">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)]">
                             <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={participantLabel(m.homeUser, selectedTournament.participantType || 'individual')} />
                             <span className="truncate">{participantLabel(m.homeUser, selectedTournament.participantType || 'individual')}</span>
                           </span>
-                          <span className="shrink-0 self-center font-mono text-base font-bold text-gray-900 dark:text-white">
+                          <span className="shrink-0 self-center font-mono text-base font-bold text-[var(--xt-color-text)]">
                             {m.scoreHome ?? '—'} : {m.scoreAway ?? '—'}
                           </span>
-                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gray-900 dark:text-white sm:justify-end">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)] sm:justify-end">
                             <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={participantLabel(m.awayUser, selectedTournament.participantType || 'individual')} />
                             <span className="truncate">{participantLabel(m.awayUser, selectedTournament.participantType || 'individual')}</span>
                           </span>
@@ -1334,12 +1328,12 @@ export default function TournamentSimple() {
             )}
 
             {detailTab === 'matches' && !detailLoading && (!detailExtras.matches || detailExtras.matches.length === 0) && (
-              <p className="mb-8 text-sm text-gray-600 dark:text-gray-400">Nuk ka ndeshje të regjistruara për këtë turne.</p>
+              <p className="mb-8 text-sm text-[var(--xt-color-text-muted)]">Nuk ka ndeshje të regjistruara për këtë turne.</p>
             )}
 
             {detailTab === 'squad' && !detailLoading && (
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Lista e pjesëmarrësve</h3>
+                <h3 className="text-lg font-bold text-[var(--xt-color-text)]">Lista e pjesëmarrësve</h3>
                 {selectedTournament.participants?.length > 0 ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {selectedTournament.participants.map((participant) => {
@@ -1360,12 +1354,12 @@ export default function TournamentSimple() {
                             {uid ? (
                               <Link
                                 to={`/profile/${uid}`}
-                                className="truncate text-sm font-medium text-gray-900 dark:text-white hover:text-emerald-600 hover:underline"
+                                className="truncate text-sm font-medium text-[var(--xt-color-text)] hover:text-emerald-600 hover:underline"
                               >
                                 {label}
                               </Link>
                             ) : (
-                              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                              <p className="truncate text-sm font-medium text-[var(--xt-color-text)]">{label}</p>
                             )}
                             {participant.Profile?.club &&
                               ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
@@ -1386,7 +1380,7 @@ export default function TournamentSimple() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-gray-600 dark:text-gray-400">Ende pa pjesëmarrës.</p>
+                  <p className="text-[var(--xt-color-text-muted)]">Ende pa pjesëmarrës.</p>
                 )}
               </div>
             )}
