@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { messagingAPI } from "../services/api";
 import { HomeIcon, ShoppingBagIcon, ChatBubbleLeftRightIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 
 function formatCartBadge(value) {
@@ -14,43 +13,19 @@ function formatCartBadge(value) {
 
 function BottomNav() {
   const { user } = useAuth();
-  const location = useLocation();
   const { totalPieces } = useCart();
   const cartBadge = formatCartBadge(totalPieces);
   const [messagesUnread, setMessagesUnread] = useState(0);
   const messagesBadge = formatCartBadge(messagesUnread);
 
-  const fetchMessagesUnread = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await messagingAPI.getUnreadCount();
-      setMessagesUnread(
-        Number(res?.data?.count ?? res?.data?.unreadCount ?? res?.data?.unread ?? 0)
-      );
-    } catch (_e) {
-      // mbaj numrin e mëparshëm
-    }
-  }, [user]);
-
   useEffect(() => {
     if (!user) return undefined;
-    fetchMessagesUnread();
-    const id = setInterval(fetchMessagesUnread, 30000);
-    return () => clearInterval(id);
-  }, [user, fetchMessagesUnread]);
-
-  useEffect(() => {
-    fetchMessagesUnread();
-  }, [location.pathname, fetchMessagesUnread]);
-
-  useEffect(() => {
-    if (!user) return undefined;
-    const onBump = () => {
-      void fetchMessagesUnread();
+    const onUnreadCount = (event) => {
+      setMessagesUnread(Number(event.detail?.count || 0));
     };
-    window.addEventListener("messaging-unread-changed", onBump);
-    return () => window.removeEventListener("messaging-unread-changed", onBump);
-  }, [user, fetchMessagesUnread]);
+    window.addEventListener("messaging-unread-count", onUnreadCount);
+    return () => window.removeEventListener("messaging-unread-count", onUnreadCount);
+  }, [user]);
 
   const rawApiUrl = import.meta.env.VITE_API_URL || "";
   const apiRoot = rawApiUrl ? rawApiUrl.replace("/api", "") : "";
@@ -83,14 +58,14 @@ function BottomNav() {
     <NavLink
       to="/marketplace"
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
       aria-label="Tregu"
     >
       <span className="relative inline-flex items-center justify-center">
         <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
         {cartBadge ? (
-          <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span aria-label={`${totalPieces} artikuj në shportë`} className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-[var(--xt-color-danger)] text-white text-[10px] font-bold flex items-center justify-center leading-none">
             {cartBadge}
           </span>
         ) : null}
@@ -105,14 +80,14 @@ function BottomNav() {
       <NavLink
         to="/messaging"
         className={({ isActive }) =>
-          `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
+          `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""}`
         }
         aria-label="Bisedat"
       >
         <span className="relative inline-flex items-center justify-center">
           <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
           {messagesBadge ? (
-            <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span aria-label={`${messagesUnread} mesazhe të palexuara`} className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-[var(--xt-color-danger)] text-white text-[10px] font-bold flex items-center justify-center leading-none">
               {messagesBadge}
             </span>
           ) : null}
@@ -152,7 +127,7 @@ function BottomNav() {
           className="h-7 w-7 rounded-full border border-white/20 object-cover"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.style.display = "none";
+            e.target.src = "/default-avatar.svg";
           }}
         />
       ) : (

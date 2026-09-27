@@ -48,8 +48,6 @@ const EmbedGoLive = lazyWithReload(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
 import AuthCallback from './components/AuthCallback';
 import { APP_BRAND_NAME } from './config/branding';
 
@@ -68,10 +66,14 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
-        <div className="w-full max-w-md">
-          <Skeleton height={40} className="mb-4" />
-          <Skeleton height={20} count={3} />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--xt-color-canvas)] px-4" role="status" aria-label="Po ngarkohet aplikacioni">
+        <div className="w-full max-w-md space-y-4" aria-hidden="true">
+          <div className="xt-skeleton h-10 w-3/5" />
+          <div className="space-y-2">
+            <div className="xt-skeleton h-5 w-full" />
+            <div className="xt-skeleton h-5 w-11/12" />
+            <div className="xt-skeleton h-5 w-4/5" />
+          </div>
         </div>
       </div>
     );
@@ -81,7 +83,7 @@ function App() {
     <ErrorBoundary>
       <CartProvider>
       <PostsProvider>
-        <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isFullscreenRoute ? 'live-fullscreen' : ''}`}>
+        <div className={`min-h-screen bg-[var(--xt-color-canvas)] ${isFullscreenRoute ? 'live-fullscreen' : ''}`}>
           {user && !isFullscreenRoute && <Navbar />}
           {user && !isFullscreenRoute && <BottomNav />}
           {user && <XPNotificationManager />}

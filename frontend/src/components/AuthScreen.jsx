@@ -85,6 +85,15 @@ export default function AuthScreen({ initialMode }) {
     }
   }, [searchParams, nextPath]);
 
+  useEffect(() => {
+    if (!rolePickerOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setRolePickerOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [rolePickerOpen]);
+
   const subtitle = useMemo(() => {
     if (mode === 'login') return 'Hyr për të vazhduar';
     if (mode === 'register') return 'Krijo llogarinë — karriera jote fillon këtu';
@@ -190,37 +199,36 @@ export default function AuthScreen({ initialMode }) {
     }
   };
 
-  const inputClass =
-    'w-full rounded-[10px] border border-slate-300 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30 focus:border-teal-700';
+  const inputClass = 'input';
 
   return (
-    <div className="min-h-[100dvh] bg-[#f0fdfa] text-slate-900">
-      <div className="mx-auto max-w-md px-6 pt-12 pb-10">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--xt-color-canvas)] px-4 py-8 text-[var(--xt-color-text)]">
+      <div className="xt-card w-full max-w-md p-5 sm:p-8">
         <Link
           to="/"
-          className="mb-3 inline-flex items-center gap-1 text-[15px] font-semibold text-slate-900 hover:text-teal-800"
+          className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--xt-color-text-muted)] transition-colors hover:text-[var(--xt-color-gold-bright)]"
         >
-          <span aria-hidden>‹</span> Kthehu
+          <span aria-hidden>←</span> Kthehu
         </Link>
 
-        <h1 className="text-[30px] font-extrabold uppercase tracking-tight">
-          <span className="text-amber-500">X</span>
+        <h1 className="text-3xl font-extrabold uppercase tracking-tight">
+          <span className="text-[var(--xt-color-gold-bright)]">X</span>
           {APP_BRAND_WORDMARK}
         </h1>
-        <p className="mt-1.5 mb-4 text-slate-600 leading-snug">{subtitle}</p>
+        <p className="mb-5 mt-2 leading-snug text-[var(--xt-color-text-muted)]">{subtitle}</p>
 
         {inlineError ? (
-          <p className="mb-3 font-semibold text-red-700" role="alert">
+          <p className="mb-3 rounded-lg border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-danger)]/10 p-3 font-semibold text-[var(--xt-color-danger)]" role="alert">
             {inlineError}
           </p>
         ) : null}
         {successMsg ? (
-          <p className="mb-3 font-semibold text-emerald-700" role="status">
+          <p className="mb-3 rounded-lg border border-[var(--xt-color-success)]/30 bg-[var(--xt-color-success)]/10 p-3 font-semibold text-[var(--xt-color-success)]" role="status">
             {successMsg}
           </p>
         ) : null}
 
-        <div className="mb-3.5 flex rounded-[10px] bg-slate-200 p-1">
+        <div className="mb-5 flex rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1" role="tablist" aria-label="Hyr ose krijo llogari">
           {[
             { id: 'login', label: 'Hyr' },
             { id: 'register', label: 'Regjistrohu' },
@@ -230,8 +238,10 @@ export default function AuthScreen({ initialMode }) {
               key={tab.id}
               type="button"
               onClick={() => switchMode(tab.id)}
-              className={`flex-1 rounded-lg py-2 text-[13px] font-semibold transition ${
-                mode === tab.id ? 'bg-teal-700 text-white' : 'text-slate-700 hover:bg-slate-100'
+              role="tab"
+              aria-selected={mode === tab.id}
+              className={`min-h-11 flex-1 rounded-md px-1 text-xs font-semibold transition-colors sm:text-sm ${
+                mode === tab.id ? 'bg-[var(--xt-color-gold)] text-[#101114]' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-text)]'
               }`}
             >
               {tab.label}
@@ -244,6 +254,7 @@ export default function AuthScreen({ initialMode }) {
             <>
               <input
                 className={inputClass}
+                aria-label="Emri"
                 placeholder="Emri"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -251,27 +262,31 @@ export default function AuthScreen({ initialMode }) {
               />
               <input
                 className={inputClass}
+                aria-label="Mbiemri"
                 placeholder="Mbiemri"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 autoComplete="family-name"
               />
 
-              <label className="block text-[13px] font-semibold text-slate-500">Lloji i llogarisë</label>
+              <label className="label">Lloji i llogarisë</label>
               <button
                 type="button"
                 onClick={() => setRolePickerOpen(true)}
-                className={`${inputClass} flex items-center justify-between text-left font-semibold`}
+                className={`${inputClass} flex min-h-11 items-center justify-between text-left font-semibold`}
+                aria-haspopup="dialog"
+                aria-expanded={rolePickerOpen}
               >
                 <span>{registerRoleLabel(role)}</span>
-                <span className="text-slate-500">▾</span>
+                <span className="text-[var(--xt-color-text-muted)]" aria-hidden="true">▾</span>
               </button>
 
-              <label className="block text-[13px] font-semibold text-slate-500">Datëlindja</label>
+              <label className="label">Datëlindja</label>
               <div className="flex gap-2">
                 <input
                   className={`${inputClass} flex-1`}
                   placeholder="DD"
+                  aria-label="Dita e lindjes"
                   inputMode="numeric"
                   maxLength={2}
                   value={dobDay}
@@ -281,6 +296,7 @@ export default function AuthScreen({ initialMode }) {
                 <input
                   className={`${inputClass} flex-1`}
                   placeholder="MM"
+                  aria-label="Muaji i lindjes"
                   inputMode="numeric"
                   maxLength={2}
                   value={dobMonth}
@@ -290,6 +306,7 @@ export default function AuthScreen({ initialMode }) {
                 <input
                   className={`${inputClass} flex-[1.4]`}
                   placeholder="VVVV"
+                  aria-label="Viti i lindjes"
                   inputMode="numeric"
                   maxLength={4}
                   value={dobYear}
@@ -297,7 +314,7 @@ export default function AuthScreen({ initialMode }) {
                   autoComplete="bday-year"
                 />
               </div>
-              <p className="text-xs text-slate-500 leading-snug">
+              <p className="text-xs leading-snug text-[var(--xt-color-text-muted)]">
                 Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.
               </p>
             </>
@@ -305,6 +322,7 @@ export default function AuthScreen({ initialMode }) {
 
           <input
             className={inputClass}
+            aria-label="Email"
             type="email"
             placeholder="Email"
             value={email}
@@ -317,6 +335,7 @@ export default function AuthScreen({ initialMode }) {
             <>
               <input
                 className={inputClass}
+                aria-label="Fjalëkalimi"
                 type="password"
                 placeholder="Fjalëkalimi"
                 value={password}
@@ -326,6 +345,7 @@ export default function AuthScreen({ initialMode }) {
               {mode === 'register' ? (
                 <input
                   className={inputClass}
+                  aria-label="Përsërit fjalëkalimin"
                   type="password"
                   placeholder="Përsërit fjalëkalimin"
                   value={confirmPassword}
@@ -337,12 +357,12 @@ export default function AuthScreen({ initialMode }) {
           ) : null}
 
           {mode === 'register' ? (
-            <label className="flex items-center gap-3 text-[13px] text-slate-600 cursor-pointer">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px] text-[var(--xt-color-text-muted)]">
               <input
                 type="checkbox"
                 checked={acceptedTerms}
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="h-5 w-5 rounded border-slate-300 text-teal-700 focus:ring-teal-700"
+                className="h-5 w-5 rounded border-[var(--xt-color-border-strong)] accent-[var(--xt-color-gold)] focus-visible:outline"
               />
               <span>Pranoj kushtet e përdorimit dhe privatësinë</span>
             </label>
@@ -351,7 +371,7 @@ export default function AuthScreen({ initialMode }) {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-[10px] bg-teal-700 py-3.5 text-base font-bold text-white hover:bg-teal-800 disabled:opacity-50 transition"
+            className="btn btn-primary mt-2 w-full"
           >
             {loading
               ? 'Duke u ngarkuar…'
@@ -366,17 +386,18 @@ export default function AuthScreen({ initialMode }) {
 
       {rolePickerOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/45 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center"
           onClick={() => setRolePickerOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-md max-h-[70vh] overflow-auto rounded-t-2xl sm:rounded-2xl bg-white pb-6 pt-4 shadow-xl"
+            className="xt-card max-h-[min(70vh,40rem)] w-full max-w-md overflow-auto rounded-t-2xl border-[var(--xt-color-border-strong)] bg-[var(--xt-color-surface)] pb-6 pt-4 shadow-2xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
+            aria-modal="true"
             aria-label="Lloji i llogarisë"
           >
-            <h2 className="px-5 mb-2 text-lg font-extrabold text-slate-900">Lloji i llogarisë</h2>
+            <h2 className="mb-2 px-5 text-lg font-extrabold text-[var(--xt-color-text)]">Lloji i llogarisë</h2>
             <ul>
               {REGISTER_ROLE_OPTIONS.map((item) => (
                 <li key={item.value}>
@@ -386,17 +407,17 @@ export default function AuthScreen({ initialMode }) {
                       setRole(item.value);
                       setRolePickerOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between border-b border-slate-100 px-5 py-3 text-left hover:bg-teal-50 ${
-                      role === item.value ? 'bg-teal-50' : ''
+                    className={`flex min-h-14 w-full items-center justify-between border-b border-[var(--xt-color-border)] px-5 py-3 text-left transition-colors hover:bg-white/5 ${
+                      role === item.value ? 'bg-[var(--xt-color-gold)]/10' : ''
                     }`}
                   >
                     <span>
-                      <span className="block font-bold text-slate-900">{item.label}</span>
+                      <span className="block font-bold text-[var(--xt-color-text)]">{item.label}</span>
                       {item.hint ? (
-                        <span className="block text-xs text-slate-500 mt-0.5">{item.hint}</span>
+                        <span className="mt-0.5 block text-xs text-[var(--xt-color-text-muted)]">{item.hint}</span>
                       ) : null}
                     </span>
-                    {role === item.value ? <span className="text-teal-700 font-bold">✓</span> : null}
+                    {role === item.value ? <span className="font-bold text-[var(--xt-color-gold-bright)]" aria-label="Zgjedhur">✓</span> : null}
                   </button>
                 </li>
               ))}

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon, HomeIcon, ShoppingBagIcon, BellIcon, ChatBubbleLeftRightIcon, UsersIcon, BuildingOffice2Icon, LockClosedIcon, SparklesIcon, MegaphoneIcon, ArrowRightOnRectangleIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { liveStreamAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
@@ -75,9 +75,9 @@ function Navbar() {
         messagingAPI.getUnreadCount(),
       ]);
       setUnreadCount(notifRes.data.count || 0);
-      setMessagesUnread(
-        Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0)
-      );
+      const messageCount = Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0);
+      setMessagesUnread(messageCount);
+      window.dispatchEvent(new CustomEvent('messaging-unread-count', { detail: { count: messageCount } }));
     } catch (error) {
       console.error('Error fetching header badges:', error);
     }
@@ -226,6 +226,15 @@ function Navbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isMenuOpen]);
+
 
 
   return (
@@ -310,7 +319,7 @@ function Navbar() {
                   className="w-9 h-9 rounded-full object-cover"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.style.display = 'none';
+                    e.target.src = '/default-avatar.svg';
                   }}
                 />
               ) : (
@@ -323,9 +332,11 @@ function Navbar() {
 
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="relative rounded-lg p-2 text-gray-300 transition-colors hover:bg-white/10 hover:text-[#f2c866]"
+            className="relative grid h-11 w-11 place-items-center rounded-lg text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--xt-color-gold-bright)]"
             aria-label="Toggle menu"
             aria-expanded={isMenuOpen}
+            aria-controls="authenticated-navigation-menu"
+            type="button"
           >
             {isMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
             {!isMenuOpen && unreadCount > 0 && (
@@ -338,7 +349,11 @@ function Navbar() {
       </div>
 
       {/* BURGER MENU SIDEBAR — mobile: plot lartësinë, me scroll, mbi bottom nav */}
-      <div
+      <nav
+        id="authenticated-navigation-menu"
+        aria-label="Navigimi i llogarisë"
+        aria-hidden={!isMenuOpen}
+        inert={!isMenuOpen}
         className={`fixed top-16 right-0 z-[60] h-[calc(100vh-4rem)] w-80 max-w-[min(20rem,100vw)] transform overflow-y-auto overscroll-contain border-l border-white/10 bg-[#08111f]/[.98] shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-in-out ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         } bottom-0 h-[calc(100vh-4rem)]`}
@@ -355,7 +370,7 @@ function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="text-2xl">🏠</span>
+                <HomeIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Ballina</span>
               </Link>
 
@@ -364,7 +379,7 @@ function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="text-2xl">🛒</span>
+                <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Tregu</span>
                 {cartBadge ? (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
@@ -378,7 +393,7 @@ function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="text-2xl">🏆</span>
+                <TrophyIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Turnetë</span>
               </Link>
 
@@ -390,7 +405,7 @@ function Navbar() {
                 }}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
-                <span className="text-2xl">🔴</span>
+                <VideoCameraIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Dil LIVE</span>
               </button>
             </div>
@@ -401,7 +416,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="md:hidden flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">🏆</span>
+              <TrophyIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Turnetë</span>
             </Link>
             
@@ -411,7 +426,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">🔔</span>
+              <BellIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Njoftimet</span>
               {unreadCount > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
@@ -426,7 +441,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">💬</span>
+              <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Mesazhet</span>
               {messagesUnread > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
@@ -441,7 +456,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">👥</span>
+              <UsersIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Shfleto Profilet</span>
             </Link>
 
@@ -481,7 +496,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">⚽</span>
+              <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Ndeshjet</span>
             </Link>
 
@@ -492,7 +507,7 @@ function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="text-2xl">🔍</span>
+                <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Scouting</span>
               </Link>
             )}
@@ -502,9 +517,9 @@ function Navbar() {
               <Link 
                 to="/club-roster" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-colors"
+                className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
               >
-                <span className="text-2xl">👥</span>
+                <BuildingOffice2Icon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Formacioni i Klubit</span>
               </Link>
             )}
@@ -514,9 +529,9 @@ function Navbar() {
               <Link 
                 to="/admin" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-danger)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
               >
-                <span className="text-2xl">🔐</span>
+                <LockClosedIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Paneli i Adminit</span>
               </Link>
             )}
@@ -526,9 +541,9 @@ function Navbar() {
             <Link 
               to="/premium" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors"
+              className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
             >
-              <span className="text-2xl">👑</span>
+              <SparklesIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Kalo në Premium</span>
             </Link>
 
@@ -538,9 +553,9 @@ function Navbar() {
                 // Dërgo event custom për të hapur modalin në AdSlider
                 window.dispatchEvent(new CustomEvent('open-ad-modal'));
               }}
-              className="flex items-center gap-3 p-3 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors mt-2 w-full"
+              className="btn btn-outline mt-2 w-full justify-start"
             >
-              <span className="text-2xl">📢</span>
+              <MegaphoneIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Shto reklamë</span>
             </button>
 
@@ -550,7 +565,7 @@ function Navbar() {
               onClick={() => setIsMenuOpen(false)}
               className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="text-2xl">⚙️</span>
+              <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Cilësimet</span>
             </Link>
 
@@ -563,20 +578,22 @@ function Navbar() {
               }}
               className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
-              <span className="text-2xl">🚪</span>
+              <ArrowRightOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Dil</span>
             </button>
 
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* OVERLAY */}
       {isMenuOpen && (
-        <div 
-          className="fixed inset-0 top-16 bg-black/50 z-40"
+        <button
+          type="button"
+          className="fixed inset-0 top-16 z-40 cursor-default bg-black/50"
+          aria-label="Mbyll menunë"
           onClick={() => setIsMenuOpen(false)}
-        ></div>
+        />
       )}
 
       {/* Go Live button removed from top navbar — use BottomNav button instead */}
