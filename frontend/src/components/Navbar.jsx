@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { liveStreamAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
@@ -257,10 +257,10 @@ function Navbar() {
           {/* SEARCH */}
           <Link
             to="/search"
-            className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-white/10 hover:text-[#f2c866]"
+            className="grid h-11 w-11 place-items-center rounded-lg text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--xt-color-gold-bright)]"
             aria-label="Search"
           >
-            <span className="text-2xl" aria-hidden="true">⌕</span>
+            <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
           </Link>
 
           {/* Dark mode toggle removed (available in Settings) */}
@@ -275,7 +275,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`px-2 py-1 text-sm rounded-l-md border ${followedOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-l-lg border transition-colors ${followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={followedOnly}
               aria-label="Show My feed"
             >
@@ -288,7 +288,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`px-2 py-1 text-sm rounded-r-md border ${!followedOnly ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-r-lg border transition-colors ${!followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={!followedOnly}
               aria-label="Show All feed"
             >
@@ -300,7 +300,7 @@ function Navbar() {
           {user ? (
             <Link
               to={`/profile/${user.id}`}
-              className="hidden md:flex items-center rounded-full ring-2 ring-blue-500/40 hover:ring-blue-500 transition-all"
+              className="hidden md:flex items-center rounded-full ring-2 ring-white/15 hover:ring-[var(--xt-color-gold)] transition-all"
               aria-label="Profile"
             >
               {user.profilePhoto && typeof user.profilePhoto === 'string' && user.profilePhoto.trim() !== '' ? (
@@ -314,7 +314,7 @@ function Navbar() {
                   }}
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                <div className="xt-avatar h-9 w-9 text-sm">
                   {user.firstName?.[0]}
                 </div>
               )}
