@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { clubMembersAPI, clubStaffAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
+import { getFullUrl } from '../../utils/mediaUrl';
 
 const ClubProfile = ({ profile = {}, isOwner }) => {
   const clubData = (profile && profile.stats) ? profile.stats : {};
 
-  // Helper for absolute/relative URL
-  const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
-
-  // Helper për path të plotë të fotove/video
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    const normalized = url.startsWith('https//')
-      ? url.replace('https//', 'https://')
-      : url.startsWith('http//')
-        ? url.replace('http//', 'http://')
-        : url;
-    if (/^https?:\/\//.test(normalized)) return normalized;
-    if (/(^|\/)default-avatar\.png$/i.test(normalized)) return '/default-avatar.svg';
-    return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
-  };
   const [clubMembers, setClubMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [pendingMembers, setPendingMembers] = useState([]);
@@ -102,6 +88,14 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
   const athleteMembers = clubMembers.filter(isAthleteMember);
   const squadSize = loadingMembers ? '...' : athleteMembers.length;
+  const clubMetrics = [
+    { label: 'Lojtarë në skuadër', value: squadSize },
+    { label: 'Ekipe', value: loadingMembers ? '…' : new Set(athleteMembers.map((member) => member.teamType).filter(Boolean)).size },
+    { label: 'Staf aktiv', value: loadingStaff ? '…' : clubStaff.length },
+    { label: 'Trofe', value: clubData.trophies },
+    { label: 'Pozita në ligë', value: clubData.ranking },
+    { label: 'Vlera e tregut', value: clubData.marketValue },
+  ].filter((metric) => metric.value !== null && metric.value !== undefined && metric.value !== '');
 
   const groupByTeam = (items, getTeamType) =>
     items.reduce((acc, item) => {
@@ -118,17 +112,13 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
   const avatarFallback = (first, last) =>
     `${(first || '?').charAt(0)}${(last || '').charAt(0)}`.toUpperCase();
 
-  const PersonAvatar = ({ photo, firstName, lastName, tone = 'blue' }) => {
-    const toneClass =
-      tone === 'green'
-        ? 'bg-gradient-to-br from-green-500 to-teal-600'
-        : 'bg-gradient-to-br from-blue-500 to-indigo-600';
+  const PersonAvatar = ({ photo, firstName, lastName }) => {
     if (photo) {
       return (
         <img
           src={getFullUrl(photo)}
           alt={`${firstName || ''} ${lastName || ''}`.trim() || 'Avatar'}
-          className="w-12 h-12 rounded-full object-cover shrink-0"
+          className="xt-avatar h-12 w-12 object-cover"
           loading="lazy"
           decoding="async"
         />
@@ -136,7 +126,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
     }
     return (
       <div
-        className={`w-12 h-12 rounded-full ${toneClass} text-white flex items-center justify-center font-bold text-sm shrink-0`}
+        className="xt-avatar h-12 w-12 text-sm"
       >
         {avatarFallback(firstName, lastName)}
       </div>
@@ -205,23 +195,29 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Profile Photo */}
-      {profile.profilePhoto && (
-        <div className="flex justify-center mb-6">
-          <img
-            src={getFullUrl(profile.profilePhoto)}
-            alt="Profile"
-            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
-          />
+    <div className="space-y-5">
+      <section className="xt-card overflow-hidden">
+        <div className="h-1.5 bg-[var(--xt-color-gold)]" />
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+          <div className="xt-avatar h-20 w-20 overflow-hidden rounded-xl text-2xl">
+            {profile.profilePhoto ? <img src={getFullUrl(profile.profilePhoto)} alt={`${profile.club || 'Klubi'} logo`} className="h-full w-full object-cover" /> : (profile.club || 'KL').slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">Klub futbolli</p>
+            <h2 className="mt-1 text-2xl font-bold">{profile.club || 'Organizata e klubit'}</h2>
+            <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{[profile.city, profile.country].filter(Boolean).join(', ') || 'Vendndodhja nuk është shtuar'}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {profile.verified && <span className="xt-badge xt-badge-gold">I verifikuar</span>}
+              {clubData.clubType && <span className="xt-badge">{clubData.clubType}</span>}
+            </div>
+          </div>
+          {isOwner && <Link to="/club-roster" className="btn btn-primary">Hap menaxhimin e klubit</Link>}
         </div>
-      )}
+      </section>
       {/* Gallery Photos */}
       {Array.isArray(profile.gallery) && profile.gallery.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>🖼️</span> Galeria e klubit
-          </h3>
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Galeria e klubit</h3>
           <div className="flex flex-wrap gap-4">
             {profile.gallery.map((img, idx) => (
               <img
@@ -237,10 +233,8 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Club Videos */}
       {Array.isArray(profile.videos) && profile.videos.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>🎥</span> Videot e klubit
-          </h3>
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Videot e klubit</h3>
           <div className="flex flex-wrap gap-4">
             {profile.videos.map((vid, idx) => (
               <video
@@ -255,32 +249,32 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       )}
 
       {/* Club Information */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Club Information</h3>
+      <div className="xt-card p-4 sm:p-6">
+        <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Informacioni i klubit</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Founded</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-              {profile.founded || clubData.founded || profile.foundingYear || 'N/A'}
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Founded</label>
+            <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
+              {profile.founded || clubData.founded || profile.foundingYear || 'Nuk është shtuar'}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Stadium</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-              {profile.stadium || clubData.stadium || 'N/A'}
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Stadium</label>
+            <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
+              {profile.stadium || clubData.stadium || 'Nuk është shtuar'}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Capacity</label>
-            <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Capacity</label>
+            <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
               {(profile.capacity ?? clubData.capacity) != null &&
               String(profile.capacity ?? clubData.capacity) !== ''
                 ? Number(profile.capacity ?? clubData.capacity).toLocaleString()
-                : 'N/A'}
+                : 'Nuk është shtuar'}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">
               {Array.isArray(profile.joinedLigas) && profile.joinedLigas.length > 1 ? 'Ligat' : 'Liga'}
             </label>
             {Array.isArray(profile.joinedLigas) && profile.joinedLigas.length > 0 ? (
@@ -293,19 +287,19 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                       {logo ? (
                         <img src={logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-[var(--xt-color-surface-raised)] flex items-center justify-center text-xs font-bold text-[var(--xt-color-text-muted)] shrink-0">
                           {String(liga.name || 'L').slice(0, 1).toUpperCase()}
                         </div>
                       )}
                       {lid ? (
                         <Link
                           to={`/profile/${lid}`}
-                          className="text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate"
+                          className="text-lg font-semibold text-[var(--xt-color-text)] hover:text-[var(--xt-color-gold-bright)] hover:underline truncate"
                         >
                           {liga.name}
                         </Link>
                       ) : (
-                        <span className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                        <span className="text-lg font-semibold text-[var(--xt-color-text)] truncate">
                           {liga.name}
                         </span>
                       )}
@@ -314,8 +308,8 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                 })}
               </ul>
             ) : (
-              <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-                {profile.league || clubData.league || 'N/A'}
+              <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
+                {profile.league || clubData.league || 'Nuk është shtuar'}
               </p>
             )}
           </div>
@@ -323,60 +317,41 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       </div>
 
       {/* Club Statistics */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Statistics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg">
-            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">🏆</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{clubData.trophies || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Trophies</div>
+      {clubMetrics.length > 0 && (
+        <section className="xt-card p-4 sm:p-6">
+          <div className="xt-section-header"><div><p className="text-xs font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">Përmbledhje</p><h3 className="mt-1 text-xl font-semibold">Të dhënat e klubit</h3></div></div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {clubMetrics.map((metric) => <div className="xt-stat-card" key={metric.label}><p className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{metric.value}</p><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{metric.label}</p></div>)}
           </div>
-          <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">👥</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{squadSize}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Squad Size</div>
-          </div>
-          <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">📊</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{clubData.ranking || 'N/A'}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">League Ranking</div>
-          </div>
-          <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">💰</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{clubData.marketValue || 'N/A'}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Market Value</div>
-          </div>
-        </div>
-      </div>
+        </section>
+      )}
 
       {/* About Club */}
       {profile.bio && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>ℹ️</span> About {profile.club || 'Club'}
-          </h3>
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Rreth {profile.club || 'klubit'}</h3>
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
         </div>
       )}
 
       {/* Club Staff */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-1 text-gray-900 dark:text-white flex items-center gap-2">
-          <span>🧑‍🏫</span> Stafi / Trajnerët
+      <div className="xt-card p-4 sm:p-6">
+        <h3 className="text-xl font-bold mb-1 text-[var(--xt-color-text)] flex items-center gap-2">
+          Stafi teknik dhe drejtues
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
           Sipas kategorisë së ekipit dhe rolit — klikoni për profilin.
         </p>
         {loadingStaff ? (
-          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+          <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
         ) : clubStaff.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400">Nuk ka staf aktiv ende.</div>
+          <div className="text-[var(--xt-color-text-muted)]">Nuk ka staf aktiv ende.</div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedStaff).map(([group, staffList]) => (
               <div key={group}>
                 <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium xt-badge xt-badge-gold">
                     {group}
                   </span>
                   <span className="text-xs text-gray-400 font-normal">{staffList.length}</span>
@@ -394,17 +369,17 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                           tone="green"
                         />
                         <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-white truncate">
+                          <div className="font-semibold text-[var(--xt-color-text)] truncate">
                             {staffUser?.firstName} {staffUser?.lastName}
                           </div>
-                          <div className="text-sm text-green-700 dark:text-green-300">
+                          <div className="text-sm text-[var(--xt-color-gold-bright)]">
                             {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff'}
                           </div>
                         </div>
                       </>
                     );
                     const className =
-                      'flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition';
+                      'xt-card flex items-center gap-3 p-3 transition-colors hover:border-[var(--xt-color-gold)]';
                     return staffId ? (
                       <Link key={staff.id} to={`/profile/${staffId}`} className={className}>
                         {card}
@@ -424,18 +399,18 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Pending membership requests */}
       {isOwner && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
             <span>⏳</span> Kërkesa në pritje
           </h3>
           {loadingPending ? (
-            <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+            <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
           ) : pendingMembers.filter(isAthleteMember).length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400">Nuk ka kërkesa në pritje.</div>
+            <div className="text-[var(--xt-color-text-muted)]">Nuk ka kërkesa në pritje.</div>
           ) : (
             <div className="space-y-3">
               {pendingMembers.filter(isAthleteMember).map((member) => (
-                <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-[var(--xt-color-border)]">
                   <div className="flex items-center gap-3 min-w-0">
                     <PersonAvatar
                       photo={member.athlete?.Profile?.profilePhoto}
@@ -443,10 +418,10 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                       lastName={member.athlete?.lastName}
                     />
                     <div className="min-w-0">
-                      <div className="font-semibold text-gray-900 dark:text-white">
+                      <div className="font-semibold text-[var(--xt-color-text)]">
                         {member.athlete?.firstName} {member.athlete?.lastName}
                       </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-300 font-medium">Atlet</div>
+                      <div className="text-xs text-[var(--xt-color-gold-bright)] font-medium">Atlet</div>
                       {member.position && (
                         <div className="text-sm text-gray-500">{member.position}</div>
                       )}
@@ -476,23 +451,21 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       )}
 
       {/* Squad by group */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-1 text-gray-900 dark:text-white flex items-center gap-2">
-          <span>⚽</span> Skuadra (atletë)
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      <div className="xt-card p-4 sm:p-6">
+        <h3 className="text-xl font-bold mb-1 text-[var(--xt-color-text)]">Skuadra e lojtarëve</h3>
+        <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
           Të ndarë sipas ekipit / kategorisë — klikoni për profilin.
         </p>
         {loadingMembers ? (
-          <div className="text-gray-500 dark:text-gray-400">Duke ngarkuar...</div>
+          <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
         ) : athleteMembers.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400">Nuk ka atletë të aprovuar ende.</div>
+          <div className="text-[var(--xt-color-text-muted)]">Nuk ka atletë të aprovuar ende.</div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedMembers).map(([group, members]) => (
               <div key={group}>
                 <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium xt-badge">
                     {group}
                   </span>
                   <span className="text-xs text-gray-400 font-normal">{members.length}</span>
@@ -515,7 +488,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                       <Link
                         key={member.id}
                         to={`/profile/${athleteId}`}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                        className="xt-card flex items-center gap-3 p-3 transition-colors hover:border-[var(--xt-color-gold)]"
                       >
                         <PersonAvatar
                           photo={member.athlete?.Profile?.profilePhoto}
@@ -523,7 +496,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                           lastName={member.athlete?.lastName}
                         />
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 dark:text-white truncate">
+                          <div className="font-medium text-[var(--xt-color-text)] truncate">
                             {member.athlete?.firstName} {member.athlete?.lastName}
                           </div>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -558,26 +531,24 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       </div>
       {/* Club Roster */}
       {isOwner && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>👥</span> Club Roster
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-2 text-[var(--xt-color-text)]">Skuadra e klubit</h3>
+          <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
             Menaxho kërkesat dhe anëtarët e klubit në faqen e dedikuar.
           </p>
           <Link
             to="/club-roster"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
           >
-            Shko te Club Roster
+            Hap menaxhimin e klubit
           </Link>
         </div>
       )}
 
       {/* Achievements & Honors */}
       {clubData.achievements && clubData.achievements.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
             <span>🏅</span> Achievements & Honors
           </h3>
           <div className="space-y-3">
@@ -585,8 +556,8 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
               <div key={index} className="flex items-center gap-3 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <div className="text-3xl">🏆</div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{achievement.title}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{achievement.year}</p>
+                  <h4 className="font-semibold text-[var(--xt-color-text)]">{achievement.title}</h4>
+                  <p className="text-sm text-[var(--xt-color-text-muted)]">{achievement.year}</p>
                 </div>
               </div>
             ))}
@@ -596,8 +567,8 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Team Colors */}
       {clubData.colors && clubData.colors.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
             <span>🎨</span> Team Colors
           </h3>
           <div className="flex gap-3">
@@ -615,10 +586,8 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Contact & Social */}
       {profile.contact && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-            <span>📞</span> Contact Information
-          </h3>
+        <div className="xt-card p-4 sm:p-6">
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Kontakti</h3>
           <div className="space-y-3">
             {profile.contact.phone && (
               <div className="flex items-center gap-3">
