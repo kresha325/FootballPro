@@ -9,7 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
 import { createProductRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';

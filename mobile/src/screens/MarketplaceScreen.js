@@ -12,7 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

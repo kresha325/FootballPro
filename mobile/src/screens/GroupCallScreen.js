@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NativeCallRoom from '../livekit/NativeCallRoom';
 import { useAuth } from '../context/AuthContext';

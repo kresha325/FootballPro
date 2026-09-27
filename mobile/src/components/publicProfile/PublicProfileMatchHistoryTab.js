@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from '../../theme/nativeComponents';
 import { parseProfileJsonArray } from '../../utils/profileArrays';
 
 function resultStyle(result, theme) {

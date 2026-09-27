@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
 import { BACKEND_URL } from '../config/constants';
 
 function sponsorImageUri(s) {

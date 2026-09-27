@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from '../theme/nativeComponents';
 import { Track } from 'livekit-client';
 import { createLiveKitTokenRequest, extractErrorMessage } from '../api/client';
 import { ensureLiveKitNative } from './register';

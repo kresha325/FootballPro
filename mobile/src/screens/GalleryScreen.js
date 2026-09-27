@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { ResizeMode, Video } from 'expo-av';
 import { deleteGalleryItemRequest, extractErrorMessage, myGalleryRequest } from '../api/client';
 

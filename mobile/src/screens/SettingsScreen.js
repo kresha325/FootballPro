@@ -9,7 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import {
   extractErrorMessage,

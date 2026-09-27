@@ -9,7 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../../theme/nativeComponents';
 import { parseProfileJsonArray } from '../../utils/profileArrays';
 
 const MATCH_RESULT_OPTIONS = [

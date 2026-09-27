@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 export default function PublicProfileContactTab({ profile, theme }) {
   const contact = profile?.contact && typeof profile.contact === 'object' ? profile.contact : {};

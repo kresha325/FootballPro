@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
 
 export function resolveUserPhotoUri(userOrProfile) {
   if (!userOrProfile) return null;

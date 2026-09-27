@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { ResizeMode, Video } from 'expo-av';
 import { WebView } from 'react-native-webview';
 import { absoluteBackendUrl, WEB_APP_URL } from '../config/constants';

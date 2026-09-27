@@ -8,7 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../../theme/nativeComponents';
 import { ResizeMode, Video } from 'expo-av';
 import {
   createCommentRequest,

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
   Vibration,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { useAuth } from '../context/AuthContext';
 import { navigateRoot } from '../navigation/navigationRef';
 import { setPendingIncomingCall } from '../utils/incomingCallPayload';

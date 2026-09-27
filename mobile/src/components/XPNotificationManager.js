@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeXpNotifications } from '../utils/xpNotifications';
 

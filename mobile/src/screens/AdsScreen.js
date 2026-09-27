@@ -8,7 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
 import { adsRequest, createAdRequest, extractErrorMessage } from '../api/client';
 

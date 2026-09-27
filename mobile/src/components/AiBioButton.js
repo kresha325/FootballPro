@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { aiGenerateBioRequest, extractErrorMessage } from '../api/client';
 
 export default function AiBioButton({ hints = {}, onBio, style }) {

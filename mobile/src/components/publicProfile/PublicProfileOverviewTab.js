@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 function formatCoachCategory(cat) {
   if (!cat) return '';

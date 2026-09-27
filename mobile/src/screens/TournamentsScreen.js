@@ -13,7 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import {
   createTournamentRequest,
   extractErrorMessage,

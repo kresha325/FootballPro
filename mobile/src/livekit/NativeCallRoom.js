@@ -5,7 +5,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { Track } from 'livekit-client';
 import { createLiveKitTokenRequest, extractErrorMessage } from '../api/client';
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';

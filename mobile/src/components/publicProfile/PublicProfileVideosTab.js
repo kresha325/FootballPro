@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from '../../theme/nativeComponents';
 import { ResizeMode, Video } from 'expo-av';
 
 function LiveVideoCard({ item, theme }) {

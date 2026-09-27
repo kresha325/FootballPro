@@ -7,7 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';

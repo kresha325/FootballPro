@@ -7,7 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResizeMode, Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import UserProfileBrowsePager, { useBrowseColors } from '../components/UserProfileBrowsePager';
 import { extractErrorMessage, profilesRequest } from '../api/client';

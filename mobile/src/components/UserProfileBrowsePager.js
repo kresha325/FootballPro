@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

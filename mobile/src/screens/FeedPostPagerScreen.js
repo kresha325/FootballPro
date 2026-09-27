@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { ResizeMode, Video } from 'expo-av';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 export default function PublicProfileTabBar({ tabs, activeKey, onChange, theme }) {
   return (

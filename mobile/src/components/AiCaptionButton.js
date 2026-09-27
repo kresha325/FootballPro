@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity } from '../theme/nativeComponents';
 import { aiSuggestPostRequest, extractErrorMessage } from '../api/client';
 
 export default function AiCaptionButton({ hints = {}, onCaption, style }) {

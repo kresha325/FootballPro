@@ -7,7 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { Share } from 'react-native';
 import { extractErrorMessage, parentVerificationRequest } from '../api/client';
 

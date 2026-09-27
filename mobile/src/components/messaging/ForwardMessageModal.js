@@ -8,7 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../../theme/nativeComponents';
 import {
   conversationsRequest,
   extractErrorMessage,

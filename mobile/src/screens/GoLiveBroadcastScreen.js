@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';

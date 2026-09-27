@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from '../../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import { BACKEND_URL } from '../../config/constants';
 import { messageHasMedia, replyPreviewText, resolveMessageFileUrl } from '../../utils/messageActions';

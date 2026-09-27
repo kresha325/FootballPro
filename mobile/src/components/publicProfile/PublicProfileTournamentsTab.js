@@ -1,5 +1,5 @@
 import { formatTournamentTitle } from '../../utils/footballSeason';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 function statusLabel(status) {
   const map = {

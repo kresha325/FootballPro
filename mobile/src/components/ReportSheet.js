@@ -8,7 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from '../theme/nativeComponents';
 import { createReportRequest, extractErrorMessage } from '../api/client';
 
 const REASONS = [

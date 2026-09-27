@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 export default function PublicProfileSponsorsTab({ sponsors = [], theme }) {
   if (!sponsors.length) {

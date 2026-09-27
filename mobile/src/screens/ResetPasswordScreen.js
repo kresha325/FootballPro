@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { extractErrorMessage, resetPasswordRequest } from '../api/client';
 
 export default function ResetPasswordScreen({ route, navigation }) {

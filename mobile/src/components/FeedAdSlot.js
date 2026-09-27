@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 
 /**
  * Shfaq një karusel të shkurtër reklamash (si AdSlider në web).
