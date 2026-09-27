@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
-import { postsAPI, sponsorAPI } from '../services/api';
+import { postsAPI, sponsorAPI, profileAPI } from '../services/api';
 // import streamsAPI from '../services/streamsAPI';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../contexts/PostsContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from 'react-share';
 
 import AdSlider from './AdSlider';
@@ -17,7 +17,8 @@ import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import StadiumStrip from './StadiumStrip';
 import VerifiedBadge from './VerifiedBadge';
 import PersonName from './PersonName';
-import { API } from '../services/api';
+import { API, matchesAPI } from '../services/api';
+import { ArrowRightIcon, ChartBarIcon, MagnifyingGlassIcon, PlusIcon, TrophyIcon, UserGroupIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 
 const Feed = () => {
   const { user } = useAuth();
@@ -58,6 +59,7 @@ const Feed = () => {
     likedPosts, 
     postComments, 
     loading: postsLoading,
+    error: postsError,
     fetchPosts, 
     toggleLike, 
     fetchComments, 
@@ -128,16 +130,37 @@ const Feed = () => {
 
   // Trending tournaments (sidebar)
   const [trending, setTrending] = useState([]);
+  const [trendingError, setTrendingError] = useState(false);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [matchesError, setMatchesError] = useState(false);
+  const [performanceSummary, setPerformanceSummary] = useState(null);
+  const [performanceError, setPerformanceError] = useState(false);
   useEffect(() => {
     const fetchTrending = async () => {
       try {
         const res = await API.get('/tournaments/trending?status=open');
         setTrending(res.data || []);
       } catch (err) {
+        setTrendingError(true);
         console.error('Error fetching trending tournaments:', err);
       }
     };
     fetchTrending();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    matchesAPI.getMatches()
+      .then((res) => {
+        if (cancelled) return;
+        const now = Date.now();
+        const upcoming = (Array.isArray(res.data) ? res.data : [])
+          .filter((match) => !['finished', 'ongoing'].includes(match.status) && new Date(match.matchDate).getTime() >= now)
+          .sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
+        setUpcomingMatches(upcoming);
+      })
+      .catch(() => { if (!cancelled) setMatchesError(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // My tournaments (sidebar): tournaments where user is creator or participant
@@ -435,21 +458,89 @@ const Feed = () => {
     [allPosts, feedSearch]
   );
 
+  const role = String(user?.role || '').toLowerCase();
+  useEffect(() => {
+    if (!user?.id || !['athlete', 'player', 'coach'].includes(role)) return undefined;
+    let cancelled = false;
+    profileAPI.getProfileTournamentSummary(user.id)
+      .then((res) => { if (!cancelled) setPerformanceSummary(res?.data?.totals || null); })
+      .catch(() => { if (!cancelled) setPerformanceError(true); });
+    return () => { cancelled = true; };
+  }, [user?.id, role]);
+
+  const roleName = ({ athlete: 'Player', player: 'Player', scout: 'Scout', club: 'Club', coach: 'Coach', manager: 'Manager', admin: 'Admin', federation: 'Federation' })[role] || 'Member';
+  const quickActions = ['scout', 'manager', 'federation'].includes(role)
+    ? [{ label: 'Discover talent', to: '/profiles', icon: <UserGroupIcon className="h-4 w-4" /> }, { label: 'Scouting workspace', to: '/scouting', icon: <MagnifyingGlassIcon className="h-4 w-4" /> }, { label: 'Messages', to: '/messaging', icon: <VideoCameraIcon className="h-4 w-4" /> }]
+    : role === 'club'
+      ? [{ label: 'Club roster', to: '/club-roster', icon: <UserGroupIcon className="h-4 w-4" /> }, { label: 'Recruit players', to: '/profiles', icon: <MagnifyingGlassIcon className="h-4 w-4" /> }, { label: 'Matches', to: '/matches', icon: <TrophyIcon className="h-4 w-4" /> }]
+      : role === 'coach'
+        ? [{ label: 'Team players', to: '/profiles', icon: <UserGroupIcon className="h-4 w-4" /> }, { label: 'Matches', to: '/matches', icon: <TrophyIcon className="h-4 w-4" /> }, { label: 'Performance', to: '/analytics', icon: <ChartBarIcon className="h-4 w-4" /> }]
+        : role === 'admin'
+          ? [{ label: 'Admin dashboard', to: '/admin', icon: <ChartBarIcon className="h-4 w-4" /> }, { label: 'Profiles', to: '/profiles', icon: <UserGroupIcon className="h-4 w-4" /> }, { label: 'Tournaments', to: '/tournaments', icon: <TrophyIcon className="h-4 w-4" /> }]
+          : [{ label: 'Complete your profile', to: `/profile/${user?.id}`, icon: <UserGroupIcon className="h-4 w-4" /> }, { label: 'Explore opportunities', to: '/tournaments', icon: <TrophyIcon className="h-4 w-4" /> }, { label: 'Watch highlights', to: '/videos', icon: <VideoCameraIcon className="h-4 w-4" /> }];
+
   if (postsLoading) {
-    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Duke ngarkuar postimet...</div>;
+    return <div className="mx-auto grid max-w-7xl gap-5 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_19rem]" aria-label="Duke ngarkuar dashboard-in">
+      <div className="space-y-4"><div className="xt-skeleton h-44 rounded-2xl" /><div className="xt-skeleton h-24 rounded-2xl" /><div className="xt-skeleton h-72 rounded-2xl" /><div className="xt-skeleton h-48 rounded-2xl" /></div>
+      <div className="hidden space-y-4 lg:block"><div className="xt-skeleton h-48 rounded-2xl" /><div className="xt-skeleton h-52 rounded-2xl" /><div className="xt-skeleton h-40 rounded-2xl" /></div>
+    </div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4">
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-7">
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <header className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_top_right,rgba(217,164,65,.14),transparent_45%),linear-gradient(145deg,#121c2a,#0b111a)] p-5 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">{roleName} dashboard · X TALENTI</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Mirë se erdhe, {user?.firstName || roleName}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--xt-color-text-muted)]">Shiko aktivitetin e fundit, zbulo talentin që po kërkon dhe vazhdo hapin tënd të radhës në futboll.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {quickActions.slice(0, 2).map(({ label, to, icon }) => <Link key={to} to={to} className="btn btn-quiet min-h-11 text-sm">{icon}{label}</Link>)}
+            <button type="button" onClick={() => document.getElementById('new-post')?.focus()} className="btn btn-primary min-h-11 text-sm"><PlusIcon className="h-4 w-4" />Ndaj përditësim</button>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+          {quickActions.map(({ label, to }) => <Link key={to} to={to} className="xt-badge hover:border-[var(--xt-color-gold)] hover:text-white">{label}<ArrowRightIcon className="h-3 w-3" /></Link>)}
+        </div>
+      </header>
+
+      <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Përmbledhje e aktivitetit">
+        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Përditësime në feed</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{displayPosts.length}</p></div><ChartBarIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
+        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Ndeshje të ardhshme</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{matchesError ? '—' : upcomingMatches.length}</p></div><TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
+        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Turne të listuara</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{trendingError ? '—' : trending.length}</p></div><UserGroupIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
+      </section>
+
+      {['athlete', 'player', 'coach'].includes(role) && <section className="xt-card mb-6 p-4 sm:p-5" aria-labelledby="performance-title">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Your progress</p><h2 id="performance-title" className="mt-1 text-lg">Përmbledhje e performancës</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Profili im <ArrowRightIcon className="h-4 w-4" /></Link></div>
+        {performanceError ? <p className="text-sm text-[var(--xt-color-text-muted)]">Statistikat nuk mund të ngarkoheshin.</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Duke ngarkuar statistikat">{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', performanceSummary.points], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => <div key={label} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><p className="text-xs text-[var(--xt-color-text-muted)]">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-white">{Number(value) || 0}</p></div>)}
+        </div>}
+      </section>}
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
         {/* Main Feed Content */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 space-y-5">
 
       {/* Feed Toggle moved to Navbar */}
 
       {/* Player Cards Section */}
-      <UserCardsSection />
+      <section aria-labelledby="featured-talents-title">
+        <div className="xt-section-header mb-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Discover</p><h2 id="featured-talents-title" className="mt-1 text-lg text-white">Talente të veçuara</h2></div>
+          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Të gjithë <ArrowRightIcon className="h-4 w-4" /></Link>
+        </div>
+        <UserCardsSection />
+      </section>
+
+      <section aria-labelledby="featured-clubs-title">
+        <div className="xt-section-header mb-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Club network</p><h2 id="featured-clubs-title" className="mt-1 text-lg text-white">Klube të veçuara</h2></div>
+          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Zbulo klube <ArrowRightIcon className="h-4 w-4" /></Link>
+        </div>
+        <UserCardsSection role="club" />
+      </section>
 
       {['federation', 'scout', 'manager'].includes(String(user?.role || '').toLowerCase()) ? (
         <FeedScoutingReport />
@@ -457,45 +548,36 @@ const Feed = () => {
 
       <FeedLiveNow />
 
+      <section aria-labelledby="activity-title">
+      <div className="xt-section-header mb-3">
+        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Community</p><h2 id="activity-title" className="mt-1 text-lg text-white">Aktiviteti i fundit</h2></div>
+        <span className="xt-badge">{displayPosts.length} përditësime</span>
+      </div>
       <ListSearchBar
         value={feedSearch}
         onChange={setFeedSearch}
         placeholder="Kërko postime në feed…"
       />
+      {postsError && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--xt-color-danger)]/35 bg-[var(--xt-color-danger)]/5 p-4 text-sm" role="alert"><span>{postsError}</span><button type="button" onClick={() => {
+        const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; } })();
+        fetchPosts({ followedOnly });
+      }} className="btn btn-quiet min-h-10 text-xs">Provo përsëri</button></div>}
 
       {/* Create Post Form (flat background, no grid overlay) */}
-      <div className="rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="xt-card mb-5 p-4 sm:p-5">
         <div className="relative">
         <form onSubmit={handleCreatePost}>
           <label htmlFor="new-post" className="sr-only">Çfarë po mendon?</label>
-          {/* Goal-styled input box */}
-          <div className="relative mx-auto" style={{ maxWidth: 760 }}>
-            {/* Net background */}
-            <div
-              className="rounded-lg p-3"
-              style={{
-                backgroundColor: '#ffffff',
-                backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0 6px, transparent 6px 12px)',
-                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.04)'
-              }}
-            >
-              {/* Left goal post */}
-              <div className="absolute left-0 top-0 bottom-0 w-3 bg-white rounded-r-md shadow" style={{ transform: 'translateX(-100%)' }} aria-hidden />
-              {/* Right goal post */}
-              <div className="absolute right-0 top-0 bottom-0 w-3 bg-white rounded-l-md shadow" style={{ transform: 'translateX(100%)' }} aria-hidden />
-              {/* Crossbar */}
-              <div className="absolute left-0 right-0 top-0 h-3 bg-white shadow" style={{ transform: 'translateY(-100%)' }} aria-hidden />
-
+          <div className="relative mx-auto max-w-3xl">
               <textarea
                 id="new-post"
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
                 placeholder="Shkruaj postimin tënd..."
-                className="w-full p-4 border border-transparent rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-transparent text-gray-900 placeholder-gray-500"
+                className="input min-h-24 resize-y rounded-xl p-4 text-sm"
                 rows="3"
                 style={{ minHeight: 96 }}
               />
-            </div>
           </div>
           
           {/* File Preview */}
@@ -513,11 +595,11 @@ const Feed = () => {
               >
                 ✕
               </button>
-            </div>
+    </div>
           )}
           
           {/* Action Buttons */}
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <AiSuggestCaptionButton
                 hints={{
@@ -529,13 +611,14 @@ const Feed = () => {
                 onCaption={(caption) => setNewPost((prev) => (prev.trim() ? `${prev.trim()} ${caption}` : caption))}
               />
               {/* Photo/Video Upload */}
-              <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition">
-                <span className="text-xl">⚽</span>
+              <label className="btn btn-quiet min-h-11 cursor-pointer text-sm">
+                <VideoCameraIcon className="h-4 w-4 text-[var(--xt-color-gold)]" />
+                Foto ose video
                 <input
                   type="file"
                   accept="image/*,video/*"
                   onChange={handleFileSelect}
-                  className="hidden"
+                  className="sr-only"
                 />
               </label>
               
@@ -543,11 +626,11 @@ const Feed = () => {
               <div className="relative inline-block">
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition"
+                  className="btn btn-quiet min-h-11"
                   title="Add emoji"
                   onClick={() => setShowEmojiPicker((prev) => !prev)}
                 >
-                  <span className="text-xl">😊</span>
+                  <span className="text-sm">Emoji</span>
                 </button>
                 {showEmojiPicker && (
                   <div className="absolute z-50 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
@@ -571,11 +654,11 @@ const Feed = () => {
               {/* Location */}
               <button
                 type="button"
-                className="px-3 py-2 rounded-md bg-white/90 text-gray-900 hover:bg-white transition"
+                className="btn btn-quiet min-h-11"
                 title="Add location"
                 onClick={() => setShowLocationInput((prev) => !prev)}
               >
-                <span className="text-xl">📍</span>
+                <span className="text-sm">Vendndodhje</span>
               </button>
               {showLocationInput && (
                 <input
@@ -583,8 +666,7 @@ const Feed = () => {
                   value={location}
                   onChange={e => setLocation(e.target.value)}
                   placeholder="Vendndodhja (p.sh. Prishtinë, Stadiumi X...)"
-                  className="ml-2 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ minWidth: 180 }}
+                  className="input min-w-[180px]"
                 />
               )}
             </div>
@@ -592,7 +674,7 @@ const Feed = () => {
             <button
               type="submit"
               disabled={posting || (!newPost.trim() && !selectedFile)}
-              className="bg-yellow-400 text-black px-6 py-2 rounded-md hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="btn btn-primary w-full sm:w-auto"
               aria-describedby="post-button-desc"
             >
               {posting ? 'Duke postuar...' : 'Posto'}
@@ -604,7 +686,8 @@ const Feed = () => {
       </div>
 
       {/* Posts List */}
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {!displayPosts.length && <div className="xt-empty-state xt-card"><div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[var(--xt-color-gold)]"><MagnifyingGlassIcon className="h-6 w-6" /></div><h3 className="text-base text-white">Nuk ka përditësime për këtë kërkim</h3><p className="max-w-sm text-sm">Provo një fjalë tjetër ose ndiq profile që feed-i yt të bëhet më relevant.</p><Link to="/profiles" className="btn btn-outline">Zbulo talente</Link></div>}
         {displayPosts.map((post, index) => (
           <div 
             key={post.id}
@@ -617,17 +700,10 @@ const Feed = () => {
           >
             {/* Post Content */}
               {/* Post Content */}
-              <div className={`flex-1 rounded-lg shadow-md p-6 border 
-                ${post.sponsors?.length > 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}
-                ${highlightedPostId === String(post.id)
-                  ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-200 dark:ring-blue-900'
-                  : 'border-gray-200 dark:border-gray-700'}
-              `}
-              style={{}}
-            >
+              <article className={`xt-card flex-1 p-4 transition-colors sm:p-5 ${post.sponsors?.length > 0 ? 'border-[var(--xt-color-gold)]/40 bg-[var(--xt-color-surface-raised)]' : ''} ${highlightedPostId === String(post.id) ? 'ring-2 ring-[var(--xt-color-gold)]' : ''}`}>
                 {post.sponsors?.length > 0 && (
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-base font-bold animate-pulse" style={{ color: '#FFD700', letterSpacing: '1px', textShadow: '0 0 8px #FFD700, 0 0 2px #fff' }}>Sponsored</span>
+                    <span className="xt-badge xt-badge-gold">Sponsored</span>
                   </div>
                 )}
               <div className="flex items-center justify-between mb-4">
@@ -648,18 +724,18 @@ const Feed = () => {
                             : getCloudinarySafeUrl(getFullUrl(user.profilePhoto))
                         }
                         alt={post.author?.firstName || user?.firstName || 'User'}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                        className="h-10 w-10 rounded-full border border-white/15 object-cover"
                         loading="lazy"
                         decoding="async"
                         onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                      <div className="xt-avatar h-10 w-10">
                         {`${post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}${post.author?.lastName?.charAt(0).toUpperCase() || user?.lastName?.charAt(0).toUpperCase() || ''}`}
                       </div>
                     )}
-                    <div className="ml-3">
-                      <p className="font-semibold text-gray-900 dark:text-white hover:underline inline-flex items-center gap-1">
+                    <div className="ml-3 min-w-0">
+                      <p className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
                         <PersonName>
                           {post.author?.firstName && post.author?.lastName
                             ? `${post.author.firstName} ${post.author.lastName}`
@@ -667,7 +743,7 @@ const Feed = () => {
                         </PersonName>
                         <VerifiedBadge verified={post.author?.verified} size="sm" />
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-[var(--xt-color-text-subtle)]">
                         {new Date(post.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -682,23 +758,26 @@ const Feed = () => {
                 {user && post.userId === user.id && (
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => openSponsorModal(post.id)}
-                      className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 border border-orange-300 rounded px-2 py-1 text-xs"
+                      className="btn btn-quiet min-h-10 px-3 text-xs"
                       title="Sponsorizo këtë post"
                     >
                       S
                     </button>
                     <button
+                      type="button"
                       onClick={() => openEditPost(post)}
-                      className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                      className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white"
                       title="Ndrysho postimin"
                     >
                       ✏️
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDeletePost(post.id)}
                       disabled={deletingPost === post.id}
-                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                      className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-danger)] hover:bg-white/5 disabled:opacity-50"
                       title="Fshi postimin"
                     >
                       {deletingPost === post.id ? '⏳' : '🗑️'}
@@ -768,7 +847,7 @@ const Feed = () => {
                       </div>
                     )}
               </div>
-              <p className="text-gray-800 dark:text-gray-200 mb-4">{post.content}</p>
+              <p className="mb-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--xt-color-text)]">{post.content}</p>
               {post.location && (
                 <div className="flex items-center text-blue-600 dark:text-blue-400 mb-2 gap-1">
                   <span className="text-lg">📍</span>
@@ -819,12 +898,12 @@ const Feed = () => {
                 />
               )}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+                  <div className="flex flex-wrap items-center gap-2">
                   <div className="relative inline-block">
                     <button
                       onClick={() => toggleLike(post.id)}
-                      className={`flex items-center space-x-1 px-3 py-1 rounded-md ${
-                        likedPosts.has(post.id) ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
+                        likedPosts.has(post.id) ? 'border-rose-400/30 bg-rose-500/10 text-rose-300' : 'border-white/10 bg-white/[.03] text-[var(--xt-color-text-muted)] hover:bg-white/[.07]'
                       }`}
                       aria-label={likedPosts.has(post.id) ? `Hiq pëlqimin për postimin e ${post.author?.username || 'I panjohur'}` : `Pëlqe postimin e ${post.author?.username || 'I panjohur'}`}
                       onContextMenu={e => { e.preventDefault(); setShowEmojiPicker(post.id); }}
@@ -853,7 +932,7 @@ const Feed = () => {
                   </div>
                   <button
                     onClick={() => toggleComments(post.id)}
-                    className="flex items-center space-x-1 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600" 
+                    className="flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[.03] px-3 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/[.07]"
                     aria-label={`Komento postimin e ${post.author?.username || 'I panjohur'}`}
                   >
                     <span>💬</span>
@@ -861,15 +940,15 @@ const Feed = () => {
                   </button>
                   <button
                     onClick={() => setSharingPost(post.id)}
-                    className="flex items-center justify-center px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white"
+                    className="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[.03] px-3 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/[.07]"
                     aria-label={`Ndaj postimin e ${post.author?.username || 'I panjohur'}`}
                     title="Ndaj"
                   >
-                    <span className="text-sm">🟥</span>
+                    <span className="text-sm">Ndaj</span>
                   </button>
                 </div>
               </div>
-            </div>
+            </article>
             
             {/* Share Modal */}
             {sharingPost === post.id && (
@@ -971,13 +1050,8 @@ const Feed = () => {
             )}
           </div>
         ))}
-        {displayPosts.length === 0 && (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            Ende nuk ka postime. Bëhu i pari që poston diçka!
-          </div>
-        )}
       </div>
-    </div>
+      </section>
 
     {editingPost && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -1051,117 +1125,31 @@ const Feed = () => {
       </div>
     )}
 
-    {/* Sidebar - Marketing Spaces */}
-    <div className="lg:col-span-1 space-y-4 hidden lg:block">
-      {/* Sticky Sidebar */}
-      <div className="sticky top-4 space-y-4">
-        {/* Ad 1 - Premium Subscription */}
-        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 text-white shadow-lg">
-          <div className="text-3xl mb-2">⭐</div>
-          <h3 className="font-bold mb-2">Kalo në Premium</h3>
-          <p className="text-sm mb-3">Unlock exclusive features and remove ads</p>
-          <button className="w-full bg-white text-orange-600 py-2 rounded-md font-semibold hover:bg-orange-50 transition">
-            Upgrade
-          </button>
         </div>
-
-        {/* Ad 2 - Trending Tournaments */}
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <span>🔥</span> Turnetë në trend
-            </h3>
-            <div className="space-y-3">
-              {/* Render fetched trending tournaments */}
-              {trending && trending.length > 0 ? (
-                trending.map(t => (
-                  <div key={t.id} className="flex items-center gap-2 text-sm">
-                    <span className="text-blue-600">🏆</span>
-                    <button
-                      onClick={() => navigate(`/tournaments`)}
-                      className="text-gray-700 dark:text-gray-300 text-left truncate"
-                      title={t.name}
-                    >
-                      {t.name} {t.participants && `· ${t.participants.length}`}
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500">No trending tournaments yet</div>
-              )}
-            </div>
-            <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition text-sm">
-              Shiko të gjitha
-            </button>
-          </div>
-
-          {/* My Tournaments widget */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <span>⭐</span> Turnetë e mia
-            </h3>
-            <div className="space-y-2 text-sm">
-              {user ? (
-                myTournaments && myTournaments.length > 0 ? (
-                  myTournaments.map(t => (
-                    <div key={t.id} className="flex items-center gap-2">
-                      <span className="text-yellow-600">🏆</span>
-                      <button onClick={() => navigate(`/tournaments`)} className="text-gray-700 dark:text-gray-300 text-left truncate" title={t.name}>
-                        {t.name}
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-gray-500">You have no tournaments</div>
-                )
-              ) : (
-                <div className="text-sm text-gray-500">Hyr për të parë turnetë e tua</div>
-              )}
-            </div>
-            <button onClick={() => navigate('/tournaments')} className="w-full mt-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 rounded-md hover:bg-gray-300 transition text-sm">
-              Menaxho turnetë
-            </button>
-          </div>
-
-          <StadiumStrip />
+    <aside className="min-w-0 space-y-4 lg:sticky lg:top-20">
+      <section className="xt-card p-4" aria-labelledby="matches-widget-title">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">On the pitch</p><h2 id="matches-widget-title" className="mt-1 text-base">Ndeshjet e ardhshme</h2></div>
+          <Link to="/matches" aria-label="Shiko të gjitha ndeshjet" className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-gold-bright)] hover:bg-white/5"><ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
+        {matchesError ? <p className="text-sm text-[var(--xt-color-text-muted)]">Ndeshjet nuk mund të ngarkoheshin.</p> : upcomingMatches.length ? <ul className="space-y-2">{upcomingMatches.slice(0, 4).map((match) => <li key={match.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3">
+          <div className="flex items-center justify-between gap-2 text-sm font-semibold"><span className="truncate">{match.homeUser ? `${match.homeUser.firstName || ''} ${match.homeUser.lastName || ''}`.trim() : `Ekipi ${match.homeUserId}`}</span><span className="text-xs font-bold text-[var(--xt-color-gold-bright)]">VS</span><span className="truncate text-right">{match.awayUser ? `${match.awayUser.firstName || ''} ${match.awayUser.lastName || ''}`.trim() : (match.awayUserId ? `Ekipi ${match.awayUserId}` : 'TBD')}</span></div>
+          <p className="mt-2 text-xs text-[var(--xt-color-text-subtle)]">{new Date(match.matchDate).toLocaleString()} {match.Tournament?.name ? `· ${match.Tournament.name}` : ''}</p>
+        </li>)}</ul> : <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-[var(--xt-color-text-muted)]">Nuk ka ndeshje të planifikuara tani.</p>}
+        <Link to="/matches" className="btn btn-quiet mt-3 w-full text-sm">Kalendari i ndeshjeve</Link>
+      </section>
 
-        {/* Ad 3 - Sponsor Banner */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="bg-gradient-to-r from-red-500 to-pink-600 p-3 text-white text-center">
-            <h4 className="font-bold">⚽ Featured Sponsor</h4>
-          </div>
-          <div className="p-4 text-center">
-            <div className="bg-gray-100 dark:bg-gray-700 h-32 rounded flex items-center justify-center mb-3">
-              <span className="text-5xl">🎯</span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Your brand could be here</p>
-            <button className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition text-sm">
-              Advertise
-            </button>
-          </div>
-        </div>
+      <section className="xt-card p-4" aria-labelledby="tournaments-widget-title">
+        <div className="mb-3 flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">Competition</p><h2 id="tournaments-widget-title" className="mt-1 text-base">Turne aktive</h2></div><TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
+        {trendingError ? <p className="text-sm text-[var(--xt-color-text-muted)]" role="status">Turnetë nuk mund të ngarkoheshin.</p> : trending.length ? <ul className="space-y-2">{trending.slice(0, 4).map((t) => <li key={t.id} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-white/5"><span className="min-w-0 truncate text-sm font-medium">{t.name}</span><span className="xt-badge shrink-0">{t.participants?.length || 0} lojtarë</span></li>)}</ul> : <div className="xt-empty-state px-2 py-4"><p className="text-sm">Nuk ka turne aktive për momentin.</p></div>}
+        <Link to="/tournaments" className="btn btn-quiet mt-3 w-full text-sm">Shfleto turnetë</Link>
+      </section>
 
-        {/* Ad 4 - Quick Stats */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-          <h4 className="font-bold text-gray-900 dark:text-white mb-3">📈 Platform Stats</h4>
-          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <div className="flex justify-between">
-              <span>Përdorues aktivë</span>
-              <span className="font-semibold">10,234</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Postime ditore</span>
-              <span className="font-semibold">1,432</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Turne</span>
-              <span className="font-semibold">87</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      {myTournaments.length > 0 && <section className="xt-card p-4" aria-labelledby="my-tournaments-title"><h2 id="my-tournaments-title" className="mb-3 text-base">Turnetë e mia</h2><ul className="space-y-2">{myTournaments.slice(0, 3).map((t) => <li key={t.id}><Link to="/tournaments" className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white"><span className="truncate">{t.name}</span><ArrowRightIcon className="h-4 w-4 shrink-0" /></Link></li>)}</ul></section>}
+
+      <section className="xt-card p-4" aria-labelledby="quick-actions-title"><h2 id="quick-actions-title" className="mb-3 text-base">Veprime të shpejta</h2><ul className="space-y-1">{quickActions.map(({ label, to, icon }) => <li key={to}><Link to={to} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)]">{icon}{label}</Link></li>)}</ul></section>
+      <StadiumStrip />
+    </aside>
   </div>
 </div>
   );

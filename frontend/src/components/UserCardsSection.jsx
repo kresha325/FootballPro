@@ -20,7 +20,7 @@ import VerifiedBadge from './VerifiedBadge';
 import PersonName from './PersonName';
 
 
-const UserCardsSection = () => {
+const UserCardsSection = ({ role = 'athlete' }) => {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [followStatus, setFollowStatus] = useState({}); // { [userId]: true/false }
@@ -30,9 +30,10 @@ const UserCardsSection = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    profileAPI.getAllProfiles({ role: 'athlete', limit: 8 })
+    profileAPI.getAllProfiles({ role, limit: role === 'club' ? 6 : 8 })
       .then(async res => {
         setProfiles(res.data);
+        if (role === 'club') return;
         // Fetch follow status and online status for each profile
         const statusObj = {};
         const onlineObj = {};
@@ -58,7 +59,7 @@ const UserCardsSection = () => {
       })
       .catch(() => setProfiles([]))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, role]);
 
   const handleFollow = async (profileId) => {
     setLoadingFollow(lf => ({ ...lf, [profileId]: true }));
@@ -93,25 +94,27 @@ const UserCardsSection = () => {
     return getAgeFromDate(profile?.dateOfBirth || profile?.User?.dateOfBirth);
   };
 
-  if (loading) return <div className="mb-6">Loading players...</div>;
+  if (loading) return <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4" aria-label={role === 'club' ? 'Duke ngarkuar klubet' : 'Duke ngarkuar talentet'}>
+    {Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-64 rounded-2xl sm:h-72" />)}
+  </div>;
   if (!profiles.length) {
     return (
-      <div className="mb-8">
-        <div className="text-sm text-gray-500 dark:text-gray-400">Nuk ka lojtarë për momentin.</div>
+      <div className="xt-empty-state xt-card mb-6 py-8">
+        <div className="text-sm text-[var(--xt-color-text-muted)]">{role === 'club' ? 'Nuk ka klube të veçuara për momentin.' : 'Nuk ka lojtarë për momentin.'}</div>
       </div>
     );
   }
 
   return (
-    <div className="mb-8">
-      <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory flex-nowrap hide-scrollbar-mobile">
+    <div className="mb-2">
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 hide-scrollbar-mobile">
         {profiles.map(profile => (
           <div
             key={profile.id}
-            className="relative min-w-[220px] h-[320px] rounded-2xl shadow-xl overflow-hidden snap-start group"
+            className="group relative h-72 min-w-[min(72vw,15rem)] snap-start overflow-hidden rounded-2xl border border-white/10 shadow-[var(--xt-shadow-card)] sm:h-80 sm:min-w-[17rem]"
           >
             <img
-              src={profile.profilePhoto ? getFullUrl(profile.profilePhoto) : '/default-avatar.svg'}
+              src={profile.profilePhoto || profile.clubLogo ? getFullUrl(profile.profilePhoto || profile.clubLogo) : '/default-avatar.svg'}
               alt={profile.firstName + ' ' + profile.lastName}
               className={`object-cover w-full h-full transition-transform duration-500 group-hover:scale-105 ${onlineStatus[profile.id] === true ? 'ring-2 ring-green-500/70' : 'ring-2 ring-white/20'}`}
               loading="lazy"
@@ -122,42 +125,43 @@ const UserCardsSection = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-black/45" />
 
             <div className="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/45 to-transparent">
-              <div className="text-3xl font-bold text-white drop-shadow-lg leading-tight flex items-center gap-2">
+              <div className="flex items-start gap-2 text-lg font-bold leading-tight text-white drop-shadow-lg sm:text-xl">
                 <PersonName>
                   {profile.firstName} {profile.lastName}
                 </PersonName>
                 <VerifiedBadge verified={profile.verified} size="sm" tone="white" />
-                {onlineStatus[profile.id] === true ? (
+                {role === 'athlete' && onlineStatus[profile.id] === true ? (
                   <span title="Online" className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
-                ) : (
+                ) : role === 'athlete' ? (
                   <span title="Offline" className="inline-block w-3 h-3 rounded-full bg-gray-400 border-2 border-white" />
-                )}
+                ) : null}
               </div>
-              <div className="text-white text-base font-semibold drop-shadow">{profile.position || '—'}</div>
+              <div className="mt-1 text-sm font-semibold text-white/85 drop-shadow">{role === 'club' ? (profile.clubName || profile.name || profile.league || 'Football club') : (profile.position || '—')}</div>
             </div>
 
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/55 via-black/35 to-transparent">
-              <div className="mb-2 text-sm text-white/95 font-medium drop-shadow">
-                Mosha: {getProfileAge(profile) ?? '—'} {profile.country ? `🌍 ${profile.country}` : ''}
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-white/90 drop-shadow">
+                {getProfileAge(profile) != null && <span className="xt-badge border-white/20 bg-black/35 text-white">{getProfileAge(profile)} vjeç</span>}
+                {profile.country && <span className="xt-badge border-white/20 bg-black/35 text-white">{profile.country}</span>}
               </div>
               <div className="flex gap-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-2">
                 <button
-                  className="flex-1 bg-green-600/95 hover:bg-green-700 text-white font-semibold text-xs py-2 rounded-lg transition"
+                  className="btn btn-primary min-h-11 flex-1 px-2 text-[10px] uppercase tracking-wide"
                   onClick={() => navigate(`/profile/${profile.id}`)}
                 >
                   SHIKO PROFILIN
                 </button>
-                {user && user.id !== profile.id && (
+                {role === 'athlete' && user && user.id !== profile.id && (
                   <button
-                    className={`flex-1 font-semibold text-xs py-2 rounded-lg transition ${followStatus[profile.id] ? 'bg-gray-300/95 hover:bg-gray-400 text-gray-900' : 'bg-white/20 hover:bg-white/30 text-white border border-white/25'}`}
+                    className={`min-h-11 flex-1 rounded-lg border px-2 text-[10px] font-semibold uppercase tracking-wide transition ${followStatus[profile.id] ? 'border-white/25 bg-black/45 text-white hover:bg-black/65' : 'border-white/25 bg-white/15 text-white hover:bg-white/25'}`}
                     onClick={() => handleFollow(profile.id)}
                     disabled={loadingFollow[profile.id]}
                   >
                     {loadingFollow[profile.id] ? '...' : followStatus[profile.id] ? 'NDJEKUR' : 'NDIQE'}
                   </button>
                 )}
-                {(!user || user.id === profile.id) && (
-                  <button className="flex-1 bg-white/20 text-white/80 font-semibold text-xs py-2 rounded-lg cursor-not-allowed border border-white/25" disabled>
+                {role === 'athlete' && (!user || user.id === profile.id) && (
+                  <button className="min-h-11 flex-1 rounded-lg border border-white/25 bg-black/35 px-2 text-[10px] font-semibold uppercase tracking-wide text-white/70" disabled>
                     NDIQE
                   </button>
                 )}

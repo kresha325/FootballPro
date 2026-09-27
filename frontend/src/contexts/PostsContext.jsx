@@ -16,10 +16,12 @@ function PostsProvider({ children }) {
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [postComments, setPostComments] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Fetch all posts
   const fetchPosts = useCallback(async (options = {}) => {
     setLoading(true);
+    setError(null);
     try {
       const params = {};
       if (options.followedOnly) params.followed = true;
@@ -36,6 +38,7 @@ function PostsProvider({ children }) {
       setLikedPosts(liked);
     } catch (error) {
       console.error('Error fetching posts:', error);
+      setError(error?.response?.data?.msg || 'Feed-i nuk mund të ngarkohej. Provo përsëri.');
     } finally {
       setLoading(false);
     }
@@ -140,6 +143,7 @@ function PostsProvider({ children }) {
     likedPosts,
     postComments,
     loading,
+    error,
     fetchPosts,
     fetchUserPosts,
     toggleLike,
