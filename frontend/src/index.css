@@ -94,6 +94,71 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .xt-bottom-nav { border-top: 1px solid var(--xt-color-border); background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 28px rgb(0 0 0 / 22%); backdrop-filter: blur(16px); }
 .xt-toast { color: var(--xt-color-text); border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-md); background: var(--xt-color-surface-raised); box-shadow: var(--xt-shadow-popover); }
 
+/* Dashboard family: Analytics, Gamification and Admin share the X TALENTI surfaces. */
+.xt-dashboard-page { color: var(--xt-color-text); }
+.xt-analytics, .xt-gamification { padding-bottom: max(5rem, env(safe-area-inset-bottom)); }
+.xt-analytics > .bg-gradient-to-r {
+  border-bottom: 1px solid var(--xt-color-border);
+  background: radial-gradient(ellipse at 85% 0%, rgb(217 164 65 / 15%), transparent 42%), var(--xt-color-surface) !important;
+}
+.xt-analytics > .bg-gradient-to-r p { color: var(--xt-color-text-muted) !important; }
+.xt-dashboard-page .bg-white { background-color: var(--xt-color-surface) !important; }
+.xt-dashboard-page .bg-gray-50 { background-color: var(--xt-color-canvas) !important; }
+.xt-dashboard-page .bg-gray-100 { background-color: var(--xt-color-surface-raised) !important; }
+.xt-dashboard-page .bg-red-50 { background-color: rgb(243 107 114 / 10%) !important; }
+.xt-dashboard-page .border-gray-200,
+.xt-dashboard-page .border-gray-300,
+.xt-dashboard-page .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--xt-color-border) !important; }
+.xt-dashboard-page .text-gray-900,
+.xt-dashboard-page .text-gray-800,
+.xt-dashboard-page .text-gray-700 { color: var(--xt-color-text) !important; }
+.xt-dashboard-page .text-gray-600,
+.xt-dashboard-page .text-gray-500,
+.xt-dashboard-page .text-gray-400 { color: var(--xt-color-text-muted) !important; }
+.xt-dashboard-page .text-blue-600,
+.xt-dashboard-page .text-blue-700,
+.xt-dashboard-page .text-purple-700 { color: var(--xt-color-gold-bright) !important; }
+.xt-dashboard-page .border-blue-600 { border-color: var(--xt-color-gold) !important; }
+.xt-dashboard-page .border-b-2.border-blue-600 { border-bottom-color: var(--xt-color-gold) !important; }
+.xt-dashboard-page .text-green-700,
+.xt-dashboard-page .text-green-600 { color: var(--xt-color-success) !important; }
+.xt-dashboard-page input,
+.xt-dashboard-page select,
+.xt-dashboard-page textarea { color: var(--xt-color-text); border-color: var(--xt-color-border-strong); background: var(--xt-color-surface-raised); }
+.xt-dashboard-page input::placeholder,
+.xt-dashboard-page textarea::placeholder { color: var(--xt-color-text-subtle); }
+.xt-dashboard-page button { transition: color var(--xt-motion-fast), background-color var(--xt-motion-fast), border-color var(--xt-motion-fast); }
+.xt-dashboard-page .bg-white.rounded-lg,
+.xt-dashboard-page .bg-white.rounded-2xl { border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-lg); box-shadow: var(--xt-shadow-card); }
+.xt-analytics .recharts-cartesian-grid line { stroke: var(--xt-color-border); }
+.xt-analytics .recharts-text { fill: var(--xt-color-text-muted); }
+.xt-analytics .recharts-default-tooltip,
+.xt-analytics .recharts-tooltip-wrapper > div { color: var(--xt-color-text) !important; border: 1px solid var(--xt-color-border) !important; border-radius: var(--xt-radius-md); background: var(--xt-color-surface-raised) !important; box-shadow: var(--xt-shadow-popover); }
+.xt-gamification .xt-game-tabs { overflow-x: auto; gap: .5rem; padding: .3rem; border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-lg); background: var(--xt-color-surface); scrollbar-width: thin; }
+.xt-gamification .xt-game-tabs button { min-height: 44px; flex: 0 0 auto; padding: .65rem 1rem; border: 1px solid transparent; border-radius: var(--xt-radius-md); color: var(--xt-color-text-muted); font-weight: 650; white-space: nowrap; }
+.xt-gamification .xt-game-tabs button:hover { color: var(--xt-color-text); background: var(--xt-color-surface-raised); }
+.xt-gamification .xt-game-tabs button.is-active { color: #111; background: var(--xt-color-gold); }
+.xt-gamification .bg-gradient-to-br { background: radial-gradient(ellipse at 100% 0%, rgb(217 164 65 / 14%), transparent 48%), var(--xt-color-surface) !important; border-color: var(--xt-color-border) !important; }
+.xt-gamification .bg-gradient-to-r { background-image: linear-gradient(90deg, var(--xt-color-gold-deep), var(--xt-color-gold-bright)) !important; }
+.xt-gamification tr:hover { background: var(--xt-color-surface-hover); }
+.xt-gamification .text-green-700 { color: var(--xt-color-text) !important; }
+.xt-admin-page { width: 100%; max-width: 88rem; min-height: 100dvh; margin-inline: auto; }
+.xt-admin-page nav,
+.xt-admin-page .border-b.border-gray-200 { border-color: var(--xt-color-border) !important; }
+.xt-admin-page table { color: var(--xt-color-text-muted); }
+.xt-admin-page th { color: var(--xt-color-text-muted); background: var(--xt-color-surface-raised); }
+.xt-admin-page tbody tr:hover { background: var(--xt-color-surface-hover); }
+.xt-admin-page .shadow,
+.xt-admin-page .shadow-md,
+.xt-admin-page .shadow-lg { box-shadow: var(--xt-shadow-card); }
+
+@media (max-width: 640px) {
+  .xt-admin-page { padding: 1rem !important; }
+  .xt-analytics > .max-w-7xl,
+  .xt-gamification > .max-w-7xl { padding: 1rem !important; }
+  .xt-analytics .recharts-responsive-container { min-height: 220px; }
+}
+
 @keyframes xt-shimmer { to { background-position: -200% 0; } }
 @media (max-width: 767px) { .xt-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; } }
 @media (max-width: 768px) {

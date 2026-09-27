@@ -423,7 +423,7 @@ export default function AdminDashboard() {
 
   if (user?.role !== 'admin') {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="xt-dashboard-page xt-admin-page max-w-7xl mx-auto px-4 py-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Access denied. Admin privileges required.</p>
         </div>
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="xt-dashboard-page xt-admin-page max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>

@@ -21,6 +21,7 @@ import {
   gamificationUserRequest,
 } from '../api/client';
 import { absoluteBackendUrl } from '../config/constants';
+import { useTheme } from '../context/ThemeContext';
 
 const PERIODS = [
   { key: 7, label: '7 ditë' },
@@ -49,22 +50,22 @@ function rarityTone(rarity) {
   }
 }
 
-function StatTile({ icon, label, value, tone }) {
+function StatTile({ icon, label, value, tone, colors }) {
   return (
-    <View style={styles.statTile}>
+    <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={[styles.statIconWrap, { backgroundColor: tone }]}>
         <Ionicons name={icon} size={18} color="#FFFFFF" />
       </View>
-      <Text style={styles.statValue}>{formatNumber(value)}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: colors.text }]}>{formatNumber(value)}</Text>
+      <Text style={[styles.statLabel, { color: colors.muted }]}>{label}</Text>
     </View>
   );
 }
 
-function MiniBars({ series }) {
+function MiniBars({ series, colors }) {
   const points = Array.isArray(series) ? series.slice(-10) : [];
   if (points.length < 2) {
-    return <Text style={styles.muted}>Nuk ka të dhëna për këtë periudhë.</Text>;
+    return <Text style={[styles.muted, { color: colors.muted }]}>Nuk ka të dhëna për këtë periudhë.</Text>;
   }
   const max = Math.max(...points.map((p) => Number(p.count || p.rate || p.value || 0)), 1);
   return (
@@ -74,7 +75,7 @@ function MiniBars({ series }) {
         const h = Math.max(6, Math.round((raw / max) * 72));
         return (
           <View key={`${p.date || idx}`} style={styles.barCol}>
-            <View style={[styles.bar, { height: h }]} />
+            <View style={[styles.bar, { height: h, backgroundColor: colors.primary }]} />
           </View>
         );
       })}
@@ -82,18 +83,18 @@ function MiniBars({ series }) {
   );
 }
 
-function ProgressBar({ progress, color = '#F59E0B' }) {
+function ProgressBar({ progress, color, colors }) {
   const pct = Math.max(0, Math.min(100, Number(progress) || 0));
   return (
-    <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
+    <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+      <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color || colors.primary }]} />
     </View>
   );
 }
 
-function SegmentTabs({ value, onChange }) {
+function SegmentTabs({ value, onChange, colors }) {
   return (
-    <View style={styles.segment}>
+    <View style={[styles.segment, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
       {[
         { key: 'analytics', label: 'Analitika', icon: 'stats-chart-outline' },
         { key: 'gamification', label: 'Gamifikim', icon: 'trophy-outline' },
@@ -102,12 +103,12 @@ function SegmentTabs({ value, onChange }) {
         return (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+            style={[styles.segmentBtn, active && styles.segmentBtnActive, active && { backgroundColor: colors.primary }]}
             onPress={() => onChange(tab.key)}
             activeOpacity={0.85}
           >
-            <Ionicons name={tab.icon} size={16} color={active ? '#0F172A' : '#64748B'} />
-            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{tab.label}</Text>
+            <Ionicons name={tab.icon} size={16} color={active ? colors.onPrimary : colors.muted} />
+            <Text style={[styles.segmentText, { color: active ? colors.onPrimary : colors.muted }]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -116,6 +117,7 @@ function SegmentTabs({ value, onChange }) {
 }
 
 export default function InsightsScreen() {
+  const { colors } = useTheme();
   const [tab, setTab] = useState('analytics');
   const [period, setPeriod] = useState(30);
   const [loading, setLoading] = useState(true);
@@ -212,8 +214,8 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#0F766E" />
+      <View style={[styles.loading, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Duke ngarkuar insights…</Text>
       </View>
     );
@@ -221,7 +223,7 @@ export default function InsightsScreen() {
 
   return (
     <ScrollView
-      style={styles.root}
+      style={[styles.root, { backgroundColor: colors.bg }]}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -230,16 +232,16 @@ export default function InsightsScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0F766E']}
-          tintColor="#0F766E"
+          colors={[colors.primary]}
+          tintColor={colors.primary}
         />
       }
     >
-      <View style={styles.hero}>
-        <Text style={styles.heroEyebrow}>Performanca jote</Text>
-        <Text style={styles.heroTitle}>Insights</Text>
-        <Text style={styles.heroSub}>Analitika e profilit dhe progresi XP në një vend.</Text>
-        <SegmentTabs value={tab} onChange={setTab} />
+      <View style={[styles.hero, { backgroundColor: colors.card, borderBottomColor: colors.primary }]}>
+        <Text style={[styles.heroEyebrow, { color: colors.primaryText }]}>Performanca jote</Text>
+        <Text style={[styles.heroTitle, { color: colors.text }]}>Insights</Text>
+        <Text style={[styles.heroSub, { color: colors.muted }]}>Analitika e profilit dhe progresi XP në një vend.</Text>
+        <SegmentTabs value={tab} onChange={setTab} colors={colors} />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -250,10 +252,10 @@ export default function InsightsScreen() {
             {PERIODS.map((p) => (
               <TouchableOpacity
                 key={p.key}
-                style={[styles.periodChip, period === p.key && styles.periodChipActive]}
+                style={[styles.periodChip, { backgroundColor: colors.bgElevated, borderColor: colors.border }, period === p.key && { backgroundColor: colors.primary, borderColor: colors.primary }]}
                 onPress={() => setPeriod(p.key)}
               >
-                <Text style={[styles.periodText, period === p.key && styles.periodTextActive]}>
+                <Text style={[styles.periodText, { color: colors.textSecondary }, period === p.key && { color: colors.onPrimary }]}>
                   {p.label}
                 </Text>
               </TouchableOpacity>
@@ -261,79 +263,79 @@ export default function InsightsScreen() {
           </View>
 
           <View style={styles.statGrid}>
-            <StatTile icon="people" label="Ndjekës" value={overview?.totalFollowers} tone="#0F766E" />
-            <StatTile icon="heart" label="Pëlqime" value={overview?.totalLikes} tone="#DC2626" />
-            <StatTile icon="chatbubble" label="Komente" value={overview?.totalComments} tone="#F59E0B" />
-            <StatTile icon="eye" label="Shikime" value={overview?.profileViews} tone="#334155" />
+            <StatTile icon="people" label="Ndjekës" value={overview?.totalFollowers} tone={colors.primary} colors={colors} />
+            <StatTile icon="heart" label="Pëlqime" value={overview?.totalLikes} tone="#DC2626" colors={colors} />
+            <StatTile icon="chatbubble" label="Komente" value={overview?.totalComments} tone="#F59E0B" colors={colors} />
+            <StatTile icon="eye" label="Shikime" value={overview?.profileViews} tone="#334155" colors={colors} />
           </View>
 
-          <View style={styles.panel}>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.panelHeader}>
-              <Text style={styles.panelTitle}>Angazhimi</Text>
-              <Text style={styles.panelValue}>{overview?.engagementRate || 0}%</Text>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>Angazhimi</Text>
+              <Text style={[styles.panelValue, { color: colors.primaryText }]}>{overview?.engagementRate || 0}%</Text>
             </View>
-            <Text style={styles.panelHint}>Mesatarja e pëlqimeve + komenteve për postim</Text>
+            <Text style={[styles.panelHint, { color: colors.muted }]}>Mesatarja e pëlqimeve + komenteve për postim</Text>
             <View style={styles.metricRow}>
-              <View style={[styles.metricBox, styles.metricBoxInPanel]}>
-                <Text style={styles.metricLabel}>Postime</Text>
-                <Text style={styles.metricValue}>{formatNumber(overview?.totalPosts)}</Text>
+              <View style={[styles.metricBox, styles.metricBoxInPanel, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Postime</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{formatNumber(overview?.totalPosts)}</Text>
               </View>
-              <View style={[styles.metricBox, styles.metricBoxInPanel]}>
-                <Text style={styles.metricLabel}>Duke ndjekur</Text>
-                <Text style={styles.metricValue}>{formatNumber(overview?.totalFollowing)}</Text>
+              <View style={[styles.metricBox, styles.metricBoxInPanel, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Duke ndjekur</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{formatNumber(overview?.totalFollowing)}</Text>
               </View>
-              <View style={[styles.metricBox, styles.metricBoxInPanel]}>
-                <Text style={styles.metricLabel}>Ndjekës të rinj</Text>
-                <Text style={styles.metricValue}>+{formatNumber(newFollowers)}</Text>
+              <View style={[styles.metricBox, styles.metricBoxInPanel, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+                <Text style={[styles.metricLabel, { color: colors.muted }]}>Ndjekës të rinj</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>+{formatNumber(newFollowers)}</Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Rritja e ndjekësve</Text>
-            <MiniBars series={followerGrowth} />
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.panelTitle, { color: colors.text }]}>Rritja e ndjekësve</Text>
+            <MiniBars series={followerGrowth} colors={colors} />
           </View>
 
           {engagementSeries.length > 0 ? (
-            <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Angazhimi në kohë</Text>
-              <MiniBars series={engagementSeries} />
+            <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>Angazhimi në kohë</Text>
+              <MiniBars series={engagementSeries} colors={colors} />
             </View>
           ) : null}
 
           {postType ? (
-            <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Llojet e postimeve</Text>
+            <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>Llojet e postimeve</Text>
               <View style={styles.compareRow}>
-                <View style={styles.compareCard}>
-                  <Ionicons name="image-outline" size={20} color="#0F766E" />
-                  <Text style={styles.compareTitle}>Me foto</Text>
-                  <Text style={styles.compareValue}>{postType.withImage?.count || 0}</Text>
-                  <Text style={styles.compareMeta}>avg {postType.withImage?.avgLikes || 0} likes</Text>
+                <View style={[styles.compareCard, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+                  <Ionicons name="image-outline" size={20} color={colors.primary} />
+                  <Text style={[styles.compareTitle, { color: colors.text }]}>Me foto</Text>
+                  <Text style={[styles.compareValue, { color: colors.text }]}>{postType.withImage?.count || 0}</Text>
+                  <Text style={[styles.compareMeta, { color: colors.muted }]}>avg {postType.withImage?.avgLikes || 0} likes</Text>
                 </View>
-                <View style={styles.compareCard}>
+                <View style={[styles.compareCard, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
                   <Ionicons name="document-text-outline" size={20} color="#F59E0B" />
-                  <Text style={styles.compareTitle}>Vetëm tekst</Text>
-                  <Text style={styles.compareValue}>{postType.withoutImage?.count || 0}</Text>
-                  <Text style={styles.compareMeta}>avg {postType.withoutImage?.avgLikes || 0} likes</Text>
+                  <Text style={[styles.compareTitle, { color: colors.text }]}>Vetëm tekst</Text>
+                  <Text style={[styles.compareValue, { color: colors.text }]}>{postType.withoutImage?.count || 0}</Text>
+                  <Text style={[styles.compareMeta, { color: colors.muted }]}>avg {postType.withoutImage?.avgLikes || 0} likes</Text>
                 </View>
               </View>
             </View>
           ) : null}
 
           {topPosts.length > 0 ? (
-            <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Top postimet</Text>
+            <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>Top postimet</Text>
               {topPosts.map((post, idx) => (
                 <View key={String(post.id || idx)} style={styles.topPostRow}>
-                  <View style={styles.rankPill}>
-                    <Text style={styles.rankPillText}>#{idx + 1}</Text>
+                <View style={[styles.rankPill, { backgroundColor: colors.primarySoft }]}>
+                  <Text style={[styles.rankPillText, { color: colors.primaryText }]}>#{idx + 1}</Text>
                   </View>
                   <View style={styles.topPostBody}>
-                    <Text style={styles.topPostText} numberOfLines={2}>
+                  <Text style={[styles.topPostText, { color: colors.text }]} numberOfLines={2}>
                       {post.content || post.caption || 'Postim pa tekst'}
                     </Text>
-                    <Text style={styles.topPostMeta}>
+                    <Text style={[styles.topPostMeta, { color: colors.muted }]}>
                       {formatNumber(post.likesCount)} pëlqime · {formatNumber(post.commentsCount)} komente
                     </Text>
                   </View>
@@ -344,40 +346,40 @@ export default function InsightsScreen() {
         </View>
       ) : (
         <View>
-          <View style={styles.xpHero}>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeLabel}>Nivel</Text>
-              <Text style={styles.levelBadgeValue}>{level}</Text>
+          <View style={[styles.xpHero, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.levelBadge, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.levelBadgeLabel, { color: colors.onPrimary }]}>Nivel</Text>
+              <Text style={[styles.levelBadgeValue, { color: colors.onPrimary }]}>{level}</Text>
             </View>
             <View style={styles.xpBody}>
-              <Text style={styles.xpTitle}>{formatNumber(points)} XP</Text>
-              <Text style={styles.xpSub}>
+              <Text style={[styles.xpTitle, { color: colors.text }]}>{formatNumber(points)} XP</Text>
+              <Text style={[styles.xpSub, { color: colors.muted }]}>
                 {xpInLevel}/1000 deri te niveli {level + 1}
               </Text>
-              <ProgressBar progress={xpProgress} />
-              <Text style={styles.xpPct}>{xpProgress}%</Text>
+              <ProgressBar progress={xpProgress} colors={colors} />
+              <Text style={[styles.xpPct, { color: colors.primaryText }]}>{xpProgress}%</Text>
             </View>
           </View>
 
           <View style={[styles.metricRow, { paddingHorizontal: 12 }]}>
-            <View style={[styles.metricBox, styles.metricBoxWide]}>
-              <Text style={styles.metricLabel}>Arritje</Text>
-              <Text style={styles.metricValue}>
+            <View style={[styles.metricBox, styles.metricBoxWide, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.metricLabel, { color: colors.muted }]}>Arritje</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>
                 {unlockedAchievements.length}/{achievements.length || unlockedAchievements.length}
               </Text>
             </View>
-            <View style={[styles.metricBox, styles.metricBoxWide]}>
-              <Text style={styles.metricLabel}>Badge</Text>
-              <Text style={styles.metricValue}>
+            <View style={[styles.metricBox, styles.metricBoxWide, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.metricLabel, { color: colors.muted }]}>Badge</Text>
+              <Text style={[styles.metricValue, { color: colors.text }]}>
                 {earnedBadges.length}/{badges.length || earnedBadges.length}
               </Text>
             </View>
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Arritjet</Text>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.panelTitle, { color: colors.text }]}>Arritjet</Text>
             {achievements.length === 0 ? (
-              <Text style={styles.muted}>Nuk ka arritje ende.</Text>
+              <Text style={[styles.muted, { color: colors.muted }]}>Nuk ka arritje ende.</Text>
             ) : (
               <>
                 {unlockedAchievements.slice(0, 6).map((a) => (
@@ -386,9 +388,9 @@ export default function InsightsScreen() {
                       <Ionicons name="trophy" size={18} color="#B45309" />
                     </View>
                     <View style={styles.achBody}>
-                      <Text style={styles.achTitle}>{a.name || a.title || 'Arritje'}</Text>
-                      {a.description ? <Text style={styles.achDesc}>{a.description}</Text> : null}
-                      <Text style={styles.achStatusOn}>E hapur</Text>
+                      <Text style={[styles.achTitle, { color: colors.text }]}>{a.name || a.title || 'Arritje'}</Text>
+                      {a.description ? <Text style={[styles.achDesc, { color: colors.muted }]}>{a.description}</Text> : null}
+                      <Text style={[styles.achStatusOn, { color: colors.primaryText }]}>E hapur</Text>
                     </View>
                   </View>
                 ))}
@@ -398,9 +400,9 @@ export default function InsightsScreen() {
                       <Ionicons name="lock-closed-outline" size={16} color="#94A3B8" />
                     </View>
                     <View style={styles.achBody}>
-                      <Text style={styles.achTitleLocked}>{a.name || a.title || 'Arritje'}</Text>
-                      {a.description ? <Text style={styles.achDesc}>{a.description}</Text> : null}
-                      <ProgressBar progress={a.progress || 0} color="#94A3B8" />
+                      <Text style={[styles.achTitleLocked, { color: colors.textSecondary }]}>{a.name || a.title || 'Arritje'}</Text>
+                      {a.description ? <Text style={[styles.achDesc, { color: colors.muted }]}>{a.description}</Text> : null}
+                      <ProgressBar progress={a.progress || 0} color={colors.muted} colors={colors} />
                       <Text style={styles.achStatusOff}>{Math.round(a.progress || 0)}% progres</Text>
                     </View>
                   </View>
@@ -409,10 +411,10 @@ export default function InsightsScreen() {
             )}
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Badge</Text>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.panelTitle, { color: colors.text }]}>Badge</Text>
             {badges.length === 0 ? (
-              <Text style={styles.muted}>Nuk ka badge ende.</Text>
+              <Text style={[styles.muted, { color: colors.muted }]}>Nuk ka badge ende.</Text>
             ) : (
               <View style={styles.badgeGrid}>
                 {badges.slice(0, 8).map((b) => {
@@ -423,12 +425,12 @@ export default function InsightsScreen() {
                       key={String(b.id || b.name)}
                       style={[
                         styles.badgeCard,
-                        { borderColor: earned ? tone.border : '#E2E8F0', backgroundColor: earned ? tone.bg : '#F8FAFC' },
+                        { borderColor: earned ? tone.border : colors.border, backgroundColor: earned ? colors.primarySoft : colors.bgElevated },
                         !earned && styles.badgeCardLocked,
                       ]}
                     >
-                      <Text style={styles.badgeEmoji}>{b.icon || '🏅'}</Text>
-                      <Text style={styles.badgeName} numberOfLines={2}>
+                      <Ionicons name="medal-outline" size={26} color={earned ? colors.primaryText : colors.muted} />
+                      <Text style={[styles.badgeName, { color: colors.text }]} numberOfLines={2}>
                         {b.name || b.title}
                       </Text>
                       <Text style={[styles.badgeRarity, { color: tone.label }]}>
@@ -444,10 +446,10 @@ export default function InsightsScreen() {
             )}
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Renditja</Text>
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.panelTitle, { color: colors.text }]}>Renditja</Text>
             {leaderboard.length === 0 ? (
-              <Text style={styles.muted}>Nuk ka të dhëna për leaderboard.</Text>
+              <Text style={[styles.muted, { color: colors.muted }]}>Nuk ka të dhëna për leaderboard.</Text>
             ) : (
               leaderboard.map((item, idx) => {
                 const rank = Number(item.rank || idx + 1);
@@ -455,22 +457,22 @@ export default function InsightsScreen() {
                   rank === 1 ? '#F59E0B' : rank === 2 ? '#94A3B8' : rank === 3 ? '#B45309' : '#E2E8F0';
                 const photo = absoluteBackendUrl(item.profilePhoto || item.avatar || '');
                 return (
-                  <View key={String(item.id || idx)} style={styles.lbRow}>
+                  <View key={String(item.id || idx)} style={[styles.lbRow, { borderBottomColor: colors.border }]}>
                     <View style={[styles.lbRank, { backgroundColor: medal }]}>
                       <Text style={[styles.lbRankText, rank > 3 && styles.lbRankTextDark]}>#{rank}</Text>
                     </View>
                     {photo ? (
                       <Image source={{ uri: photo }} style={styles.lbAvatar} />
                     ) : (
-                      <View style={[styles.lbAvatar, styles.lbAvatarFallback]}>
-                        <Ionicons name="person" size={16} color="#64748B" />
+                      <View style={[styles.lbAvatar, styles.lbAvatarFallback, { backgroundColor: colors.bgElevated }]}>
+                        <Ionicons name="person" size={16} color={colors.muted} />
                       </View>
                     )}
                     <View style={styles.lbBody}>
-                      <Text style={styles.lbName}>
+                      <Text style={[styles.lbName, { color: colors.text }]}>
                         {item.firstName || ''} {item.lastName || ''}
                       </Text>
-                      <Text style={styles.lbMeta}>
+                      <Text style={[styles.lbMeta, { color: colors.muted }]}>
                         Nivel {item.level || 1} · {formatNumber(item.points)} XP
                       </Text>
                     </View>

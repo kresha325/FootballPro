@@ -29,7 +29,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+const COLORS = ['#D9A441', '#42C98B', '#70AAF5', '#F36B72', '#A78BFA', '#55C5C8'];
 
 function StatCard({ icon, label, value, change, color }) {
   const Icon = icon;
@@ -105,7 +105,7 @@ const Analytics = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="xt-dashboard-page xt-analytics min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -113,7 +113,7 @@ const Analytics = () => {
 
   if (!analytics) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="xt-dashboard-page xt-analytics min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">No analytics data available</p>
       </div>
     );
@@ -139,7 +139,7 @@ const Analytics = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="xt-dashboard-page xt-analytics min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
         <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
