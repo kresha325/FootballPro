@@ -100,18 +100,18 @@ const FeedScoutingReport = () => {
   const playerB = candidateMap.get(String(playerBId));
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 p-4 md:p-5 mb-6">
+    <section className="xt-card p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Raporti i Scouting</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <h2 className="text-lg font-semibold text-[var(--xt-color-text)] md:text-xl">Krahasimi i lojtarëve</h2>
+          <p className="text-sm text-[var(--xt-color-text-muted)]">
             Krahaso dy atletë të ndjekur sipas golave, asistimeve, pëlqimeve dhe ndjekësve.
           </p>
         </div>
         <select
           value={ageGroup}
           onChange={(e) => setAgeGroup(e.target.value)}
-          className="min-h-11 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+          className="select w-full sm:w-auto"
         >
               {AGE_GROUP_OPTIONS.map((group) => (
             <option key={group.id} value={group.id}>
@@ -122,25 +122,25 @@ const FeedScoutingReport = () => {
       </div>
 
       {loadingCandidates ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-pulse">
-          <div className="h-24 rounded-lg bg-slate-100 dark:bg-slate-800" />
-          <div className="h-24 rounded-lg bg-slate-100 dark:bg-slate-800" />
-          <div className="h-24 rounded-lg bg-slate-100 dark:bg-slate-800" />
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="xt-skeleton h-24 rounded-lg" />
+          <div className="xt-skeleton h-24 rounded-lg" />
+          <div className="xt-skeleton h-24 rounded-lg" />
         </div>
       ) : candidates.length < 2 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] p-4 text-sm">
           Të duhen të paktën 2 atletë të ndjekur në këtë grupmoshë për të gjeneruar krahasimin.
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {[{ label: 'Player A', value: playerAId, onChange: setPlayerAId }, { label: 'Player B', value: playerBId, onChange: setPlayerBId }].map((slot) => (
-              <div key={slot.label} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{slot.label}</label>
+              <div key={slot.label} className="rounded-lg border border-[var(--xt-color-border)] p-3">
+                <label className="label">{slot.label}</label>
                 <select
                   value={slot.value}
                   onChange={(e) => slot.onChange(e.target.value)}
-                  className="mt-2 w-full min-h-11 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                  className="select mt-2"
                 >
                   {candidates.map((c) => (
                     <option key={c.id} value={c.id} translate="no" className="notranslate">
@@ -150,12 +150,12 @@ const FeedScoutingReport = () => {
                 </select>
               </div>
             ))}
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 flex flex-col justify-end sticky bottom-20 lg:static bg-white dark:bg-gray-900">
+            <div className="xt-card sticky bottom-20 flex flex-col justify-end p-3 lg:static">
               <button
                 type="button"
                 onClick={runCompare}
                 disabled={!canCompare || comparing}
-                className="min-h-11 px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700"
+                className="btn btn-primary w-full"
               >
                   {comparing ? 'Duke krahasuar...' : 'Krahaso Lojtarët'}
               </button>
@@ -165,17 +165,17 @@ const FeedScoutingReport = () => {
           {(playerA || playerB) && (
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
               {[{ label: 'A', player: playerA }, { label: 'B', player: playerB }].map((item) => (
-                <div key={item.label} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 flex items-center gap-3">
+                <div key={item.label} className="rounded-lg border border-[var(--xt-color-border)] p-3 flex items-center gap-3">
                   <img
                     src={avatarOrFallback(item.player?.profilePhoto)}
                     alt={item.player?.fullName || `Player ${item.label}`}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-600"
+                    className="xt-avatar h-12 w-12 object-cover"
                   />
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 dark:text-white truncate">
+                    <p className="truncate font-semibold text-[var(--xt-color-text)]">
                       <PersonName>{item.player?.fullName || '-'}</PersonName>
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    <p className="truncate text-xs text-[var(--xt-color-text-muted)]">
                       {item.player?.position || 'Pa pozicion'} {item.player?.club ? `· ${item.player.club}` : ''}
                     </p>
                   </div>
@@ -187,11 +187,11 @@ const FeedScoutingReport = () => {
       )}
 
       {error ? (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="xt-error-state mt-3 text-sm" role="alert">{error}</p>
       ) : null}
 
       {compareData?.players?.A && compareData?.players?.B ? (
-        <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-700 p-3 md:p-4">
+        <div className="xt-card mt-4 p-3 md:p-4">
           <div className="grid grid-cols-3 items-center gap-2 mb-3">
             <div className="text-center">
               <p className="text-xs text-slate-500">Lojtari A</p>
@@ -234,4 +234,3 @@ const FeedScoutingReport = () => {
 };
 
 export default FeedScoutingReport;
-

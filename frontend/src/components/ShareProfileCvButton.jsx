@@ -32,7 +32,7 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+        className="btn btn-primary"
       >
         CV dixhitale
       </button>
@@ -47,13 +47,13 @@ export default function ShareProfileCvButton({ profile, className = '' }) {
           <div
             role="dialog"
             aria-label="Ndaj CV dixhitale"
-            className="fixed left-1/2 top-1/2 z-50 w-[min(20rem,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0 md:translate-y-0 md:shadow-lg"
+            className="xt-card fixed left-1/2 top-1/2 z-50 w-[min(20rem,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 p-3 md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0 md:translate-y-0"
           >
             <Link
               to={publicPath}
               target="_blank"
               rel="noopener noreferrer"
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200"
+              className="btn btn-outline mb-3 w-full"
               onClick={() => setOpen(false)}
             >
               Shiko CV

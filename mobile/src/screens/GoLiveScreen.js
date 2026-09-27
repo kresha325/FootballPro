@@ -298,7 +298,7 @@ export default function GoLiveScreen({ route, navigation }) {
     <ScrollView
       style={[styles.container, isDark && styles.screenDark]}
       contentContainerStyle={[styles.content, isDark && styles.screenDark]}
-      refreshControl={<RefreshControl refreshing={loadingLists} onRefresh={loadStreams} colors={['#0f766e']} />}
+      refreshControl={<RefreshControl refreshing={loadingLists} onRefresh={loadStreams} colors={['#9A6B12']} />}
     >
       <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Streams & Go Live</Text>
       <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   ytBadgeLabel: { fontSize: 11, color: '#64748b', marginBottom: 2 },
   ytBadgeId: { fontSize: 12, fontFamily: 'Menlo', color: '#0f172a', fontWeight: '600' },
-  ytLink: { marginBottom: 14, fontSize: 13, color: '#0f766e', fontWeight: '600' },
+  ytLink: { marginBottom: 14, fontSize: 13, color: '#9A6B12', fontWeight: '600' },
   input: {
     borderColor: '#cbd5e1',
     backgroundColor: '#fff',
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   viewBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   retryBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,

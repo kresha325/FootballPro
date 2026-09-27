@@ -7,6 +7,7 @@ import axios from 'axios';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
+import { ShoppingBagIcon } from '@heroicons/react/24/outline';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -39,6 +40,7 @@ export default function MarketplaceSimple() {
   const [products, setProducts] = useState([]);
   const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [category, setCategory] = useState('all');
@@ -130,7 +132,7 @@ export default function MarketplaceSimple() {
 
     // Fetch XCoin balance
     getJonCoinBalance().then(({ balance: bal }) => setJonCoinBalance(Number(bal) || 0));
-    
+
     const success = searchParams.get('success');
     const canceled = searchParams.get('canceled');
     if (success || canceled) {
@@ -146,8 +148,10 @@ export default function MarketplaceSimple() {
         allProducts = allProducts.filter(p => p.category === category);
       }
       setProducts(allProducts);
+      setProductsError('');
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProductsError('Produktet nuk mund të ngarkoheshin. Provo përsëri.');
     } finally {
       setLoading(false);
     }
@@ -287,19 +291,19 @@ export default function MarketplaceSimple() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
+    <div className="mx-auto min-h-screen max-w-7xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       {/* XCoin Balance Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1" title="XCoin Balance">
+          <span className="xt-badge xt-badge-gold min-h-10 px-3" title="XCoin Balance">
             {jonCoinBalance !== null ? `${jonCoinBalance} XCoin` : '...'}
-            <span className="text-xs text-gray-500 ml-1">(1 XCoin = 1€)</span>
+
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="relative bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded font-semibold shadow"
+            className="btn btn-quiet relative min-h-11"
             onClick={() => setShowCartDrawer(true)}
           >
             Shporta
@@ -310,7 +314,7 @@ export default function MarketplaceSimple() {
             ) : null}
           </button>
           <button
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-semibold shadow"
+            className="btn btn-outline min-h-11"
             onClick={() => navigate('/wallet')}
           >
             Shiko Wallet
@@ -320,12 +324,12 @@ export default function MarketplaceSimple() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Tregu</h1>
-          <p className="text-gray-600 dark:text-gray-400">Bli dhe shit pajisje sportive</p>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Marketplace</p><h1 className="mt-1 text-3xl font-black text-white mb-2">Tregu</h1>
+          <p className="text-[var(--xt-color-text-muted)]">Bli dhe shit pajisje sportive</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-md"
+          className="btn btn-primary min-h-11"
         >
           + Shto Produkt
         </button>
@@ -345,8 +349,8 @@ export default function MarketplaceSimple() {
             onClick={() => setCategory(cat.value)}
             className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all ${
               category === cat.value
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-md'
+                : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
             }`}
           >
             {cat.icon} {cat.label}
@@ -364,7 +368,7 @@ export default function MarketplaceSimple() {
             <div
               key={product.id}
               onClick={() => setSelectedProduct(product)}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-gray-200 dark:border-gray-700 overflow-hidden"
+              className="xt-card cursor-pointer overflow-hidden transition hover:border-[var(--xt-color-gold)]/50"
             >
               {/* Image */}
               <div className="relative aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center overflow-hidden">
@@ -375,7 +379,7 @@ export default function MarketplaceSimple() {
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <span className="text-6xl">{getCategoryIcon(product.category)}</span>
+                  <ShoppingBagIcon className="h-14 w-14 text-[var(--xt-color-gold-bright)]" aria-hidden="true" />
                 )}
                 {isSold && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -393,27 +397,27 @@ export default function MarketplaceSimple() {
 
               {/* Info */}
               <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                <h3 className="text-lg font-bold text-[var(--xt-color-text)] mb-2 line-clamp-2">
                   {product.name}
                 </h3>
 
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-2xl font-bold text-[var(--xt-color-gold-bright)]">
                     {product.price} XCoin
                   </span>
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium capitalize">
+                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-[var(--xt-color-text-muted)] rounded text-xs font-medium capitalize">
                     {product.condition}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <div className="flex items-center gap-2 text-sm text-[var(--xt-color-text-muted)] mb-3">
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs border-2 border-white dark:border-gray-800">
                     {product.Seller?.firstName?.[0]}
                   </div>
                   {product.Seller?.id ? (
                     <a
                       href={`/profile/${product.Seller.id}`}
-                      className="hover:underline text-blue-600 dark:text-blue-400"
+                      className="hover:underline text-[var(--xt-color-gold-bright)]"
                       onClick={e => { e.stopPropagation(); }}
                     >
                       {product.Seller?.firstName} {product.Seller?.lastName}
@@ -423,7 +427,7 @@ export default function MarketplaceSimple() {
                   )}
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                <p className="text-sm text-[var(--xt-color-text-muted)] line-clamp-2 mb-3">
                   {product.description}
                 </p>
 
@@ -449,7 +453,7 @@ export default function MarketplaceSimple() {
                 {!isOwner && !isSold && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Sasia</label>
+                      <label className="text-sm text-[var(--xt-color-text-muted)] whitespace-nowrap">Sasia</label>
                       <input
                         type="number"
                         min={1}
@@ -459,14 +463,14 @@ export default function MarketplaceSimple() {
                         onChange={(e) =>
                           setOrderQty((prev) => ({ ...prev, [product.id]: e.target.value }))
                         }
-                        className="w-20 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                        className="w-20 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-[var(--xt-color-text)] bg-[var(--xt-color-surface)]"
                       />
                       <span className="text-xs text-gray-500">max {product.stock ?? 0}</span>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => addToCart(product, e)}
-                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                      className="btn btn-primary min-h-11 w-full"
                     >
                       Shto në shportë
                     </button>
@@ -478,20 +482,22 @@ export default function MarketplaceSimple() {
         })}
       </div>
 
-      {products.length === 0 && (
+      {productsError && <div className="xt-error-state xt-card" role="alert"><p>{productsError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchProducts(); }}>Provo përsëri</button></div>}
+
+      {!productsError && products.length === 0 && (
         <div className="text-center py-20">
-          <div className="text-6xl mb-4">🛒</div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <ShoppingBagIcon className="mx-auto mb-4 h-12 w-12 text-[var(--xt-color-gold)]" aria-hidden="true" />
+          <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">
             Nuk ka produkte
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {category === 'all' 
-              ? 'Bëhu i pari që shet diçka!' 
+          <p className="text-[var(--xt-color-text-muted)] mb-6">
+            {category === 'all'
+              ? 'Bëhu i pari që shet diçka!'
               : `Nuk ka produkte në kategorinë "${categories.find(c => c.value === category)?.label}"`}
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+            className="px-6 py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-xl hover:bg-blue-700 transition-colors font-semibold"
           >
             Shto Produktin e Parë
           </button>
@@ -501,23 +507,23 @@ export default function MarketplaceSimple() {
       {/* Create Product Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Shto Produkt të Ri</h2>
-            
+          <div className="xt-card w-full max-w-md rounded-xl p-4 shadow-2xl sm:p-6 max-h-[90dvh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">Shto Produkt të Ri</h2>
+
             <form onSubmit={createProduct} className="space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                                 Foto e Produktit
                               </label>
                               <input
                                 type="file"
                                 accept="image/*"
                                 onChange={e => setImageFile(e.target.files[0])}
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                               />
                             </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Emri i Produktit
                 </label>
                 <input
@@ -525,26 +531,26 @@ export default function MarketplaceSimple() {
                   value={newProduct.name}
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                   placeholder="Nike Football Boots"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Përshkrimi
                 </label>
                 <textarea
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                   placeholder="Përshkruaj produktin..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Çmimi (XCoin)
                 </label>
                 <input
@@ -553,13 +559,13 @@ export default function MarketplaceSimple() {
                   value={newProduct.price}
                   onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                   placeholder="29.99"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Sasia në stok (copë)
                 </label>
                 <input
@@ -569,22 +575,22 @@ export default function MarketplaceSimple() {
                   value={newProduct.stock}
                   onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                   placeholder="10"
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
                   Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Kategoria
                 </label>
                 <select
                   value={newProduct.category}
                   onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                 >
                   {categories.filter(c => c.value !== 'all').map(cat => (
                     <option key={cat.value} value={cat.value}>
@@ -595,13 +601,13 @@ export default function MarketplaceSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Gjendja
                 </label>
                 <select
                   value={newProduct.condition}
                   onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                 >
                   <option value="new">E Re</option>
                   <option value="like-new">Si e Re</option>
@@ -614,13 +620,13 @@ export default function MarketplaceSimple() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                 >
                   Anulo
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
                   Shto Produktin
                 </button>
@@ -633,52 +639,52 @@ export default function MarketplaceSimple() {
       {/* Edit Product Modal */}
       {showEditModal && editProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Ndrysho produktin</h2>
+          <div className="xt-card w-full max-w-md rounded-xl p-4 shadow-2xl sm:p-6 max-h-[90dvh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">Ndrysho produktin</h2>
             <form onSubmit={saveProductEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   Foto e re (opsionale)
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Emri</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Emri</label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Përshkrimi</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Përshkrimi</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Çmimi (XCoin)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Çmimi (XCoin)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={editForm.price}
                   onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sasia në stok (copë)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Sasia në stok (copë)</label>
                 <input
                   type="number"
                   min={0}
@@ -686,18 +692,18 @@ export default function MarketplaceSimple() {
                   value={editForm.stock}
                   onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                   Restoko (stok &gt; 0) për ta mbajtur listimin. Pa stok fshihet automatikisht pas 48h.
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategoria</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kategoria</label>
                 <select
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 >
                   {categories.filter((c) => c.value !== 'all').map((cat) => (
                     <option key={cat.value} value={cat.value}>
@@ -707,11 +713,11 @@ export default function MarketplaceSimple() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gjendja</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Gjendja</label>
                 <select
                   value={editForm.condition}
                   onChange={(e) => setEditForm({ ...editForm, condition: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 >
                   <option value="new">E Re</option>
                   <option value="like-new">Si e Re</option>
@@ -726,7 +732,7 @@ export default function MarketplaceSimple() {
                     setShowEditModal(false);
                     setEditProduct(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
                 >
                   Anulo
                 </button>
@@ -748,11 +754,11 @@ export default function MarketplaceSimple() {
           onClick={() => setShowCartDrawer(false)}
         >
           <div
-            className="bg-white dark:bg-gray-800 rounded-t-2xl max-h-[75vh] flex flex-col shadow-2xl border-t border-gray-200 dark:border-gray-700"
+            className="xt-card flex max-h-[85dvh] flex-col rounded-t-2xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-bold text-[var(--xt-color-text)]">
                 Shporta {totalPieces > 0 ? `(${totalPieces} copë)` : ''}
               </h3>
               <button
@@ -766,7 +772,7 @@ export default function MarketplaceSimple() {
             </div>
             <div className="overflow-y-auto p-4 flex-1 min-h-0">
               {items.length === 0 ? (
-                <p className="text-center text-gray-600 dark:text-gray-400 py-8">Shporta është bosh.</p>
+                <p className="text-center text-[var(--xt-color-text-muted)] py-8">Shporta është bosh.</p>
               ) : (
                 <ul className="space-y-3">
                   {items.map((line) => {
@@ -789,8 +795,8 @@ export default function MarketplaceSimple() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white truncate">{line.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="font-semibold text-[var(--xt-color-text)] truncate">{line.name}</p>
+                          <p className="text-sm text-[var(--xt-color-text-muted)]">
                             {(Number(line.price) || 0).toFixed(2)} XCoin × {q}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
@@ -828,7 +834,7 @@ export default function MarketplaceSimple() {
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
               <div className="space-y-2 text-sm">
-                <label className="block font-medium text-gray-800 dark:text-gray-200">Si e merr / dërgon? *</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">Si e merr / dërgon? *</label>
                 <select
                   value={checkoutForm.deliveryMethod}
                   onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryMethod: e.target.value })}
@@ -838,7 +844,7 @@ export default function MarketplaceSimple() {
                   <option value="pickup">Marrje personale</option>
                   <option value="shipping">Dërgesë</option>
                 </select>
-                <label className="block font-medium text-gray-800 dark:text-gray-200">Kontakt (tel / email) *</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">Kontakt (tel / email) *</label>
                 <input
                   type="text"
                   value={checkoutForm.buyerContact}
@@ -848,7 +854,7 @@ export default function MarketplaceSimple() {
                 />
                 {checkoutForm.deliveryMethod === 'shipping' ? (
                   <>
-                    <label className="block font-medium text-gray-800 dark:text-gray-200">Adresa e dërgesës *</label>
+                    <label className="block font-medium text-[var(--xt-color-text)]">Adresa e dërgesës *</label>
                     <textarea
                       value={checkoutForm.deliveryAddress}
                       onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
@@ -858,7 +864,7 @@ export default function MarketplaceSimple() {
                   </>
                 ) : (
                   <>
-                    <label className="block font-medium text-gray-800 dark:text-gray-200">Vendtakimi / adresa (opsionale)</label>
+                    <label className="block font-medium text-[var(--xt-color-text)]">Vendtakimi / adresa (opsionale)</label>
                     <input
                       type="text"
                       value={checkoutForm.deliveryAddress}
@@ -867,7 +873,7 @@ export default function MarketplaceSimple() {
                     />
                   </>
                 )}
-                <label className="block font-medium text-gray-800 dark:text-gray-200">Shënim</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">Shënim</label>
                 <input
                   type="text"
                   value={checkoutForm.deliveryNotes}
@@ -876,7 +882,7 @@ export default function MarketplaceSimple() {
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 />
               </div>
-              <div className="flex justify-between text-gray-900 dark:text-white font-bold">
+              <div className="flex justify-between text-[var(--xt-color-text)] font-bold">
                 <span>Total</span>
                 <span>{subtotalJonCoin} XCoin</span>
               </div>
@@ -887,7 +893,7 @@ export default function MarketplaceSimple() {
                 type="button"
                 onClick={checkoutCart}
                 disabled={cartChecking || items.length === 0}
-                className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
+                className="w-full py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
               >
                 {cartChecking ? '…' : 'Dërgo porosinë'}
               </button>
@@ -898,9 +904,9 @@ export default function MarketplaceSimple() {
 
       {selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="xt-card w-full max-w-2xl rounded-xl p-4 shadow-2xl sm:p-6 max-h-[90dvh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-[var(--xt-color-text)]">
                 {selectedProduct.name}
               </h2>
               <button
@@ -911,8 +917,8 @@ export default function MarketplaceSimple() {
               </button>
             </div>
 
-            <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-xl flex items-center justify-center mb-6">
-              <span className="text-9xl">{getCategoryIcon(selectedProduct.category)}</span>
+            <div className="mb-6 flex aspect-video items-center justify-center rounded-xl bg-[var(--xt-color-surface-raised)]">
+              {!selectedProduct.imageUrl && <ShoppingBagIcon className="h-20 w-20 text-[var(--xt-color-gold)]" aria-hidden="true" />}
                 {selectedProduct.imageUrl ? (
                   <img
                     src={productImageSrc(selectedProduct.imageUrl)}
@@ -926,10 +932,10 @@ export default function MarketplaceSimple() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                <span className="text-4xl font-bold text-[var(--xt-color-gold-bright)]">
                   {selectedProduct.price} XCoin
                 </span>
-                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium capitalize">
+                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-[var(--xt-color-text-muted)] rounded-full text-sm font-medium capitalize">
                   {selectedProduct.condition}
                 </span>
               </div>
@@ -947,30 +953,30 @@ export default function MarketplaceSimple() {
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
+                  <p className="font-semibold text-[var(--xt-color-text)]">
                     {selectedProduct.Seller?.firstName} {selectedProduct.Seller?.lastName}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Seller</p>
+                  <p className="text-sm text-[var(--xt-color-text-muted)]">Seller</p>
                 </div>
               </div>
 
               {selectedProduct.description && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Përshkrimi</h3>
-                  <p className="text-gray-700 dark:text-gray-300">{selectedProduct.description}</p>
+                  <h3 className="font-semibold text-[var(--xt-color-text)] mb-2">Përshkrimi</h3>
+                  <p className="text-[var(--xt-color-text-muted)]">{selectedProduct.description}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Kategoria</p>
-                  <p className="font-medium text-gray-900 dark:text-white capitalize">
+                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">Kategoria</p>
+                  <p className="font-medium text-[var(--xt-color-text)] capitalize">
                     {getCategoryIcon(selectedProduct.category)} {selectedProduct.category}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Statusi</p>
-                  <p className="font-medium text-gray-900 dark:text-white capitalize">
+                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">Statusi</p>
+                  <p className="font-medium text-[var(--xt-color-text)] capitalize">
                     {selectedProduct.status}
                   </p>
                 </div>
@@ -981,7 +987,7 @@ export default function MarketplaceSimple() {
                 selectedProduct.status !== 'sold' && (
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 dark:text-gray-400">Sasia</label>
+                    <label className="text-sm text-[var(--xt-color-text-muted)]">Sasia</label>
                     <input
                       type="number"
                       min={1}
@@ -990,13 +996,13 @@ export default function MarketplaceSimple() {
                       onChange={(e) =>
                         setOrderQty((prev) => ({ ...prev, [selectedProduct.id]: e.target.value }))
                       }
-                      className="w-24 border border-gray-300 dark:border-gray-600 rounded px-2 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                      className="w-24 border border-gray-300 dark:border-gray-600 rounded px-2 py-2 text-[var(--xt-color-text)] bg-[var(--xt-color-surface)]"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => addToCart(selectedProduct)}
-                    className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
+                    className="btn btn-primary min-h-12 w-full text-base"
                   >
                     Shto në shportë —{' '}
                     {Math.round(

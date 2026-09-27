@@ -61,7 +61,7 @@ export default function AdvancedSearchInput({
   const text = colors.text || '#0f172a';
   const muted = colors.muted || '#64748b';
   const chipBg = colors.chipBg || '#ecfdf5';
-  const chipText = colors.chipText || '#0f766e';
+  const chipText = colors.chipText || '#9A6B12';
   const panelBg = colors.inputBg || bg;
 
   const hasText = String(value || '').length > 0;
@@ -103,13 +103,13 @@ export default function AdvancedSearchInput({
         style={[
           styles.field,
           {
-            borderColor: focused ? '#0f766e' : border,
+            borderColor: focused ? '#9A6B12' : border,
             backgroundColor: bg,
             shadowOpacity: focused ? 0.12 : 0.04,
           },
         ]}
       >
-        <Ionicons name="search" size={20} color={focused ? '#0f766e' : muted} style={styles.leadIcon} />
+        <Ionicons name="search" size={20} color={focused ? '#9A6B12' : muted} style={styles.leadIcon} />
         <TextInput
           ref={inputRef}
           value={value}
@@ -132,7 +132,7 @@ export default function AdvancedSearchInput({
           onSubmitEditing={() => commit()}
         />
         {loading ? (
-          <ActivityIndicator size="small" color="#0f766e" style={styles.trail} />
+          <ActivityIndicator size="small" color="#9A6B12" style={styles.trail} />
         ) : hasText ? (
           <TouchableOpacity
             onPress={() => {

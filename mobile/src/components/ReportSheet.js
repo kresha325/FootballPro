@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  chipOn: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  chipOn: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   chipText: { color: '#334155', fontWeight: '600', fontSize: 13 },
   chipTextOn: { color: '#fff' },
   input: {
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   submit: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',

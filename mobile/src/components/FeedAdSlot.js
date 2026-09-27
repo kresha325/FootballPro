@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
   bodyDark: { color: '#cbd5e1' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  dotActive: { backgroundColor: '#0f766e' },
+  dotActive: { backgroundColor: '#9A6B12' },
   dotIdle: { backgroundColor: '#cbd5e1' },
 });

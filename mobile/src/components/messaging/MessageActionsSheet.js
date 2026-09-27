@@ -114,7 +114,7 @@ export default function MessageActionsSheet({
                 <Ionicons
                   name={row.icon}
                   size={20}
-                  color={row.destructive ? danger : '#0f766e'}
+                  color={row.destructive ? danger : '#9A6B12'}
                 />
               </View>
               <Text style={[styles.rowLabel, { color: row.destructive ? danger : text }]}>

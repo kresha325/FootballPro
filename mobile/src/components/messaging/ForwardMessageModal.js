@@ -119,7 +119,7 @@ export default function ForwardMessageModal({ visible, message, currentUserId, o
           {success ? (
             <Text style={styles.success}>U përcoll!</Text>
           ) : loading ? (
-            <ActivityIndicator style={styles.loader} color="#0f766e" />
+            <ActivityIndicator style={styles.loader} color="#9A6B12" />
           ) : (
             <FlatList
               data={conversations}
@@ -146,7 +146,7 @@ export default function ForwardMessageModal({ visible, message, currentUserId, o
                     <Text style={styles.rowTitle} numberOfLines={1}>
                       {title}
                     </Text>
-                    {busy ? <ActivityIndicator size="small" color="#0f766e" /> : null}
+                    {busy ? <ActivityIndicator size="small" color="#9A6B12" /> : null}
                   </TouchableOpacity>
                 );
               }}
@@ -217,5 +217,5 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 24 },
   empty: { textAlign: 'center', color: '#64748b', marginVertical: 20 },
   error: { color: '#b91c1c', textAlign: 'center', marginTop: 8, paddingHorizontal: 16 },
-  success: { color: '#0f766e', textAlign: 'center', marginVertical: 20, fontWeight: '700' },
+  success: { color: '#9A6B12', textAlign: 'center', marginVertical: 20, fontWeight: '700' },
 });

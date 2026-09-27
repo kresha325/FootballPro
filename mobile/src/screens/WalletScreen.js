@@ -209,7 +209,7 @@ export default function WalletScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   txType: { color: '#0f172a', fontWeight: '700' },
-  txAmount: { color: '#0f766e', fontWeight: '800', marginTop: 4 },
+  txAmount: { color: '#9A6B12', fontWeight: '800', marginTop: 4 },
   txDesc: { color: '#475569', marginTop: 4 },
   skeletonBlock: { height: 90, backgroundColor: '#e2e8f0' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },

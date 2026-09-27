@@ -21,7 +21,7 @@ function RemoteVideo({ stream }) {
       videoRef.current.play?.().catch(() => {});
     }
   }, [stream]);
-  return <video ref={videoRef} autoPlay playsInline style={{ width: 240 }} />;
+  return <video ref={videoRef} autoPlay playsInline className="w-full max-w-[640px] rounded-2xl" />;
 }
 
 const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => {
@@ -181,28 +181,28 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
   };
 
   return (
-    <div className="video-call-room">
+    <div className="video-call-room min-h-[60vh] rounded-2xl bg-[var(--xt-color-canvas)] p-4 text-[var(--xt-color-text)] sm:p-6">
       {!joined ? (
-        <button onClick={handleJoin}>Join Video Call</button>
+        <button className="btn btn-primary min-h-12" onClick={handleJoin}>Bashkohu në thirrje</button>
       ) : (
         <div>
-          <div>
-            <video ref={localVideoRef} autoPlay muted playsInline style={{ width: 300 }} />
-            <div>
-              <button onClick={handleMute}>{muted ? 'Unmute' : 'Mute'}</button>
-              <button onClick={handleVideoToggle}>{videoEnabled ? 'Turn Off Video' : 'Turn On Video'}</button>
-              <button onClick={handleLeave}>Leave Call</button>
+          <div className="flex flex-col items-center gap-4">
+            <video ref={localVideoRef} autoPlay muted playsInline className="w-full max-w-[640px] rounded-2xl" />
+            <div className="flex flex-wrap justify-center gap-3">
+              <button className="btn btn-quiet min-h-11" onClick={handleMute}>{muted ? 'Aktivizo audion' : 'Çaktivizo audion'}</button>
+              <button className="btn btn-quiet min-h-11" onClick={handleVideoToggle}>{videoEnabled ? 'Fik kamerën' : 'Aktivizo kamerën'}</button>
+              <button className="btn min-h-11 bg-red-600 text-white" onClick={handleLeave}>Mbyll thirrjen</button>
             </div>
           </div>
-          <div>
-            <h4>Participants:</h4>
+          <div className="mt-5 text-center">
+            <h4 className="font-semibold text-[var(--xt-color-gold-bright)]">Pjesëmarrësit</h4>
             <ul>
               {participants.map(pid => (
                 <li key={pid}>{pid === userId ? 'You' : `User ${pid}`}</li>
               ))}
             </ul>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
             {remoteStreams.map((stream, idx) => (
               <RemoteVideo key={idx} stream={stream} />
             ))}

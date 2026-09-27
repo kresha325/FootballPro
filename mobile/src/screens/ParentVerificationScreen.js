@@ -150,9 +150,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   warnText: { color: '#92400e', fontSize: 13, marginBottom: 8 },
-  link: { fontSize: 11, color: '#0f766e', marginBottom: 10 },
+  link: { fontSize: 11, color: '#9A6B12', marginBottom: 10 },
   copyBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   button: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',

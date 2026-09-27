@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
     alignItems: 'center',
   },
-  toggleBtnActive: { backgroundColor: '#0f766e' },
+  toggleBtnActive: { backgroundColor: '#9A6B12' },
   toggleText: { fontWeight: '700', color: '#475569' },
   toggleTextActive: { color: '#fff' },
   planCard: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   planTitle: { color: '#0f172a', fontWeight: '800', fontSize: 18 },
-  planPrice: { color: '#0f766e', fontWeight: '800', fontSize: 20, marginVertical: 8 },
+  planPrice: { color: '#9A6B12', fontWeight: '800', fontSize: 20, marginVertical: 8 },
   planBadgeWrap: {
     alignSelf: 'flex-start',
     backgroundColor: '#fef3c7',
@@ -365,10 +365,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
   },
-  verifyBtnText: { color: '#0f766e', fontWeight: '700' },
+  verifyBtnText: { color: '#9A6B12', fontWeight: '700' },
   footer: {
     marginTop: 16,
     fontSize: 12,

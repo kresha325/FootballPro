@@ -157,6 +157,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 12 },
   body: { fontSize: 15, color: '#cbd5e1', lineHeight: 22, marginBottom: 20 },
   error: { color: '#fca5a5', marginBottom: 16, textAlign: 'center' },
-  btn: { backgroundColor: '#0f766e', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  btn: { backgroundColor: '#9A6B12', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700' },
 });

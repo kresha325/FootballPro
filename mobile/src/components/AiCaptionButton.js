@@ -28,7 +28,7 @@ export default function AiCaptionButton({ hints = {}, onCaption, style }) {
   return (
     <TouchableOpacity style={[styles.btn, style]} onPress={onPress} disabled={loading}>
       {loading ? (
-        <ActivityIndicator size="small" color="#0f766e" />
+        <ActivityIndicator size="small" color="#9A6B12" />
       ) : (
         <Text style={styles.text}>✨ Caption AI</Text>
       )}
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   btn: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -48,5 +48,5 @@ const styles = StyleSheet.create({
     minHeight: 36,
     justifyContent: 'center',
   },
-  text: { color: '#0f766e', fontWeight: '600', fontSize: 13 },
+  text: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },
 });

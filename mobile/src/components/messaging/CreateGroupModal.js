@@ -110,7 +110,7 @@ export default function CreateGroupModal({ visible, onClose, conversations, curr
                     <Ionicons
                       name={on ? 'checkbox' : 'square-outline'}
                       size={22}
-                      color={on ? '#0f766e' : '#94a3b8'}
+                      color={on ? '#9A6B12' : '#94a3b8'}
                     />
                     <Text style={styles.rowText}>{item.name}</Text>
                   </TouchableOpacity>
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, fontSize: 15, color: '#0f172a', fontWeight: '600' },
   createBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',

@@ -149,7 +149,7 @@ export default function ClubRosterScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     borderColor: '#bae6fd',
     backgroundColor: '#f0f9ff',
   },
-  tabActive: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  tabActive: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   tabText: { color: '#155e75', fontWeight: '700' },
   tabTextActive: { color: '#fff' },
   formCard: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 8,
   },
-  submitBtn: { backgroundColor: '#0f766e', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
+  submitBtn: { backgroundColor: '#9A6B12', borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   submitTxt: { color: '#fff', fontWeight: '700' },
   section: { color: '#0f172a', fontWeight: '800', marginBottom: 8 },
   card: {

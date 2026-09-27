@@ -158,6 +158,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
   body: { fontSize: 15, color: '#334155', lineHeight: 22, marginBottom: 20 },
   error: { color: '#b91c1c', marginBottom: 16, textAlign: 'center' },
-  btn: { backgroundColor: '#0f766e', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  btn: { backgroundColor: '#9A6B12', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700' },
 });

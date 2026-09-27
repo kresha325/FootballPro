@@ -126,7 +126,7 @@ export default function LiveViewerScreen({ route, navigation }) {
   if (mode === 'loading') {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
         <Text style={styles.loadingText}>Duke hapur stream…</Text>
       </View>
     );
@@ -234,7 +234,7 @@ export default function LiveViewerScreen({ route, navigation }) {
           }
           renderLoading={() => (
             <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#0f766e" />
+              <ActivityIndicator size="large" color="#9A6B12" />
             </View>
           )}
         />
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
   loadingText: { marginTop: 12, color: '#64748b' },
   errorText: { color: '#ef4444', fontWeight: '700', textAlign: 'center', marginBottom: 16 },
-  btn: { backgroundColor: '#0f766e', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  btn: { backgroundColor: '#9A6B12', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   btnText: { color: '#fff', fontWeight: '700' },
   banner: {
     backgroundColor: '#fef3c7',
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   bannerText: { color: '#92400e', fontSize: 12, lineHeight: 17 },
   broadcastBanner: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,

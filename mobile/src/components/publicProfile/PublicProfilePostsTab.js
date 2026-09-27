@@ -158,7 +158,7 @@ export default function PublicProfilePostsTab({ posts = [], theme }) {
             </View>
             {expanded[post.id] ? (
               <View style={[styles.commentsBox, { borderTopColor: theme.border }]}>
-                {loadingComments[post.id] ? <ActivityIndicator color="#0f766e" /> : null}
+                {loadingComments[post.id] ? <ActivityIndicator color="#9A6B12" /> : null}
                 <View style={styles.commentInputRow}>
                   <TextInput
                     style={[styles.commentInput, { color: theme.text, borderColor: theme.border }]}

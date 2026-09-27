@@ -76,7 +76,7 @@ function roleLabel(role) {
 }
 
 export default function PublicProfileScreen({ route, navigation }) {
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user: me, logout } = useAuth();
 
@@ -168,7 +168,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                 style={{ paddingHorizontal: 8 }}
                 accessibilityLabel="CV dixhitale"
               >
-                <Ionicons name="share-outline" size={22} color="#0f766e" />
+                <Ionicons name="share-outline" size={22} color={colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -222,13 +222,14 @@ export default function PublicProfileScreen({ route, navigation }) {
                 }}
                 style={{ paddingHorizontal: 12 }}
               >
-                <Ionicons name="ellipsis-horizontal" size={22} color="#0f766e" />
+                <Ionicons name="ellipsis-horizontal" size={22} color={colors.primary} />
               </TouchableOpacity>
             )
           : undefined,
     });
   }, [
     navigation,
+    colors.primary,
     ownProfileRoot,
     profile,
     displayName,
@@ -522,35 +523,37 @@ export default function PublicProfileScreen({ route, navigation }) {
   const theme = useMemo(
     () => ({
       isDark,
-      bg: isDark ? '#020617' : '#f1f5f9',
-      card: isDark ? '#0f172a' : '#ffffff',
-      border: isDark ? '#1e293b' : '#e2e8f0',
-      text: isDark ? '#f8fafc' : '#0f172a',
-      muted: isDark ? '#94a3b8' : '#64748b',
-      chipBg: isDark ? '#1e293b' : '#f1f5f9',
-      chipText: isDark ? '#e2e8f0' : '#334155',
-      coverFallback: isDark ? ['#1e3a8a', '#5b21b6'] : ['#3b82f6', '#7c3aed'],
+      bg: colors.bg,
+      card: colors.card,
+      border: colors.border,
+      text: colors.text,
+      muted: colors.muted,
+      primary: colors.primary,
+      primaryText: colors.primaryText,
+      chipBg: colors.bgElevated,
+      chipText: colors.textSecondary,
+      coverFallback: isDark ? ['#111B29', '#202C3B'] : ['#344054', '#667085'],
     }),
-    [isDark]
+    [isDark, colors]
   );
 
   const tabs = useMemo(() => {
     const base = [
-      { key: 'overview', label: '🏠 Përmbledhje' },
-      { key: 'posts', label: '📝 Postime' },
+      { key: 'overview', label: 'Përmbledhje' },
+      { key: 'posts', label: 'Postime' },
     ];
     if (isAthlete) {
-      base.push({ key: 'matches', label: '⚽ Ndeshje' });
-      base.push({ key: 'tournaments', label: '🏆 Turne' });
-      base.push({ key: 'achievements', label: '🎖️ Arritje' });
+      base.push({ key: 'matches', label: 'Ndeshje' });
+      base.push({ key: 'tournaments', label: 'Turne' });
+      base.push({ key: 'achievements', label: 'Arritje' });
     }
     base.push(
-      { key: 'gallery', label: '🖼️ Galeria' },
-      { key: 'videos', label: '🎥 Videot' },
-      { key: 'about', label: 'ℹ️ Rreth' },
-      { key: 'contact', label: '✉️ Kontakt' }
+      { key: 'gallery', label: 'Galeria' },
+      { key: 'videos', label: 'Videot' },
+      { key: 'about', label: 'Rreth' },
+      { key: 'contact', label: 'Kontakt' }
     );
-    if (isSelf) base.push({ key: 'sponsors', label: '🤝 Sponsorë' });
+    if (isSelf) base.push({ key: 'sponsors', label: 'Sponsorë' });
     return base;
   }, [isSelf, isAthlete]);
 
@@ -575,7 +578,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.bg }]}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -640,7 +643,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             setRefreshing(true);
             loadProfile({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={[theme.primary]}
         />
       }
     >
@@ -683,7 +686,7 @@ export default function PublicProfileScreen({ route, navigation }) {
               {photoUri ? (
                 <Image source={{ uri: photoUri }} style={styles.avatarImg} />
               ) : (
-                <View style={[styles.avatarFallback, { backgroundColor: '#0f766e' }]}>
+                <View style={[styles.avatarFallback, { backgroundColor: theme.primary }]}>
                   <Text style={styles.avatarFallbackText}>{initials}</Text>
                 </View>
               )}
@@ -856,7 +859,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                     style={[styles.selfSecondaryBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                     onPress={() => navigation.navigate('BrowseProfiles')}
                   >
-                    <Ionicons name="people-outline" size={18} color="#0f766e" />
+                    <Ionicons name="people-outline" size={18} color="#9A6B12" />
                     <Text style={styles.selfSecondaryBtnText}>Shfleto</Text>
                   </TouchableOpacity>
                 </View>
@@ -1028,7 +1031,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
           {followListLoading ? (
-            <ActivityIndicator style={{ marginVertical: 24 }} color="#0f766e" />
+            <ActivityIndicator style={{ marginVertical: 24 }} color="#9A6B12" />
           ) : followListRows.length === 0 ? (
             <Text style={[styles.followEmpty, { color: theme.muted }]}>
               {followListMode === 'followers' ? 'Nuk ka ndjekës ende.' : 'Nuk po ndjek askënd ende.'}
@@ -1137,7 +1140,7 @@ const styles = StyleSheet.create({
   roleLine: {
     marginTop: 4,
     textAlign: 'center',
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '700',
     fontSize: 15,
   },
@@ -1255,7 +1258,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingVertical: 12,
     borderRadius: 10,
     maxWidth: 200,
@@ -1268,12 +1271,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderWidth: 2,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     paddingVertical: 10,
     borderRadius: 10,
     maxWidth: 140,
   },
-  selfSecondaryBtnText: { color: '#0f766e', fontWeight: '800', fontSize: 15 },
+  selfSecondaryBtnText: { color: '#9A6B12', fontWeight: '800', fontSize: 15 },
   tabPanel: {
     marginTop: 8,
     paddingTop: 4,
@@ -1332,7 +1335,7 @@ const styles = StyleSheet.create({
   transferModalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
   transferCancelBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1' },
   transferCancelText: { color: '#475569', fontWeight: '700' },
-  transferSaveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#0f766e' },
+  transferSaveBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#9A6B12' },
   transferSaveText: { color: '#fff', fontWeight: '700' },
   followModalBackdrop: {
     flex: 1,
@@ -1364,7 +1367,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e2e8f0',
   },
   followAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e2e8f0' },
-  followAvatarPh: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f766e' },
+  followAvatarPh: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#9A6B12' },
   followAvatarText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   followName: { flex: 1, fontWeight: '700', fontSize: 15 },
 });

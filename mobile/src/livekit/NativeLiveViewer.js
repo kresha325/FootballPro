@@ -14,7 +14,7 @@ function RemoteVideos() {
   if (!remote.length) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
         <Text style={styles.loadingText}>Duke pritur videon e streamer-it…</Text>
       </View>
     );
@@ -105,7 +105,7 @@ export default function NativeLiveViewer({ streamId, onNativeUnavailable, onFata
   if (!LiveKitRoomComp || !creds) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
         <Text style={styles.loadingText}>Duke u lidhur me LiveKit…</Text>
       </View>
     );

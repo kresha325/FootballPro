@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  platformIcon: { fontSize: 18, fontWeight: '800', color: '#0f766e', marginTop: 2 },
+  platformIcon: { fontSize: 18, fontWeight: '800', color: '#9A6B12', marginTop: 2 },
   platformTitle: { fontWeight: '700', fontSize: 15 },
   platformDesc: { fontSize: 13, marginTop: 4 },
   unlockedBadge: {
@@ -166,5 +166,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
-  linkBtnText: { color: '#0f766e', fontWeight: '800', fontSize: 15 },
+  linkBtnText: { color: '#9A6B12', fontWeight: '800', fontSize: 15 },
 });

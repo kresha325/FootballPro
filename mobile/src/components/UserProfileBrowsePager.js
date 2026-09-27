@@ -21,7 +21,7 @@ export function useBrowseColors(isDark) {
       text: isDark ? '#f8fafc' : '#0f172a',
       muted: isDark ? '#94a3b8' : '#64748b',
       chipBg: isDark ? '#1e293b' : '#ecfdf5',
-      chipText: isDark ? '#5eead4' : '#0f766e',
+      chipText: isDark ? '#5eead4' : '#9A6B12',
       inputBg: isDark ? '#0f172a' : '#ffffff',
       shadow: '#000',
     }),
@@ -196,7 +196,7 @@ export default function UserProfileBrowsePager({
         getItemLayout={getItemLayout}
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f766e']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9A6B12']} />
           ) : undefined
         }
         renderItem={({ item }) => (
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   cardFallbackBg: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
   },
   cardFillInner: {
     flex: 1,

@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   block: { borderRadius: 12, borderWidth: 1, padding: 14 },
   blockTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10 },
   transferHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  addBtn: { backgroundColor: '#0f766e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  addBtn: { backgroundColor: '#9A6B12', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   mutedCenter: { textAlign: 'center', paddingVertical: 20, fontSize: 15 },
   transferRow: {

@@ -261,7 +261,7 @@ export default function SearchScreen({ navigation, route }) {
 
       {showInitialLoader ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#0f766e" />
+          <ActivityIndicator size="large" color="#9A6B12" />
         </View>
       ) : (
         <View style={styles.browseFlex}>

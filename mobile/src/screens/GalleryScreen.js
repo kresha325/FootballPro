@@ -71,7 +71,7 @@ export default function GalleryScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -97,7 +97,7 @@ export default function GalleryScreen() {
             setRefreshing(true);
             loadGallery({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListEmptyComponent={<Text style={styles.empty}>Your gallery is empty.</Text>}

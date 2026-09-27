@@ -159,7 +159,7 @@ export default function EditProductScreen({ route, navigation }) {
   if (loading || !productId) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -259,15 +259,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  chipActive: { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+  chipActive: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
   chipText: { color: '#475569', fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   imageBtn: { alignSelf: 'flex-start', marginTop: 4 },
-  imageBtnText: { color: '#0f766e', fontWeight: '700' },
+  imageBtnText: { color: '#9A6B12', fontWeight: '700' },
   preview: { width: '100%', height: 180, borderRadius: 10, marginTop: 8, backgroundColor: '#e2e8f0' },
   submitBtn: {
     marginTop: 24,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',

@@ -300,7 +300,7 @@ export const ordersAPI = {
    SCOUTING
 ========================= */
 export const scoutingAPI = {
-  getRecommendations: (params) => API.get('/scouting/recommendations', { params }),
+  getRecommendations: (params, config = {}) => API.get('/scouting/recommendations', { ...config, params }),
   getCandidates: (params) => API.get('/scouting/candidates', { params }),
   comparePlayers: (params) => API.get('/scouting/compare', { params }),
 };

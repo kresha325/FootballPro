@@ -179,14 +179,14 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 120, textAlignVertical: 'top' },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   secondaryButtonText: {
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '700',
   },
   previewImage: {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   sponsorChipActive: {
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     backgroundColor: '#ccfbf1',
   },
   sponsorChipText: {
@@ -236,11 +236,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sponsorChipTextActive: {
-    color: '#0f766e',
+    color: '#9A6B12',
   },
   primaryButton: {
     marginTop: 14,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     alignItems: 'center',
     paddingVertical: 12,

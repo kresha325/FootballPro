@@ -46,7 +46,7 @@ export async function ensureAndroidChannel() {
     name: 'X TALENTI',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#0f766e',
+    lightColor: '#9A6B12',
   });
 }
 

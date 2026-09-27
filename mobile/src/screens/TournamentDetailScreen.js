@@ -128,7 +128,7 @@ const statsStyles = StyleSheet.create({
     marginBottom: 4,
   },
   statValue: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
-  statValueAccent: { color: '#0f766e' },
+  statValueAccent: { color: '#9A6B12' },
   statValueSmall: { fontSize: 13, fontWeight: '700', color: '#0f172a', textAlign: 'center' },
   statHint: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
   summary: { fontSize: 13, color: '#475569', lineHeight: 19, marginTop: 10 },
@@ -420,7 +420,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
   if (loading && !tournament) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -672,7 +672,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
             <TouchableOpacity style={styles.modalClose} onPress={() => setMatchModal({ open: false })}>
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
-            {matchModal.loading ? <ActivityIndicator color="#0f766e" /> : null}
+            {matchModal.loading ? <ActivityIndicator color="#9A6B12" /> : null}
             {matchModal.error ? <Text style={styles.error}>{matchModal.error}</Text> : null}
             {matchModal.data?.match ? (
               <ScrollView>
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
-  primaryBtn: { backgroundColor: '#0f766e', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
+  primaryBtn: { backgroundColor: '#9A6B12', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
   secondaryBtn: { borderWidth: 1, borderColor: '#dc2626', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
   secondaryBtnText: { color: '#dc2626', fontWeight: '700' },
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
   tabScroll: { marginBottom: 10, maxHeight: 44 },
   tabRow: { flexDirection: 'row', gap: 6, paddingRight: 8 },
   tabBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#e2e8f0', alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#0f766e' },
+  tabBtnActive: { backgroundColor: '#9A6B12' },
   tabText: { color: '#334155', fontWeight: '700', fontSize: 12 },
   tabTextActive: { color: '#fff' },
   card: {
@@ -884,10 +884,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   participantInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
-  rowLink: { color: '#0f766e' },
+  rowLink: { color: '#9A6B12' },
   participantStatus: { color: '#b45309', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
   participantActions: { flexDirection: 'row', gap: 6 },
-  acceptBtn: { backgroundColor: '#0f766e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  acceptBtn: { backgroundColor: '#9A6B12', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   acceptBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   rejectBtn: { borderWidth: 1, borderColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   rejectBtnText: { color: '#dc2626', fontWeight: '700', fontSize: 12 },
@@ -903,16 +903,16 @@ const styles = StyleSheet.create({
   standAvatar: { marginRight: 2 },
   standBody: { flex: 1, minWidth: 0 },
   standName: { color: '#0f172a', fontWeight: '600' },
-  standPts: { color: '#0f766e', fontWeight: '700', marginTop: 2, fontSize: 12 },
+  standPts: { color: '#9A6B12', fontWeight: '700', marginTop: 2, fontSize: 12 },
   roundSection: { marginBottom: 12 },
-  roundHeader: { fontWeight: '800', color: '#0f766e', marginBottom: 6, fontSize: 14 },
+  roundHeader: { fontWeight: '800', color: '#9A6B12', marginBottom: 6, fontSize: 14 },
   matchRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   matchTitle: { color: '#0f172a', fontWeight: '700' },
   error: { color: '#b91c1c', marginBottom: 8 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '70%' },
   modalClose: { alignSelf: 'flex-end', marginBottom: 8 },
-  modalCloseText: { color: '#0f766e', fontWeight: '700' },
+  modalCloseText: { color: '#9A6B12', fontWeight: '700' },
   modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
   goalEventRow: {
     flexDirection: 'row',
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
   goalPickerBox: { marginTop: 8, marginBottom: 8 },
   chipBtn: {
     backgroundColor: '#ecfdf5',
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
     marginBottom: 6,
   },
-  chipBtnText: { color: '#0f766e', fontWeight: '700', fontSize: 12 },
+  chipBtnText: { color: '#9A6B12', fontWeight: '700', fontSize: 12 },
   goalMinuteInput: {
     borderWidth: 1,
     borderColor: '#cbd5e1',

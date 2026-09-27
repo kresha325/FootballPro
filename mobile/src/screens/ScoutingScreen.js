@@ -21,7 +21,7 @@ function RecommendationCard({ item, onAiSummary, aiLoadingId }) {
           onPress={() => onAiSummary(playerId, item?.playerName)}
         >
           {aiLoadingId === playerId ? (
-            <ActivityIndicator size="small" color="#0f766e" />
+            <ActivityIndicator size="small" color="#9A6B12" />
           ) : (
             <Text style={styles.aiBtnText}>Përmbledhje AI</Text>
           )}
@@ -98,7 +98,7 @@ export default function ScoutingScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -115,7 +115,7 @@ export default function ScoutingScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListHeaderComponent={
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#fff',
   },
-  filterBtn: { backgroundColor: '#0f766e', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
+  filterBtn: { backgroundColor: '#9A6B12', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
   filterBtnText: { color: '#fff', fontWeight: '700' },
   card: {
     backgroundColor: '#fff',
@@ -192,14 +192,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 36,
     justifyContent: 'center',
   },
-  aiBtnText: { color: '#0f766e', fontWeight: '700', fontSize: 13 },
+  aiBtnText: { color: '#9A6B12', fontWeight: '700', fontSize: 13 },
   error: { marginTop: 8, color: '#b91c1c' },
   footerText: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
   accessTitle: { color: '#0f172a', fontWeight: '800', fontSize: 18, textAlign: 'center' },

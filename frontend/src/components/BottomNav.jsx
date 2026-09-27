@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { messagingAPI } from "../services/api";
+import { HomeIcon, ShoppingBagIcon, ChatBubbleLeftRightIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 
 function formatCartBadge(value) {
   const n = Number(value || 0);
@@ -13,43 +13,19 @@ function formatCartBadge(value) {
 
 function BottomNav() {
   const { user } = useAuth();
-  const location = useLocation();
   const { totalPieces } = useCart();
   const cartBadge = formatCartBadge(totalPieces);
   const [messagesUnread, setMessagesUnread] = useState(0);
   const messagesBadge = formatCartBadge(messagesUnread);
 
-  const fetchMessagesUnread = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await messagingAPI.getUnreadCount();
-      setMessagesUnread(
-        Number(res?.data?.count ?? res?.data?.unreadCount ?? res?.data?.unread ?? 0)
-      );
-    } catch (_e) {
-      // mbaj numrin e mëparshëm
-    }
-  }, [user]);
-
   useEffect(() => {
     if (!user) return undefined;
-    fetchMessagesUnread();
-    const id = setInterval(fetchMessagesUnread, 30000);
-    return () => clearInterval(id);
-  }, [user, fetchMessagesUnread]);
-
-  useEffect(() => {
-    fetchMessagesUnread();
-  }, [location.pathname, fetchMessagesUnread]);
-
-  useEffect(() => {
-    if (!user) return undefined;
-    const onBump = () => {
-      void fetchMessagesUnread();
+    const onUnreadCount = (event) => {
+      setMessagesUnread(Number(event.detail?.count || 0));
     };
-    window.addEventListener("messaging-unread-changed", onBump);
-    return () => window.removeEventListener("messaging-unread-changed", onBump);
-  }, [user, fetchMessagesUnread]);
+    window.addEventListener("messaging-unread-count", onUnreadCount);
+    return () => window.removeEventListener("messaging-unread-count", onUnreadCount);
+  }, [user]);
 
   const rawApiUrl = import.meta.env.VITE_API_URL || "";
   const apiRoot = rawApiUrl ? rawApiUrl.replace("/api", "") : "";
@@ -69,12 +45,12 @@ function BottomNav() {
     <NavLink
       to="/feed"
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
       aria-label="Ballina"
     >
-      <span className="text-2xl">🏠</span>
-      <span className="text-xs">Ballina</span>
+      <HomeIcon className="h-5 w-5" aria-hidden="true" />
+      <span className="text-[10px] font-medium">Ballina</span>
     </NavLink>
   );
 
@@ -82,42 +58,41 @@ function BottomNav() {
     <NavLink
       to="/marketplace"
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
       aria-label="Tregu"
     >
       <span className="relative inline-flex items-center justify-center">
-        <span className="text-2xl">🛒</span>
+        <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
         {cartBadge ? (
-          <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span aria-label={`${totalPieces} artikuj në shportë`} className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-[var(--xt-color-danger)] text-white text-[10px] font-bold flex items-center justify-center leading-none">
             {cartBadge}
           </span>
         ) : null}
       </span>
-      <span className="text-xs">Tregu</span>
+      <span className="text-[10px] font-medium">Tregu</span>
     </NavLink>
   );
 
-  const chatsLink = (opts = {}) => {
-    const { elevated = false } = opts;
+  const chatsLink = () => {
     if (!user) return null;
     return (
       <NavLink
         to="/messaging"
         className={({ isActive }) =>
-          `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"}`
+          `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""}`
         }
         aria-label="Bisedat"
       >
         <span className="relative inline-flex items-center justify-center">
-          <span className="text-2xl">💬</span>
+          <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
           {messagesBadge ? (
-            <span className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span aria-label={`${messagesUnread} mesazhe të palexuara`} className="absolute -top-1 -right-2 min-h-[18px] min-w-[18px] px-1 rounded-full bg-[var(--xt-color-danger)] text-white text-[10px] font-bold flex items-center justify-center leading-none">
               {messagesBadge}
             </span>
           ) : null}
         </span>
-        <span className="text-xs">Biseda</span>
+        <span className="text-[10px] font-medium">Biseda</span>
       </NavLink>
     );
   };
@@ -129,11 +104,11 @@ function BottomNav() {
         onClick={() =>
           window.dispatchEvent(new CustomEvent("open-live-modal", { detail: { openCameraFirst: true } }))
         }
-        className={`flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 text-red-600 ${extra}`}
+        className={`flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-danger)] transition-colors hover:bg-white/5 ${extra}`}
         aria-label="Dil LIVE"
       >
-        <span className="text-2xl">🔴</span>
-        <span className="text-xs">LIVE</span>
+        <VideoCameraIcon className="h-5 w-5" aria-hidden="true" />
+        <span className="text-[10px] font-medium">LIVE</span>
       </button>
     ) : null;
 
@@ -141,7 +116,7 @@ function BottomNav() {
     <NavLink
       to={`/profile/${user?.id}`}
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 px-3 py-2 transition-all hover:scale-110 ${isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"} ${extra}`
+        `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
       aria-label="Profili"
     >
@@ -149,23 +124,23 @@ function BottomNav() {
         <img
           src={getFullUrl(user.profilePhoto)}
           alt="Profile"
-          className="w-8 h-8 rounded-full object-cover shadow-md border-2 border-blue-500"
+          className="h-7 w-7 rounded-full border border-white/20 object-cover"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.style.display = "none";
+            e.target.src = "/default-avatar.svg";
           }}
         />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold shadow-md text-sm">
+        <div className="xt-avatar h-7 w-7 text-xs">
           {user?.firstName?.[0]}
         </div>
       )}
-      <span className="text-xs">Profili</span>
+      <span className="text-[10px] font-medium">Profili</span>
     </NavLink>
   );
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="xt-bottom-nav fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
       {user ? (
         <div className="relative flex w-full items-end justify-between min-h-[56px] px-1 pb-1 pt-0.5">
           <div className="flex flex-1 justify-evenly items-end min-w-0 pr-11">{homeLink()} {shopLink()}</div>

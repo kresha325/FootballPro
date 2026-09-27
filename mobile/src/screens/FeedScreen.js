@@ -309,7 +309,7 @@ function PostCard({
 
       {commentsOpen ? (
         <View style={[styles.commentsWrap, isDark && styles.commentsWrapDark]}>
-          {loadingComments ? <ActivityIndicator color="#0f766e" /> : null}
+          {loadingComments ? <ActivityIndicator color="#9A6B12" /> : null}
           {(commentsData || []).map((comment) => {
             const commentUser = comment?.User;
             const name = commentUser ? `${commentUser.firstName || ''} ${commentUser.lastName || ''}`.trim() : 'User';
@@ -886,7 +886,7 @@ export default function FeedScreen({ navigation }) {
             setRefreshing(true);
             loadPosts({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       ListEmptyComponent={<Text style={styles.empty}>No posts yet.</Text>}
@@ -1205,7 +1205,7 @@ const styles = StyleSheet.create({
   },
   pillBtnCommentOpen: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
   },
   pillBtnShare: {
     backgroundColor: '#dc2626',
@@ -1286,7 +1286,7 @@ const styles = StyleSheet.create({
     color: '#e2e8f0',
   },
   sendBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 8,
     paddingHorizontal: 12,
     justifyContent: 'center',
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   retryBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   headerScopeBtnActive: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
   },
   headerScopeBtnText: {
     color: '#334155',
@@ -1384,7 +1384,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   liveSeeAll: {
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '700',
   },
   liveUsersRow: {
@@ -1443,7 +1443,7 @@ const styles = StyleSheet.create({
   },
   createPostButton: {
     flex: 1,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -1456,14 +1456,14 @@ const styles = StyleSheet.create({
   galleryButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     backgroundColor: '#fff',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
   },
   galleryButtonText: {
-    color: '#0f766e',
+    color: '#9A6B12',
     fontWeight: '700',
   },
   skelRow: {

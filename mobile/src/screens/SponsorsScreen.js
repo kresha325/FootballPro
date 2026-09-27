@@ -33,7 +33,7 @@ function SponsorRow({ item, onEdit, onDelete, deleting }) {
       </View>
       <View style={styles.rowActions}>
         <TouchableOpacity onPress={() => onEdit(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="create-outline" size={20} color="#0f766e" />
+          <Ionicons name="create-outline" size={20} color="#9A6B12" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onDelete(item)} disabled={deleting} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="trash-outline" size={20} color="#dc2626" />
@@ -184,7 +184,7 @@ export default function SponsorsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -222,7 +222,7 @@ export default function SponsorsScreen() {
             setRefreshing(true);
             loadSponsors({ silent: true });
           }}
-          colors={['#0f766e']}
+          colors={['#9A6B12']}
         />
       }
       renderItem={({ item }) => (
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   primaryBtn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
@@ -264,13 +264,13 @@ const styles = StyleSheet.create({
   primaryText: { color: '#fff', fontWeight: '700' },
   secondaryBtn: {
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
     marginTop: 4,
   },
-  secondaryText: { color: '#0f766e', fontWeight: '700' },
+  secondaryText: { color: '#9A6B12', fontWeight: '700' },
   btnDisabled: { opacity: 0.7 },
   row: {
     backgroundColor: '#fff',

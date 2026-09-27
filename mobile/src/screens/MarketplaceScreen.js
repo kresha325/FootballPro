@@ -142,7 +142,7 @@ export default function MarketplaceScreen() {
             accessibilityLabel="Shporta"
           >
             <View>
-              <Ionicons name="cart-outline" size={26} color="#0f766e" />
+              <Ionicons name="cart-outline" size={26} color="#9A6B12" />
               {totalPieces > 0 ? (
                 <View style={styles.headerBadge}>
                   <Text style={styles.headerBadgeText}>{totalPieces > 99 ? '99+' : totalPieces}</Text>
@@ -188,7 +188,7 @@ export default function MarketplaceScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#9A6B12" />
       </View>
     );
   }
@@ -238,7 +238,7 @@ export default function MarketplaceScreen() {
               setRefreshing(true);
               loadData({ silent: true });
             }}
-            colors={['#0f766e']}
+            colors={['#9A6B12']}
           />
         }
         ListEmptyComponent={<Text style={styles.empty}>No products found.</Text>}
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -320,11 +320,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
     alignItems: 'center',
   },
-  editBtnText: { color: '#0f766e', fontWeight: '700' },
-  buyBtn: { backgroundColor: '#0f766e', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
+  editBtnText: { color: '#9A6B12', fontWeight: '700' },
+  buyBtn: { backgroundColor: '#9A6B12', borderRadius: 8, alignItems: 'center', paddingVertical: 9 },
   buyBtnDisabled: { backgroundColor: '#94a3b8' },
   buyBtnText: { color: '#fff', fontWeight: '700' },
   error: { color: '#b91c1c', textAlign: 'center' },

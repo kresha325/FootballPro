@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { useAuth } from '../contexts/AuthContext';
-import { clubMembersAPI, clubStaffAPI } from '../services/api';
+import { clubMembersAPI, clubStaffAPI, profileAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 
 const VALID_ROSTER_TABS = new Set(['approved', 'pending', 'staff']);
 
@@ -25,9 +26,11 @@ function ClubRoster() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [members, setMembers] = useState([]);
+  const [clubProfile, setClubProfile] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
   const [pendingStaff, setPendingStaff] = useState([]);
+  const [loadError, setLoadError] = useState('');
   const [pendingStaffRoles, setPendingStaffRoles] = useState({});
   const [pendingStaffTeams, setPendingStaffTeams] = useState({});
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ function ClubRoster() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const teamTypes = [
-    { id: 'all', label: 'All Teams', icon: '👥' },
+    { id: 'all', label: 'Të gjitha ekipet', icon: '👥' },
     { id: 'first_team', label: 'First Team', icon: '⭐' },
     { id: 'men', label: 'Men', icon: '👨' },
     { id: 'women', label: 'Women', icon: '👩' },
@@ -234,12 +237,14 @@ function ClubRoster() {
   useEffect(() => {
     if (user && user.role === 'club') {
       fetchRosterData();
+      profileAPI.getMyProfile().then((response) => setClubProfile(response.data)).catch(() => setClubProfile(null));
     }
   }, [user]);
 
   const fetchRosterData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       // Always load approved + pending (+ staff) so tab badges stay correct without clicking.
       const [approvedRes, pendingRes, staffActiveRes, staffPendingRes] = await Promise.all([
         clubMembersAPI.getClubMembers(user.id, 'approved'),
@@ -263,6 +268,7 @@ function ClubRoster() {
       setPendingStaffTeams(teamMap);
     } catch (error) {
       console.error('Error fetching members:', error);
+      setLoadError('Të dhënat e skuadrës nuk u ngarkuan. Provo përsëri.');
     } finally {
       setLoading(false);
     }
@@ -413,41 +419,100 @@ function ClubRoster() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6" aria-label="Po ngarkohet menaxhimi i klubit">
+        <div className="xt-skeleton h-44 rounded-xl" />
+        <div className="grid gap-3 sm:grid-cols-3"><div className="xt-skeleton h-24 rounded-xl"/><div className="xt-skeleton h-24 rounded-xl"/><div className="xt-skeleton h-24 rounded-xl"/></div>
+        <div className="xt-skeleton h-64 rounded-xl" />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-5 sm:p-8 text-white mb-6">
-        <h1 className="text-2xl sm:text-4xl font-bold mb-2">Club Roster Management</h1>
-        <p className="text-white/90 text-sm sm:text-base">Manage your club's athletes and membership requests</p>
-      </div>
+  const completionFields = [
+    Boolean(clubProfile?.profilePhoto || clubProfile?.clubLogo),
+    Boolean(clubProfile?.club || user?.firstName),
+    Boolean(clubProfile?.bio),
+    Boolean(clubProfile?.city),
+    Boolean(clubProfile?.country),
+    Boolean(clubProfile?.stadium),
+    Boolean(clubProfile?.contact?.email || clubProfile?.contact?.phone || clubProfile?.contact?.website),
+  ];
+  const profileCompletion = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
+  const clubName = clubProfile?.club || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Klubi';
+  const clubLocation = [clubProfile?.city, clubProfile?.country].filter(Boolean).join(', ');
+  const playerCount = members.filter((member) => {
+    const role = String(member?.athlete?.role || '').toLowerCase();
+    return !role || role === 'athlete';
+  }).length;
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+  return (
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 pb-24 sm:px-6 lg:py-8">
+      <header className="xt-card overflow-hidden">
+        <div className="h-2 bg-[var(--xt-color-gold)]" />
+        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
+          <div className="xt-avatar h-20 w-20 overflow-hidden rounded-xl text-2xl">
+            {(clubProfile?.profilePhoto || clubProfile?.clubLogo) ? <img src={getFullUrl(clubProfile.profilePhoto || clubProfile.clubLogo)} alt={`${clubName} logo`} className="h-full w-full object-cover" /> : clubName.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · CLUB OPERATIONS</p>
+            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{clubName}</h1>
+            <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{clubLocation || 'Vendndodhja nuk është shtuar'}{clubProfile?.verified ? ' · Profil i verifikuar' : ''}</p>
+            {clubProfile?.stats?.clubType && <span className="xt-badge mt-2">{clubProfile.stats.clubType}</span>}
+          </div>
+          <div className="flex flex-col gap-3 sm:min-w-56">
+            <Link className="btn btn-primary" to={`/profile/${user.id}`}>Profili publik</Link>
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-[var(--xt-color-text-muted)]"><span>Plotësia e profilit</span><span>{profileCompletion}%</span></div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--xt-color-surface-raised)]" role="progressbar" aria-label="Plotësia e profilit të klubit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileCompletion}><div className="h-full rounded-full bg-[var(--xt-color-gold)]" style={{ width: `${profileCompletion}%` }} /></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-3 sm:grid-cols-3" aria-label="Përmbledhje e klubit">
+        {[
+          ['Lojtarë aktivë', playerCount],
+          ['Kërkesa në pritje', pendingRequests.length],
+          ['Staf aktiv', staffMembers.length],
+        ].map(([label, value]) => <div className="xt-stat-card" key={label}><div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{label}</p></div>)}
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Vegzime të shpejta">
+        {[
+          ['/matches', 'Ndeshjet', 'Shiko ndeshjet dhe rezultatet'],
+          ['/tournaments', 'Turnet', 'Pjesëmarrja dhe garat'],
+          ['/analytics', 'Analitika', 'Të dhënat e performancës'],
+          [`/profile/${user.id}`, 'Profili i klubit', 'Përditëso informacionin publik'],
+        ].map(([to, title, description]) => <Link className="xt-card p-4 transition-colors hover:border-[var(--xt-color-gold)]" key={to} to={to}><p className="font-semibold text-[var(--xt-color-text)]">{title}</p><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{description}</p></Link>)}
+      </section>
+
+      {loadError && <div className="xt-error-state xt-card" role="alert"><p>{loadError}</p><button type="button" className="btn btn-outline" onClick={fetchRosterData}>Ringarko</button></div>}
+
+      <section className="xt-card p-4 sm:p-5" aria-label="Menaxhimi i skuadrës">
+        <div className="xt-section-header mb-4"><div><h2 className="text-xl font-semibold">Skuadra dhe stafi</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Menaxho përbërjen, kategoritë dhe kërkesat e klubit.</p></div></div>
+      <div role="tablist" aria-label="Menaxhimi i klubit" className="flex gap-2 overflow-x-auto pb-1">
         <button
+          role="tab"
+          aria-selected={activeTab === 'approved'}
           onClick={() => selectTab('approved')}
-          className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition text-sm ${
+          className={`btn shrink-0 border px-3 text-sm sm:px-6 ${
             activeTab === 'approved'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-canvas)]'
+            : 'border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
           }`}
         >
-          👥 Squad ({members.length})
+          Skuadra ({members.length})
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'pending'}
           onClick={() => selectTab('pending')}
-          className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition relative text-sm ${
+          className={`btn shrink-0 border px-3 text-sm sm:px-6 ${
             activeTab === 'pending'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-canvas)]'
+            : 'border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
           }`}
         >
-          ⏳ Pending ({pendingRequests.length})
+          Në pritje ({pendingRequests.length})
           {pendingRequests.length > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
               {pendingRequests.length}
@@ -455,16 +520,19 @@ function ClubRoster() {
           )}
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'staff'}
           onClick={() => selectTab('staff')}
-          className={`shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition text-sm ${
+          className={`btn shrink-0 border px-3 text-sm sm:px-6 ${
             activeTab === 'staff'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-canvas)]'
+            : 'border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
           }`}
         >
-          🧑‍🏫 Staff ({staffMembers.length + pendingStaff.length})
+          Stafi ({staffMembers.length + pendingStaff.length})
         </button>
       </div>
+      </section>
 
       {/* Team Type Filter (only for approved) */}
       {activeTab === 'approved' && (
@@ -473,13 +541,12 @@ function ClubRoster() {
             <button
               key={team.id}
               onClick={() => setTeamFilter(team.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+              className={`btn min-h-11 flex items-center gap-2 whitespace-nowrap text-sm ${
                 teamFilter === team.id
-                  ? 'bg-green-600 text-white shadow-lg'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/30 border border-gray-200 dark:border-gray-700'
+                  ? 'border border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-canvas)]'
+                  : 'border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
               }`}
             >
-              <span>{team.icon}</span>
               <span>{team.label}</span>
             </button>
           ))}
@@ -498,11 +565,10 @@ function ClubRoster() {
       {activeTab === 'approved' && (
         <div className="space-y-4">
           {approvedMembersFiltered.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
-              <div className="text-6xl mb-4">👥</div>
-              <p className="text-gray-500 text-lg">No athletes in your squad yet</p>
-              <p className="text-gray-400 text-sm mt-2">
-                Athletes will appear here after you approve their membership requests
+            <div className="xt-empty-state xt-card">
+              <p className="text-lg font-semibold text-[var(--xt-color-text)]">Skuadra është bosh</p>
+              <p className="mt-2 text-sm text-[var(--xt-color-text-muted)]">
+                Lojtarët shfaqen këtu pasi të miratohen kërkesat e anëtarësimit.
               </p>
             </div>
           ) : (
@@ -511,11 +577,11 @@ function ClubRoster() {
               return (
               <div
                 key={membership.id}
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition"
+                className="xt-card p-4 sm:p-5 transition-colors hover:border-[var(--xt-color-gold)]"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   {/* Avatar */}
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                  <div className="xt-avatar h-16 w-16 text-xl">
                     {membership.athlete?.Profile?.profilePhoto ? (
                       <img
                         src={getFullUrl(membership.athlete.Profile.profilePhoto)}
@@ -529,7 +595,7 @@ function ClubRoster() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
+                    <h3 className="text-lg font-bold text-[var(--xt-color-text)] sm:text-xl">
                       {membership.athlete?.firstName} {membership.athlete?.lastName}
                       {membership.athlete?.gender && (
                         <span className="ml-2 text-sm font-normal">
@@ -539,32 +605,28 @@ function ClubRoster() {
                     </h3>
                     <div className="flex gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                       {membership.teamType && (
-                        <span className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full font-medium">
-                          {teamBadge.icon} {teamBadge.label}
+                        <span className="xt-badge xt-badge-gold">
+                          {teamBadge.label}
                         </span>
                       )}
-                      <span className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
+                      <span className="xt-badge">
                         Ligë:{' '}
                         {competitionCategories.find(
                           (c) => c.id === (membership.competitionCategory || 'open')
                         )?.label || membership.competitionCategory || 'Open'}
                       </span>
                       {membership.position && (
-                        <span className="flex items-center gap-1">
-                          ⚽ {membership.position}
-                        </span>
+                        <span className="xt-badge">{membership.position}</span>
                       )}
+                      {membership.athlete?.Profile?.age != null && <span className="xt-badge">{membership.athlete.Profile.age} vjeç</span>}
                       {membership.jerseyNumber && (
                         <span className="flex items-center gap-1">
                           👕 #{membership.jerseyNumber}
                         </span>
                       )}
-                      {membership.joinedAt && (
-                        <span className="flex items-center gap-1">
-                          📅 Joined {new Date(membership.joinedAt).toLocaleDateString()}
-                        </span>
-                      )}
+                      {membership.joinedAt && <span className="xt-badge">Anëtar që nga {new Date(membership.joinedAt).toLocaleDateString()}</span>}
                     </div>
+                    {(membership.athlete?.Profile?.stats?.goals != null || membership.athlete?.Profile?.stats?.assists != null) && <p className="mt-2 text-sm text-[var(--xt-color-text-muted)]">{membership.athlete.Profile.stats.goals != null ? `${membership.athlete.Profile.stats.goals} gola` : ''}{membership.athlete.Profile.stats.goals != null && membership.athlete.Profile.stats.assists != null ? ' · ' : ''}{membership.athlete.Profile.stats.assists != null ? `${membership.athlete.Profile.stats.assists} asiste` : ''}</p>}
                     {membership.athlete?.Profile?.bio && (
                       <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 line-clamp-2">
                         {membership.athlete.Profile.bio}
@@ -574,16 +636,19 @@ function ClubRoster() {
 
                   {/* Actions */}
                   <div className="flex flex-col gap-2 w-full sm:w-auto">
+                    <Link to={`/profile/${membership.athlete?.id || membership.athleteId}`} className="btn btn-outline">
+                      Profili i lojtarit
+                    </Link>
                     <button
                       onClick={() => openCategoryModal(membership)}
-                      className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg transition"
+                      className="btn btn-quiet text-sm"
                       title="Ndrysho kategorinë e ligës për këtë edicion"
                     >
                       Kategoria ligë
                     </button>
                     <button
                       onClick={() => handleRemove(membership.id)}
-                      className="p-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition self-start sm:self-auto"
+                      className="btn btn-quiet self-start text-[var(--xt-color-danger)] sm:self-auto"
                       title="Remove from club"
                     >
                       <TrashIcon className="h-6 w-6" />
@@ -607,7 +672,7 @@ function ClubRoster() {
                 Kërkesa në pritje
               </div>
               {pendingStaff.map((staff) => (
-                <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-2 border-yellow-400 dark:border-yellow-600">
+                <div key={staff.id} className="xt-card p-4 sm:p-5">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500 to-orange-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
                       {staff.staff?.Profile?.profilePhoto ? (
@@ -674,10 +739,9 @@ function ClubRoster() {
           )}
 
           {staffMembers.length === 0 && pendingStaff.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
-              <div className="text-6xl mb-4">🧑‍🏫</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No staff members yet</h3>
-              <p className="text-gray-600 dark:text-gray-400">Staff will appear here once added.</p>
+            <div className="xt-empty-state xt-card">
+              <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Nuk ka staf aktiv ende</h3>
+              <p className="text-[var(--xt-color-text-muted)]">Stafi shfaqet këtu pasi të pranohet nga klubi.</p>
             </div>
           ) : (
             staffMembers.length > 0 && (
@@ -687,7 +751,7 @@ function ClubRoster() {
                   Staff aktiv
                 </div>
                 {staffMembers.map((staff) => (
-                  <div key={staff.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div key={staff.id} className="xt-card p-4 sm:p-5">
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0">
                         {staff.staff?.Profile?.profilePhoto ? (
@@ -726,18 +790,17 @@ function ClubRoster() {
       {activeTab === 'pending' && (
         <div className="space-y-4">
           {pendingRequests.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
-              <div className="text-6xl mb-4">✅</div>
-              <p className="text-gray-500 text-lg">No pending membership requests</p>
-              <p className="text-gray-400 text-sm mt-2">
-                Athletes who select your club will appear here for approval
+            <div className="xt-empty-state xt-card">
+              <p className="text-lg font-semibold text-[var(--xt-color-text)]">Nuk ka kërkesa në pritje</p>
+              <p className="mt-2 text-sm text-[var(--xt-color-text-muted)]">
+                Kërkesat e reja të anëtarësimit do të shfaqen këtu.
               </p>
             </div>
           ) : (
             pendingRequests.map((membership) => (
               <div
                 key={membership.id}
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border-2 border-yellow-400 dark:border-yellow-600"
+                className="xt-card p-4 sm:p-5"
               >
                 <div className="flex items-center gap-4">
                   {/* Avatar */}
@@ -776,7 +839,7 @@ function ClubRoster() {
                       )}
                       {membership.position && (
                         <span className="flex items-center gap-1">
-                          ⚽ {membership.position}
+                          {membership.position}
                         </span>
                       )}
                       {membership.jerseyNumber && (
@@ -955,7 +1018,7 @@ function ClubRoster() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

@@ -76,7 +76,7 @@ export default function UserAvatar({
 const styles = StyleSheet.create({
   avatar: { backgroundColor: '#e2e8f0' },
   fallback: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -203,7 +203,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
                     onLongPress={openActions}
                     delayLongPress={350}
                   >
-                    <Ionicons name="document-outline" size={22} color={mine ? '#e0f2f1' : '#0f766e'} />
+                    <Ionicons name="document-outline" size={22} color={mine ? '#e0f2f1' : '#9A6B12'} />
                     <Text style={[styles.fileName, mine && styles.fileNameMine]} numberOfLines={2}>
                       {message.fileName || 'Skedar'}
                     </Text>
@@ -463,14 +463,14 @@ export default function ConversationScreen({ route, navigation }) {
                 onPress={() => openCall(true)}
                 accessibilityLabel="Thirrje audio"
               >
-                <Ionicons name="call-outline" size={22} color="#0f766e" />
+                <Ionicons name="call-outline" size={22} color="#9A6B12" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerIconBtn}
                 onPress={() => openCall(false)}
                 accessibilityLabel="Thirrje video"
               >
-                <Ionicons name="videocam-outline" size={24} color="#0f766e" />
+                <Ionicons name="videocam-outline" size={24} color="#9A6B12" />
               </TouchableOpacity>
             </>
           ) : null}
@@ -1011,8 +1011,8 @@ export default function ConversationScreen({ route, navigation }) {
           <RefreshControl
             refreshing={pullRefreshing}
             onRefresh={onPullRefresh}
-            colors={[isDark ? '#2dd4bf' : '#0f766e']}
-            tintColor={isDark ? '#2dd4bf' : '#0f766e'}
+            colors={[isDark ? '#D9A441' : '#9A6B12']}
+            tintColor={isDark ? '#D9A441' : '#9A6B12'}
             progressViewOffset={Platform.OS === 'android' ? 48 : 0}
           />
         }
@@ -1071,7 +1071,7 @@ export default function ConversationScreen({ route, navigation }) {
           <View style={styles.attachmentPreview}>
             {pendingAttachment.isVideo ? (
               <View style={styles.attachmentThumbPlaceholder}>
-                <Ionicons name="videocam" size={28} color="#0f766e" />
+                <Ionicons name="videocam" size={28} color="#9A6B12" />
               </View>
             ) : (
               <Image source={{ uri: pendingAttachment.uri }} style={styles.attachmentThumb} />
@@ -1249,13 +1249,13 @@ const styles = StyleSheet.create({
   bubbleWrapOther: {},
   sender: { color: '#64748b', fontSize: 12, marginBottom: 2 },
   bubble: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
-  bubbleMine: { backgroundColor: '#0f766e' },
+  bubbleMine: { backgroundColor: '#9A6B12' },
   bubbleOther: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
   bubbleOtherDark: { backgroundColor: '#1e293b', borderColor: '#334155' },
   bubbleText: { color: '#111827' },
   bubbleTextDark: { color: '#f8fafc' },
   bubbleTextMine: { color: '#fff' },
-  callBubbleText: { color: '#0f766e', fontWeight: '700', fontSize: 14, textAlign: 'center' },
+  callBubbleText: { color: '#9A6B12', fontWeight: '700', fontSize: 14, textAlign: 'center' },
   callBubbleTextMine: { color: '#ccfbf1', fontWeight: '700', fontSize: 14, textAlign: 'center' },
   deletedText: { fontStyle: 'italic', opacity: 0.85 },
   editedHint: { fontSize: 10, color: '#64748b', marginTop: 4 },
@@ -1295,12 +1295,12 @@ const styles = StyleSheet.create({
   msgImage: { width: 200, height: 200, maxWidth: '100%', backgroundColor: '#e2e8f0' },
   msgVideo: { width: 220, height: 160, marginBottom: 6, backgroundColor: '#000' },
   fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, maxWidth: 220 },
-  fileName: { flex: 1, color: '#0f766e', fontWeight: '600', fontSize: 14 },
+  fileName: { flex: 1, color: '#9A6B12', fontWeight: '600', fontSize: 14 },
   fileNameMine: { color: '#e0f2f1' },
   bubbleTextAfterMedia: { marginTop: 4 },
   replyQuote: {
     borderLeftWidth: 3,
-    borderLeftColor: '#0f766e',
+    borderLeftColor: '#9A6B12',
     paddingLeft: 8,
     marginBottom: 8,
     opacity: 0.95,
@@ -1314,10 +1314,10 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#0f766e',
+    borderLeftColor: '#9A6B12',
   },
   replyBannerBody: { flex: 1, marginRight: 8 },
-  replyBannerLabel: { fontSize: 11, fontWeight: '700', color: '#0f766e', marginBottom: 6 },
+  replyBannerLabel: { fontSize: 11, fontWeight: '700', color: '#9A6B12', marginBottom: 6 },
   composer: {
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
@@ -1369,12 +1369,12 @@ const styles = StyleSheet.create({
   },
   inlineToolBtnActive: {
     backgroundColor: '#ccfbf1',
-    borderColor: '#0f766e',
+    borderColor: '#9A6B12',
   },
   inlinePlus: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0f766e',
+    color: '#9A6B12',
     lineHeight: 28,
     marginTop: -2,
   },
@@ -1394,7 +1394,7 @@ const styles = StyleSheet.create({
   inputEditingOnly: { marginLeft: 0 },
   sendBtn: {
     marginLeft: 8,
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -1405,7 +1405,7 @@ const styles = StyleSheet.create({
   empty: { color: '#64748b', textAlign: 'center', marginTop: 28 },
   error: { color: '#b91c1c', textAlign: 'center', marginTop: 8, paddingHorizontal: 12 },
   loadOlder: { alignSelf: 'center', marginVertical: 10, paddingVertical: 8, paddingHorizontal: 14 },
-  loadOlderText: { color: '#0f766e', fontWeight: '600', fontSize: 13 },
+  loadOlderText: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },
   editBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1417,7 +1417,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#fde68a',
   },
   editBannerText: { color: '#92400e', fontWeight: '600', flex: 1 },
-  editBannerCancel: { color: '#0f766e', fontWeight: '700' },
+  editBannerCancel: { color: '#9A6B12', fontWeight: '700' },
   imageModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.92)',

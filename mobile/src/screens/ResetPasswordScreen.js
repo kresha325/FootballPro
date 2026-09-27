@@ -84,13 +84,13 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   btn: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#9A6B12',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 4,
   },
   btnText: { color: '#fff', fontWeight: '700' },
-  link: { color: '#0f766e', textAlign: 'center', marginTop: 16, fontWeight: '600' },
+  link: { color: '#9A6B12', textAlign: 'center', marginTop: 16, fontWeight: '600' },
   error: { color: '#b91c1c', marginBottom: 10 },
 });
