@@ -6,9 +6,17 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#1DB954",
-          dark: "#14833B",
-          light: "#4EE88C",
+          DEFAULT: "#D9A441",
+          dark: "#B8812D",
+          light: "#F2C866",
+        },
+        xtalenti: {
+          ink: "#05070B",
+          navy: "#08111F",
+          soft: "#0D1A2A",
+          gold: "#D9A441",
+          bright: "#F2C866",
+          muted: "#A7AFBA",
         },
         black: "#0B0B0B",
         white: "#FFFFFF",
@@ -25,4 +33,3 @@ export default {
   },
   plugins: [],
 };
-

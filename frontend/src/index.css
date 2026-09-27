@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+  --xt-ink: #05070b;
+  --xt-navy: #08111f;
+  --xt-navy-soft: #0d1a2a;
+  --xt-gold: #d9a441;
+  --xt-gold-bright: #f2c866;
+  --xt-white: #f7f8fa;
+  --xt-muted: #a7afba;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html { min-width: 320px; scroll-behavior: smooth; background: var(--xt-ink); }
+body { min-width: 320px; margin: 0; background: var(--xt-ink); }
+button, input, textarea, select { font: inherit; }
+
+.xt-app-nav {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(5 7 11 / 88%);
+  backdrop-filter: blur(16px);
+}
+.xt-app-nav a:focus-visible, .xt-app-nav button:focus-visible { outline: 2px solid var(--xt-gold-bright); outline-offset: 3px; }
+
 @media (max-width: 768px) {
   .hide-scrollbar-mobile {
     -ms-overflow-style: none;
@@ -38,6 +64,10 @@
   h3 {
     @apply text-lg font-semibold;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 /* ---------------- COMPONENTS ---------------- */

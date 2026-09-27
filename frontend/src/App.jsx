@@ -63,7 +63,7 @@ function App() {
     /^\/cv\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
-    document.title = APP_BRAND_NAME;
+    document.title = `${APP_BRAND_NAME} — Talent Has a Future`;
   }, []);
 
   if (loading) {

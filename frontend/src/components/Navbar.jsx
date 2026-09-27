@@ -229,24 +229,24 @@ function Navbar() {
 
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 z-50">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+    <nav className="xt-app-nav fixed top-0 left-0 right-0 z-50">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 md:px-6">
 
         {/* LOGO: mark + TALENTI */}
         <Link
           to="/feed"
-          className="flex items-center gap-1.5 min-w-0"
+          className="flex min-w-0 items-center gap-1.5"
           aria-label={APP_BRAND_NAME}
         >
           <img
             src={APP_LOGO_SRC}
             alt=""
-            className="h-9 w-9 sm:h-10 sm:w-10 object-contain shrink-0"
+            className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
             width={40}
             height={40}
             decoding="async"
           />
-          <span className="text-xl sm:text-2xl font-extrabold uppercase tracking-wide text-slate-900 dark:text-white truncate">
+          <span className="truncate text-xl font-extrabold uppercase tracking-[.16em] text-white sm:text-2xl">
             {APP_BRAND_WORDMARK}
           </span>
         </Link>
@@ -257,10 +257,10 @@ function Navbar() {
           {/* SEARCH */}
           <Link
             to="/search"
-            className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-white/10 hover:text-[#f2c866]"
             aria-label="Search"
           >
-            <span className="text-2xl">🔍</span>
+            <span className="text-2xl" aria-hidden="true">⌕</span>
           </Link>
 
           {/* Dark mode toggle removed (available in Settings) */}
@@ -323,8 +323,9 @@ function Navbar() {
 
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="relative p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="relative rounded-lg p-2 text-gray-300 transition-colors hover:bg-white/10 hover:text-[#f2c866]"
             aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
           >
             {isMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
             {!isMenuOpen && unreadCount > 0 && (
@@ -338,7 +339,7 @@ function Navbar() {
 
       {/* BURGER MENU SIDEBAR — mobile: plot lartësinë, me scroll, mbi bottom nav */}
       <div
-        className={`fixed top-16 right-0 w-80 max-w-[min(20rem,100vw)] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-[60] overflow-y-auto overscroll-contain ${
+        className={`fixed top-16 right-0 z-[60] h-[calc(100vh-4rem)] w-80 max-w-[min(20rem,100vw)] transform overflow-y-auto overscroll-contain border-l border-white/10 bg-[#08111f]/[.98] shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-in-out ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         } bottom-0 h-[calc(100vh-4rem)]`}
       >
