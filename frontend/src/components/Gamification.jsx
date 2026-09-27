@@ -3,7 +3,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams } from 'react-router-dom';
 import { gamificationAPI } from '../services/api';
-import { TrophyIcon } from '@heroicons/react/24/outline';
+import { TrophyIcon, BoltIcon, StarIcon, FireIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState, useRef } from 'react';
     // DEBUG LOGS (vendosen jashtë JSX)
 
@@ -80,7 +80,7 @@ const Gamification = () => {
       const newAch = userAchievements.filter(
         a => a.unlocked && !prevAchievements.current.some(pa => pa.id === a.id && pa.unlocked)
       );
-      newAch.forEach(a => toast.info(`🏆 Achievement Unlocked: ${a.name}`));
+      newAch.forEach(a => toast.info(`Achievement unlocked: ${a.name}`));
       prevAchievements.current = userAchievements;
     }
     // Badges
@@ -88,7 +88,7 @@ const Gamification = () => {
       const newBadges = userBadges.filter(
         b => b.earned && !prevBadges.current.some(pb => pb.id === b.id && pb.earned)
       );
-      newBadges.forEach(b => toast.success(`🔓 Badge Unlocked: ${b.name}`));
+      newBadges.forEach(b => toast.success(`Badge unlocked: ${b.name}`));
       prevBadges.current = userBadges;
     }
   }, [gamificationData]);
@@ -104,7 +104,7 @@ const Gamification = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="xt-dashboard-page xt-gamification min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -112,7 +112,7 @@ const Gamification = () => {
 
   if (!gamificationData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="xt-dashboard-page xt-gamification min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">No gamification data available</p>
       </div>
     );
@@ -121,33 +121,33 @@ const Gamification = () => {
   // Already destructured above if present, remove duplicate
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <ToastContainer position="top-center" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+    <div className="xt-dashboard-page xt-gamification min-h-screen bg-gray-50 pb-20">
+      <ToastContainer position="top-center" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover toastClassName="xt-toast" />
       {/* Header & Tabs */}
       <div className="max-w-7xl mx-auto p-6">
-        <div className="flex gap-4 mb-6">
-          <button onClick={() => setActiveTab('overview')} className={activeTab==='overview' ? 'font-bold underline' : ''}>Overview</button>
-          <button onClick={() => setActiveTab('achievements')} className={activeTab==='achievements' ? 'font-bold underline' : ''}>Achievements</button>
-          <button onClick={() => setActiveTab('badges')} className={activeTab==='badges' ? 'font-bold underline' : ''}>Badges</button>
-          <button onClick={() => setActiveTab('leaderboard')} className={activeTab==='leaderboard' ? 'font-bold underline' : ''}>Leaderboard</button>
+        <div className="xt-game-tabs flex gap-4 mb-6" role="tablist" aria-label="Gamification sections">
+          <button type="button" role="tab" aria-selected={activeTab==='overview'} onClick={() => setActiveTab('overview')} className={activeTab==='overview' ? 'is-active' : ''}>Overview</button>
+          <button type="button" role="tab" aria-selected={activeTab==='achievements'} onClick={() => setActiveTab('achievements')} className={activeTab==='achievements' ? 'is-active' : ''}>Achievements</button>
+          <button type="button" role="tab" aria-selected={activeTab==='badges'} onClick={() => setActiveTab('badges')} className={activeTab==='badges' ? 'is-active' : ''}>Badges</button>
+          <button type="button" role="tab" aria-selected={activeTab==='leaderboard'} onClick={() => setActiveTab('leaderboard')} className={activeTab==='leaderboard' ? 'is-active' : ''}>Leaderboard</button>
         </div>
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="bg-gradient-to-br from-green-100 via-blue-50 to-purple-100 rounded-2xl shadow-xl p-10 mb-10 border border-green-200 animate-fade-in">
             <h2 className="text-3xl font-extrabold mb-2 text-green-700 flex items-center gap-2">
-              <span>🎮</span> Welcome to your gamification dashboard!
+              <BoltIcon className="h-7 w-7" aria-hidden="true" /> Welcome to your gamification dashboard!
             </h2>
             <p className="mb-8 text-lg text-gray-600">Track your progress, unlock achievements, and climb the leaderboard!</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">⭐</span>
+                  <StarIcon className="h-6 w-6" aria-hidden="true" />
                   <span className="text-lg font-semibold">XP:</span>
                   <span className="font-bold text-blue-700 text-xl">{profileUser.xp}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🏅</span>
+                  <TrophyIcon className="h-6 w-6" aria-hidden="true" />
                   <span className="text-lg font-semibold">Level:</span>
                   <span className="font-bold text-purple-700 text-xl">{profileUser.level}</span>
                 </div>
@@ -164,17 +164,17 @@ const Gamification = () => {
               </div>
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">⚽</span>
+                  <FireIcon className="h-6 w-6" aria-hidden="true" />
                   <span className="text-lg font-semibold">Matches played:</span>
                   <span className="font-bold text-gray-800">{gamificationData.matchesCount ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🏆</span>
+                  <TrophyIcon className="h-6 w-6" aria-hidden="true" />
                   <span className="text-lg font-semibold">Wins:</span>
                   <span className="font-bold text-gray-800">{gamificationData.winsCount ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🔓</span>
+                  <SparklesIcon className="h-6 w-6" aria-hidden="true" />
                   <span className="text-lg font-semibold">Unlocked achievements:</span>
                   <span className="font-bold text-green-700">{userAchievements?.filter(a => a.unlocked).length ?? 0}</span>
                 </div>
@@ -194,7 +194,7 @@ const Gamification = () => {
                 {userAchievements.map((ach) => (
                   <div key={ach.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">🏆</span>
+                      <TrophyIcon className="h-6 w-6 text-xtalenti-gold" aria-hidden="true" />
                       <span className="font-bold">{ach.name}</span>
                     </div>
                     <p className="text-sm text-gray-500 mb-1">{ach.description}</p>
@@ -277,9 +277,7 @@ const Gamification = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {player.rank === 1 && <span className="text-2xl">🥇</span>}
-                          {player.rank === 2 && <span className="text-2xl">🥈</span>}
-                          {player.rank === 3 && <span className="text-2xl">🥉</span>}
+                          {player.rank <= 3 && <TrophyIcon className="h-5 w-5 text-xtalenti-gold" aria-hidden="true" />}
                           {player.rank > 3 && (
                             <span className="text-lg font-bold text-gray-700">#{player.rank}</span>
                           )}

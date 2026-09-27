@@ -14,9 +14,11 @@ import {
   extractErrorMessage,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AdminDashboardScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -80,8 +82,8 @@ export default function AdminDashboardScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.denied}>Admin access required.</Text>
+      <View style={[styles.centered, { backgroundColor: colors.bg }]}>
+        <Text style={[styles.denied, { color: colors.danger }]}>Admin access required.</Text>
       </View>
     );
   }
@@ -90,7 +92,8 @@ export default function AdminDashboardScreen() {
     <FlatList
       data={activeTab === 'users' ? users : activeTab === 'content' ? posts : []}
       keyExtractor={(item, idx) => String(item?.id || idx)}
-      contentContainerStyle={styles.content}
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.content, { backgroundColor: colors.bg }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -98,45 +101,45 @@ export default function AdminDashboardScreen() {
             setRefreshing(true);
             loadData({ silent: true });
           }}
-          colors={['#9A6B12']}
+          colors={[colors.primary]}
         />
       }
       ListHeaderComponent={
         <View>
-          <View style={styles.headerCard}>
-            <Text style={styles.headerTitle}>Admin Dashboard</Text>
-            <Text style={styles.headerSub}>Users: {analytics?.totals?.users || 0} | Posts: {analytics?.totals?.posts || 0}</Text>
-            <Text style={styles.headerSub}>Messages: {analytics?.totals?.messages || 0} | Likes: {analytics?.totals?.likes || 0}</Text>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View style={[styles.headerCard, { backgroundColor: colors.card, borderColor: colors.primaryBorder }]}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Admin Dashboard</Text>
+            <Text style={[styles.headerSub, { color: colors.muted }]}>Users: {analytics?.totals?.users || 0} | Posts: {analytics?.totals?.posts || 0}</Text>
+            <Text style={[styles.headerSub, { color: colors.muted }]}>Messages: {analytics?.totals?.messages || 0} | Likes: {analytics?.totals?.likes || 0}</Text>
+            {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
           </View>
 
           <View style={styles.tabsRow}>
             <TouchableOpacity
-              style={[styles.tabBtn, activeTab === 'overview' ? styles.tabActive : null]}
+              style={[styles.tabBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }, activeTab === 'overview' ? { backgroundColor: colors.primary, borderColor: colors.primary } : null]}
               onPress={() => {
                 setActiveTab('overview');
                 setPage(1);
               }}
             >
-              <Text style={[styles.tabTxt, activeTab === 'overview' ? styles.tabTxtActive : null]}>Overview</Text>
+              <Text style={[styles.tabTxt, { color: activeTab === 'overview' ? colors.onPrimary : colors.textSecondary }]}>Overview</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabBtn, activeTab === 'users' ? styles.tabActive : null]}
+              style={[styles.tabBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }, activeTab === 'users' ? { backgroundColor: colors.primary, borderColor: colors.primary } : null]}
               onPress={() => {
                 setActiveTab('users');
                 setPage(1);
               }}
             >
-              <Text style={[styles.tabTxt, activeTab === 'users' ? styles.tabTxtActive : null]}>Users</Text>
+              <Text style={[styles.tabTxt, { color: activeTab === 'users' ? colors.onPrimary : colors.textSecondary }]}>Users</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabBtn, activeTab === 'content' ? styles.tabActive : null]}
+              style={[styles.tabBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }, activeTab === 'content' ? { backgroundColor: colors.primary, borderColor: colors.primary } : null]}
               onPress={() => {
                 setActiveTab('content');
                 setPage(1);
               }}
             >
-              <Text style={[styles.tabTxt, activeTab === 'content' ? styles.tabTxtActive : null]}>Content</Text>
+              <Text style={[styles.tabTxt, { color: activeTab === 'content' ? colors.onPrimary : colors.textSecondary }]}>Content</Text>
             </TouchableOpacity>
           </View>
 
@@ -145,30 +148,30 @@ export default function AdminDashboardScreen() {
               value={search}
               onChangeText={setSearch}
               placeholder="Search"
-              placeholderTextColor="#94a3b8"
-              style={styles.searchInput}
+              placeholderTextColor={colors.muted}
+              style={[styles.searchInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
             />
           ) : null}
 
           {activeTab === 'overview' ? (
-            <View style={styles.card}>
-              <Text style={styles.name}>System Health</Text>
-              <Text style={styles.meta}>Active Streams: {analytics?.systemHealth?.activeStreams || 0}</Text>
-              <Text style={styles.meta}>Verified Users: {analytics?.systemHealth?.verifiedUsers || 0}</Text>
-              <Text style={styles.meta}>Premium Users: {analytics?.systemHealth?.premiumUsers || 0}</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.name, { color: colors.text }]}>System Health</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>Active Streams: {analytics?.systemHealth?.activeStreams || 0}</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>Verified Users: {analytics?.systemHealth?.verifiedUsers || 0}</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>Premium Users: {analytics?.systemHealth?.premiumUsers || 0}</Text>
             </View>
           ) : (
-            <Text style={styles.section}>{activeTab === 'users' ? 'User Management' : 'Content Moderation'}</Text>
+            <Text style={[styles.section, { color: colors.text }]}>{activeTab === 'users' ? 'User Management' : 'Content Moderation'}</Text>
           )}
         </View>
       }
       renderItem={({ item }) => {
         if (activeTab === 'content') {
           return (
-            <View style={styles.card}>
-              <Text style={styles.name}>Post #{item?.id || '-'}</Text>
-              <Text style={styles.meta}>{item?.content || 'No content'}</Text>
-              <Text style={styles.meta}>Author: {item?.User?.firstName || '-'} {item?.User?.lastName || ''}</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.name, { color: colors.text }]}>Post #{item?.id || '-'}</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>{item?.content || 'No content'}</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>Author: {item?.User?.firstName || '-'} {item?.User?.lastName || ''}</Text>
               <TouchableOpacity
                 style={[styles.action, styles.remove]}
                 onPress={() => askDelete('post', () => runUserAction(adminDeletePostRequest, item.id))}
@@ -181,22 +184,22 @@ export default function AdminDashboardScreen() {
 
         if (activeTab === 'users') {
           return (
-            <View style={styles.card}>
-              <Text style={styles.name}>{`${item?.firstName || ''} ${item?.lastName || ''}`.trim() || item?.email || 'User'}</Text>
-              <Text style={styles.meta}>Role: {item?.role || '-'} | Verified: {item?.verified ? 'Yes' : 'No'} | Premium: {item?.premium ? 'Yes' : 'No'}</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.name, { color: colors.text }]}>{`${item?.firstName || ''} ${item?.lastName || ''}`.trim() || item?.email || 'User'}</Text>
+              <Text style={[styles.meta, { color: colors.muted }]}>Role: {item?.role || '-'} | Verified: {item?.verified ? 'Yes' : 'No'} | Premium: {item?.premium ? 'Yes' : 'No'}</Text>
               <TextInput
                 value={newRole}
                 onChangeText={setNewRole}
                 placeholder="Role"
-                placeholderTextColor="#94a3b8"
-                style={styles.inlineInput}
+                placeholderTextColor={colors.muted}
+                style={[styles.inlineInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
               />
               <TextInput
                 value={passwordDraft}
                 onChangeText={setPasswordDraft}
                 placeholder="New password"
-                placeholderTextColor="#94a3b8"
-                style={styles.inlineInput}
+                placeholderTextColor={colors.muted}
+                style={[styles.inlineInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
               />
               <View style={styles.row}>
                 {!item?.verified ? (
@@ -242,7 +245,7 @@ export default function AdminDashboardScreen() {
             >
               <Text style={styles.pageTxt}>Prev</Text>
             </TouchableOpacity>
-            <Text style={styles.pageIndicator}>Page {page} / {pages}</Text>
+            <Text style={[styles.pageIndicator, { color: colors.textSecondary }]}>Page {page} / {pages}</Text>
             <TouchableOpacity
               style={[styles.pageBtn, page >= pages ? styles.pageDisabled : null]}
               onPress={() => setPage((p) => (p < pages ? p + 1 : p))}
@@ -255,7 +258,7 @@ export default function AdminDashboardScreen() {
       }
       ListEmptyComponent={
         !loading ? (
-          <Text style={styles.empty}>
+          <Text style={[styles.empty, { color: colors.muted }]}>
             {activeTab === 'content' ? 'No posts found.' : activeTab === 'users' ? 'No users found.' : 'Select a tab.'}
           </Text>
         ) : null
