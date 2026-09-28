@@ -477,55 +477,77 @@ exports.getTrendingUsers = async (req, res) => {
   }
 };
 
-// Get recommended users based on shared interests
+// Get users to browse / discover — people the current user is NOT following
 exports.getRecommendedUsers = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 80);
 
-    // Get user's profile
+    let followedIds = [];
+    try {
+      const followedUsers = await Follow.findAll({
+        where: { followerId: userId, status: 'accepted' },
+        attributes: ['followingId'],
+      });
+      followedIds = followedUsers.map((f) => Number(f.followingId)).filter(Boolean);
+    } catch (_statusErr) {
+      const followedUsers = await Follow.findAll({
+        where: { followerId: userId },
+        attributes: ['followingId'],
+      });
+      followedIds = followedUsers.map((f) => Number(f.followingId)).filter(Boolean);
+    }
+
+    const excludeIds = [...new Set([userId, ...followedIds])];
+
     const userProfile = await Profile.findOne({ where: { userId } });
+    const profileOr = [];
+    if (userProfile?.position) profileOr.push({ position: userProfile.position });
+    if (userProfile?.club) profileOr.push({ club: userProfile.club });
+    if (userProfile?.city) profileOr.push({ city: userProfile.city });
 
-    // Find users with similar position/club/city
-    const where = {
-      userId: {
-        [Op.ne]: userId,
-      },
+    const baseWhere = {
+      id: { [Op.notIn]: excludeIds },
     };
 
-    if (userProfile) {
-      const orConditions = [];
-      if (userProfile.position) orConditions.push({ position: userProfile.position });
-      if (userProfile.club) orConditions.push({ club: userProfile.club });
-      if (userProfile.city) orConditions.push({ city: userProfile.city });
+    const includeProfile = {
+      model: Profile,
+      required: false,
+      attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
+    };
 
-      if (orConditions.length > 0) {
-        where[Op.or] = orConditions;
-      }
+    let recommendedUsers = [];
+
+    // Prefer similar profiles first (same position/club/city)
+    if (profileOr.length > 0) {
+      recommendedUsers = await User.findAll({
+        where: baseWhere,
+        include: [
+          {
+            ...includeProfile,
+            where: { [Op.or]: profileOr },
+            required: true,
+          },
+        ],
+        attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
+        order: [['verified', 'DESC'], ['createdAt', 'DESC']],
+        limit,
+      });
     }
 
-    // Get users current user is NOT following
-    const followedUsers = await Follow.findAll({
-      where: { followerId: userId, status: 'accepted' },
-      attributes: ['followingId'],
-    });
-    const followedIds = followedUsers.map((f) => f.followingId);
-
-    if (followedIds.length > 0) {
-      where.userId[Op.notIn] = followedIds;
+    // Fill remaining slots with any other users not followed
+    if (recommendedUsers.length < limit) {
+      const already = new Set(recommendedUsers.map((u) => Number(u.id)));
+      const fillExclude = [...excludeIds, ...already];
+      const fillers = await User.findAll({
+        where: { id: { [Op.notIn]: fillExclude.length ? fillExclude : [userId] } },
+        include: [includeProfile],
+        attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
+        order: [['verified', 'DESC'], ['createdAt', 'DESC']],
+        limit: limit - recommendedUsers.length,
+      });
+      recommendedUsers = [...recommendedUsers, ...fillers];
     }
-
-    const recommendedUsers = await User.findAll({
-      include: [
-        {
-          model: Profile,
-          where,
-          required: true,
-          attributes: ['bio', 'position', 'club', 'city', 'profilePhoto'],
-        },
-      ],
-      attributes: ['id', 'firstName', 'lastName', 'verified'],
-      limit: 10,
-    });
 
     res.json(recommendedUsers);
   } catch (err) {
@@ -533,6 +555,9 @@ exports.getRecommendedUsers = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
+
+/** Alias: browse people you are not following */
+exports.getBrowseUsers = exports.getRecommendedUsers;
 
 // Autocomplete suggestions
 exports.getSearchSuggestions = async (req, res) => {

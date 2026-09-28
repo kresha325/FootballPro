@@ -377,7 +377,11 @@ export const searchPostsRequest = (params = {}) => api.get('/api/search/posts', 
 export const searchSuggestionsRequest = (params = {}) => api.get('/api/search/suggestions', { params });
 export const trendingSearchUsersRequest = () => api.get('/api/search/trending/users');
 export const trendingSearchPostsRequest = () => api.get('/api/search/trending/posts');
-export const recommendedUsersRequest = () => api.get('/api/search/recommended');
+export const recommendedUsersRequest = (params = {}) =>
+  api.get('/api/search/recommended', { params });
+/** Browse people you don't follow — same backend as recommended (stable path). */
+export const browseUsersRequest = (params = {}) =>
+  api.get('/api/search/recommended', { params });
 
 export const matchesRequest = () => api.get('/api/matches');
 export const createMatchRequest = (payload) => api.post('/api/matches', payload);
@@ -391,11 +395,68 @@ export const adminTogglePremiumRequest = (userId) => api.post(`/api/admin/users/
 export const adminVerifyUserRequest = (userId) => api.post(`/api/admin/users/${userId}/verify`);
 export const adminBanUserRequest = (userId, reason = 'Admin action') =>
   api.post(`/api/admin/users/${userId}/ban`, { reason });
+export const adminUnbanUserRequest = (userId) => api.post(`/api/admin/users/${userId}/unban`);
 export const adminDeleteUserRequest = (userId) => api.delete(`/api/admin/users/${userId}`);
 export const adminUpdateUserRoleRequest = (userId, role) => api.put(`/api/admin/users/${userId}/role`, { role });
 export const adminResetUserPasswordRequest = (userId, newPassword) =>
   api.post(`/api/admin/users/${userId}/reset-password`, { newPassword });
 export const adminDeletePostRequest = (postId) => api.delete(`/api/admin/posts/${postId}`);
+export const adminJoncoinPendingRequest = () => api.get('/api/admin/joncoin/pending');
+export const adminJoncoinUpdateStatusRequest = (txId, status) =>
+  api.patch(`/api/joncoin/transaction/${txId}`, { status });
+export const adminReportsRequest = (params = {}) =>
+  api.get('/api/moderation/admin/reports', { params });
+export const adminReviewReportRequest = (reportId, status) =>
+  api.put(`/api/moderation/admin/reports/${reportId}`, { status });
+export const adminInvoicesRequest = (params = {}) => api.get('/api/admin/invoices', { params });
+export const adminTournamentsRequest = (params = {}) => api.get('/api/admin/tournaments', { params });
+export const adminUpdateTournamentRequest = (id, payload) =>
+  api.put(`/api/admin/tournaments/${id}`, payload);
+export const adminDeleteTournamentRequest = (id) => api.delete(`/api/admin/tournaments/${id}`);
+export const adminStadiumsRequest = (params = {}) => api.get('/api/stadiums', { params });
+export const adminDeleteStadiumRequest = (id) => api.delete(`/api/stadiums/${id}`);
+export const adminCreateStadiumRequest = (payload = {}) => {
+  const form = new FormData();
+  form.append('name', String(payload.name || '').trim());
+  form.append('city', String(payload.city || '').trim());
+  form.append('country', String(payload.country || '').trim());
+  form.append('capacity', payload.capacity === '' || payload.capacity == null ? '' : String(payload.capacity));
+  form.append('address', String(payload.address || '').trim());
+  form.append('featured', payload.featured === true || payload.featured === 'true' ? 'true' : 'false');
+  if (payload.featured === true || payload.featured === 'true') {
+    form.append('days', payload.days === '' || payload.days == null ? '7' : String(payload.days));
+  }
+  if (payload.photo && typeof payload.photo === 'object' && payload.photo.uri) {
+    form.append('photo', payload.photo);
+  } else if (typeof payload.photo === 'string' && payload.photo.trim()) {
+    form.append('photo', payload.photo.trim());
+  }
+  if (payload.clearPhoto) form.append('clearPhoto', String(payload.clearPhoto));
+  return api.post('/api/stadiums', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+export const adminUpdateStadiumRequest = (id, payload = {}) => {
+  const form = new FormData();
+  form.append('name', String(payload.name || '').trim());
+  form.append('city', String(payload.city || '').trim());
+  form.append('country', String(payload.country || '').trim());
+  form.append('capacity', payload.capacity === '' || payload.capacity == null ? '' : String(payload.capacity));
+  form.append('address', String(payload.address || '').trim());
+  form.append('featured', payload.featured === true || payload.featured === 'true' ? 'true' : 'false');
+  if (payload.featured === true || payload.featured === 'true') {
+    form.append('days', payload.days === '' || payload.days == null ? '7' : String(payload.days));
+  }
+  if (payload.photo && typeof payload.photo === 'object' && payload.photo.uri) {
+    form.append('photo', payload.photo);
+  } else if (typeof payload.photo === 'string' && payload.photo.trim()) {
+    form.append('photo', payload.photo.trim());
+  }
+  if (payload.clearPhoto) form.append('clearPhoto', String(payload.clearPhoto));
+  return api.put(`/api/stadiums/${id}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 
 export const clubRosterRequestsRequest = () => api.get('/api/club-roster/requests');
 export const clubRosterPendingRequest = () => api.get('/api/club-roster/pending');

@@ -1,17 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from 'react';
 import { adsAPI } from '../services/api';
+
+const EUR_PER_UNIT = 1;
+const SECONDS_PER_UNIT = 3;
+
+/** €1 per 3s of media, charged per campaign day. Video 12s → €4/day. */
+function pricePerDayFromSeconds(sec) {
+  const n = Number(sec) || 0;
+  if (n <= 0) return EUR_PER_UNIT;
+  return Math.max(1, Math.ceil(n / SECONDS_PER_UNIT)) * EUR_PER_UNIT;
+}
+
+function mediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('blob:') || /^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/uploads/')) {
+    return `${String(import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '')}${url}`;
+  }
+  return url;
+}
 
 export default function AdSlider() {
   const [ads, setAds] = useState([]);
   const [active, setActive] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ title: '', text: '', color: '#34d399', image: null, imageUrl: '', days: 1 });
+  const [form, setForm] = useState({
+    title: '',
+    text: '',
+    color: '#34d399',
+    image: null,
+    imageUrl: '',
+    mediaKind: null,
+    mediaDurationSec: null,
+    days: 1,
+  });
   const [error, setError] = useState('');
-  // Load ads from backend
-  // Shuffle array helper
+
   function shuffle(array) {
-    let arr = array.slice();
+    const arr = array.slice();
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -20,11 +47,10 @@ export default function AdSlider() {
   }
 
   useEffect(() => {
-    adsAPI.getAds().then(res => {
+    adsAPI.getAds().then((res) => {
       if (res.data && res.data.length > 0) {
         const shuffled = shuffle(res.data);
         setAds(shuffled);
-        // Fillo nga një indeks random
         setActive(Math.floor(Math.random() * shuffled.length));
       } else {
         setAds([]);
@@ -32,16 +58,17 @@ export default function AdSlider() {
     });
   }, []);
 
-  // Auto-slide every 1.5 seconds, unless paused
+  // Per-ad display: video length, or 3s for images
   useEffect(() => {
-    if (isPaused || ads.length === 0) return;
-    const interval = setInterval(() => {
+    if (isPaused || ads.length === 0) return undefined;
+    const current = ads[active] || ads[0];
+    const sec = Math.max(3, Number(current?.displaySeconds) || 3);
+    const id = setTimeout(() => {
       setActive((prev) => (prev + 1) % ads.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isPaused, ads]);
+    }, sec * 1000);
+    return () => clearTimeout(id);
+  }, [isPaused, ads, active]);
 
-  // Shto reklamë nga jashtë (event custom) dhe hap modalin nga burger menu
   useEffect(() => {
     function handleAddAd(e) {
       if (e.detail && e.detail.ad) {
@@ -59,18 +86,61 @@ export default function AdSlider() {
     };
   }, []);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setForm(f => ({ ...f, image: file, imageUrl: url }));
+  const pricing = useMemo(() => {
+    const d = Math.max(1, parseInt(String(form.days || '1'), 10) || 1);
+    const perDay =
+      form.mediaKind === 'video' && form.mediaDurationSec
+        ? pricePerDayFromSeconds(form.mediaDurationSec)
+        : EUR_PER_UNIT;
+    const displaySeconds =
+      form.mediaKind === 'video' && form.mediaDurationSec
+        ? form.mediaDurationSec
+        : SECONDS_PER_UNIT;
+    return {
+      days: d,
+      pricePerDay: perDay,
+      displaySeconds,
+      priceEur: perDay * d,
+    };
+  }, [form.days, form.mediaKind, form.mediaDurationSec]);
+
+  const handleMediaChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isVideo = String(file.type || '').startsWith('video/');
+    const url = URL.createObjectURL(file);
+
+    if (isVideo) {
+      const videoEl = document.createElement('video');
+      videoEl.preload = 'metadata';
+      videoEl.onloadedmetadata = () => {
+        const sec = Math.max(1, Math.round(videoEl.duration || 1));
+        URL.revokeObjectURL(videoEl.src);
+        setForm((f) => ({
+          ...f,
+          image: file,
+          imageUrl: url,
+          mediaKind: 'video',
+          mediaDurationSec: sec,
+        }));
+      };
+      videoEl.src = url;
+      return;
     }
+
+    setForm((f) => ({
+      ...f,
+      image: file,
+      imageUrl: url,
+      mediaKind: 'image',
+      mediaDurationSec: null,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.title || !form.text || !form.days || isNaN(form.days) || Number(form.days) < 1) {
+    if (!form.title || !form.text || !form.days || Number.isNaN(Number(form.days)) || Number(form.days) < 1) {
       setError('Plotëso të gjitha fushat dhe cakto ditët (1+).');
       return;
     }
@@ -78,89 +148,149 @@ export default function AdSlider() {
     data.append('title', form.title);
     data.append('text', form.text);
     data.append('color', form.color);
-    data.append('days', Number(form.days));
-    if (form.image) data.append('image', form.image);
+    data.append('days', String(pricing.days));
+    if (form.mediaDurationSec) data.append('mediaDurationSec', String(form.mediaDurationSec));
+    if (form.image) {
+      if (form.mediaKind === 'video') data.append('video', form.image);
+      else data.append('image', form.image);
+    }
     try {
       await adsAPI.createAd(data);
-      // Rifresko ads nga backend
       const res = await adsAPI.getAds();
       setAds(res.data);
-      setForm({ title: '', text: '', color: '#34d399', image: null, imageUrl: '', days: 1 });
+      setForm({
+        title: '',
+        text: '',
+        color: '#34d399',
+        image: null,
+        imageUrl: '',
+        mediaKind: null,
+        mediaDurationSec: null,
+        days: 1,
+      });
       setShowModal(false);
-    } catch (err) {
+    } catch (_err) {
       setError('Nuk u shtua reklama. Provo sërish.');
     }
   };
 
+  const current = ads[active];
+
   return (
-    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mt-6 text-center border border-gray-200 dark:border-gray-600">
-      {/* Modal për shtim reklame */}
+    <div className="mt-6 rounded-lg border border-gray-200 bg-gray-100 p-4 text-center dark:border-gray-600 dark:bg-gray-700">
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-80 space-y-4">
-            <h2 className="text-lg font-bold mb-2">Shto reklamë</h2>
-            <input type="text" className="w-full p-2 rounded border" placeholder="Titulli" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-            <input type="text" className="w-full p-2 rounded border" placeholder="Teksti" value={form.text} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-            <input type="color" className="w-8 h-8" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} />
-            <div className="flex items-center gap-2">
-              <div className="relative w-full">
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full p-2 rounded border pr-12"
-                  placeholder="Numri i ditëve"
-                  value={form.days}
-                  onChange={e => setForm(f => ({ ...f, days: e.target.value }))}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-300 text-sm pointer-events-none">Ditë</span>
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">1 euro/ditë</span>
+          <form
+            onSubmit={handleSubmit}
+            className="w-80 space-y-3 rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800"
+          >
+            <h2 className="mb-2 text-lg font-bold">Shto reklamë</h2>
+            <input
+              type="text"
+              className="w-full rounded border p-2"
+              placeholder="Titulli"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            />
+            <input
+              type="text"
+              className="w-full rounded border p-2"
+              placeholder="Teksti"
+              value={form.text}
+              onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
+            />
+            <input
+              type="color"
+              className="h-8 w-8"
+              value={form.color}
+              onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+            />
+            <div className="relative w-full">
+              <input
+                type="number"
+                min="1"
+                className="w-full rounded border p-2 pr-12"
+                placeholder="Numri i ditëve"
+                value={form.days}
+                onChange={(e) => setForm((f) => ({ ...f, days: e.target.value }))}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                Ditë
+              </span>
             </div>
-            <input type="file" accept="image/*" onChange={handleImageChange} className="w-full" />
-            {form.imageUrl && (
-              <img src={form.imageUrl} alt="Preview" className="w-full h-32 object-cover rounded mt-2" />
-            )}
-            {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-            <div className="flex gap-2 mt-2">
-              <button type="submit" className="flex-1 bg-green-500 text-white rounded p-2">Shto</button>
-              <button type="button" className="flex-1 bg-gray-300 dark:bg-gray-600 rounded p-2" onClick={() => setShowModal(false)}>Anulo</button>
+            <p className="text-left text-xs text-gray-500">
+              €{EUR_PER_UNIT}/ditë = {SECONDS_PER_UNIT}s media. Video 12s → €4/ditë. Total = çmimi ditor ×
+              ditët.
+            </p>
+            <p className="text-left text-sm font-semibold text-[var(--xt-color-gold,#9A6B12)]">
+              {form.mediaKind === 'video' && form.mediaDurationSec
+                ? `Video ${form.mediaDurationSec}s → €${pricing.pricePerDay}/ditë × ${pricing.days} ditë = €${pricing.priceEur}`
+                : `€${pricing.pricePerDay}/ditë × ${pricing.days} ditë = €${pricing.priceEur}`}
+            </p>
+            <input type="file" accept="image/*,video/*" onChange={handleMediaChange} className="w-full" />
+            {form.imageUrl && form.mediaKind === 'video' ? (
+              <video src={form.imageUrl} className="mt-2 h-32 w-full rounded object-cover" controls muted />
+            ) : null}
+            {form.imageUrl && form.mediaKind !== 'video' ? (
+              <img src={form.imageUrl} alt="Preview" className="mt-2 h-32 w-full rounded object-cover" />
+            ) : null}
+            {error ? <div className="mb-2 text-sm text-red-500">{error}</div> : null}
+            <div className="mt-2 flex gap-2">
+              <button type="submit" className="flex-1 rounded bg-green-500 p-2 text-white">
+                Shto · €{pricing.priceEur}
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded bg-gray-300 p-2 dark:bg-gray-600"
+                onClick={() => setShowModal(false)}
+              >
+                Anulo
+              </button>
             </div>
           </form>
         </div>
       )}
-      {ads.length > 0 ? (
+      {ads.length > 0 && current ? (
         <>
           <div
-            style={{ background: ads[active].color }}
-            className="rounded-lg p-0 mb-2 overflow-hidden cursor-pointer"
+            style={{ background: current.color }}
+            className="mb-2 cursor-pointer overflow-hidden rounded-lg p-0"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            {ads[active].imageUrl && (
-              <div className="w-full h-56 flex items-center justify-center bg-white dark:bg-gray-800">
-                <img
-                  src={
-                    ads[active].imageUrl.startsWith('blob:')
-                      ? ads[active].imageUrl
-                      : ads[active].imageUrl.startsWith('/uploads/')
-                        ? `${import.meta.env.VITE_API_URL.replace('/api','')}${ads[active].imageUrl}`
-                        : ads[active].imageUrl
-                  }
-                  alt="Ad"
-                  className="max-w-full max-h-full object-contain block"
-                  style={{ width: '100%', height: '100%' }}
+            {current.videoUrl ? (
+              <div className="flex h-56 w-full items-center justify-center bg-white dark:bg-gray-800">
+                <video
+                  src={mediaUrl(current.videoUrl)}
+                  className="block h-full max-h-full w-full max-w-full object-contain"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
                 />
               </div>
-            )}
-            {/* Nëse vjen nga backend, përdor ads[active].image ose ads[active].imageUrl */}
+            ) : current.imageUrl ? (
+              <div className="flex h-56 w-full items-center justify-center bg-white dark:bg-gray-800">
+                <img
+                  src={mediaUrl(current.imageUrl)}
+                  alt="Ad"
+                  className="block h-full max-h-full w-full max-w-full object-contain"
+                />
+              </div>
+            ) : null}
           </div>
-          <div className="font-bold text-lg text-gray-900 dark:text-white mb-1">{ads[active].title}</div>
-          <div className="mb-2 text-gray-800 dark:text-gray-200">{ads[active].text}</div>
-          <div className="flex justify-center gap-2 mt-2">
+          <div className="mb-1 text-lg font-bold text-gray-900 dark:text-white">{current.title}</div>
+          <div className="mb-2 text-gray-800 dark:text-gray-200">{current.text}</div>
+          <div className="text-xs text-gray-500">
+            {Math.max(3, Number(current.displaySeconds) || 3)}s shfaqje
+            {current.priceEur != null ? ` · €${Number(current.priceEur)}` : ''}
+          </div>
+          <div className="mt-2 flex justify-center gap-2">
             {ads.map((_, i) => (
               <button
                 key={i}
-                className={`w-3 h-3 rounded-full focus:outline-none ${i === active ? "bg-black" : "bg-gray-400"}`}
+                type="button"
+                className={`h-3 w-3 rounded-full focus:outline-none ${i === active ? 'bg-black' : 'bg-gray-400'}`}
                 onClick={() => setActive(i)}
                 aria-label={`Go to ad ${i + 1}`}
               />

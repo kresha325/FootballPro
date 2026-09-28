@@ -38,6 +38,20 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  /**
+   * Membership from sponsors / paid: free | basic | premium.
+   * 1 active sponsor → basic; 2+ → premium (also sets premium=true).
+   */
+  subscriptionPlan: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'free',
+  },
+  /** When plan access ends (aligned with furthest active sponsor endDate when sponsor-based). */
+  premiumExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   firstName: {
     type: DataTypes.STRING,
   },

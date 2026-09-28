@@ -187,16 +187,11 @@ const Feed = () => {
     if (!activeSponsorPost || !user) return;
     // Always use the logged-in user's id for sponsor creation
     const userId = user.id;
-    // Set startDate now, endDate +365 days
-    const now = new Date();
-    const end = new Date(now);
-    end.setDate(now.getDate() + 365);
     const formData = new FormData();
     formData.append('userId', userId);
     formData.append('name', tempSponsor.name);
     formData.append('link', tempSponsor.link);
-    formData.append('startDate', now.toISOString());
-    formData.append('endDate', end.toISOString());
+    // Dates + 1y Premium are set automatically by the API
     if (tempSponsor.image instanceof File) {
       formData.append('image', tempSponsor.image);
     }

@@ -8,6 +8,7 @@ const {
   getTrendingPosts,
   getTrendingUsers,
   getRecommendedUsers,
+  getBrowseUsers,
   getSearchSuggestions,
   searchEverything,
 } = require('../controllers/search');
@@ -23,6 +24,7 @@ router.get('/posts', auth, searchPosts);
 router.get('/trending/posts', auth, getTrendingPosts);
 router.get('/trending/users', auth, getTrendingUsers);
 router.get('/recommended', auth, getRecommendedUsers);
+router.get('/browse', auth, getBrowseUsers);
 
 // Autocomplete
 router.get('/suggestions', auth, getSearchSuggestions);

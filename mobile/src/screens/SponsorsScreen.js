@@ -20,6 +20,7 @@ import {
   updateSponsorRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { alertMediaLibraryDenied, ensureMediaLibraryPermission } from '../utils/mediaPermissions';
 
 function SponsorRow({ item, onEdit, onDelete, deleting }) {
   return (
@@ -48,8 +49,6 @@ export default function SponsorsScreen() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,32 +82,37 @@ export default function SponsorsScreen() {
   }, [loadSponsors]);
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Media permission is required to attach sponsor image.');
+    setError('');
+    const access = await ensureMediaLibraryPermission();
+    if (!access.ok) {
+      alertMediaLibraryDenied();
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsEditing: false,
+      });
 
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    setImage({
-      uri: asset.uri,
-      name: asset.fileName || `sponsor-${Date.now()}.jpg`,
-      type: asset.mimeType || 'image/jpeg',
-    });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      setImage({
+        uri: asset.uri,
+        name: asset.fileName || `sponsor-${Date.now()}.jpg`,
+        type: asset.mimeType || 'image/jpeg',
+      });
+      setError('');
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Nuk u hap galeria. Provo përsëri.'));
+    }
   };
 
   const resetForm = () => {
     setEditingId(null);
     setName('');
     setLink('');
-    setStartDate('');
-    setEndDate('');
     setImage(null);
   };
 
@@ -116,8 +120,6 @@ export default function SponsorsScreen() {
     setEditingId(item.id);
     setName(item.name || '');
     setLink(item.link || '');
-    setStartDate(item.startDate ? String(item.startDate).slice(0, 10) : '');
-    setEndDate(item.endDate ? String(item.endDate).slice(0, 10) : '');
     setImage(null);
   };
 
@@ -160,13 +162,12 @@ export default function SponsorsScreen() {
       const payload = {
         name: name.trim(),
         link: link.trim(),
-        startDate: startDate.trim() || undefined,
-        endDate: endDate.trim() || undefined,
       };
+      let createRes = null;
       if (editingId) {
         await updateSponsorRequest(editingId, payload);
       } else {
-        await createSponsorRequest({
+        createRes = await createSponsorRequest({
           userId: user.id,
           ...payload,
           image,
@@ -174,6 +175,16 @@ export default function SponsorsScreen() {
       }
       resetForm();
       await loadSponsors({ silent: true });
+      if (!editingId) {
+        const plan = String(createRes?.data?.subscriptionPlan || '').toLowerCase();
+        const count = Number(createRes?.data?.sponsorCount || 0);
+        const planLabel =
+          plan === 'premium' ? 'Premium' : plan === 'basic' ? 'Basic' : 'Free';
+        Alert.alert(
+          'Sponsor u krijua',
+          `Afati: 12 muaj. Sponsorë aktivë: ${count || '—'}. Abonimi yt: ${planLabel}.`
+        );
+      }
     } catch (err) {
       setError(extractErrorMessage(err, editingId ? 'Failed to update sponsor' : 'Failed to create sponsor'));
     } finally {
@@ -200,8 +211,11 @@ export default function SponsorsScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" />
           <TextInput style={styles.input} value={link} onChangeText={setLink} placeholder="Website link" autoCapitalize="none" />
-          <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} placeholder="Start date (YYYY-MM-DD)" autoCapitalize="none" />
-          <TextInput style={styles.input} value={endDate} onChangeText={setEndDate} placeholder="End date (YYYY-MM-DD)" autoCapitalize="none" />
+          {!editingId ? (
+            <Text style={styles.autoHint}>
+              Afati: sot → +12 muaj. 1 sponsor = abonim Basic · 2 sponsore = Premium.
+            </Text>
+          ) : null}
           <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
             <Text style={styles.secondaryText}>{image ? 'Image selected' : 'Pick image (optional)'}</Text>
           </TouchableOpacity>
@@ -245,6 +259,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
+  autoHint: {
+    color: '#64748b',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',

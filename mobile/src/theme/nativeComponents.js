@@ -25,8 +25,8 @@ const textTone = new Map([
   ['#64748b', 'muted'], ['#6b7280', 'muted'], ['#94a3b8', 'mutedSoft'],
   ['#9ca3af', 'mutedSoft'], ['#0f766e', 'primaryText'], ['#0d9488', 'primaryText'],
   ['#14b8a6', 'primaryText'], ['#2dd4bf', 'primaryText'], ['#9a6b12', 'primaryText'],
-  ['#b45309', 'primaryText'], ['#92400e', 'primaryText'], ['#f59e0b', 'primaryText'],
-  ['#fbbf24', 'primaryText'], ['#d9a441', 'primaryText'], ['#f2c866', 'primaryText'],
+  ['#b45309', 'primaryText'], ['#92400e', 'primaryText'], ['#78500c', 'primaryText'],
+  // Bright golds stay literal on dark brand surfaces; darker golds map to primaryText.
   ['#dc2626', 'danger'], ['#ef4444', 'danger'], ['#b91c1c', 'danger'],
   ['#10b981', 'success'], ['#16a34a', 'success'], ['#15803d', 'success'],
 ]);
@@ -50,8 +50,11 @@ function resolveColor(value, property, colors) {
   } else if (property === 'borderColor' || property === 'borderTopColor' || property === 'borderBottomColor' || property === 'borderLeftColor' || property === 'borderRightColor') {
     token = borderTone.get(normalized);
   } else if (property === 'color' || property === 'placeholderTextColor' || property === 'selectionColor' || property === 'cursorColor' || property === 'underlineColorAndroid' || property === 'tintColor') {
+    // Keep pure white/black as intentional contrast (e.g. white label on dark CTA).
+    // Remapping #fff → colors.text made "Hyr" and hero copy invisible in light mode.
+    if (normalized === '#ffffff' || normalized === '#fff' || normalized === 'white') return value;
+    if (normalized === '#000000' || normalized === '#000' || normalized === 'black') return value;
     token = textTone.get(normalized);
-    if (normalized === '#ffffff' || normalized === '#fff') return colors.text;
   } else if (property === 'shadowColor' && (normalized === '#000' || normalized === '#000000' || normalized === 'black')) {
     token = 'shadow';
   }

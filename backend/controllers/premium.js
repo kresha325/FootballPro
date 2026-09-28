@@ -40,12 +40,24 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   if (!user) return null;
 
   user.premium = true;
+
+  const now = new Date();
+  const currentExpiry =
+    user.premiumExpiresAt && new Date(user.premiumExpiresAt) > now
+      ? new Date(user.premiumExpiresAt)
+      : now;
+  const expiresAt = new Date(currentExpiry);
+  expiresAt.setDate(expiresAt.getDate() + config.days);
+  user.premiumExpiresAt = expiresAt;
+
   const { syncOverallVerified } = require('../utils/userVerification');
   syncOverallVerified(user);
-  await user.save();
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + config.days);
+  try {
+    await user.save();
+  } catch (saveErr) {
+    console.warn('Premium save with expiry failed, retrying flag only:', saveErr?.message || saveErr);
+    await User.update({ premium: true }, { where: { id: userId } });
+  }
 
   let paymentId = null;
   let source = opts.source;
@@ -58,17 +70,20 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   const externalId =
     sessionId ||
     opts.externalId ||
-    `demo:premium:${userId}:${plan}:${Date.now()}`;
+    `${source}:premium:${userId}:${plan}:${Date.now()}`;
 
-  if (sessionId || source === 'demo') {
+  if (sessionId || source === 'demo' || source === 'sponsor') {
     try {
       const payment = await Payment.create({
         userId,
-        amount: config.amountCents / 100,
+        amount: source === 'sponsor' ? 0 : config.amountCents / 100,
         currency: 'eur',
         status: 'completed',
         stripePaymentIntentId: String(externalId).slice(0, 255),
-        description: `Premium ${config.label}${source === 'demo' ? ' (demo)' : ''}`,
+        description:
+          source === 'sponsor'
+            ? `Premium ${config.label} (sponsor)`
+            : `Premium ${config.label}${source === 'demo' ? ' (demo)' : ''}`,
       });
       paymentId = payment.id;
     } catch (payErr) {
@@ -77,28 +92,30 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   }
 
   let invoice = null;
-  try {
-    const inv = await createInvoiceIfNeeded({
-      userId,
-      kind: 'premium',
-      source,
-      amount: config.amountCents / 100,
-      currency: 'EUR',
-      description: config.name,
-      plan,
-      productId: opts.productId || null,
-      externalId,
-      paymentId,
-      iapPurchaseId: opts.iapPurchaseId || null,
-      rawPayload: {
-        plan,
-        days: config.days,
+  if (source !== 'sponsor') {
+    try {
+      const inv = await createInvoiceIfNeeded({
+        userId,
+        kind: 'premium',
         source,
-      },
-    });
-    invoice = inv.invoice;
-  } catch (invErr) {
-    console.warn('Premium invoice skipped:', invErr?.message || invErr);
+        amount: config.amountCents / 100,
+        currency: 'EUR',
+        description: config.name,
+        plan,
+        productId: opts.productId || null,
+        externalId,
+        paymentId,
+        iapPurchaseId: opts.iapPurchaseId || null,
+        rawPayload: {
+          plan,
+          days: config.days,
+          source,
+        },
+      });
+      invoice = inv.invoice;
+    } catch (invErr) {
+      console.warn('Premium invoice skipped:', invErr?.message || invErr);
+    }
   }
 
   return {
@@ -109,6 +126,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
     user: {
       id: user.id,
       premium: user.premium,
+      premiumExpiresAt: user.premiumExpiresAt,
       firstName: user.firstName,
       lastName: user.lastName,
     },

@@ -2,8 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* X TALENTI foundations. Component styles below consume these tokens. */
+/* X TALENTI foundations — light by default, dark when html.dark is set. */
 :root {
+  color-scheme: light;
+  --xt-color-canvas: #f3f5f8;
+  --xt-color-surface: #ffffff;
+  --xt-color-surface-raised: #ffffff;
+  --xt-color-surface-hover: #eef2f6;
+  --xt-color-border: rgb(16 24 40 / 10%);
+  --xt-color-border-strong: rgb(16 24 40 / 18%);
+  --xt-color-gold: #9a6b12;
+  --xt-color-gold-bright: #b8812d;
+  --xt-color-gold-deep: #78500c;
+  --xt-color-text: #111827;
+  --xt-color-text-muted: #475569;
+  --xt-color-text-subtle: #64748b;
+  --xt-color-success: #16845b;
+  --xt-color-warning: #b8812d;
+  --xt-color-danger: #c83b3b;
+  --xt-color-info: #2563eb;
+  --xt-space-1: .25rem;
+  --xt-space-2: .5rem;
+  --xt-space-3: .75rem;
+  --xt-space-4: 1rem;
+  --xt-space-5: 1.25rem;
+  --xt-space-6: 1.5rem;
+  --xt-space-8: 2rem;
+  --xt-space-10: 2.5rem;
+  --xt-radius-sm: .375rem;
+  --xt-radius-md: .625rem;
+  --xt-radius-lg: .875rem;
+  --xt-radius-xl: 1.125rem;
+  --xt-radius-full: 9999px;
+  --xt-shadow-card: 0 8px 28px rgb(16 24 40 / 8%);
+  --xt-shadow-popover: 0 18px 55px rgb(16 24 40 / 14%);
+  --xt-shadow-focus: 0 0 0 3px rgb(154 107 18 / 28%);
+  --xt-motion-fast: 140ms;
+  --xt-motion-normal: 200ms;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark {
   color-scheme: dark;
   --xt-color-canvas: #070a10;
   --xt-color-surface: #0d1420;
@@ -21,29 +64,9 @@
   --xt-color-warning: #f1b84b;
   --xt-color-danger: #f36b72;
   --xt-color-info: #70aaf5;
-  --xt-space-1: .25rem;
-  --xt-space-2: .5rem;
-  --xt-space-3: .75rem;
-  --xt-space-4: 1rem;
-  --xt-space-5: 1.25rem;
-  --xt-space-6: 1.5rem;
-  --xt-space-8: 2rem;
-  --xt-space-10: 2.5rem;
-  --xt-radius-sm: .375rem;
-  --xt-radius-md: .625rem;
-  --xt-radius-lg: .875rem;
-  --xt-radius-xl: 1.125rem;
-  --xt-radius-full: 9999px;
   --xt-shadow-card: 0 8px 28px rgb(0 0 0 / 22%);
   --xt-shadow-popover: 0 18px 55px rgb(0 0 0 / 42%);
   --xt-shadow-focus: 0 0 0 3px rgb(217 164 65 / 28%);
-  --xt-motion-fast: 140ms;
-  --xt-motion-normal: 200ms;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 html { min-width: 320px; scroll-behavior: smooth; background: var(--xt-color-canvas); }
@@ -90,8 +113,10 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .xt-table th { color: var(--xt-color-text); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 }
 
-.xt-app-nav { border-bottom: 1px solid var(--xt-color-border); background: rgb(7 10 16 / 92%); backdrop-filter: blur(16px); }
-.xt-bottom-nav { border-top: 1px solid var(--xt-color-border); background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 28px rgb(0 0 0 / 22%); backdrop-filter: blur(16px); }
+.xt-app-nav { border-bottom: 1px solid var(--xt-color-border); background: color-mix(in srgb, var(--xt-color-canvas) 92%, transparent); backdrop-filter: blur(16px); }
+html.dark .xt-app-nav { background: rgb(7 10 16 / 92%); }
+.xt-bottom-nav { border-top: 1px solid var(--xt-color-border); background: color-mix(in srgb, var(--xt-color-surface) 96%, transparent); box-shadow: 0 -8px 28px rgb(16 24 40 / 8%); backdrop-filter: blur(16px); }
+html.dark .xt-bottom-nav { background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 28px rgb(0 0 0 / 22%); }
 .xt-toast { color: var(--xt-color-text); border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-md); background: var(--xt-color-surface-raised); box-shadow: var(--xt-shadow-popover); }
 
 /* Dashboard family: Analytics, Gamification and Admin share the X TALENTI surfaces. */
@@ -170,6 +195,7 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @media (prefers-contrast: more) {
-  :root { --xt-color-border: rgb(255 255 255 / 35%); --xt-color-border-strong: rgb(255 255 255 / 60%); }
+  :root { --xt-color-border: rgb(16 24 40 / 35%); --xt-color-border-strong: rgb(16 24 40 / 55%); }
+  html.dark { --xt-color-border: rgb(255 255 255 / 35%); --xt-color-border-strong: rgb(255 255 255 / 60%); }
   :focus-visible { outline-width: 3px; }
 }

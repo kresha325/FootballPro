@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
+import { useTheme } from '../context/ThemeContext';
 
 export const WELCOME_ONBOARDING_KEY = 'welcome_onboarding_done';
 
@@ -41,6 +42,7 @@ const SLIDES = [
 
 export default function WelcomeOnboardingScreen({ onDone }) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const listRef = useRef(null);
   const [index, setIndex] = useState(0);
 
@@ -66,14 +68,14 @@ export default function WelcomeOnboardingScreen({ onDone }) {
   const brandRest = APP_BRAND_NAME.replace(/^x\s*/i, '').trim() || 'TALENTI';
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
+    <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16, backgroundColor: colors.bg }]}>
       <View style={styles.topRow}>
         <Text style={styles.brand}>
-          <Text style={styles.brandX}>X</Text>
-          <Text style={styles.brandRest}>{brandRest}</Text>
+          <Text style={[styles.brandX, { color: colors.primary }]}>X</Text>
+          <Text style={[styles.brandRest, { color: colors.text }]}>{brandRest}</Text>
         </Text>
         <TouchableOpacity onPress={finish} hitSlop={12} accessibilityLabel="Anashkalo">
-          <Text style={styles.skip}>Anashkalo</Text>
+          <Text style={[styles.skip, { color: colors.muted }]}>Anashkalo</Text>
         </TouchableOpacity>
       </View>
 
@@ -91,23 +93,34 @@ export default function WelcomeOnboardingScreen({ onDone }) {
         getItemLayout={(_, i) => ({ length: PAGE_W, offset: PAGE_W * i, index: i })}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: PAGE_W }]}>
-            <View style={[styles.imageWrap, { width: IMAGE_W, height: IMAGE_H }]}>
+            <View style={[styles.imageWrap, { width: IMAGE_W, height: IMAGE_H, backgroundColor: colors.primarySoft }]}>
               <Image source={item.image} style={styles.image} resizeMode="cover" />
             </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.body}>{item.body}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.body, { color: colors.muted }]}>{item.body}</Text>
           </View>
         )}
       />
 
       <View style={styles.dots}>
         {SLIDES.map((s, i) => (
-          <View key={s.key} style={[styles.dot, i === index && styles.dotActive]} />
+          <View
+            key={s.key}
+            style={[
+              styles.dot,
+              { backgroundColor: colors.borderStrong },
+              i === index && [styles.dotActive, { backgroundColor: colors.primary }],
+            ]}
+          />
         ))}
       </View>
 
-      <TouchableOpacity style={styles.cta} onPress={goNext} activeOpacity={0.9}>
-        <Text style={styles.ctaText}>
+      <TouchableOpacity
+        style={[styles.cta, { backgroundColor: colors.primary }]}
+        onPress={goNext}
+        activeOpacity={0.9}
+      >
+        <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
           {index >= SLIDES.length - 1 ? 'Fillo' : 'Vazhdo'}
         </Text>
       </TouchableOpacity>

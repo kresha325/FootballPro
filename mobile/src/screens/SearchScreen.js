@@ -1,59 +1,31 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from '../theme/nativeComponents';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import {
+  browseUsersRequest,
   extractErrorMessage,
   followingListRequest,
   searchSuggestionsRequest,
   searchUsersRequest,
 } from '../api/client';
 import AdvancedSearchInput from '../components/AdvancedSearchInput';
-import UserProfileBrowsePager, { useBrowseColors } from '../components/UserProfileBrowsePager';
+import UserProfileBrowsePager, { normalizeBrowseUser, useBrowseColors } from '../components/UserProfileBrowsePager';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 function mapFollowingRows(raw) {
   const list = Array.isArray(raw) ? raw : [];
-  return list
-    .map((row) => {
-      const u = row?.following || row;
-      if (!u?.id) return null;
-      return {
-        id: u.id,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        role: u.role,
-        verified: u.verified,
-        profilePhoto: u.Profile?.profilePhoto || u.profilePhoto || null,
-        club: u.Profile?.club || u.club || null,
-        position: u.Profile?.position || u.position || null,
-        city: u.Profile?.city || u.city || null,
-        country: u.Profile?.country || u.country || null,
-      };
-    })
-    .filter(Boolean);
+  return list.map((row) => normalizeBrowseUser(row?.following || row)).filter(Boolean);
 }
 
 function mapSearchUsers(raw) {
   const list = Array.isArray(raw) ? raw : [];
-  return list
-    .map((u) => {
-      if (!u?.id) return null;
-      const p = u.Profile || u.profile || {};
-      return {
-        id: u.id,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        role: u.role,
-        verified: u.verified,
-        profilePhoto: p.profilePhoto || u.profilePhoto || null,
-        club: p.club || u.club || null,
-        position: p.position || u.position || null,
-        city: p.city || u.city || null,
-        country: p.country || u.country || null,
-      };
-    })
-    .filter(Boolean);
+  return list.map((u) => normalizeBrowseUser(u)).filter(Boolean);
 }
+
+const MODES = [
+  { id: 'following', label: 'Duke ndjekur' },
+  { id: 'browse', label: 'Shfleto' },
+];
 
 export default function SearchScreen({ navigation, route }) {
   const { isDark } = useTheme();
@@ -61,12 +33,14 @@ export default function SearchScreen({ navigation, route }) {
   const browseColors = useBrowseColors(isDark);
   const initialQuery = route?.params?.initialQuery || '';
 
+  const [mode, setMode] = useState('following');
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState({ position: '', club: '' });
   const [following, setFollowing] = useState([]);
+  const [browseUsers, setBrowseUsers] = useState([]);
   const [results, setResults] = useState([]);
   const [suggestions, setSuggestions] = useState({ users: [], positions: [], clubs: [] });
-  const [loadingFollowing, setLoadingFollowing] = useState(true);
+  const [loadingList, setLoadingList] = useState(true);
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -95,10 +69,10 @@ export default function SearchScreen({ navigation, route }) {
     async ({ silent } = { silent: false }) => {
       if (!user?.id) {
         setFollowing([]);
-        setLoadingFollowing(false);
+        setLoadingList(false);
         return;
       }
-      if (!silent) setLoadingFollowing(true);
+      if (!silent) setLoadingList(true);
       setError('');
       try {
         const res = await followingListRequest(user.id);
@@ -107,11 +81,30 @@ export default function SearchScreen({ navigation, route }) {
         setError(extractErrorMessage(err, 'Nuk u ngarkuan ndjekjet'));
         setFollowing([]);
       } finally {
-        setLoadingFollowing(false);
+        setLoadingList(false);
         setRefreshing(false);
       }
     },
     [user?.id]
+  );
+
+  const loadBrowse = useCallback(
+    async ({ silent } = { silent: false }) => {
+      if (!silent) setLoadingList(true);
+      setError('');
+      try {
+        const res = await browseUsersRequest({ limit: 40 });
+        const rows = Array.isArray(res?.data) ? res.data : res?.data?.users || [];
+        setBrowseUsers(mapSearchUsers(rows));
+      } catch (err) {
+        setError(extractErrorMessage(err, 'Nuk u ngarkuan përdoruesit'));
+        setBrowseUsers([]);
+      } finally {
+        setLoadingList(false);
+        setRefreshing(false);
+      }
+    },
+    []
   );
 
   const runUserSearch = useCallback(
@@ -172,8 +165,9 @@ export default function SearchScreen({ navigation, route }) {
   }, []);
 
   useEffect(() => {
-    loadFollowing();
-  }, [loadFollowing]);
+    if (mode === 'browse') loadBrowse();
+    else loadFollowing();
+  }, [mode, loadBrowse, loadFollowing]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -209,25 +203,41 @@ export default function SearchScreen({ navigation, route }) {
     }
   }, [initialQuery]);
 
-  const browseItems = useMemo(
-    () => (isSearching ? results : following),
-    [isSearching, results, following]
-  );
+  const browseItems = useMemo(() => {
+    if (isSearching) return results;
+    return mode === 'browse' ? browseUsers : following;
+  }, [isSearching, results, mode, browseUsers, following]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     if (isSearching) {
       runUserSearch(query, filters, { silent: true });
+    } else if (mode === 'browse') {
+      loadBrowse({ silent: true });
     } else {
       loadFollowing({ silent: true });
     }
-  }, [isSearching, query, filters, runUserSearch, loadFollowing]);
+  }, [isSearching, mode, query, filters, runUserSearch, loadBrowse, loadFollowing]);
 
   const onApplyFilter = useCallback((patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const showInitialLoader = loadingFollowing && !refreshing && !isSearching && following.length === 0;
+  const showInitialLoader = loadingList && !refreshing && !isSearching && browseItems.length === 0;
+
+  const sectionLabel = isSearching
+    ? searching
+      ? 'Duke kërkuar…'
+      : `Rezultate${browseItems.length ? ` · ${browseItems.length}` : ''}`
+    : mode === 'browse'
+      ? 'Shfleto · njerëz që nuk i ndjek'
+      : 'Duke ndjekur';
+
+  const emptyMessage = isSearching
+    ? 'Asnjë rezultat për këtë kërkim.'
+    : mode === 'browse'
+      ? 'Nuk ka përdorues të rinj për t’u shfletuar tani.'
+      : 'Nuk po ndjek askënd ende. Hap Shfleto ose kërko më sipër.';
 
   return (
     <View style={[styles.root, { backgroundColor: browseColors.bg }]}>
@@ -249,15 +259,27 @@ export default function SearchScreen({ navigation, route }) {
         colors={browseColors}
       />
 
+      {!isSearching ? (
+        <View style={[styles.modeRow, { backgroundColor: browseColors.inputBg, borderColor: browseColors.border }]}>
+          {MODES.map((m) => {
+            const active = mode === m.id;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.modeBtn, active && { backgroundColor: '#9A6B12' }]}
+                onPress={() => setMode(m.id)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.modeTxt, { color: active ? '#fff' : browseColors.muted }]}>{m.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {!isSearching ? (
-        <Text style={[styles.sectionLabel, { color: browseColors.muted }]}>Duke ndjekur</Text>
-      ) : (
-        <Text style={[styles.sectionLabel, { color: browseColors.muted }]}>
-          {searching ? 'Duke kërkuar…' : `Rezultate${browseItems.length ? ` · ${browseItems.length}` : ''}`}
-        </Text>
-      )}
+      <Text style={[styles.sectionLabel, { color: browseColors.muted }]}>{sectionLabel}</Text>
 
       {showInitialLoader ? (
         <View style={styles.centered}>
@@ -271,11 +293,7 @@ export default function SearchScreen({ navigation, route }) {
             onOpenProfile={openPublicProfile}
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            emptyMessage={
-              isSearching
-                ? 'Asnjë rezultat për këtë kërkim.'
-                : 'Nuk po ndjek askënd ende. Kërko më sipër për të gjetur njerëz.'
-            }
+            emptyMessage={emptyMessage}
           />
         </View>
       )}
@@ -287,6 +305,22 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   browseFlex: { flex: 1, minHeight: 0 },
+  modeRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 4,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modeTxt: { fontWeight: '800', fontSize: 13 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '800',

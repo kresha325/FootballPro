@@ -99,7 +99,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "X TALENTI ka nevojë për kamerën për live dhe video thirrje.",
         "NSMicrophoneUsageDescription": "X TALENTI ka nevojë për mikrofonin për live dhe thirrje.",
-        "NSPhotoLibraryUsageDescription": "X TALENTI ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime dhe mesazhe.",
+        "NSPhotoLibraryUsageDescription": "X TALENTI ka nevojë për galerinë për të zgjedhur foto dhe video për profil, postime, sponsorë dhe mesazhe.",
+        "NSPhotoLibraryAddUsageDescription": "X TALENTI mund të ruajë foto në galerinë tënde kur e kërkon.",
         "UIBackgroundModes": ["audio", "remote-notification"],
         "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
         "LSMinimumSystemVersion": "15.1"

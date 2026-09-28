@@ -8,15 +8,20 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedTheme = localStorage.getItem('theme');
 
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
+    // Brand default is dark; only leave light when the user explicitly chose it.
+    const preferDark = savedTheme !== 'light';
+    setDarkMode(preferDark);
+    if (preferDark) {
       document.documentElement.classList.add('dark');
+      if (!savedTheme) localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
 
     const loadUser = async () => {

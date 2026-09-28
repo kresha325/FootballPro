@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { Video, ResizeMode } from 'expo-av';
 
 /**
- * Shfaq një karusel të shkurtër reklamash (si AdSlider në web).
- * `ads` duhet të jetë tashmë lista aktive nga API (e përzier opsionale nga prindi).
+ * Shfaq një karusel reklamash.
+ * Çdo ad ka displaySeconds (video = gjatësia; foto = 3s). Çmimi: €1 / 3s / ditë.
  */
 export default function FeedAdSlot({ ads = [], isDark }) {
   const safeAds = Array.isArray(ads) ? ads : [];
@@ -19,11 +20,13 @@ export default function FeedAdSlot({ ads = [], isDark }) {
 
   useEffect(() => {
     if (safeAds.length <= 1) return undefined;
-    const id = setInterval(() => {
+    const current = safeAds[active] || safeAds[0];
+    const sec = Math.max(3, Number(current?.displaySeconds) || 3);
+    const id = setTimeout(() => {
       setActive((prev) => (prev + 1) % safeAds.length);
-    }, 3000);
-    return () => clearInterval(id);
-  }, [safeAds]);
+    }, sec * 1000);
+    return () => clearTimeout(id);
+  }, [safeAds, active]);
 
   if (!safeAds.length) {
     return (
@@ -35,15 +38,32 @@ export default function FeedAdSlot({ ads = [], isDark }) {
 
   const ad = safeAds[active] || safeAds[0];
   const accent = ad.color && /^#/.test(String(ad.color).trim()) ? String(ad.color).trim() : '#34d399';
-  const uri = typeof ad.imageUrl === 'string' && ad.imageUrl.length > 0 ? ad.imageUrl : null;
+  const videoUri = typeof ad.videoUrl === 'string' && ad.videoUrl.length > 0 ? ad.videoUrl : null;
+  const imageUri = typeof ad.imageUrl === 'string' && ad.imageUrl.length > 0 ? ad.imageUrl : null;
+  const displaySec = Math.max(3, Number(ad.displaySeconds) || 3);
 
   return (
     <View style={[styles.wrap, isDark && styles.wrapDark]}>
-      <Text style={[styles.badge, isDark && styles.badgeDark]}>Reklamë</Text>
+      <View style={styles.badgeRow}>
+        <Text style={[styles.badge, isDark && styles.badgeDark]}>Reklamë</Text>
+        <Text style={[styles.meta, isDark && styles.metaDark]}>{displaySec}s</Text>
+      </View>
       <View style={[styles.cardInner, { borderColor: accent }]}>
-        {uri ? (
-          <View style={[styles.imageBox, isDark && styles.imageBoxDark]}>
-            <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+        {videoUri ? (
+          <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>
+            <Video
+              source={{ uri: videoUri }}
+              style={styles.video}
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay
+              isLooping
+              isMuted
+              useNativeControls={false}
+            />
+          </View>
+        ) : imageUri ? (
+          <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>
+            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
           </View>
         ) : null}
         <View style={[styles.colorBar, { backgroundColor: accent }]} />
@@ -84,14 +104,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderColor: '#1e293b',
   },
+  badgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   badge: {
     fontSize: 11,
     fontWeight: '800',
     color: '#64748b',
-    marginBottom: 6,
     letterSpacing: 0.5,
   },
   badgeDark: { color: '#94a3b8' },
+  meta: { fontSize: 11, fontWeight: '700', color: '#9A6B12' },
+  metaDark: { color: '#F2C866' },
   empty: { textAlign: 'center', color: '#64748b', fontSize: 13, paddingVertical: 8 },
   emptyDark: { color: '#94a3b8' },
   cardInner: {
@@ -100,14 +122,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  imageBox: {
-    height: 160,
+  mediaBox: {
+    height: 180,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imageBoxDark: { backgroundColor: '#020617' },
+  mediaBoxDark: { backgroundColor: '#020617' },
   image: { width: '100%', height: '100%' },
+  video: { width: '100%', height: '100%' },
   colorBar: { height: 4, width: '100%' },
   title: { fontSize: 17, fontWeight: '800', color: '#0f172a', paddingHorizontal: 12, paddingTop: 10 },
   titleDark: { color: '#f8fafc' },

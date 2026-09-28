@@ -217,7 +217,8 @@ export const searchAPI = {
   getSuggestions: (q, type = 'all') => API.get('/search/suggestions', { params: { q, type } }),
   getTrendingPosts: () => API.get('/search/trending/posts'),
   getTrendingUsers: () => API.get('/search/trending/users'),
-  getRecommended: () => API.get('/search/recommended'),
+  getRecommended: (params) => API.get('/search/recommended', { params }),
+  getBrowseUsers: (params) => API.get('/search/recommended', { params }),
 };
 
 /* =========================

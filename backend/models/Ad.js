@@ -27,6 +27,32 @@ const Ad = sequelize.define('Ad', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  videoUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  /** image | video */
+  mediaType: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'image',
+  },
+  /** How long this ad stays on screen in the feed carousel (€1/day = 3s). */
+  displaySeconds: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 3,
+  },
+  priceEur: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 1,
+  },
+  /** Source media length in seconds (videos). */
+  mediaDurationSec: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 }, {
   tableName: 'Ads',
 });

@@ -11,6 +11,18 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
+import { useTheme } from '../context/ThemeContext';
+
+/** Fixed light-on-dark colors for brand hero surfaces (never remapped by theme). */
+const ON_DARK = {
+  text: '#FFFFFF',
+  muted: '#CBD5E1',
+  accent: '#FBBF24',
+  surface: '#0F172A',
+  surfaceDeep: '#020617',
+  outline: 'rgba(255,255,255,0.3)',
+  outlineFill: 'rgba(255,255,255,0.1)',
+};
 
 const ROLE_GROUPS = {
   individual: {
@@ -77,12 +89,12 @@ const STEPS = [
   { step: '3', title: 'Fillo Të Lidhesh', desc: 'Postimet, mesazhet dhe skautimi fillojnë menjëherë — falas.' },
 ];
 
-function BrandMark() {
+function BrandMark({ textColor }) {
   const rest = APP_BRAND_NAME.replace(/^x/i, '').trim() || 'Talenti';
   return (
     <Text style={styles.brandMark}>
       <Text style={styles.brandX}>X</Text>
-      <Text style={styles.brandRest}>{rest}</Text>
+      <Text style={[styles.brandRest, textColor ? { color: textColor } : null]}>{rest}</Text>
     </Text>
   );
 }
@@ -90,6 +102,7 @@ function BrandMark() {
 export default function LandingScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const scrollRef = useRef(null);
   const [pricingY, setPricingY] = useState(0);
   const [roleGroup, setRoleGroup] = useState('individual');
@@ -105,12 +118,25 @@ export default function LandingScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <View style={[styles.nav, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      <View
+        style={[
+          styles.nav,
+          {
+            paddingTop: insets.top,
+            backgroundColor: isDark ? colors.header : 'rgba(255,255,255,0.96)',
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View style={styles.navInner}>
-          <BrandMark />
-          <TouchableOpacity style={styles.navCta} onPress={goLogin} activeOpacity={0.85}>
-            <Text style={styles.navCtaText}>Hyr</Text>
+          <BrandMark textColor={colors.text} />
+          <TouchableOpacity
+            style={[styles.navCta, { backgroundColor: ON_DARK.surface }]}
+            onPress={goLogin}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.navCtaText, { color: ON_DARK.text }]}>Hyr</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -123,42 +149,52 @@ export default function LandingScreen() {
         bounces
         nestedScrollEnabled
       >
-        <View style={styles.hero}>
+        <View style={[styles.hero, { backgroundColor: ON_DARK.surface }]}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Platforma #1 për talente futbolli</Text>
+            <Text style={[styles.badgeText, { color: ON_DARK.accent }]}>Platforma #1 për talente futbolli</Text>
           </View>
-          <Text style={styles.heroTitle}>
-            Zbulo. Zhvillo. <Text style={styles.heroAccent}>Shko Më Tej.</Text>
+          <Text style={[styles.heroTitle, { color: ON_DARK.text }]}>
+            Zbulo. Zhvillo. <Text style={[styles.heroAccent, { color: ON_DARK.accent }]}>Shko Më Tej.</Text>
           </Text>
-          <Text style={styles.heroBody}>
+          <Text style={[styles.heroBody, { color: ON_DARK.muted }]}>
             {APP_BRAND_NAME} lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme — për të ndarë
             talentin, për t'u zbuluar dhe për të ndërtuar karrierën në futboll.
           </Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={goRegister} activeOpacity={0.9}>
             <Text style={styles.primaryBtnText}>Regjistrohu Falas</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={scrollToPricing} activeOpacity={0.9}>
-            <Text style={styles.secondaryBtnText}>Shiko Çmimet</Text>
+          <TouchableOpacity
+            style={[
+              styles.secondaryBtn,
+              { borderColor: ON_DARK.outline, backgroundColor: ON_DARK.outlineFill },
+            ]}
+            onPress={scrollToPricing}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.secondaryBtnText, { color: ON_DARK.text }]}>Shiko Çmimet</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Çka Është {APP_BRAND_NAME}?</Text>
-          <Text style={styles.sectionBody}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çka Është {APP_BRAND_NAME}?</Text>
+          <Text style={[styles.sectionBody, { color: colors.muted }]}>
             {APP_BRAND_NAME} është një rrjet social i dedikuar botës së futbollit. E krijuar për lojtarë të rinj që
             duan të tregojnë talentin e tyre, për trajnerë e skautë që kërkojnë lojtarë të rinj, dhe për klube e
             federata që duan të organizojnë e menaxhojnë talentet e tyre — të gjithë në një vend.
           </Text>
         </View>
 
-        <View style={styles.featuresBand}>
-          <Text style={styles.sectionTitle}>Çka Mund Të Bësh</Text>
+        <View style={[styles.featuresBand, { backgroundColor: colors.bgElevated }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çka Mund Të Bësh</Text>
           <View style={styles.featureGrid}>
             {FEATURES.map((f) => (
-              <View key={f.title} style={styles.featureCard}>
+              <View
+                key={f.title}
+                style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
                 <Ionicons name={f.icon} size={26} color="#F59E0B" style={styles.featureIcon} />
-                <Text style={styles.featureTitle}>{f.title}</Text>
-                <Text style={styles.featureDesc}>{f.desc}</Text>
+                <Text style={[styles.featureTitle, { color: colors.text }]}>{f.title}</Text>
+                <Text style={[styles.featureDesc, { color: colors.muted }]}>{f.desc}</Text>
               </View>
             ))}
           </View>
@@ -168,42 +204,85 @@ export default function LandingScreen() {
           style={styles.section}
           onLayout={(e) => setPricingY(e.nativeEvent.layout.y)}
         >
-          <Text style={styles.sectionTitle}>Çmimet</Text>
-          <Text style={[styles.sectionBody, styles.pricingIntro]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çmimet</Text>
+          <Text style={[styles.sectionBody, styles.pricingIntro, { color: colors.muted }]}>
             Zgjidh paketën që i përshtatet rolit tënd në futboll.
           </Text>
 
-          <View style={styles.toggle}>
+          <View style={[styles.toggle, { backgroundColor: colors.bgElevated }]}>
             {Object.entries(ROLE_GROUPS).map(([key, g]) => (
               <TouchableOpacity
                 key={key}
-                style={[styles.toggleBtn, roleGroup === key && styles.toggleBtnActive]}
+                style={[
+                  styles.toggleBtn,
+                  roleGroup === key && [styles.toggleBtnActive, { backgroundColor: colors.card }],
+                ]}
                 onPress={() => setRoleGroup(key)}
               >
-                <Text style={[styles.toggleText, roleGroup === key && styles.toggleTextActive]} numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    { color: colors.muted },
+                    roleGroup === key && styles.toggleTextActive,
+                  ]}
+                  numberOfLines={2}
+                >
                   {g.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.rolesHint}>{group.roles}</Text>
+          <Text style={[styles.rolesHint, { color: colors.mutedSoft }]}>{group.roles}</Text>
 
           {['social', 'basic', 'pro'].map((planKey) => {
             const plan = group.plans[planKey];
             const isPro = planKey === 'pro';
             const included = FEATURE_MATRIX.filter((f) => f[planKey]);
             return (
-              <View key={planKey} style={[styles.planCard, isPro && styles.planCardPro]}>
+              <View
+                key={planKey}
+                style={[
+                  styles.planCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  isPro && {
+                    borderColor: '#F59E0B',
+                    backgroundColor: ON_DARK.surface,
+                  },
+                ]}
+              >
                 {isPro ? (
                   <View style={styles.popularBadge}>
                     <Text style={styles.popularBadgeText}>Më Popullorja</Text>
                   </View>
                 ) : null}
-                <Text style={[styles.planName, isPro && styles.planNamePro]}>{plan.name}</Text>
-                <Text style={[styles.planPrice, isPro && styles.planPricePro]}>
+                <Text
+                  style={[
+                    styles.planName,
+                    { color: colors.text },
+                    isPro && { color: ON_DARK.accent },
+                  ]}
+                >
+                  {plan.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.planPrice,
+                    { color: colors.text },
+                    isPro && { color: ON_DARK.text },
+                  ]}
+                >
                   {plan.price === 0 ? 'Falas' : `€${plan.price}`}
                   {plan.price !== 0 ? (
-                    <Text style={[styles.planPeriod, isPro && styles.planPeriodPro]}> {plan.period}</Text>
+                    <Text
+                      style={[
+                        styles.planPeriod,
+                        { color: colors.muted },
+                        isPro && { color: ON_DARK.muted },
+                      ]}
+                    >
+                      {' '}
+                      {plan.period}
+                    </Text>
                   ) : null}
                 </Text>
                 {included.slice(0, 6).map((f) => (
@@ -214,7 +293,15 @@ export default function LandingScreen() {
                       color={isPro ? '#FBBF24' : '#10B981'}
                       style={styles.planCheck}
                     />
-                    <Text style={[styles.planFeature, isPro && styles.planFeaturePro]}>{f.label}</Text>
+                    <Text
+                      style={[
+                        styles.planFeature,
+                        { color: colors.textSecondary },
+                        isPro && { color: '#E2E8F0' },
+                      ]}
+                    >
+                      {f.label}
+                    </Text>
                   </View>
                 ))}
                 <TouchableOpacity
@@ -231,27 +318,30 @@ export default function LandingScreen() {
           })}
         </View>
 
-        <View style={styles.featuresBand}>
-          <Text style={styles.sectionTitle}>Kush Mund Të Regjistrohet</Text>
+        <View style={[styles.featuresBand, { backgroundColor: colors.bgElevated }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Kush Mund Të Regjistrohet</Text>
           <View style={styles.roleGrid}>
             {ROLES.map((r) => (
-              <View key={r.label} style={styles.roleChip}>
+              <View
+                key={r.label}
+                style={[styles.roleChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
                 <Ionicons name={r.icon} size={20} color="#F59E0B" style={styles.roleIcon} />
-                <Text style={styles.roleLabel}>{r.label}</Text>
+                <Text style={[styles.roleLabel, { color: colors.text }]}>{r.label}</Text>
               </View>
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Si Të Regjistrohesh</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Si Të Regjistrohesh</Text>
           {STEPS.map((s) => (
             <View key={s.step} style={styles.stepBlock}>
               <View style={styles.stepCircle}>
                 <Text style={styles.stepNumber}>{s.step}</Text>
               </View>
-              <Text style={styles.stepTitle}>{s.title}</Text>
-              <Text style={styles.stepDesc}>{s.desc}</Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>{s.title}</Text>
+              <Text style={[styles.stepDesc, { color: colors.muted }]}>{s.desc}</Text>
             </View>
           ))}
           <TouchableOpacity style={styles.primaryBtn} onPress={goRegister} activeOpacity={0.9}>
@@ -259,9 +349,11 @@ export default function LandingScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.contact}>
-          <Text style={styles.contactTitle}>Kontakti</Text>
-          <Text style={styles.contactBody}>Ke pyetje? Na kontakto dhe do të përgjigjemi sa më shpejt.</Text>
+        <View style={[styles.contact, { backgroundColor: ON_DARK.surface }]}>
+          <Text style={[styles.contactTitle, { color: ON_DARK.text }]}>Kontakti</Text>
+          <Text style={[styles.contactBody, { color: ON_DARK.muted }]}>
+            Ke pyetje? Na kontakto dhe do të përgjigjemi sa më shpejt.
+          </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => Linking.openURL('mailto:support@xtalenti.com')}
@@ -271,7 +363,7 @@ export default function LandingScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: ON_DARK.surfaceDeep }]}>
           <Text style={styles.footerText}>
             © {year} {APP_BRAND_NAME}. Të gjitha të drejtat e rezervuara.
           </Text>

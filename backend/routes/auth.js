@@ -103,6 +103,7 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
         'points',
         'level',
         'premium',
+        'subscriptionPlan',
         'verified',
         'createdAt',
       ],

@@ -255,7 +255,7 @@ function Navbar() {
             height={40}
             decoding="async"
           />
-          <span className="truncate text-xl font-extrabold uppercase tracking-[.16em] text-white sm:text-2xl">
+          <span className="truncate text-xl font-extrabold uppercase tracking-[.16em] text-[var(--xt-color-text)] sm:text-2xl">
             {APP_BRAND_WORDMARK}
           </span>
         </Link>
@@ -368,7 +368,7 @@ function Navbar() {
               <Link
                 to="/feed"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
               >
                 <HomeIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Ballina</span>
@@ -377,7 +377,7 @@ function Navbar() {
               <Link
                 to="/marketplace"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
               >
                 <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Tregu</span>
@@ -391,7 +391,7 @@ function Navbar() {
               <Link
                 to="/tournaments"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
               >
                 <TrophyIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Turnetë</span>
@@ -414,7 +414,7 @@ function Navbar() {
             <Link
               to="/tournaments"
               onClick={() => setIsMenuOpen(false)}
-              className="md:hidden flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="md:hidden flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Turnetë</span>
@@ -424,7 +424,7 @@ function Navbar() {
             <Link 
               to="/notifications" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <BellIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Njoftimet</span>
@@ -439,7 +439,7 @@ function Navbar() {
             <Link 
               to="/messaging" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Mesazhet</span>
@@ -454,7 +454,7 @@ function Navbar() {
             <Link 
               to="/profiles" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Shfleto Profilet</span>
@@ -464,7 +464,7 @@ function Navbar() {
             <Link 
               to="/analytics" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
               <span className="font-medium">Analitika</span>
@@ -474,7 +474,7 @@ function Navbar() {
             <Link 
               to="/gamification" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <TrophyIcon className="h-6 w-6" />
               <span className="font-medium">Gamifikimi</span>
@@ -484,7 +484,7 @@ function Navbar() {
             <Link 
               to="/videos" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <VideoCameraIcon className="h-6 w-6" />
               <span className="font-medium">Videot</span>
@@ -494,7 +494,7 @@ function Navbar() {
             <Link 
               to="/matches" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Ndeshjet</span>
@@ -505,7 +505,7 @@ function Navbar() {
               <Link 
                 to="/scouting" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Scouting</span>
@@ -563,7 +563,7 @@ function Navbar() {
             <Link 
               to="/settings" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
             >
               <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Cilësimet</span>

@@ -7,7 +7,14 @@ const uploadCloud = require('../middleware/uploadCloudinary');
 // GET all active ads
 router.get('/', adsController.getActiveAds);
 
-// POST create ad
-router.post('/', uploadCloud.fields([{ name: 'image', maxCount: 1 }]), adsController.createAd);
+// POST create ad (photo or video)
+router.post(
+  '/',
+  uploadCloud.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+  ]),
+  adsController.createAd
+);
 
 module.exports = router;

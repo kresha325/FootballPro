@@ -68,23 +68,23 @@ export default function WelcomeOnboarding() {
   const slide = SLIDES[index];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-gradient-to-b from-teal-50 via-slate-50 to-white text-slate-900">
+    <div className="min-h-[100dvh] flex flex-col bg-[var(--xt-color-canvas)] text-[var(--xt-color-text)]">
       <header className="flex items-center justify-between px-5 pt-6 pb-2">
         <div className="text-2xl font-extrabold tracking-tight">
-          <span className="text-teal-700">X</span>
+          <span className="text-[var(--xt-color-gold)]">X</span>
           <span>{APP_BRAND_WORDMARK}</span>
         </div>
         <button
           type="button"
           onClick={finish}
-          className="text-sm font-semibold text-slate-500 hover:text-slate-800"
+          className="text-sm font-semibold text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]"
         >
           Anashkalo
         </button>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-lg mx-auto w-full">
-        <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-md mb-8 bg-teal-100 ring-1 ring-teal-900/5">
+        <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-md mb-8 bg-[var(--xt-color-surface-raised)] ring-1 ring-[var(--xt-color-border)]">
           <img
             key={slide.key}
             src={slide.image}
@@ -92,15 +92,15 @@ export default function WelcomeOnboarding() {
             className="w-full h-full object-cover"
           />
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4">{slide.title}</h1>
-        <p className="text-base md:text-lg text-slate-600 leading-relaxed">{slide.body}</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4 text-[var(--xt-color-text)]">{slide.title}</h1>
+        <p className="text-base md:text-lg text-[var(--xt-color-text-muted)] leading-relaxed">{slide.body}</p>
 
         <div className="flex gap-2 mt-10 mb-8">
           {SLIDES.map((s, i) => (
             <span
               key={s.key}
               className={`h-2 rounded-full transition-all ${
-                i === index ? 'w-6 bg-teal-700' : 'w-2 bg-slate-300'
+                i === index ? 'w-6 bg-[var(--xt-color-gold)]' : 'w-2 bg-[var(--xt-color-border-strong)]'
               }`}
             />
           ))}
@@ -111,14 +111,14 @@ export default function WelcomeOnboarding() {
         <button
           type="button"
           onClick={goNext}
-          className="w-full py-3.5 rounded-xl bg-teal-700 text-white font-bold text-lg hover:bg-teal-800 transition"
+          className="w-full py-3.5 rounded-xl bg-[var(--xt-color-gold)] text-[#101114] font-bold text-lg hover:opacity-95 transition"
         >
           {index >= SLIDES.length - 1 ? 'Fillo' : 'Vazhdo'}
         </button>
         {index >= SLIDES.length - 1 ? (
-          <p className="text-center text-sm text-slate-500">
+          <p className="text-center text-sm text-[var(--xt-color-text-muted)]">
             Ke llogari?{' '}
-            <Link to="/login" onClick={markWelcomeOnboardingDone} className="text-teal-700 font-semibold">
+            <Link to="/login" onClick={markWelcomeOnboardingDone} className="text-[var(--xt-color-gold-bright)] font-semibold">
               Hyr
             </Link>
           </p>
