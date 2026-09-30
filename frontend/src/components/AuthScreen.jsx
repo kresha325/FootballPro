@@ -364,7 +364,16 @@ export default function AuthScreen({ initialMode }) {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 className="h-5 w-5 rounded border-[var(--xt-color-border-strong)] accent-[var(--xt-color-gold)] focus-visible:outline"
               />
-              <span>Pranoj kushtet e përdorimit dhe privatësinë</span>
+              <span>
+                Pranoj{' '}
+                <Link to="/terms" className="font-semibold text-[var(--xt-color-gold-bright)] underline underline-offset-2">
+                  kushtet e përdorimit
+                </Link>{' '}
+                dhe{' '}
+                <Link to="/privacy" className="font-semibold text-[var(--xt-color-gold-bright)] underline underline-offset-2">
+                  privatësinë
+                </Link>
+              </span>
             </label>
           ) : null}
 

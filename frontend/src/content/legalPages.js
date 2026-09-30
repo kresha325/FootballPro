@@ -1,177 +1,408 @@
-/** Shared legal copy for SPA LegalPage + static GitHub Pages HTML (Apple/TestFlight crawlers). */
+/** Shared legal / info copy for SPA LegalPage + static GitHub Pages HTML (Apple/TestFlight crawlers). */
 
-export const LEGAL_LAST_UPDATED = '2026-09-16';
+export const LEGAL_LAST_UPDATED = '2026-09-30';
+
+export const LEGAL_CONTACT = {
+  email: 'support@xtalenti.com',
+  web: 'https://xtalenti.com',
+  brand: 'X TALENTI',
+};
+
+/** Nav order shown across LegalPage, footer, Settings. */
+export const legalNav = [
+  { kind: 'about', label: 'Rreth nesh', short: 'Info', path: '/about' },
+  { kind: 'help', label: 'Ndihmë & FAQ', short: 'Ndihmë', path: '/help' },
+  { kind: 'privacy', label: 'Privatësia', short: 'Privatësia', path: '/privacy' },
+  { kind: 'terms', label: 'Kushtet', short: 'Kushtet', path: '/terms' },
+  { kind: 'cookies', label: 'Cookies', short: 'Cookies', path: '/cookies' },
+  { kind: 'data', label: 'Të dhënat e tua', short: 'Të dhënat', path: '/data' },
+  {
+    kind: 'community-guidelines',
+    label: 'Komuniteti',
+    short: 'Komuniteti',
+    path: '/community-guidelines',
+  },
+];
 
 export const legalPages = {
+  about: {
+    slug: 'about',
+    title: 'Rreth X TALENTI',
+    description:
+      'Çfarë është X TALENTI: platforma që lidh talentet e futbollit, klubet, skautët dhe mundësitë.',
+    sections: [
+      {
+        heading: 'Misioni',
+        paragraphs: [
+          'X TALENTI është platformë digjitale për futbollin: profil publik, CV, media, mesazha, live, turne dhe zbulim talenti.',
+          'Qëllimi ynë: t’i japim çdo lojtari, trajneri, klubi dhe skauti një hapësirë profesionale ku talenti bëhet i dukshëm.',
+        ],
+      },
+      {
+        heading: 'Për kë është',
+        paragraphs: [
+          'Lojtarë dhe atletë që ndërtojnë profil dhe histori performancë.',
+          'Klube, skautë, trajnerë, menaxherë, federata dhe organizata që kërkojnë ose zhvillojnë talent.',
+          'Biznese dhe sponsorë që lidhen me komunitetin e futbollit brenda platformës.',
+        ],
+      },
+      {
+        heading: 'Platforma',
+        paragraphs: [
+          'Web: https://xtalenti.com — dhe aplikacioni celular X TALENTI (iOS / Android).',
+          'Planet: Free (trial 30 ditë me tipare Basic), Basic dhe Pro. Detajet e çmimeve janë në faqen Premium / landing.',
+        ],
+      },
+      {
+        heading: 'Kontakt',
+        paragraphs: [
+          `Kontakt (mbështetje & privatësi): ${LEGAL_CONTACT.email}`,
+          `Web: ${LEGAL_CONTACT.web}`,
+        ],
+      },
+    ],
+  },
+
+  help: {
+    slug: 'help',
+    title: 'Ndihmë & pyetje të shpeshta',
+    description: 'Si të përdorësh X TALENTI: llogaria, profili, privatësia, pagesat dhe raportimi.',
+    sections: [
+      {
+        heading: 'Llogaria dhe hyrja',
+        paragraphs: [
+          'Regjistrohu me email dhe fjalëkalim, ose me Google/Facebook kur janë të disponueshme në web.',
+          'Nëse ke harruar fjalëkalimin, përdor “Ke harruar fjalëkalimin?” në faqen e hyrjes.',
+          'Llogaritë e pezulluara ose të fshira nuk mund të hyjnë — kontakto support@xtalenti.com nëse mendon se është gabim.',
+        ],
+      },
+      {
+        heading: 'Profili dhe CV',
+        paragraphs: [
+          'Plotëso foto, bio, pozicion, klub, arritje dhe media (përfshirë video YouTube) që skautët/klubet të të gjejnë.',
+          'CV dixhitale publike është e disponueshme në /cv/{id} — mund ta ndash nga profili.',
+          'Lojtarët e mitur mund të kenë hapa shtesë verifikimi (prind / klub) sipas rregullave të platformës.',
+        ],
+      },
+      {
+        heading: 'Planet Free / Basic / Pro',
+        paragraphs: [
+          'Free pas trial: tipare sociale (feed, mesazhe, turne bazë).',
+          'Basic (dhe trial 30-ditor): analitika e avancuar, badge i verifikuar për role jo-atlet, highlights deri në 10.',
+          'Pro: rekomandime scouting, live pa limit, tema profili dhe tipare premium shtesë.',
+          'Blerjet në celular kalojnë në App Store / Google Play; në web mund të përdoret Stripe kur është aktiv.',
+        ],
+      },
+      {
+        heading: 'Privatësia dhe të dhënat',
+        paragraphs: [
+          'Lexo Politikën e privatësisë dhe faqen “Të dhënat e tua” për të drejtat e aksesit, eksportit dhe fshirjes.',
+          'Fshirja e llogarisë: Settings → Fshi llogarinë (web ose app). Disa të dhëna teknike/financiare mund të ruhen për detyrime ligjore.',
+        ],
+      },
+      {
+        heading: 'Siguria dhe raportimi',
+        paragraphs: [
+          'Raporto përmbajtje ose sjellje që shkel Udhëzuesit e komunitetit (nga postimi/profili kur është e disponueshme, ose me email).',
+          'Mos ndaj fjalëkalimin. Aktivizo njoftime push vetëm nëse i dëshiron; mund t’i çaktivizosh në Settings.',
+        ],
+      },
+      {
+        heading: 'Kontakt mbështetje',
+        paragraphs: [
+          `Email: ${LEGAL_CONTACT.email}`,
+          'Përshkruaj problemin, rolin e llogarisë dhe pajisjen (web / iOS / Android) që të përgjigjemi më shpejt.',
+        ],
+      },
+    ],
+  },
+
   privacy: {
     slug: 'privacy',
     title: 'Politika e privatësisë — X TALENTI',
     description:
-      'Si X TALENTI mbledh, përdor dhe mbron të dhënat personale në web dhe në aplikacionin celular.',
+      'Si X TALENTI mbledh, përdor, ruan dhe mbron të dhënat personale në web dhe në aplikacionin celular.',
     sections: [
       {
-        heading: '1. Kush jemi',
+        heading: '1. Kush jemi (kontroluesi i të dhënave)',
         paragraphs: [
-          'X TALENTI (“ne”, “platforma”) është një rrjet social dhe mjet për talentet e futbollit, klubet, skautët dhe profesionistët e sportit. Kjo politikë shpjegon si trajtojmë të dhënat personale kur përdor faqen xtalenti.com ose aplikacionin celular X TALENTI (iOS/Android).',
-          'Për pyetje privatësie: support@xtalenti.com.',
+          'X TALENTI (“ne”, “platforma”) ofron shërbime web dhe celular për komunitetin e futbollit. Kjo politikë zbatohet për xtalenti.com dhe aplikacionin X TALENTI (iOS/Android).',
+          `Për privatësi dhe mbështetje: ${LEGAL_CONTACT.email}.`,
         ],
       },
       {
         heading: '2. Çfarë të dhënash mbledhim',
         paragraphs: [
-          'Të dhëna llogarie: email, fjalëkalim (i hash-uar), emër, mbiemër, roli në platformë (p.sh. athlete, club, scout).',
-          'Profil sportiv: klub, pozicion, mosha/kategoria, bio, qyteti/shteti, arritje, media profili (foto/video) që ngarkon ti.',
-          'Përmbajtje që publikon: postime, komente, mesazhe, galeri, live/stream, të dhëna turneesh dhe marketplace kur i përdor.',
-          'Komunikime: mesazhe private, njoftime në app, dhe token i njoftimeve push (Expo/APNs/FCM) nëse i aktivizon.',
-          'Thirrje dhe live: për video thirrje / Go Live mund të kërkojmë akses në kamerë dhe mikrofon; audio/video i sesionit përpunohet përmes ofruesit LiveKit për të ofruar shërbimin.',
-          'Pagesa: Premium dhe XCoin në celular kalojnë nëpër App Store / Google Play (IAP). Në web mund të përdoret Stripe. Ne nuk ruajmë numra kartelash në serverët tanë.',
-          'Të dhëna teknike: IP, lloj pajisjeje/OS, loge serveri për siguri, stabilitet dhe abuzim.',
+          'Llogaria: email, fjalëkalim (i hash-uar), emër, mbiemër, roli (athlete, club, scout, etj.), data e lindjes kur jepet.',
+          'Profil sportiv: klub, pozicion, qytet/shtet, bio, arritje, foto/video, media YouTube, CV dixhitale.',
+          'Përmbajtje e krijuar nga ti: postime, komente, like, mesazhe, galeri, live/stream, turne, marketplace.',
+          'Komunikime: mesazhe private, njoftime në app, token push (Expo/APNs/FCM) nëse i aktivizon.',
+          'Kamera/mikrofon: vetëm kur nis video thirrje ose Go Live; audio/video i sesionit përpunohet përmes LiveKit për të ofruar shërbimin.',
+          'Pagesa: Premium/XCoin në celular via Apple/Google IAP; në web Stripe kur është aktiv. Ne nuk ruajmë numra të plotë kartelash.',
+          'Teknike: IP, lloj pajisjeje/OS, loge serveri për siguri, stabilitet, abuzim dhe diagnostikim.',
         ],
       },
       {
-        heading: '3. Pse i përdorim',
+        heading: '3. Baza ligjore dhe qëllimet',
         paragraphs: [
-          'Për të krijuar dhe mirëmbajtur llogarinë tënde, profilin dhe CV dixhitale.',
-          'Për feed, messaging, njoftime, live, thirrje, turne, marketplace dhe funksione Premium/XCoin.',
-          'Për verifikim (p.sh. prind/klub kur aplikohet), moderim, raportime, bllokime dhe siguri.',
-          'Për të përmbushur detyrime ligjore dhe për të mbrojtur të drejtat e përdoruesve dhe të platformës.',
+          'Ekzekutimi i kontratës: llogaria, profili, feed, messaging, live, turne, Premium.',
+          'Interesi legjitim: siguri, parandalim mashtrimi, përmirësim produkti, statistika të agreguara.',
+          'Pëlqimi: njoftime push, cookies jo-thelbësore (kur aplikohen), marketing opsional.',
+          'Detyrim ligjor: kontabilitet, kërkesa nga autoritetet, mbrojtja e të miturve.',
         ],
       },
       {
         heading: '4. Fëmijë dhe të mitur',
         paragraphs: [
-          'X TALENTI mund të përdoret nga lojtarë të rinj futbolli. Kur kërkohet nga rregullat e platformës, mund të aktivizohen hapa verifikimi (p.sh. konfirmim prindi) për profile të miturish.',
-          'Mos ndaj të dhëna personale të panevojshme të të miturve. Prindërit/kujdestarët mund të na kontaktojnë në support@xtalenti.com për kërkesa privatësie ose fshirje.',
+          'Platforma mund të përdoret nga lojtarë të rinj. Kur kërkohet, aktivizohen hapa verifikimi (p.sh. konfirmim prindi) për profile të miturish.',
+          'Mos ndaj të dhëna personale të panevojshme të të miturve. Prindërit/kujdestarët mund të kërkojnë fshirje ose kufizim te support@xtalenti.com.',
         ],
       },
       {
         heading: '5. Me kë i ndajmë',
         paragraphs: [
-          'Ofrues hosting/infrastructure (p.sh. Render) për API dhe bazën e të dhënave.',
-          'Ofrues media (p.sh. Cloudinary) për ruajtjen e fotove/videove që ngarkon.',
-          'Expo / Apple / Google për njoftime push kur i ke aktivizuar.',
+          'Hosting / infrastrukturë (p.sh. Render) për API dhe bazën e të dhënave.',
+          'Media (p.sh. Cloudinary) për foto/video që ngarkon.',
+          'Expo / Apple / Google për njoftime push.',
           'LiveKit për video thirrje dhe live.',
-          'Apple / Google për blerje In-App; Stripe për pagesa web kur janë të aktivizuara.',
-          'Nuk shesim të dhënat e tua personale te palë të treta për marketing.',
+          'Apple / Google për IAP; Stripe për pagesa web kur janë aktive.',
+          'YouTube (Google) kur lidh ose shfaq video nga URL YouTube që ti vendos.',
+          'Nuk shesim të dhëna personale për marketing të palëve të treta.',
         ],
       },
       {
-        heading: '6. Ruajtja dhe siguria',
+        heading: '6. Transferime ndërkombëtare',
         paragraphs: [
-          'I ruajmë të dhënat sa kohë llogaria jote është aktive dhe sa nevojitet për shërbimin, sigurinë ose detyrime ligjore.',
-          'Përdorim masa teknike dhe organizative të arsyeshme (HTTPS, kontroll aksesesh, fjalëkalime të hash-uara). Asnjë sistem nuk është 100% i sigurt.',
+          'Disa ofrues mund të përpunojnë të dhëna jashtë Shqipërisë / BE-së. Përdorim masa të arsyeshme kontraktuale dhe teknike sipas praktikave të ofruesve (p.sh. klauzola standarde ku aplikohen).',
         ],
       },
       {
-        heading: '7. Të drejtat e tua',
+        heading: '7. Ruajtja dhe siguria',
         paragraphs: [
-          'Mund të shikosh dhe përditësosh shumicën e të dhënave të profilit në app/web.',
-          'Mund të çaktivizosh njoftimet push në Settings.',
-          'Mund të kërkosh fshirjen e llogarisë nga aplikacioni: Settings → Fshi llogarinë (kërkon konfirmim). Pas fshirjes, të dhënat personale anonimizohen sipas procesit tonë; disa të dhëna teknike/log mund të ruhen përkohësisht për siguri ose detyrime ligjore.',
-          'Për kërkesa shtesë privatësie: support@xtalenti.com.',
+          'Të dhënat ruhen sa kohë llogaria është aktive dhe sa nevojitet për shërbimin, sigurinë ose ligjin.',
+          'Pas fshirjes së llogarisë, të dhënat personale anonimizohen sipas procesit tonë; loge/financiare mund të ruhen përkohësisht.',
+          'Masa: HTTPS, kontroll aksesesh, fjalëkalime të hash-uara. Asnjë sistem nuk është 100% i sigurt.',
         ],
       },
       {
-        heading: '8. Cookies dhe tracking',
+        heading: '8. Të drejtat e tua',
         paragraphs: [
-          'Faqja web mund të përdorë ruajtje lokale/sesioni për autentikim dhe preferenca. Aplikacioni celular nuk përdor reklamues tracking të palëve të treta si default.',
-          'Nuk bëjmë “tracking” ndër-app për reklama sipas kuptimit të App Tracking Transparency, përveçse nëse kjo ndryshon në të ardhmen — në atë rast do të kërkojmë leje kur kërkohet nga Apple/Google.',
+          'Akses, korrigjim, kufizim, kundërshtim, portueshmëri (kur zbatohet), tërheqje e pëlqimit.',
+          'Fshirje llogarie: Settings → Fshi llogarinë (web/app).',
+          'Detaje praktike: faqja “Të dhënat e tua” (/data) dhe email support@xtalenti.com.',
         ],
       },
       {
-        heading: '9. Ndryshime',
+        heading: '9. Cookies dhe tracking',
         paragraphs: [
-          'Mund ta përditësojmë këtë politikë. Data e përditësimit shfaqet në krye të faqes. Përdorimi i vazhdueshëm pas ndryshimeve nënkupton pranimin e versionit të ri, përveçse kur ligji kërkon pëlqim të veçantë.',
+          'Shiko Politikën e cookies (/cookies). Web përdor ruajtje lokale/sesioni për autentikim dhe preferenca.',
+          'Aplikacioni nuk përdor reklamues tracking të palëve të treta si default. Nuk bëjmë “tracking” ndër-app për ATT përveçse nëse ndryshon — atëherë kërkojmë leje.',
         ],
       },
       {
-        heading: '10. Kontakt',
+        heading: '10. Ndryshime dhe kontakt',
         paragraphs: [
-          'Email: support@xtalenti.com',
-          'Web: https://xtalenti.com',
+          'Mund ta përditësojmë këtë politikë. Data e përditësimit shfaqet në krye. Përdorimi i vazhdueshëm pas ndryshimeve nënkupton pranimin, përveçse kur ligji kërkon pëlqim të ri.',
+          `Kontakt: ${LEGAL_CONTACT.email} · ${LEGAL_CONTACT.web}`,
         ],
       },
     ],
   },
+
   terms: {
     slug: 'terms',
     title: 'Kushtet e përdorimit — X TALENTI',
-    description: 'Kushtet e përdorimit të platformës X TALENTI (web dhe aplikacion celular).',
+    description: 'Kushtet që rregullojnë përdorimin e platformës X TALENTI (web dhe celular).',
     sections: [
       {
-        heading: '1. Pranimi',
+        heading: '1. Pranimi i kushteve',
         paragraphs: [
-          'Duke krijuar llogari ose duke përdorur X TALENTI, pranon këto kushte dhe Udhëzuesit e komunitetit.',
+          'Duke krijuar llogari ose duke përdorur X TALENTI, pranon këto Kushte, Politikën e privatësisë dhe Udhëzuesit e komunitetit.',
+          'Nëse nuk pajtohesh, mos përdor shërbimin.',
         ],
       },
       {
-        heading: '2. Llogaria',
+        heading: '2. Përshkrimi i shërbimit',
+        paragraphs: [
+          'X TALENTI ofron profil, feed, mesazha, media, live, turne, scouting, marketplace, wallet/XCoin dhe tipare Premium sipas planit.',
+          'Mund të ndryshojmë, pezullojmë ose ndërpresim funksione për mirëmbajtje, siguri ose arsye biznesi.',
+        ],
+      },
+      {
+        heading: '3. Llogaria dhe eligjibiliteti',
         paragraphs: [
           'Je përgjegjës për saktesinë e të dhënave dhe për ruajtjen e kredencialeve.',
-          'Mos krijo llogari mashtruese ose për persona të tjerë pa autorizim.',
+          'Mos krijo llogari mashtruese ose në emër të të tjerëve pa autorizim.',
+          'Për të mitur, prindi/kujdestari duhet të mbikëqyrë përdorimin dhe të plotësojë verifikimet e kërkuara.',
         ],
       },
       {
-        heading: '3. Përmbajtja jote',
+        heading: '4. Përmbajtja jote dhe licenca',
         paragraphs: [
-          'Mban të drejtat mbi përmbajtjen që publikon, por na jep licencë jo-ekskluzive për ta shfaqur në platformë (feed, profil, CV, live, etj.).',
-          'Nuk lejohet përmbajtje e paligjshme, abuzive, ose që shkel të drejtat e të tjerëve.',
+          'Mban të drejtat mbi përmbajtjen që publikon. Na jep licencë botërore, jo-ekskluzive, për ta shfaqur, ruajtur dhe shpërndarë brenda platformës (feed, profil, CV, live, etj.).',
+          'Garanton se ke të drejtë ta publikosh përmbajtjen dhe se ajo nuk shkel ligjin ose të drejtat e të tjerëve.',
         ],
       },
       {
-        heading: '4. Pagesat',
+        heading: '5. Sjellja e ndaluar',
         paragraphs: [
-          'Premium, XCoin dhe blerjet digjitale në iOS/Android rregullohen nga Apple App Store / Google Play dhe politikat e tyre.',
-          'Pagesat web (kur aktivizohen) mund të kalojnë në Stripe.',
+          'Ndalohen spam, mashtrime, ngacmim, gjuhë urrejtjeje, përmbajtje seksuale e padëshiruar, shkelje IP, scraping i paautorizuar, bypass i pagesave/planëve.',
+          'Shkeljet mund të çojnë në heqje përmbajtjeje, pezullim ose mbyllje llogarie.',
         ],
       },
       {
-        heading: '5. Pezullimi',
+        heading: '6. Pagesat dhe abonimet',
         paragraphs: [
-          'Mund të heqim përmbajtje ose të pezullojmë/mbyllim llogari që shkelin rregullat, abuzojnë sistemin, ose dëmtojnë të tjerët.',
+          'Blerjet digjitale në iOS/Android rregullohen nga Apple App Store / Google Play (përfshirë rinovimet dhe rifundimet sipas politikave të tyre).',
+          'Pagesat web (kur aktivizohen) mund të kalojnë në Stripe. XCoin dhe marketplace kanë rregulla shtesë në produkt.',
+          'Çmimet dhe tiparet e planeve Free/Basic/Pro mund të ndryshojnë; ndryshimet komunikohen në app/web.',
         ],
       },
       {
-        heading: '6. Mosmarrëveshje / “siç është”',
+        heading: '7. Pronësia intelektuale e platformës',
         paragraphs: [
-          'Shërbimi ofrohet “siç është”. Mund të ndodhin ndërprerje rrjeti, live ose mirëmbajtje.',
+          'Marka X TALENTI, dizajni, kodi dhe përmbajtja jonë janë të mbrojtura. Mos i kopjo ose ripërdor pa leje me shkrim.',
         ],
       },
       {
-        heading: '7. Kontakt',
-        paragraphs: ['support@xtalenti.com'],
+        heading: '8. Mosmarrëveshje / “siç është”',
+        paragraphs: [
+          'Shërbimi ofrohet “siç është” dhe “sipas disponueshmërisë”. Mund të ndodhin ndërprerje rrjeti, live ose mirëmbajtje.',
+          'Në masën e lejuar nga ligji, nuk jemi përgjegjës për dëme indirekte ose humbje të të dhënave përtej kontrollit tonë të arsyeshëm.',
+        ],
+      },
+      {
+        heading: '9. Ndryshime dhe kontakt',
+        paragraphs: [
+          'Mund t’i përditësojmë Kushtet. Data shfaqet në krye. Përdorimi i vazhdueshëm pas ndryshimeve nënkupton pranimin.',
+          `Kontakt: ${LEGAL_CONTACT.email}`,
+        ],
       },
     ],
   },
+
+  cookies: {
+    slug: 'cookies',
+    title: 'Politika e cookies — X TALENTI',
+    description: 'Si përdor X TALENTI cookies dhe teknologji të ngjashme në web.',
+    sections: [
+      {
+        heading: '1. Çfarë janë cookies',
+        paragraphs: [
+          'Cookies dhe ruajtja lokale/sesioni janë skedarë ose të dhëna të vogla në shfletues që ndihmojnë autentikimin, preferencat dhe funksionimin e faqes.',
+        ],
+      },
+      {
+        heading: '2. Çfarë përdorim',
+        paragraphs: [
+          'Thelbësore: token autentikimi (localStorage), preferenca teme (dark/light), gjendje sesioni e nevojshme për login.',
+          'Funksionale: kujtese e lehtë e UI (p.sh. onboarding i përfunduar) që të mos të shfaqet përsëri.',
+          'Analitikë/marketing i palëve të treta: aktualisht nuk përdorim reklama tracking si default. Nëse shtohen, do t’i listojmë këtu dhe do të kërkojmë pëlqim kur kërkohet.',
+        ],
+      },
+      {
+        heading: '3. Aplikacioni celular',
+        paragraphs: [
+          'Aplikacioni nuk mbështetet te cookies e shfletuesit. Përdor ruajtje të sigurt lokale për token dhe preferenca, plus token push nëse i aktivizon.',
+        ],
+      },
+      {
+        heading: '4. Menaxhimi',
+        paragraphs: [
+          'Mund të pastrosh të dhënat e faqes nga cilësimet e shfletuesit (kjo të del nga llogaria).',
+          'Bllokimi i cookies thelbësore mund të prishë login-in dhe funksione kritike.',
+        ],
+      },
+      {
+        heading: '5. Kontakt',
+        paragraphs: [`${LEGAL_CONTACT.email}`],
+      },
+    ],
+  },
+
+  data: {
+    slug: 'data',
+    title: 'Të dhënat e tua — kërkesa & të drejta',
+    description:
+      'Si të kërkosh akses, eksport, korrigjim ose fshirje të të dhënave personale në X TALENTI.',
+    sections: [
+      {
+        heading: '1. Çfarë mund të bësh vetë në app/web',
+        paragraphs: [
+          'Shiko dhe përditëso profilin në Settings / Edit Profile.',
+          'Çaktivizo njoftimet push në Settings.',
+          'Fshi llogarinë: Settings → Fshi llogarinë (kërkon konfirmim / fjalëkalim kur është i nevojshëm).',
+          'Pas fshirjes, të dhënat personale anonimizohen; disa të dhëna teknike ose financiare mund të ruhen për detyrime ligjore.',
+        ],
+      },
+      {
+        heading: '2. Kërkesa me email',
+        paragraphs: [
+          `Dërgo te ${LEGAL_CONTACT.email} me subjektin “Kërkesë të dhënash”.`,
+          'Përfshi: emailin e llogarisë, llojin e kërkesës (akses / eksport / korrigjim / fshirje / kufizim), dhe verifikim identiteti (përgjigjemi vetëm pas identifikimit).',
+          'Synojmë t’i trajtojmë kërkesat brenda një afati të arsyeshëm (zakonisht deri në 30 ditë, ose sipas ligjit të zbatueshëm).',
+        ],
+      },
+      {
+        heading: '3. Çfarë mund të përfshijë një eksport',
+        paragraphs: [
+          'Të dhëna llogarie dhe profili (emër, email, rol, fusha profili).',
+          'Përmbledhje e përmbajtjes së lidhur me llogarinë ku është praktikisht e mundur (postime, media metadata).',
+          'Mesazhet private mund të kufizohen për të mbrojtur privatësinë e palëve të tjera.',
+        ],
+      },
+      {
+        heading: '4. Të miturit',
+        paragraphs: [
+          'Prindi/kujdestari ligjor mund të kërkojë fshirje ose kufizim për llogarinë e të miturit, me dokumentacion të arsyeshëm verifikimi.',
+        ],
+      },
+      {
+        heading: '5. Dokumente të lidhura',
+        paragraphs: [
+          'Politika e privatësisë (/privacy), Cookies (/cookies), Kushtet (/terms).',
+        ],
+      },
+    ],
+  },
+
   'community-guidelines': {
     slug: 'community-guidelines',
     title: 'Udhëzuesit e komunitetit — X TALENTI',
-    description: 'Rregullat e sjelljes në komunitetin X TALENTI.',
+    description: 'Rregullat e sjelljes dhe sigurisë në komunitetin X TALENTI.',
     sections: [
       {
-        heading: 'Respekti',
+        heading: '1. Respekti',
         paragraphs: [
-          'Respekto të tjerët. Nuk lejohet ngacmimi, gjuha e urrejtjes, kërcënimet ose dhuna.',
+          'Trajto të tjerët me respekt. Nuk lejohet ngacmimi, gjuha e urrejtjes, kërcënimet, dhuna ose diskriminimi.',
         ],
       },
       {
-        heading: 'Përmbajtja',
+        heading: '2. Përmbajtja',
         paragraphs: [
-          'Mos publiko spam, mashtrime, përmbajtje seksuale të padëshiruar, ose materiale ilegale.',
-          'Respekto privatësinë — mos ndaj të dhëna personale të të tjerëve pa leje.',
+          'Mos publiko spam, mashtrime, përmbajtje seksuale të padëshiruar, material ilegal, ose shkelje të së drejtës së autorit.',
+          'Respekto privatësinë — mos ndaj të dhëna personale të të tjerëve (telefon, adresë, dokumente) pa leje.',
         ],
       },
       {
-        heading: 'Siguria e të rinjve',
+        heading: '3. Siguria e të rinjve',
         paragraphs: [
-          'Jihu i kujdesshëm me komunikimin ndaj lojtarëve të mitur. Raporto sjellje të dyshimtë.',
+          'Komuniko me kujdes me lojtarë të mitur. Ndalohen kontaktet e papërshtatshme dhe kërkesat për takime private të dyshimta.',
+          'Raporto menjëherë sjellje të dyshimtë te support@xtalenti.com.',
         ],
       },
       {
-        heading: 'Raportimi',
+        heading: '4. Autenticiteti',
+        paragraphs: [
+          'Mos pretendo të jesh klub, skaut ose person tjetër. Profilet mashtruese pezullohen.',
+          'Statistikat dhe arritjet duhet të jenë të ndershme sa është e mundur.',
+        ],
+      },
+      {
+        heading: '5. Raportimi dhe pasojat',
         paragraphs: [
           'Raporto përmbajtjen që shkel rregullat. Ekipi i moderimit shqyrton raportet.',
-          'Shkeljet e përsëritura mund të çojnë në pezullim ose mbyllje të llogarisë.',
+          'Shkeljet mund të çojnë në heqje përmbajtjeje, pezullim ose mbyllje të llogarisë, pa rifundim të abonimeve kur shkelja është e rëndë (sipas kushteve të dyqaneve të app-eve).',
         ],
       },
     ],
@@ -189,6 +420,13 @@ export function escapeHtml(s) {
 export function renderLegalStaticHtml(kind) {
   const page = legalPages[kind];
   if (!page) return null;
+  const navHtml = legalNav
+    .map((item) => {
+      const active = item.kind === kind ? ' class="active"' : '';
+      return `<a href="${escapeHtml(item.path)}"${active}>${escapeHtml(item.short)}</a>`;
+    })
+    .join(' · ');
+
   const sectionsHtml = page.sections
     .map((sec) => {
       const ps = sec.paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n');
@@ -206,23 +444,27 @@ export function renderLegalStaticHtml(kind) {
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="https://xtalenti.com/${escapeHtml(page.slug)}" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #f8fafc; color: #0f172a; line-height: 1.55; }
-    main { max-width: 42rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
-    h1 { font-size: 1.75rem; margin: 0 0 0.5rem; }
-    .meta { color: #64748b; font-size: 0.875rem; margin-bottom: 1.5rem; }
-    section { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem 1.1rem; margin-bottom: 0.75rem; }
-    h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
-    p { margin: 0 0 0.6rem; font-size: 0.95rem; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #05070b; color: #e8edf4; line-height: 1.55; }
+    main { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 1.5rem; font-size: 0.8rem; }
+    .nav a { color: #a7afba; text-decoration: none; }
+    .nav a.active, .nav a:hover { color: #f2c866; }
+    h1 { font-size: 1.75rem; margin: 0 0 0.5rem; color: #fff; }
+    .meta { color: #8b94a3; font-size: 0.875rem; margin-bottom: 1.5rem; }
+    section { background: #0c1219; border: 1px solid rgb(255 255 255 / 10%); border-radius: 0.75rem; padding: 1rem 1.1rem; margin-bottom: 0.75rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 0.5rem; color: #f2c866; }
+    p { margin: 0 0 0.6rem; font-size: 0.95rem; color: #c5cdd8; }
     p:last-child { margin-bottom: 0; }
-    a { color: #0f766e; font-weight: 600; }
+    a { color: #f2c866; font-weight: 600; }
   </style>
 </head>
 <body>
   <main>
+    <nav class="nav" aria-label="Dokumentet ligjore">${navHtml}</nav>
     <h1>${escapeHtml(page.title)}</h1>
-    <p class="meta">Përditësuar: ${escapeHtml(LEGAL_LAST_UPDATED)} · X TALENTI</p>
+    <p class="meta">Përditësuar: ${escapeHtml(LEGAL_LAST_UPDATED)} · ${escapeHtml(LEGAL_CONTACT.brand)}</p>
     ${sectionsHtml}
-    <p class="meta"><a href="/">← Kthehu te X TALENTI</a> · <a href="/terms">Kushtet</a> · <a href="/privacy">Privatësia</a></p>
+    <p class="meta"><a href="/">← Kthehu te X TALENTI</a> · <a href="mailto:${escapeHtml(LEGAL_CONTACT.email)}">${escapeHtml(LEGAL_CONTACT.email)}</a></p>
   </main>
 </body>
 </html>`;

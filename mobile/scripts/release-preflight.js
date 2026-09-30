@@ -61,6 +61,9 @@ const settingsSrc = fs.readFileSync(settingsPath, 'utf8');
 if (!settingsSrc.includes('/privacy') || !settingsSrc.includes('/terms')) {
   fail('Settings missing privacy/terms URLs');
 }
+if (!settingsSrc.includes('/help') || !settingsSrc.includes('/data') || !settingsSrc.includes('/cookies')) {
+  fail('Settings missing help/data/cookies URLs');
+}
 if (!settingsSrc.includes('deleteMyAccountRequest') && !settingsSrc.includes('Fshi llogarinë')) {
   fail('Account deletion UI missing from Settings');
 }

@@ -29,9 +29,14 @@ import {
 import { WEB_APP_URL } from '../config/constants';
 
 const YOUTUBE_STUDIO_HELP = 'https://www.youtube.com/account_advanced';
-const COMMUNITY_GUIDELINES_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/community-guidelines`;
-const PRIVACY_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/privacy`;
-const TERMS_URL = `${(WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '')}/terms`;
+const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
+const HELP_URL = `${WEB_BASE}/help`;
+const ABOUT_URL = `${WEB_BASE}/about`;
+const COMMUNITY_GUIDELINES_URL = `${WEB_BASE}/community-guidelines`;
+const PRIVACY_URL = `${WEB_BASE}/privacy`;
+const TERMS_URL = `${WEB_BASE}/terms`;
+const COOKIES_URL = `${WEB_BASE}/cookies`;
+const DATA_URL = `${WEB_BASE}/data`;
 
 function profileFromUser(user) {
   return {
@@ -430,7 +435,13 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Ligjore & komuniteti</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Ndihmë, info & ligjore</Text>
+        <TouchableOpacity onPress={() => openExternal(HELP_URL)} style={styles.linkBtn}>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Ndihmë & FAQ</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openExternal(ABOUT_URL)} style={styles.linkBtn}>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Rreth X TALENTI</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => openExternal(COMMUNITY_GUIDELINES_URL)} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Udhëzuesit e komunitetit</Text>
         </TouchableOpacity>
@@ -439,6 +450,18 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openExternal(TERMS_URL)} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Kushtet e përdorimit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openExternal(COOKIES_URL)} style={styles.linkBtn}>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e cookies</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openExternal(DATA_URL)} style={styles.linkBtn}>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Të dhënat e tua (akses / fshirje)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Linking.openURL('mailto:support@xtalenti.com')}
+          style={styles.linkBtn}
+        >
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>support@xtalenti.com</Text>
         </TouchableOpacity>
       </View>
 

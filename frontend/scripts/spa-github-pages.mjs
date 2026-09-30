@@ -51,11 +51,24 @@ const STATIC_ROUTES = [
   'community-guidelines',
   'privacy',
   'terms',
+  'cookies',
+  'help',
+  'about',
+  'data',
+  'legal',
   'cv',
   'share',
 ];
 
-const LEGAL_KINDS = ['privacy', 'terms', 'community-guidelines'];
+const LEGAL_KINDS = [
+  'privacy',
+  'terms',
+  'community-guidelines',
+  'cookies',
+  'help',
+  'about',
+  'data',
+];
 
 if (!existsSync(indexHtml)) {
   console.error('spa-github-pages: mungon dist/index.html — build dështoi?');

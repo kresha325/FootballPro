@@ -489,7 +489,7 @@ const Feed = () => {
           <div className="min-w-0">
             <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">{roleName} dashboard · X TALENTI</p>
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Mirë se erdhe, {user?.firstName || roleName}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--xt-color-text-muted)]">Shiko aktivitetin e fundit, zbulo talentin që po kërkon dhe vazhdo hapin tënd të radhës në futboll.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">Shiko aktivitetin e fundit, zbulo talentin që po kërkon dhe vazhdo hapin tënd të radhës në futboll.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {quickActions.slice(0, 2).map(({ label, to, icon }) => <Link key={to} to={to} className="btn btn-quiet min-h-11 text-sm">{icon}{label}</Link>)}
@@ -502,15 +502,38 @@ const Feed = () => {
       </header>
 
       <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Përmbledhje e aktivitetit">
-        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Përditësime në feed</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{displayPosts.length}</p></div><ChartBarIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
-        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Ndeshje të ardhshme</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{matchesError ? '—' : upcomingMatches.length}</p></div><TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
-        <div className="xt-stat-card flex items-center justify-between gap-3"><div><p className="text-xs text-[var(--xt-color-text-muted)]">Turne të listuara</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{trendingError ? '—' : trending.length}</p></div><UserGroupIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
+        <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Përditësime në feed</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{displayPosts.length}</p>
+          </div>
+          <ChartBarIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
+        </div>
+        <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ndeshje të ardhshme</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{matchesError ? '—' : upcomingMatches.length}</p>
+          </div>
+          <TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
+        </div>
+        <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Turne të listuara</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{trendingError ? '—' : trending.length}</p>
+          </div>
+          <UserGroupIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
+        </div>
       </section>
 
-      {['athlete', 'player', 'coach'].includes(role) && <section className="xt-card mb-6 p-4 sm:p-5" aria-labelledby="performance-title">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Your progress</p><h2 id="performance-title" className="mt-1 text-lg">Përmbledhje e performancës</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Profili im <ArrowRightIcon className="h-4 w-4" /></Link></div>
-        {performanceError ? <p className="text-sm text-[var(--xt-color-text-muted)]">Statistikat nuk mund të ngarkoheshin.</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Duke ngarkuar statistikat">{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', performanceSummary.points], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => <div key={label} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><p className="text-xs text-[var(--xt-color-text-muted)]">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-white">{Number(value) || 0}</p></div>)}
+      {['athlete', 'player', 'coach'].includes(role) && <section className="xt-card mb-6 bg-white p-4 dark:bg-[#0d1420] sm:p-5" aria-labelledby="performance-title">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Your progress</p><h2 id="performance-title" className="mt-1 text-lg text-slate-900 dark:text-white">Përmbledhje e performancës</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Profili im <ArrowRightIcon className="h-4 w-4" /></Link></div>
+        {performanceError ? <p className="text-sm text-slate-500 dark:text-slate-400">Statistikat nuk mund të ngarkoheshin.</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Duke ngarkuar statistikat">{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', performanceSummary.points], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => (
+            <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-[#121c2a]">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
+              <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{Number(value) || 0}</p>
+            </div>
+          ))}
         </div>}
       </section>}
 
@@ -523,7 +546,7 @@ const Feed = () => {
       {/* Player Cards Section */}
       <section aria-labelledby="featured-talents-title">
         <div className="xt-section-header mb-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Discover</p><h2 id="featured-talents-title" className="mt-1 text-lg text-white">Talente të veçuara</h2></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Discover</p><h2 id="featured-talents-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Talente të veçuara</h2></div>
           <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Të gjithë <ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
         <UserCardsSection />
@@ -531,7 +554,7 @@ const Feed = () => {
 
       <section aria-labelledby="featured-clubs-title">
         <div className="xt-section-header mb-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Club network</p><h2 id="featured-clubs-title" className="mt-1 text-lg text-white">Klube të veçuara</h2></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Club network</p><h2 id="featured-clubs-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Klube të veçuara</h2></div>
           <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Zbulo klube <ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
         <UserCardsSection role="club" />
@@ -545,7 +568,7 @@ const Feed = () => {
 
       <section aria-labelledby="activity-title">
       <div className="xt-section-header mb-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Community</p><h2 id="activity-title" className="mt-1 text-lg text-white">Aktiviteti i fundit</h2></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Community</p><h2 id="activity-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Aktiviteti i fundit</h2></div>
         <span className="xt-badge">{displayPosts.length} përditësime</span>
       </div>
       <ListSearchBar
@@ -682,7 +705,7 @@ const Feed = () => {
 
       {/* Posts List */}
       <div className="space-y-4">
-        {!displayPosts.length && <div className="xt-empty-state xt-card"><div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[var(--xt-color-gold)]"><MagnifyingGlassIcon className="h-6 w-6" /></div><h3 className="text-base text-white">Nuk ka përditësime për këtë kërkim</h3><p className="max-w-sm text-sm">Provo një fjalë tjetër ose ndiq profile që feed-i yt të bëhet më relevant.</p><Link to="/profiles" className="btn btn-outline">Zbulo talente</Link></div>}
+        {!displayPosts.length && <div className="xt-empty-state xt-card"><div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[var(--xt-color-gold)]"><MagnifyingGlassIcon className="h-6 w-6" /></div><h3 className="text-base text-[var(--xt-color-text)]">Nuk ka përditësime për këtë kërkim</h3><p className="max-w-sm text-sm">Provo një fjalë tjetër ose ndiq profile që feed-i yt të bëhet më relevant.</p><Link to="/profiles" className="btn btn-outline">Zbulo talente</Link></div>}
         {displayPosts.map((post, index) => (
           <div 
             key={post.id}
@@ -730,7 +753,7 @@ const Feed = () => {
                       </div>
                     )}
                     <div className="ml-3 min-w-0">
-                      <p className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
+                      <p className="inline-flex items-center gap-1 font-semibold text-[var(--xt-color-text)] hover:underline">
                         <PersonName>
                           {post.author?.firstName && post.author?.lastName
                             ? `${post.author.firstName} ${post.author.lastName}`

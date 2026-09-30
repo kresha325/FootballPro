@@ -365,7 +365,7 @@ function Navbar() {
         aria-label="Navigimi i llogarisë"
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
-        className={`fixed top-16 right-0 z-[60] h-[calc(100vh-4rem)] w-80 max-w-[min(20rem,100vw)] transform overflow-y-auto overscroll-contain border-l border-white/10 bg-[#08111f]/[.98] shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-in-out ${
+        className={`xt-account-drawer fixed top-16 right-0 z-[60] h-[calc(100vh-4rem)] w-80 max-w-[min(20rem,100vw)] transform overflow-y-auto overscroll-contain border-l border-white/10 bg-[#08111f]/[.98] shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-in-out ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         } bottom-0 h-[calc(100vh-4rem)]`}
       >
@@ -375,11 +375,11 @@ function Navbar() {
           <div className="space-y-2">
 
             {/* Navigim kryesor — desktop (mobile: bottom nav) */}
-            <div className="hidden md:block space-y-2 pb-4 mb-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="hidden md:block space-y-2 pb-4 mb-2 border-b border-white/10">
               <Link
                 to="/feed"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+                className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <HomeIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Ballina</span>
@@ -388,7 +388,7 @@ function Navbar() {
               <Link
                 to="/marketplace"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+                className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Tregu</span>
@@ -402,7 +402,7 @@ function Navbar() {
               <Link
                 to="/tournaments"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+                className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <TrophyIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Turnetë</span>
@@ -414,7 +414,7 @@ function Navbar() {
                   setIsMenuOpen(false);
                   window.dispatchEvent(new CustomEvent('open-live-modal', { detail: { openCameraFirst: true } }));
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
               >
                 <VideoCameraIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Dil LIVE</span>
@@ -425,7 +425,7 @@ function Navbar() {
             <Link
               to="/tournaments"
               onClick={() => setIsMenuOpen(false)}
-              className="md:hidden flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="md:hidden xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Turnetë</span>
@@ -435,7 +435,7 @@ function Navbar() {
             <Link 
               to="/notifications" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <BellIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Njoftimet</span>
@@ -450,7 +450,7 @@ function Navbar() {
             <Link 
               to="/messaging" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Mesazhet</span>
@@ -465,7 +465,7 @@ function Navbar() {
             <Link 
               to="/profiles" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Shfleto Profilet</span>
@@ -475,7 +475,7 @@ function Navbar() {
             <Link 
               to="/analytics" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
               <span className="font-medium">Analitika</span>
@@ -485,7 +485,7 @@ function Navbar() {
             <Link 
               to="/gamification" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-6 w-6" />
               <span className="font-medium">Gamifikimi</span>
@@ -495,7 +495,7 @@ function Navbar() {
             <Link 
               to="/videos" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <VideoCameraIcon className="h-6 w-6" />
               <span className="font-medium">Videot</span>
@@ -505,7 +505,7 @@ function Navbar() {
             <Link 
               to="/matches" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Ndeshjet</span>
@@ -516,7 +516,7 @@ function Navbar() {
               <Link 
                 to="/scouting" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+                className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Scouting</span>
@@ -528,7 +528,7 @@ function Navbar() {
               <Link 
                 to="/club-roster" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
+                className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
               >
                 <BuildingOffice2Icon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Formacioni i Klubit</span>
@@ -540,7 +540,7 @@ function Navbar() {
               <Link 
                 to="/admin" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-danger)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
+                className="xt-drawer-link flex items-center gap-3 rounded-lg border border-red-400/40 bg-white/5 p-3 text-red-300 transition-colors hover:bg-white/10"
               >
                 <LockClosedIcon className="h-5 w-5" aria-hidden="true" />
                 <span className="font-medium">Paneli i Adminit</span>
@@ -552,7 +552,7 @@ function Navbar() {
             <Link 
               to="/premium" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/30 bg-[var(--xt-color-surface-raised)] p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-[var(--xt-color-surface-hover)]"
+              className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
             >
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Kalo në Premium</span>
@@ -574,10 +574,19 @@ function Navbar() {
             <Link 
               to="/settings" 
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 p-3 rounded-lg text-[var(--xt-color-text)] hover:bg-[var(--xt-color-surface-hover)] transition-colors"
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Cilësimet</span>
+            </Link>
+
+            <Link
+              to="/help"
+              onClick={() => setIsMenuOpen(false)}
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
+            >
+              <SparklesIcon className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">Ndihmë & Info</span>
             </Link>
 
             {/* Logout */}
@@ -587,7 +596,7 @@ function Navbar() {
                 setIsMenuOpen(false);
                 navigate('/login');
               }}
-              className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
             >
               <ArrowRightOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Dil</span>

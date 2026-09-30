@@ -168,6 +168,11 @@ function App() {
             <Route path="/community-guidelines" element={<LegalPage kind="community-guidelines" />} />
             <Route path="/privacy" element={<LegalPage kind="privacy" />} />
             <Route path="/terms" element={<LegalPage kind="terms" />} />
+            <Route path="/cookies" element={<LegalPage kind="cookies" />} />
+            <Route path="/help" element={<LegalPage kind="help" />} />
+            <Route path="/about" element={<LegalPage kind="about" />} />
+            <Route path="/data" element={<LegalPage kind="data" />} />
+            <Route path="/legal" element={<LegalPage kind="help" />} />
 
             {/* ROOT - landing page e re, ose feed nëse je i loguar */}
             <Route path="/welcome" element={user ? <Navigate to="/feed" /> : <WelcomeOnboarding />} />

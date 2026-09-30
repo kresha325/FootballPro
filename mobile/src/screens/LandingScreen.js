@@ -11,7 +11,10 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
+import { WEB_APP_URL } from '../config/constants';
 import { useTheme } from '../context/ThemeContext';
+
+const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 
 /** Fixed light-on-dark colors for brand hero surfaces (never remapped by theme). */
 const ON_DARK = {
@@ -374,6 +377,20 @@ export default function LandingScreen() {
         </View>
 
         <View style={[styles.footer, { backgroundColor: ON_DARK.surfaceDeep }]}>
+          <View style={styles.footerLinks}>
+            <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/help`)}>
+              <Text style={styles.footerLink}>Ndihmë</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/privacy`)}>
+              <Text style={styles.footerLink}>Privatësia</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/terms`)}>
+              <Text style={styles.footerLink}>Kushtet</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/data`)}>
+              <Text style={styles.footerLink}>Të dhënat</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.footerText}>
             © {year} {APP_BRAND_NAME}. Të gjitha të drejtat e rezervuara.
           </Text>
@@ -603,5 +620,13 @@ const styles = StyleSheet.create({
   contactTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 },
   contactBody: { color: '#CBD5E1', fontSize: 15, textAlign: 'center', marginBottom: 18, lineHeight: 22 },
   footer: { backgroundColor: '#020617', paddingVertical: 24, paddingHorizontal: 16 },
+  footerLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14,
+    marginBottom: 12,
+  },
+  footerLink: { color: '#FBBF24', fontSize: 13, fontWeight: '700' },
   footerText: { color: '#94A3B8', textAlign: 'center', fontSize: 13 },
 });

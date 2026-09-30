@@ -1,10 +1,15 @@
 import React, { useCallback, useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
+import { WEB_APP_URL } from '../config/constants';
+
+const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
+const HELP_URL = `${WEB_BASE}/help`;
+const PRIVACY_URL = `${WEB_BASE}/privacy`;
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -157,6 +162,16 @@ export default function MoreScreen({ navigation }) {
       {btn({ title: 'Sponsors', subtitle: 'Manage your sponsor deals', onPress: () => navigation.navigate('Sponsors') })}
       {btn({ title: 'Ads', subtitle: 'Create and view active ads', onPress: () => navigation.navigate('Ads') })}
       {btn({ title: 'Settings', subtitle: 'Profile and app preferences', onPress: () => navigation.navigate('Settings') })}
+      {btn({
+        title: 'Ndihmë & FAQ',
+        subtitle: 'Si funksionon platforma',
+        onPress: () => Linking.openURL(HELP_URL),
+      })}
+      {btn({
+        title: 'Privatësia & të dhënat',
+        subtitle: 'Privacy, kushtet, fshirja e llogarisë',
+        onPress: () => Linking.openURL(PRIVACY_URL),
+      })}
       {btn({
         title: 'Dil nga llogaria',
         subtitle: 'Logout',

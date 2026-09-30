@@ -202,8 +202,8 @@ export default function LandingPage() {
     <footer className="xt-footer"><div className="xt-container"><div className="grid gap-10 py-14 md:grid-cols-[1.5fr_1fr_1fr_1fr] md:py-16">
       <div><a href="#top" className="flex items-center gap-2"><img src={APP_LOGO_SRC} alt="" width="38" height="38" className="h-9 w-9 object-contain" /><span className="text-lg font-black tracking-[.18em] text-white">{APP_BRAND_WORDMARK}</span></a><p className="mt-4 max-w-xs text-sm leading-6 text-white/50">TALENT HAS A FUTURE<br />Zbulo. Zhvillo. Shko Më Tej.</p></div>
       <div><h3>Platform</h3><a href="#players">Players</a><a href="#clubs">Clubs</a><a href="#clubs">Scouts</a><a href="#tournaments">Tournaments</a><a href="#features">Opportunities</a></div>
-      <div><h3>Company</h3><a href="#platform">About</a><a href="mailto:support@xtalenti.com">Contact</a><a href="#pricing">Pricing</a></div>
-      <div><h3>Legal</h3><Link to="/terms">Terms</Link><Link to="/privacy">Privacy</Link><a href="mailto:support@xtalenti.com">support@xtalenti.com</a></div>
+      <div><h3>Company</h3><Link to="/about">About</Link><Link to="/help">Ndihmë</Link><a href="mailto:support@xtalenti.com">Contact</a><a href="#pricing">Pricing</a></div>
+      <div><h3>Legal</h3><Link to="/privacy">Privatësia</Link><Link to="/terms">Kushtet</Link><Link to="/cookies">Cookies</Link><Link to="/data">Të dhënat</Link><Link to="/community-guidelines">Komuniteti</Link></div>
     </div><div className="flex flex-col gap-3 border-t border-white/10 py-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between"><span>© {new Date().getFullYear()} {APP_BRAND_NAME}. Të gjitha të drejtat e rezervuara.</span><span>MORE THAN FOOTBALL</span></div></div></footer>
   </div>;
 }

@@ -410,27 +410,51 @@ const Settings = () => {
       <div>
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <ShieldCheckIcon className="w-6 h-6 mr-2" />
-          Privatësia dhe siguria
+          Ndihmë, info & ligjore
         </h2>
         <div className="space-y-2">
-          <a
-            href="/community-guidelines"
+          <Link
+            to="/help"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Ndihmë & FAQ
+          </Link>
+          <Link
+            to="/about"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Rreth X TALENTI
+          </Link>
+          <Link
+            to="/community-guidelines"
             className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
             Udhëzuesit e komunitetit
-          </a>
-          <a
-            href="/privacy"
+          </Link>
+          <Link
+            to="/privacy"
             className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
             Politika e privatësisë
-          </a>
-          <a
-            href="/terms"
+          </Link>
+          <Link
+            to="/terms"
             className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
             Kushtet e përdorimit
-          </a>
+          </Link>
+          <Link
+            to="/cookies"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Politika e cookies
+          </Link>
+          <Link
+            to="/data"
+            className="block w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            Të dhënat e tua (akses / fshirje)
+          </Link>
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
             <p className="text-sm text-red-700 dark:text-red-300 font-semibold">Fshi llogarinë</p>
             <p className="text-xs text-red-600/80 dark:text-red-300/80">

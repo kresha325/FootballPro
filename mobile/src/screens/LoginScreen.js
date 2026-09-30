@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -23,6 +24,12 @@ import {
 } from '../constants/registerRoles';
 import { useAuth } from '../context/AuthContext';
 import { APP_BRAND_WORDMARK } from '../config/branding';
+import { WEB_APP_URL } from '../config/constants';
+
+const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
+const PRIVACY_URL = `${WEB_BASE}/privacy`;
+const TERMS_URL = `${WEB_BASE}/terms`;
+const HELP_URL = `${WEB_BASE}/help`;
 
 function RolePickerModal({ visible, selectedValue, onSelect, onClose }) {
   return (
@@ -322,7 +329,16 @@ export default function LoginScreen() {
         {mode === 'register' ? (
           <View style={styles.termsRow}>
             <Switch value={acceptedTerms} onValueChange={setAcceptedTerms} trackColor={{ true: '#9A6B12' }} />
-            <Text style={styles.termsText}>Pranoj kushtet e përdorimit dhe privatësinë</Text>
+            <Text style={styles.termsText}>
+              Pranoj{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(TERMS_URL)}>
+                kushtet
+              </Text>
+              {' '}dhe{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                privatësinë
+              </Text>
+            </Text>
           </View>
         ) : null}
 
@@ -334,6 +350,10 @@ export default function LoginScreen() {
               {mode === 'login' ? 'Hyr' : mode === 'register' ? 'Krijo llogarinë' : 'Dërgo linkun'}
             </Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => Linking.openURL(HELP_URL)} style={styles.helpLink}>
+          <Text style={styles.helpLinkText}>Ndihmë & FAQ</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -401,6 +421,9 @@ const styles = StyleSheet.create({
   pickerBtnText: { fontSize: 16, color: '#0f172a', fontWeight: '600' },
   termsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   termsText: { flex: 1, fontSize: 13, color: '#475569' },
+  termsLink: { color: '#9A6B12', fontWeight: '700', textDecorationLine: 'underline' },
+  helpLink: { marginTop: 16, alignItems: 'center', paddingVertical: 8 },
+  helpLinkText: { color: '#9A6B12', fontWeight: '700', fontSize: 13 },
   inlineError: { marginBottom: 12, color: '#b91c1c', fontWeight: '600' },
   button: {
     marginTop: 8,
