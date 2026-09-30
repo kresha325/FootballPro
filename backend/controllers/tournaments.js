@@ -69,6 +69,11 @@ exports.createTournament = async (req, res) => {
     if (participantType === 'club') pt = 'club';
     else if (participantType === 'mixed') pt = 'mixed';
 
+    const maxN = parseInt(maxParticipants, 10);
+    if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
+      return res.status(400).json({ msg: 'Numri i pjesëmarrësve duhet të jetë midis 2 dhe 500 (p.sh. 7).' });
+    }
+
     if (role === 'liga') {
       const liga = await Liga.findOne({ where: { userId: req.user.id } });
       if (!liga) {
@@ -76,8 +81,6 @@ exports.createTournament = async (req, res) => {
       }
       name = liga.name;
       ligaId = liga.id;
-      // Liga tournaments register athletes for goals/assists, not clubs as entities
-      pt = 'individual';
 
       const existing = await Tournament.findOne({
         where: { ligaId: liga.id, category },
@@ -103,7 +106,7 @@ exports.createTournament = async (req, res) => {
       season: resolvedSeason,
       startDate,
       endDate,
-      maxParticipants,
+      maxParticipants: maxN,
       participantType: pt,
       creatorId: req.user.id,
       ligaId,
@@ -149,14 +152,18 @@ exports.updateTournament = async (req, res) => {
     if (type) tournament.type = type;
     if (startDate !== undefined) tournament.startDate = startDate || null;
     if (endDate !== undefined) tournament.endDate = endDate || null;
-    if (maxParticipants !== undefined) tournament.maxParticipants = maxParticipants;
+    if (maxParticipants !== undefined) {
+      const maxN = parseInt(maxParticipants, 10);
+      if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
+        return res.status(400).json({ msg: 'Numri i pjesëmarrësve duhet të jetë midis 2 dhe 500 (p.sh. 7).' });
+      }
+      tournament.maxParticipants = maxN;
+    }
     if (status && ['open', 'ongoing', 'finished'].includes(status)) tournament.status = status;
     if (category !== undefined) tournament.category = normalizeCategory(category);
 
-    if (!(tournament.ligaId || tournament.sourceRole === 'liga') && participantType) {
-      if (['individual', 'club', 'mixed'].includes(participantType)) {
-        tournament.participantType = participantType;
-      }
+    if (participantType && ['individual', 'club', 'mixed'].includes(participantType)) {
+      tournament.participantType = participantType;
     }
 
     if (season !== undefined || type || startDate !== undefined) {

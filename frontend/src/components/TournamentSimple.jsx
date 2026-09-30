@@ -341,6 +341,7 @@ export default function TournamentSimple() {
     maxParticipants: 8,
     category: 'open',
     status: 'open',
+    participantType: 'individual',
   });
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -512,10 +513,16 @@ export default function TournamentSimple() {
       alert('Vetëm liga, klubi ose scout mund të krijojnë turne.');
       return;
     }
+    const maxN = parseInt(newTournament.maxParticipants, 10);
+    if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
+      alert('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.');
+      return;
+    }
     try {
       const payload = {
         ...newTournament,
         name: isLigaCreator ? undefined : newTournament.name,
+        maxParticipants: maxN,
       };
       await API.post('/tournaments', payload);
       setShowCreateModal(false);
@@ -582,20 +589,27 @@ export default function TournamentSimple() {
       maxParticipants: tournament.maxParticipants || 8,
       category: tournament.category || 'open',
       status: tournament.status || 'open',
+      participantType: tournament.participantType || 'individual',
     });
   };
 
   const saveEditTournament = async (e) => {
     e.preventDefault();
     if (!editTournament?.id) return;
+    const maxN = parseInt(editForm.maxParticipants, 10);
+    if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
+      alert('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.');
+      return;
+    }
     try {
       const isLigaT = !!(editTournament.ligaId || editTournament.sourceRole === 'liga');
       const payload = {
         description: editForm.description,
         type: editForm.type,
-        maxParticipants: editForm.maxParticipants,
+        maxParticipants: maxN,
         category: editForm.category,
         status: editForm.status,
+        participantType: editForm.participantType,
       };
       if (!isLigaT) payload.name = editForm.name;
       await API.put(`/tournaments/${editTournament.id}`, payload);
@@ -920,23 +934,21 @@ export default function TournamentSimple() {
                 </select>
               </div>
 
-              {!isLigaCreator && (
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kush merr pjesë</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Pjesëmarrja</label>
                 <select
                   value={newTournament.participantType}
                   onChange={(e) => setNewTournament({ ...newTournament, participantType: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="individual">Individë / talente (pa klub si entitet pjesëmarrës)</option>
-                  <option value="club">Vetëm klube (llogari «club»)</option>
-                  <option value="mixed">Klube + athletë (të dy rolet mund të bashkohen)</option>
+                  <option value="individual">Individë / talente</option>
+                  <option value="club">Vetëm klube</option>
+                  <option value="mixed">Klube + athletë</option>
                 </select>
                 <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
-                  Në «klub + athletë», një turne mund të ketë njëkohësisht klube dhe lojtarë të regjistruar si pjesëmarrës (p.sh. kupa me skuadra dhe individë).
+                  Zgjidh kush mund të bashkohet në turne: lojtarë, klube, ose të dyja.
                 </p>
               </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Lloji i turneut</label>
@@ -952,18 +964,45 @@ export default function TournamentSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Maks. pjesëmarrës</label>
-                <select
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
+                  Numri i pjesëmarrësve
+                </label>
+                <input
+                  type="number"
+                  min={2}
+                  max={500}
+                  step={1}
                   value={newTournament.maxParticipants}
-                  onChange={(e) => setNewTournament({ ...newTournament, maxParticipants: parseInt(e.target.value, 10) })}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    setNewTournament({
+                      ...newTournament,
+                      maxParticipants: Number.isFinite(n) ? n : '',
+                    });
+                  }}
+                  required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={4}>4</option>
-                  <option value={8}>8</option>
-                  <option value={16}>16</option>
-                  <option value={32}>32</option>
-                  {isLigaCreator && <option value={500}>500 (liga)</option>}
-                </select>
+                  placeholder="p.sh. 7, 10, 12, 16…"
+                />
+                <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
+                  Vendos numrin e saktë (p.sh. 7 klube → shfaqet 0/7). Lejohet 2–500.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[4, 6, 7, 8, 10, 12, 14, 16, 18, 20].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNewTournament({ ...newTournament, maxParticipants: n })}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                        Number(newTournament.maxParticipants) === n
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-gray-300 text-[var(--xt-color-text-muted)] hover:border-blue-400 dark:border-gray-600'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -1039,6 +1078,39 @@ export default function TournamentSimple() {
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Pjesëmarrja</label>
+                <select
+                  value={editForm.participantType}
+                  onChange={(e) => setEditForm({ ...editForm, participantType: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                >
+                  <option value="individual">Individë / talente</option>
+                  <option value="club">Vetëm klube</option>
+                  <option value="mixed">Klube + athletë</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Numri i pjesëmarrësve</label>
+                <input
+                  type="number"
+                  min={2}
+                  max={500}
+                  step={1}
+                  value={editForm.maxParticipants}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    setEditForm({
+                      ...editForm,
+                      maxParticipants: Number.isFinite(n) ? n : '',
+                    });
+                  }}
+                  required
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
+                  placeholder="p.sh. 7"
+                />
+                <p className="mt-1 text-xs text-gray-500">Numër i saktë, p.sh. 7 për ligë me 7 klube (0/7).</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Statusi</label>

@@ -129,13 +129,18 @@ export default function TournamentsScreen({ navigation }) {
       Alert.alert('Validation', 'Tournament name is required.');
       return;
     }
+    const maxN = parseInt(String(form.maxParticipants), 10);
+    if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
+      Alert.alert('Validation', 'Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.');
+      return;
+    }
     setCreating(true);
     try {
       const payload = {
         description: form.description.trim(),
         type: form.type,
-        maxParticipants: Number(form.maxParticipants) || 8,
-        participantType: isLigaCreator ? 'individual' : form.participantType,
+        maxParticipants: maxN,
+        participantType: form.participantType || 'individual',
         category: form.category || 'open',
       };
       if (!isLigaCreator) {
@@ -300,15 +305,43 @@ export default function TournamentsScreen({ navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={styles.label}>Participants: {form.participantType}</Text>
+              <Text style={styles.label}>Pjesëmarrja</Text>
               <View style={styles.chipRow}>
-                {['individual', 'club', 'mixed'].map((t) => (
+                {[
+                  { value: 'individual', label: 'Individë' },
+                  { value: 'club', label: 'Klube' },
+                  { value: 'mixed', label: 'Klube + athletë' },
+                ].map((t) => (
                   <TouchableOpacity
-                    key={t}
-                    style={[styles.chip, form.participantType === t && styles.chipActive]}
-                    onPress={() => setForm((f) => ({ ...f, participantType: t }))}
+                    key={t.value}
+                    style={[styles.chip, form.participantType === t.value && styles.chipActive]}
+                    onPress={() => setForm((f) => ({ ...f, participantType: t.value }))}
                   >
-                    <Text style={[styles.chipText, form.participantType === t && styles.chipTextActive]}>{t}</Text>
+                    <Text style={[styles.chipText, form.participantType === t.value && styles.chipTextActive]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.label}>Numri i pjesëmarrësve</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="p.sh. 7"
+                placeholderTextColor="#94a3b8"
+                keyboardType="number-pad"
+                value={String(form.maxParticipants ?? '')}
+                onChangeText={(v) => setForm((f) => ({ ...f, maxParticipants: v.replace(/[^\d]/g, '') }))}
+              />
+              <View style={styles.chipRow}>
+                {[4, 6, 7, 8, 10, 12, 14, 16, 18, 20].map((n) => (
+                  <TouchableOpacity
+                    key={n}
+                    style={[styles.chip, Number(form.maxParticipants) === n && styles.chipActive]}
+                    onPress={() => setForm((f) => ({ ...f, maxParticipants: String(n) }))}
+                  >
+                    <Text style={[styles.chipText, Number(form.maxParticipants) === n && styles.chipTextActive]}>
+                      {n}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
