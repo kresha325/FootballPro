@@ -152,6 +152,7 @@ function App() {
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
             <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
+            <Route path="/tournaments/:tournamentId" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <Gamification /> : <Navigate to="/login" />} />
             <Route path="/gamification/:userId" element={user ? <Gamification /> : <Navigate to="/login" />} />

@@ -3,6 +3,7 @@ import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { notificationsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { resolveNotificationNavigatePath } from '../utils/notificationLinks';
 import { BellIcon, PhoneIcon, UserGroupIcon, HandThumbUpIcon, ChatBubbleLeftRightIcon, UserIcon, EnvelopeIcon, TrophyIcon, FlagIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
 
 const notificationDateGroup = (date) => {
@@ -81,15 +82,12 @@ const Notifications = () => {
   };
 
   const handleNotificationClick = (notification) => {
-    console.log('Notification clicked:', notification);
-    console.log('Link:', notification.link);
-
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    if (notification.link) {
-      console.log('Navigating to:', notification.link);
-      navigate(notification.link);
+    const path = resolveNotificationNavigatePath(notification);
+    if (path) {
+      navigate(path);
     } else {
       console.warn('No link in notification');
     }

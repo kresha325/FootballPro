@@ -215,14 +215,15 @@ exports.notifyMessage = async (recipientId, senderId, message) => {
 };
 
 exports.notifyTournament = async (userId, tournamentId, title, message) => {
+  const tid = Number(tournamentId);
   return exports.createNotification({
     userId,
     type: 'tournament',
     title,
     message,
-    link: `/tournaments/${tournamentId}`,
+    link: Number.isFinite(tid) && tid > 0 ? `/tournaments?tournamentId=${tid}` : '/tournaments',
     entityType: 'tournament',
-    entityId: tournamentId,
+    entityId: Number.isFinite(tid) && tid > 0 ? tid : tournamentId,
   });
 };
 

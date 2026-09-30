@@ -245,14 +245,16 @@ exports.notifyMessage = async (recipientId, senderId, message) => {
 };
 
 exports.notifyTournament = async (userId, tournamentId, title, message) => {
+  const tid = Number(tournamentId);
   return exports.createNotification({
     userId,
     type: 'tournament',
     title: title || 'Përditësim i turneut',
     message: message || '',
-    link: `/tournaments/${tournamentId}`,
+    // SPA route is /tournaments?tournamentId=… (path /tournaments/:id is not mounted alone)
+    link: Number.isFinite(tid) && tid > 0 ? `/tournaments?tournamentId=${tid}` : '/tournaments',
     entityType: 'tournament',
-    entityId: tournamentId,
+    entityId: tid || tournamentId,
   });
 };
 

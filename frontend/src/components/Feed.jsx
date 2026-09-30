@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
-import { postsAPI, sponsorAPI, profileAPI } from '../services/api';
+import { postsAPI, sponsorAPI, profileAPI, notificationsAPI } from '../services/api';
 // import streamsAPI from '../services/streamsAPI';
 import { useAuth } from '../contexts/AuthContext';
 import { usePosts } from '../contexts/PostsContext';
@@ -20,6 +20,7 @@ import PersonName from './PersonName';
 import { API, matchesAPI } from '../services/api';
 import { ArrowRightIcon, ChartBarIcon, MagnifyingGlassIcon, PlusIcon, TrophyIcon, UserGroupIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { isEarlyAccessEnabled, EARLY_ACCESS_LABS_KEY } from '../utils/profileThemes';
+import { tournamentIdFromNotification } from '../utils/notificationLinks';
 import './ProfileTheme.css';
 
 const Feed = () => {
@@ -150,6 +151,7 @@ const Feed = () => {
   const [performanceError, setPerformanceError] = useState(false);
   const [myTournamentRows, setMyTournamentRows] = useState([]);
   const [myTournaments, setMyTournaments] = useState([]);
+  const [tournamentUnreadById, setTournamentUnreadById] = useState({});
   useEffect(() => {
     const fetchTrending = async () => {
       try {
@@ -209,6 +211,43 @@ const Feed = () => {
     fetchMine();
     return undefined;
   }, [user, myTournamentRows]);
+
+  // Unread tournament alerts → badges on «Turnetë e mia»
+  useEffect(() => {
+    if (!user) {
+      setTournamentUnreadById({});
+      return undefined;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await notificationsAPI.getNotifications({ limit: 50, unreadOnly: true });
+        const list = res?.data?.notifications || res?.data || [];
+        const map = {};
+        (Array.isArray(list) ? list : []).forEach((n) => {
+          if (n?.isRead) return;
+          const type = String(n?.type || '').toLowerCase();
+          if (type !== 'tournament' && type !== 'match' && n?.entityType !== 'tournament') return;
+          const tid = tournamentIdFromNotification(n);
+          if (!tid || Number.isNaN(tid)) return;
+          const key = String(tid);
+          map[key] = (map[key] || 0) + 1;
+        });
+        if (!cancelled) setTournamentUnreadById(map);
+      } catch {
+        if (!cancelled) setTournamentUnreadById({});
+      }
+    };
+    load();
+    const onBump = () => load();
+    window.addEventListener('notifications-unread-changed', onBump);
+    window.addEventListener('focus', onBump);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('notifications-unread-changed', onBump);
+      window.removeEventListener('focus', onBump);
+    };
+  }, [user]);
 
   const saveSponsorData = async () => {
     if (!activeSponsorPost || !user) return;
@@ -1268,6 +1307,9 @@ const Feed = () => {
               const meta = tournamentMetaLine(t);
               const rankLabel =
                 t.rank != null ? `Vendi ${t.rank}` : rankBadgeLabel(t.id);
+              const unread = Number(
+                tournamentUnreadById[String(t.id)] || tournamentUnreadById[t.id] || 0
+              );
               return (
                 <li key={t.id}>
                   <Link
@@ -1281,6 +1323,11 @@ const Feed = () => {
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {unread > 0 ? (
+                        <span className="min-w-[1.25rem] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">
+                          {unread > 9 ? '9+' : unread}
+                        </span>
+                      ) : null}
                       {rankLabel ? <span className="xt-badge xt-badge-gold">{rankLabel}</span> : null}
                       <ArrowRightIcon className="h-4 w-4" />
                     </div>

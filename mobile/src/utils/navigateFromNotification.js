@@ -22,12 +22,25 @@ function parseProfileId(link, notification) {
 }
 
 function parseTournamentId(link, notification) {
-  const fromLink = String(link || '').match(/\/tournaments\/(\d+)/i)?.[1];
+  const raw = String(link || '');
+  const fromQuery = raw.match(/[?&]tournamentId=(\d+)/i)?.[1];
+  if (fromQuery) return Number(fromQuery);
+  const fromLink = raw.match(/\/tournaments\/(\d+)/i)?.[1];
   if (fromLink) return Number(fromLink);
-  if (notification?.entityType === 'tournament' && notification?.entityId != null) {
+  const meta =
+    notification?.metadata?.tournamentId ?? notification?.metadata?.tournament_id;
+  if (meta != null && String(meta).trim() !== '') return Number(meta);
+  if (
+    (notification?.entityType === 'tournament' || notification?.type === 'tournament') &&
+    notification?.entityId != null
+  ) {
     return Number(notification.entityId);
   }
   return null;
+}
+
+export function tournamentIdFromNotification(notification) {
+  return parseTournamentId(notification?.link, notification);
 }
 
 /** Tab navigator (Feed, Messages, More, …) from any nested screen. */

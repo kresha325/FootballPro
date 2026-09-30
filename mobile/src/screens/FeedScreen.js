@@ -26,6 +26,7 @@ import {
   deletePostRequest,
   extractErrorMessage,
   likePostRequest,
+  notificationsRequest,
   postCommentsRequest,
   postsRequest,
   streamsRequest,
@@ -42,6 +43,7 @@ import PostSponsorStrip from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { tournamentIdFromNotification } from '../utils/navigateFromNotification';
 
 function postAuthorId(item) {
   if (!item || typeof item !== 'object') return null;
@@ -422,6 +424,37 @@ export default function FeedScreen({ navigation }) {
   const [feedScope, setFeedScope] = useState('all');
   const [sharingPostId, setSharingPostId] = useState(null);
   const [feedSearch, setFeedSearch] = useState('');
+  const [myTournamentsBadge, setMyTournamentsBadge] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setMyTournamentsBadge(0);
+      return undefined;
+    }
+    let cancelled = false;
+    const loadBadge = async () => {
+      try {
+        const res = await notificationsRequest({ limit: 50 });
+        const list = res?.data?.notifications || res?.data || [];
+        let count = 0;
+        (Array.isArray(list) ? list : []).forEach((n) => {
+          if (n?.isRead) return;
+          const type = String(n?.type || '').toLowerCase();
+          if (type !== 'tournament' && type !== 'match' && n?.entityType !== 'tournament') return;
+          if (tournamentIdFromNotification(n)) count += 1;
+        });
+        if (!cancelled) setMyTournamentsBadge(count);
+      } catch {
+        if (!cancelled) setMyTournamentsBadge(0);
+      }
+    };
+    loadBadge();
+    const sub = navigation.addListener?.('focus', loadBadge);
+    return () => {
+      cancelled = true;
+      if (typeof sub === 'function') sub();
+    };
+  }, [user?.id, navigation]);
 
   const onToggleShare = useCallback((postId) => {
     setSharingPostId((prev) => (prev === postId ? null : postId));
@@ -806,6 +839,7 @@ export default function FeedScreen({ navigation }) {
             onPressMatches={() => navigateToMoreScreen('Matches')}
             onPressTournaments={() => navigateToMoreScreen('Tournaments')}
             onPressMyTournaments={() => navigateToMoreScreen('Tournaments', { filter: 'mine' })}
+            myTournamentsBadge={myTournamentsBadge}
           />
           {liveStreams.length > 0 ? (
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>

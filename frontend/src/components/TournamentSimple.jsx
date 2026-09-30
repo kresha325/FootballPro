@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import UserAvatarLink from './UserAvatarLink';
 import { resolveParticipantUserId } from '../utils/tournamentParticipants';
@@ -328,7 +328,10 @@ function MatchBroadcastModal({
 
 export default function TournamentSimple() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { tournamentId: routeTournamentId } = useParams();
+  const deepLinkTournamentId = searchParams.get('tournamentId') || routeTournamentId || null;
   const [tournaments, setTournaments] = useState([]);
   const [listSearch, setListSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -371,7 +374,11 @@ export default function TournamentSimple() {
     setDetailTab(tab);
     setSelectedTournament(tournament);
     setExpandedSquadClubId(null);
+    if (tournament?.id != null) {
+      navigate(`/tournaments?tournamentId=${tournament.id}`, { replace: true });
+    }
   };
+
   const [newTournament, setNewTournament] = useState({
     name: '',
     description: '',
@@ -397,21 +404,6 @@ export default function TournamentSimple() {
       const list = response.data || [];
       setTournaments(list);
       setLoadError('');
-      const deepLinkId = searchParams.get('tournamentId');
-      if (deepLinkId) {
-        const found = list.find((t) => String(t.id) === String(deepLinkId));
-        if (found) {
-          setSelectedTournament(found);
-          setDetailTab('table');
-        } else {
-          try {
-            const tRes = await API.get(`/tournaments/${deepLinkId}`);
-            if (tRes.data) setSelectedTournament(tRes.data);
-          } catch (_e) {
-            /* ignore */
-          }
-        }
-      }
     } catch (error) {
       console.error('Error fetching tournaments:', error);
       setLoadError('Turnetë nuk mund të ngarkoheshin. Provo përsëri.');
@@ -419,6 +411,55 @@ export default function TournamentSimple() {
       setLoading(false);
     }
   };
+
+  // Open tournament from ?tournamentId= or /tournaments/:id (notification deep links)
+  useEffect(() => {
+    if (!deepLinkTournamentId || loading) return undefined;
+
+    // Normalize path form so refresh/share matches the rest of the app
+    if (routeTournamentId && !searchParams.get('tournamentId')) {
+      navigate(`/tournaments?tournamentId=${encodeURIComponent(String(deepLinkTournamentId))}`, {
+        replace: true,
+      });
+      return undefined;
+    }
+
+    if (String(selectedTournament?.id) === String(deepLinkTournamentId)) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      const found = tournaments.find((t) => String(t.id) === String(deepLinkTournamentId));
+      if (found) {
+        if (!cancelled) {
+          setDetailTab('table');
+          setSelectedTournament(found);
+          setExpandedSquadClubId(null);
+        }
+        return;
+      }
+      try {
+        const tRes = await API.get(`/tournaments/${deepLinkTournamentId}`);
+        if (!cancelled && tRes.data) {
+          setDetailTab('table');
+          setSelectedTournament(tRes.data);
+          setExpandedSquadClubId(null);
+        }
+      } catch (_e) {
+        /* ignore — list still usable */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    deepLinkTournamentId,
+    loading,
+    routeTournamentId,
+    searchParams,
+    navigate,
+    tournaments,
+    selectedTournament?.id,
+  ]);
 
   useEffect(() => {
     const id = selectedTournament?.id;
@@ -456,6 +497,16 @@ export default function TournamentSimple() {
   }, [selectedTournament?.id, detailRetry]);
 
   const closeMatchModal = () => setMatchModal({ open: false, loading: false, error: null, data: null });
+
+  const closeTournamentModal = () => {
+    closeMatchModal();
+    setDetailTab('overview');
+    setSelectedTournament(null);
+    setDetailExtras({ standings: null, matches: [], stats: null });
+    if (deepLinkTournamentId) {
+      navigate('/tournaments', { replace: true });
+    }
+  };
 
   const refreshTournamentDetail = async () => {
     const id = selectedTournament?.id;
@@ -1273,12 +1324,7 @@ export default function TournamentSimple() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  closeMatchModal();
-                  setDetailTab('overview');
-                  setSelectedTournament(null);
-                  setDetailExtras({ standings: null, matches: [], stats: null });
-                }}
+                onClick={closeTournamentModal}
                 className="shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none p-2 -mr-1"
               >
                 ✕
