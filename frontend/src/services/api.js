@@ -351,8 +351,12 @@ export const clubMembersAPI = {
 export const transferHistoryAPI = {
   getUserTransfers: (userId) => API.get(`/transfer-history/user/${userId}`),
   getClubTransfers: (clubName) => API.get(`/transfer-history/club/${clubName}`),
+  getPendingForClub: () => API.get('/transfer-history/pending-for-club'),
   addTransfer: (data) => API.post('/transfer-history', data),
   updateTransfer: (transferId, data) => API.put(`/transfer-history/${transferId}`, data),
+  confirmTransfer: (transferId) => API.post(`/transfer-history/${transferId}/confirm`),
+  rejectTransfer: (transferId, reason) =>
+    API.post(`/transfer-history/${transferId}/reject`, reason ? { reason } : {}),
   deleteTransfer: (transferId) => API.delete(`/transfer-history/${transferId}`),
 };
 

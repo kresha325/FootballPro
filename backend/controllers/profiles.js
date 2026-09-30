@@ -15,6 +15,7 @@ const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
 const sequelize = require('../config/database');
 const { parseClubJoinedYear, syncCurrentClubCareer } = require('../utils/currentClubCareer');
+const { loadRecentMatchesForUser } = require('../utils/userRecentMatches');
 
 /**
  * Numëron ndjekësit / duke ndjekur duke përjashtuar:
@@ -514,6 +515,15 @@ exports.getProfile = async (req, res) => {
       joncoinBalance,
     };
 
+    try {
+      const liveMatches = await loadRecentMatchesForUser(userId, 12);
+      if (liveMatches.length) {
+        response.matches = liveMatches;
+      }
+    } catch (matchErr) {
+      console.warn('getProfile recent matches:', matchErr?.message || matchErr);
+    }
+
     if (isOrg) {
       response.foundingYear = getFoundingYear(response);
       response.age = null;
@@ -687,6 +697,15 @@ exports.getPublicProfileCv = async (req, res) => {
       following: followingCount,
       cv: true,
     };
+
+    try {
+      const liveMatches = await loadRecentMatchesForUser(userId, 12);
+      if (liveMatches.length) {
+        response.matches = liveMatches;
+      }
+    } catch (matchErr) {
+      console.warn('getPublicProfileCv recent matches:', matchErr?.message || matchErr);
+    }
 
     if (isOrg) {
       response.foundingYear = getFoundingYear(response);

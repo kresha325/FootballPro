@@ -26,6 +26,7 @@ import {
   clubRosterByClubRequest,
   clubStaffAssignmentsRequest,
   clubStaffByClubRequest,
+  confirmTransferHistoryRequest,
   deleteTransferHistoryRequest,
   extractErrorMessage,
   followStatusRequest,
@@ -37,8 +38,10 @@ import {
   getOrCreateConversationRequest,
   profileByIdRequest,
   profileTournamentSummaryRequest,
+  rejectTransferHistoryRequest,
   sponsorsByUserRequest,
   transferHistoryByUserRequest,
+  transferHistoryPendingForClubRequest,
   unfollowUserRequest,
   userGalleryRequest,
   userPostsRequest,
@@ -90,6 +93,8 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [videos, setVideos] = useState([]);
   const [youtubeMedia, setYoutubeMedia] = useState([]);
   const [transfers, setTransfers] = useState([]);
+  const [clubPendingTransfers, setClubPendingTransfers] = useState([]);
+  const [actionTransferId, setActionTransferId] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [iBlocked, setIBlocked] = useState(false);
   const [staffAssignments, setStaffAssignments] = useState([]);
@@ -131,6 +136,8 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const isSelf = me?.id != null && userId != null && String(me.id) === String(userId);
   const ownProfileRoot = route.params?.ownProfile === true;
+  const isClubViewer = String(me?.role || '').toLowerCase() === 'club';
+  const myClubId = me?.id != null ? Number(me.id) : null;
 
   useEffect(() => {
     setProfileTab(isSelf ? 'overview' : 'posts');
@@ -325,6 +332,17 @@ export default function PublicProfileScreen({ route, navigation }) {
         setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
         setSponsors(Array.isArray(sponsorsRes?.data) ? sponsorsRes.data : []);
 
+        if (String(me?.role || '').toLowerCase() === 'club') {
+          try {
+            const pendingRes = await transferHistoryPendingForClubRequest();
+            setClubPendingTransfers(Array.isArray(pendingRes?.data) ? pendingRes.data : []);
+          } catch {
+            setClubPendingTransfers([]);
+          }
+        } else {
+          setClubPendingTransfers([]);
+        }
+
         if (isSelf) {
           const fromProfile = p?.joncoinBalance;
           const fromApi = balanceRes?.data?.balance;
@@ -374,7 +392,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         setRefreshing(false);
       }
     },
-    [userId, isSelf]
+    [userId, isSelf, me?.role]
   );
 
   useFocusEffect(
@@ -441,6 +459,41 @@ export default function PublicProfileScreen({ route, navigation }) {
             await loadProfile({ silent: true });
           } catch (err) {
             Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit fshirja e transferit'));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onConfirmTransfer = async (transfer) => {
+    if (!transfer?.id) return;
+    setActionTransferId(transfer.id);
+    try {
+      await confirmTransferHistoryRequest(transfer.id);
+      await loadProfile({ silent: true });
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Konfirmimi dështoi'));
+    } finally {
+      setActionTransferId(null);
+    }
+  };
+
+  const onRejectTransfer = (transfer) => {
+    if (!transfer?.id) return;
+    Alert.alert('Refuzo transferin', 'Refuzo këtë transfer?', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Refuzo',
+        style: 'destructive',
+        onPress: async () => {
+          setActionTransferId(transfer.id);
+          try {
+            await rejectTransferHistoryRequest(transfer.id);
+            await loadProfile({ silent: true });
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err, 'Refuzimi dështoi'));
+          } finally {
+            setActionTransferId(null);
           }
         },
       },
@@ -934,11 +987,18 @@ export default function PublicProfileScreen({ route, navigation }) {
                 <PublicProfileAboutTab
                   profile={profile}
                   transfers={transfers}
+                  clubPending={clubPendingTransfers}
                   theme={theme}
                   isOwner={isSelf}
+                  isClubViewer={isClubViewer}
+                  myClubId={myClubId}
+                  actionTransferId={actionTransferId}
                   onAddTransfer={onAddTransfer}
                   onDeleteTransfer={onDeleteTransfer}
+                  onConfirmTransfer={onConfirmTransfer}
+                  onRejectTransfer={onRejectTransfer}
                   onPressClub={(uid) => navigation.push('PublicProfile', { userId: uid })}
+                  onPressAthlete={(uid) => navigation.push('PublicProfile', { userId: uid })}
                 />
               ) : null}
               {profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
@@ -955,6 +1015,9 @@ export default function PublicProfileScreen({ route, navigation }) {
       <View style={styles.transferModalBackdrop}>
         <View style={[styles.transferModalCard, { backgroundColor: theme.card }]}>
           <Text style={[styles.transferModalTitle, { color: theme.text }]}>Add transfer</Text>
+          <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
+            Transferi mbetet në pritje derisa të dy klubet ta konfirmojnë. Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm.
+          </Text>
           <TextInput
             style={styles.transferInput}
             placeholder="From club"
@@ -964,7 +1027,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           />
           <TextInput
             style={styles.transferInput}
-            placeholder="To club *"
+            placeholder="To club * (emri i saktë i klubit)"
             placeholderTextColor="#94a3b8"
             value={transferForm.toClub}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, toClub: v }))}

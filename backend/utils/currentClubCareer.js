@@ -1,4 +1,7 @@
 const TransferHistory = require('../models/TransferHistory');
+const Profile = require('../models/Profile');
+const User = require('../models/User');
+const { Op } = require('sequelize');
 
 /** Marker stored in TransferHistory.notes for auto current-club stints (hidden in UI). */
 const CURRENT_CLUB_NOTE = '__current_club__';
@@ -10,6 +13,41 @@ function parseClubJoinedYear(raw) {
   const max = new Date().getFullYear() + 1;
   if (n < 1950 || n > max) return null;
   return n;
+}
+
+function yearFromTransfer(transferLike) {
+  if (!transferLike) return null;
+  if (transferLike.transferDate) {
+    const d = new Date(transferLike.transferDate);
+    if (!Number.isNaN(d.getTime())) return d.getUTCFullYear();
+  }
+  const seasonMatch = String(transferLike.season || '').match(/(19|20)\d{2}/);
+  if (seasonMatch) return parseClubJoinedYear(seasonMatch[0]);
+  return null;
+}
+
+async function resolveClubUserId({ clubUserId, clubName }) {
+  if (clubUserId != null && Number.isFinite(Number(clubUserId)) && Number(clubUserId) > 0) {
+    const byId = await User.findByPk(Number(clubUserId));
+    if (byId && String(byId.role || '').toLowerCase() === 'club') return byId.id;
+  }
+  const name = String(clubName || '').trim();
+  if (!name) return null;
+  const clubByUser = await User.findOne({
+    where: {
+      role: 'club',
+      [Op.or]: [
+        { firstName: { [Op.iLike]: `%${name}%` } },
+        { lastName: { [Op.iLike]: `%${name}%` } },
+      ],
+    },
+  });
+  if (clubByUser) return clubByUser.id;
+  const clubProfile = await Profile.findOne({
+    where: { club: { [Op.iLike]: `%${name}%` } },
+    include: [{ model: User, where: { role: 'club' }, required: true }],
+  });
+  return clubProfile?.User?.id || clubProfile?.userId || null;
 }
 
 function currentClubSeasonLabel(year) {
@@ -32,8 +70,87 @@ function isAutoCareerHistory(careerHistory) {
 }
 
 /**
- * When the athlete has no real transfers yet, register/update a current-club stint
- * ("ClubName · nga YEAR · vazhdon") so Karriera / Transferet are not empty.
+ * Set athlete Profile.club / clubId / clubJoinedYear from a transfer destination.
+ */
+async function syncProfileCurrentClubFromTransfer(userId, transferLike) {
+  const uid = Number(userId);
+  const toClub = String(transferLike?.toClub || '').trim();
+  if (!Number.isFinite(uid) || uid <= 0 || !toClub) return null;
+
+  const profile = await Profile.findOne({ where: { userId: uid } });
+  if (!profile) return null;
+
+  const clubId = await resolveClubUserId({
+    clubUserId: transferLike.toClubUserId,
+    clubName: toClub,
+  });
+  const joinedYear = yearFromTransfer(transferLike);
+
+  const patch = {
+    club: toClub,
+    clubId: clubId || null,
+  };
+  if (joinedYear) patch.clubJoinedYear = joinedYear;
+
+  await profile.update(patch);
+
+  try {
+    const career = profile.careerHistory;
+    const emptyCareer =
+      career == null ||
+      career === '' ||
+      (Array.isArray(career) && career.length === 0);
+    if (emptyCareer || isAutoCareerHistory(career)) {
+      const year = joinedYear || new Date().getFullYear();
+      await profile.update({
+        careerHistory: [currentClubCareerEntry(toClub, year)],
+      });
+    }
+  } catch (err) {
+    console.warn('syncProfileCurrentClubFromTransfer careerHistory:', err?.message || err);
+  }
+
+  return patch;
+}
+
+/** After delete: set current club from the newest remaining transfer (or clear). */
+async function syncProfileCurrentClubFromLatestTransfer(userId) {
+  const uid = Number(userId);
+  if (!Number.isFinite(uid) || uid <= 0) return null;
+
+  const latest = await TransferHistory.findOne({
+    where: {
+      userId: uid,
+      status: 'confirmed',
+      notes: { [Op.or]: [{ [Op.ne]: CURRENT_CLUB_NOTE }, { [Op.is]: null }] },
+    },
+    order: [
+      ['transferDate', 'DESC'],
+      ['id', 'DESC'],
+    ],
+  });
+
+  if (latest) {
+    return syncProfileCurrentClubFromTransfer(uid, latest);
+  }
+
+  const auto = await TransferHistory.findOne({
+    where: { userId: uid, notes: CURRENT_CLUB_NOTE, status: 'confirmed' },
+    order: [['id', 'DESC']],
+  });
+  if (auto) {
+    return syncProfileCurrentClubFromTransfer(uid, auto);
+  }
+
+  const profile = await Profile.findOne({ where: { userId: uid } });
+  if (profile) {
+    await profile.update({ club: '', clubId: null });
+  }
+  return null;
+}
+
+/**
+ * When the athlete has no real transfers yet, register/update a current-club stint.
  */
 async function syncCurrentClubCareer({
   userId,
@@ -63,6 +180,9 @@ async function syncCurrentClubCareer({
     transferFee: null,
     contractUntil: 'vazhdon',
     notes: CURRENT_CLUB_NOTE,
+    status: 'confirmed',
+    fromClubConfirmedAt: new Date(),
+    toClubConfirmedAt: new Date(),
   };
 
   try {
@@ -79,7 +199,6 @@ async function syncCurrentClubCareer({
     } else if (autoOnly) {
       await existing[0].update(transferPayload);
     }
-    // Real transfer history exists — leave transfers alone; player manages them.
   } catch (err) {
     console.warn('syncCurrentClubCareer transfer upsert skipped:', err && err.message);
   }
@@ -111,4 +230,7 @@ module.exports = {
   currentClubCareerEntry,
   isAutoCareerHistory,
   syncCurrentClubCareer,
+  syncProfileCurrentClubFromTransfer,
+  syncProfileCurrentClubFromLatestTransfer,
+  resolveClubUserId,
 };

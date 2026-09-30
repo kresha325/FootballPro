@@ -49,7 +49,7 @@ const TransferHistory = sequelize.define('TransferHistory', {
     allowNull: true,
   },
   season: {
-    type: DataTypes.STRING, // e.g., "2024/2025"
+    type: DataTypes.STRING,
     allowNull: false,
   },
   transferDate: {
@@ -58,14 +58,48 @@ const TransferHistory = sequelize.define('TransferHistory', {
     defaultValue: DataTypes.NOW,
   },
   transferFee: {
-    type: DataTypes.STRING, // e.g., "Free", "€5M", "Loan"
+    type: DataTypes.STRING,
     allowNull: true,
   },
   contractUntil: {
-    type: DataTypes.STRING, // e.g., "2026"
+    type: DataTypes.STRING,
     allowNull: true,
   },
   notes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  /** pending | confirmed | rejected | cancelled */
+  status: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    defaultValue: 'pending',
+  },
+  fromClubConfirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  fromClubConfirmedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  toClubConfirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  toClubConfirmedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  rejectedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  rejectedByClubUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  rejectionReason: {
     type: DataTypes.TEXT,
     allowNull: true,
   },

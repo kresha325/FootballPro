@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI, transferHistoryAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 function currentSeasonLabel(now = new Date()) {
   const y = now.getFullYear();
-  const month = now.getMonth(); // 0-based; football season often starts mid-year
+  const month = now.getMonth();
   if (month >= 6) return `${y}-${y + 1}`;
   return `${y - 1}-${y}`;
 }
@@ -17,6 +18,28 @@ function clubLabel(club) {
     club.email ||
     'Club'
   );
+}
+
+function statusBadge(transfer) {
+  const status = String(transfer?.status || 'confirmed').toLowerCase();
+  if (status === 'pending') {
+    const fromOk = !transfer.fromClubUserId || transfer.fromClubConfirmedAt;
+    const toOk = Boolean(transfer.toClubConfirmedAt);
+    return {
+      label: `Në pritje (${fromOk ? '✓' : '…'} nisës · ${toOk ? '✓' : '…'} destinacion)`,
+      className: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
+    };
+  }
+  if (status === 'rejected') {
+    return {
+      label: 'Refuzuar',
+      className: 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200',
+    };
+  }
+  return {
+    label: 'I konfirmuar',
+    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
+  };
 }
 
 function ClubAutocomplete({
@@ -138,13 +161,19 @@ const emptyForm = () => ({
   notes: '',
 });
 
-const TransferHistory = ({ userId, isOwner }) => {
+const TransferHistory = ({ userId, isOwner, onChanged }) => {
+  const { user } = useAuth();
   const [transfers, setTransfers] = useState([]);
+  const [clubPending, setClubPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionId, setActionId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formError, setFormError] = useState('');
   const [form, setForm] = useState(emptyForm);
+
+  const isClub = String(user?.role || '').toLowerCase() === 'club';
+  const myClubId = user?.id != null ? Number(user.id) : null;
 
   const sortedTransfers = useMemo(() => {
     return [...(transfers || [])].sort((a, b) => {
@@ -157,6 +186,25 @@ const TransferHistory = ({ userId, isOwner }) => {
   useEffect(() => {
     fetchTransfers();
   }, [userId]);
+
+  useEffect(() => {
+    if (!isClub) {
+      setClubPending([]);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await transferHistoryAPI.getPendingForClub();
+        if (!cancelled) setClubPending(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        if (!cancelled) setClubPending([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isClub, user?.id]);
 
   const fetchTransfers = async () => {
     if (!userId) {
@@ -175,11 +223,29 @@ const TransferHistory = ({ userId, isOwner }) => {
     }
   };
 
+  const refreshClubPending = async () => {
+    if (!isClub) return;
+    try {
+      const res = await transferHistoryAPI.getPendingForClub();
+      setClubPending(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setClubPending([]);
+    }
+  };
+
   const handleAddTransfer = async (e) => {
     e.preventDefault();
     setFormError('');
     if (!form.toClub.trim()) {
       setFormError('To Club është i detyrueshëm.');
+      return;
+    }
+    if (!form.toClubUserId && ['player_transfer', 'loan'].includes(form.transferType)) {
+      setFormError('Zgjidh klubin destinacion nga lista e klubeve (jo vetëm emrin), që të mund të konfirmojë.');
+      return;
+    }
+    if (form.fromClub.trim() && !form.fromClubUserId && ['player_transfer', 'loan'].includes(form.transferType)) {
+      setFormError('Zgjidh klubin nisës nga lista, ose lëre bosh për Free agent.');
       return;
     }
     if (!form.season.trim()) {
@@ -206,6 +272,7 @@ const TransferHistory = ({ userId, isOwner }) => {
       setShowAddModal(false);
       setForm(emptyForm());
       await fetchTransfers();
+      onChanged?.();
     } catch (error) {
       console.error('Error adding transfer:', error);
       const apiMsg =
@@ -217,6 +284,48 @@ const TransferHistory = ({ userId, isOwner }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleConfirm = async (transferId) => {
+    setActionId(transferId);
+    try {
+      await transferHistoryAPI.confirmTransfer(transferId);
+      await fetchTransfers();
+      await refreshClubPending();
+      onChanged?.();
+    } catch (error) {
+      alert(error?.response?.data?.msg || 'Konfirmimi dështoi');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleReject = async (transferId) => {
+    if (!confirm('Refuzo këtë transfer?')) return;
+    setActionId(transferId);
+    try {
+      await transferHistoryAPI.rejectTransfer(transferId);
+      await fetchTransfers();
+      await refreshClubPending();
+      onChanged?.();
+    } catch (error) {
+      alert(error?.response?.data?.msg || 'Refuzimi dështoi');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const canActAsClub = (transfer) => {
+    if (!isClub || myClubId == null || String(transfer?.status) !== 'pending') return false;
+    return (
+      Number(transfer.fromClubUserId) === myClubId || Number(transfer.toClubUserId) === myClubId
+    );
+  };
+
+  const mySideConfirmed = (transfer) => {
+    if (Number(transfer.fromClubUserId) === myClubId) return Boolean(transfer.fromClubConfirmedAt);
+    if (Number(transfer.toClubUserId) === myClubId) return Boolean(transfer.toClubConfirmedAt);
+    return false;
   };
 
   const handleDeleteTransfer = async (transferId) => {
@@ -242,13 +351,44 @@ const TransferHistory = ({ userId, isOwner }) => {
 
   if (loading) return <div className="animate-pulse">Loading transfers...</div>;
 
+  const renderClubActions = (transfer) => {
+    if (!canActAsClub(transfer)) return null;
+    if (mySideConfirmed(transfer)) {
+      return (
+        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          Klubi yt e konfirmoi
+        </span>
+      );
+    }
+    return (
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={actionId === transfer.id}
+          onClick={() => handleConfirm(transfer.id)}
+          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-60"
+        >
+          Konfirmo
+        </button>
+        <button
+          type="button"
+          disabled={actionId === transfer.id}
+          onClick={() => handleReject(transfer.id)}
+          className="px-3 py-1.5 rounded-lg border border-red-400 text-red-600 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-60"
+        >
+          Refuzo
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <span>🔄</span> Transfer History
         </h3>
-        {isOwner && (
+        {isOwner && !isClub ? (
           <button
             type="button"
             onClick={() => {
@@ -260,11 +400,51 @@ const TransferHistory = ({ userId, isOwner }) => {
           >
             + Add Transfer
           </button>
-        )}
+        ) : null}
       </div>
 
+      <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        Transferet e reja kërkojnë konfirmim nga <strong>të dy klubet</strong> (nisës + destinacion). Klubi aktual ndryshon vetëm pasi të dyja palët konfirmojnë.
+      </p>
+
+      {isClub && clubPending.length > 0 ? (
+        <div className="mb-5 rounded-xl border border-amber-300/50 bg-amber-50/80 p-4 dark:border-amber-500/30 dark:bg-amber-950/30">
+          <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+            Transfere në pritje për klubin tënd ({clubPending.length})
+          </h4>
+          <ul className="space-y-3">
+            {clubPending.map((t) => {
+              const athlete = t.User || t.user;
+              const name = athlete
+                ? `${athlete.firstName || ''} ${athlete.lastName || ''}`.trim()
+                : `Atleti #${t.userId}`;
+              return (
+                <li
+                  key={`pending-${t.id}`}
+                  className="flex flex-col gap-2 rounded-lg border border-amber-200/60 bg-white/70 p-3 dark:border-amber-500/20 dark:bg-black/20 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <Link to={`/profile/${t.userId}`} className="font-bold text-gray-900 hover:underline dark:text-white">
+                      {name}
+                    </Link>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {t.fromClub || 'Free agent'} → {t.toClub} · {t.season}
+                    </p>
+                  </div>
+                  {renderClubActions(t)}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
       {sortedTransfers.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400 text-center py-8">No transfer history</p>
+        !(isClub && clubPending.length > 0) ? (
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+            {isClub ? 'Nuk ka transfere në pritje për klubin tënd' : 'No transfer history'}
+          </p>
+        ) : null
       ) : (
         <div className="space-y-4">
           {sortedTransfers.map((transfer) => (
@@ -275,11 +455,14 @@ const TransferHistory = ({ userId, isOwner }) => {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1">
                   <div className="text-3xl">{getTransferIcon(transfer.transferType)}</div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     {isCurrentClubStint(transfer) ? (
                       <>
-                        <div className="mb-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                            Klubi aktual
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>📅 {transfer.season || '—'} · vazhdon</span>
@@ -292,6 +475,11 @@ const TransferHistory = ({ userId, isOwner }) => {
                           <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
                           <span className="text-gray-400">→</span>
                           <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge(transfer).className}`}
+                          >
+                            {statusBadge(transfer).label}
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>📅 {transfer.season}</span>
@@ -311,6 +499,9 @@ const TransferHistory = ({ userId, isOwner }) => {
                         </div>
                         {transfer.notes && transfer.notes !== '__current_club__' ? (
                           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{transfer.notes}</p>
+                        ) : null}
+                        {canActAsClub(transfer) ? (
+                          <div className="mt-3">{renderClubActions(transfer)}</div>
                         ) : null}
                       </>
                     )}
@@ -435,6 +626,10 @@ const TransferHistory = ({ userId, isOwner }) => {
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
+              <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3">
+                Transferi mbetet <strong>në pritje</strong> derisa klubi nisës dhe klubi destinacion ta konfirmojnë.
+                Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm. Free agent: mjafton konfirmimi i klubit destinacion.
+              </p>
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -448,7 +643,7 @@ const TransferHistory = ({ userId, isOwner }) => {
                   disabled={saving}
                   className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition font-medium"
                 >
-                  {saving ? 'Duke ruajtur…' : 'Add Transfer'}
+                  {saving ? 'Duke ruajtur…' : 'Dërgo për konfirmim'}
                 </button>
               </div>
             </form>

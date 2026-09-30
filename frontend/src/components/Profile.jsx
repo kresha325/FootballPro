@@ -1233,8 +1233,17 @@ const Profile = () => {
             {activeTab === 'about' && (
               <div className="space-y-6">
                 {/* Transfer History */}
-                {(profile.role === 'athlete' || profile.role === 'coach' || profile.role === 'trajner') && (
-                  <TransferHistory userId={profile.userId || profile.id} isOwner={isOwner} />
+                {(profile.role === 'athlete' ||
+                  profile.role === 'coach' ||
+                  profile.role === 'trajner' ||
+                  profile.role === 'club') && (
+                  <TransferHistory
+                    userId={profile.userId || profile.id}
+                    isOwner={isOwner}
+                    onChanged={() => {
+                      profileAPI.getProfile(id).then((res) => setProfile(res.data)).catch(() => {});
+                    }}
+                  />
                 )}
 
                 {profile.bio && (

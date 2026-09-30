@@ -332,9 +332,14 @@ export const engagementRateAnalyticsRequest = (period = 30) =>
 export const gamificationUserRequest = () => api.get('/api/gamification/user');
 export const gamificationAchievementsRequest = () => api.get('/api/gamification/achievements');
 export const transferHistoryByUserRequest = (userId) => api.get(`/api/transfer-history/user/${userId}`);
+export const transferHistoryPendingForClubRequest = () => api.get('/api/transfer-history/pending-for-club');
 export const addTransferHistoryRequest = (payload) => api.post('/api/transfer-history', payload);
 export const updateTransferHistoryRequest = (transferId, payload) =>
   api.put(`/api/transfer-history/${transferId}`, payload);
+export const confirmTransferHistoryRequest = (transferId) =>
+  api.post(`/api/transfer-history/${transferId}/confirm`);
+export const rejectTransferHistoryRequest = (transferId, reason) =>
+  api.post(`/api/transfer-history/${transferId}/reject`, reason ? { reason } : {});
 export const deleteTransferHistoryRequest = (transferId) => api.delete(`/api/transfer-history/${transferId}`);
 export const clubStaffByClubRequest = (clubId, params = {}) =>
   api.get(`/api/club-staff/club/${clubId}`, { params });
