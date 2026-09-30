@@ -24,6 +24,9 @@ import UserAvatar from '../components/UserAvatar';
 import { openUserProfile } from '../utils/openUserProfile';
 import {
   conversationDetailRequest,
+  conversationsRequest,
+  addGroupMembersRequest,
+  leaveGroupRequest,
   conversationMessagesRequest,
   deleteMessageRequest,
   editMessageRequest,
@@ -314,6 +317,11 @@ export default function ConversationScreen({ route, navigation }) {
   const [othersRead, setOthersRead] = useState([]);
   const [groupMembers, setGroupMembers] = useState([]);
   const [showGroupMembers, setShowGroupMembers] = useState(false);
+  const [showInvitePicker, setShowInvitePicker] = useState(false);
+  const [inviteContacts, setInviteContacts] = useState([]);
+  const [inviteSelected, setInviteSelected] = useState([]);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
   const [typingByUserId, setTypingByUserId] = useState({});
   const typingTimeoutRef = useRef(null);
   const composerBlurTimeoutRef = useRef(null);
@@ -370,6 +378,73 @@ export default function ConversationScreen({ route, navigation }) {
     const t = setInterval(() => refreshPeerPresence(otherUserId), 45000);
     return () => clearInterval(t);
   }, [isGroup, otherUserId, refreshPeerPresence, socketConnected]);
+
+  const openInvitePicker = useCallback(async () => {
+    setInviteBusy(true);
+    try {
+      const res = await conversationsRequest();
+      const list = Array.isArray(res?.data) ? res.data : [];
+      const existingIds = new Set(groupMembers.map((m) => Number(m.id)));
+      const map = new Map();
+      list.forEach((conv) => {
+        if (conv?.isGroup || !Array.isArray(conv?.members)) return;
+        const other = conv.members.find((m) => Number(m.id) !== Number(user?.id));
+        if (!other?.id || existingIds.has(Number(other.id)) || map.has(Number(other.id))) return;
+        map.set(Number(other.id), {
+          id: other.id,
+          name: `${other.firstName || ''} ${other.lastName || ''}`.trim() || 'Përdorues',
+          profilePhoto: other.profilePhoto || null,
+        });
+      });
+      setInviteContacts(Array.from(map.values()));
+      setInviteSelected([]);
+      setShowInvitePicker(true);
+    } catch (err) {
+      Alert.alert('Ftesa', extractErrorMessage(err) || 'Nuk u ngarkuan kontaktet');
+    } finally {
+      setInviteBusy(false);
+    }
+  }, [groupMembers, user?.id]);
+
+  const submitInvite = useCallback(async () => {
+    if (!conversationId || inviteSelected.length === 0) return;
+    setInviteBusy(true);
+    try {
+      const res = await addGroupMembersRequest(conversationId, inviteSelected);
+      const members = Array.isArray(res?.data?.members) ? res.data.members : [];
+      setGroupMembers(members);
+      setShowInvitePicker(false);
+      setInviteSelected([]);
+      Alert.alert('Ftesa', 'Anëtarët u shtuan në grup.');
+    } catch (err) {
+      Alert.alert('Ftesa', extractErrorMessage(err) || 'Nuk u shtuan anëtarët');
+    } finally {
+      setInviteBusy(false);
+    }
+  }, [conversationId, inviteSelected]);
+
+  const confirmLeaveGroup = useCallback(() => {
+    if (!conversationId) return;
+    Alert.alert('Dil nga grupi', 'Je i sigurt që do të dalësh nga ky grup?', [
+      { text: 'Anulo', style: 'cancel' },
+      {
+        text: 'Dil',
+        style: 'destructive',
+        onPress: async () => {
+          setLeaveBusy(true);
+          try {
+            await leaveGroupRequest(conversationId);
+            setShowGroupMembers(false);
+            navigation.goBack();
+          } catch (err) {
+            Alert.alert('Gabim', extractErrorMessage(err) || 'Nuk u dal nga grupi');
+          } finally {
+            setLeaveBusy(false);
+          }
+        },
+      },
+    ]);
+  }, [conversationId, navigation]);
 
   const openCall = useCallback(
     (audioOnly) => {
@@ -1232,6 +1307,36 @@ export default function ConversationScreen({ route, navigation }) {
                 <Ionicons name="close" size={24} color={colors.muted} />
               </TouchableOpacity>
             </View>
+            <View style={styles.membersActions}>
+              <TouchableOpacity
+                style={[styles.membersActionBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder }]}
+                onPress={openInvitePicker}
+                disabled={inviteBusy || leaveBusy}
+              >
+                {inviteBusy && !showInvitePicker ? (
+                  <ActivityIndicator color={colors.primaryText} />
+                ) : (
+                  <>
+                    <Ionicons name="person-add-outline" size={18} color={colors.primaryText} />
+                    <Text style={[styles.membersActionText, { color: colors.primaryText }]}>Fto anëtarë</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.membersActionBtn, { backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder || colors.danger }]}
+                onPress={confirmLeaveGroup}
+                disabled={leaveBusy || inviteBusy}
+              >
+                {leaveBusy ? (
+                  <ActivityIndicator color={colors.danger} />
+                ) : (
+                  <>
+                    <Ionicons name="exit-outline" size={18} color={colors.danger} />
+                    <Text style={[styles.membersActionText, { color: colors.danger }]}>Dil nga grupi</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
             <FlatList
               data={groupMembers}
               keyExtractor={(item, index) => String(item?.id ?? index)}
@@ -1242,6 +1347,7 @@ export default function ConversationScreen({ route, navigation }) {
               renderItem={({ item }) => {
                 const name = `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Përdorues';
                 const isMe = Number(item.id) === Number(user?.id);
+                const memberRole = item.memberRole || null;
                 return (
                   <TouchableOpacity
                     style={[styles.memberRow, { borderBottomColor: colors.border }]}
@@ -1263,7 +1369,11 @@ export default function ConversationScreen({ route, navigation }) {
                         {name}
                         {isMe ? ' (ti)' : ''}
                       </Text>
-                      {item.role ? (
+                      {memberRole ? (
+                        <Text style={[styles.memberRole, { color: colors.muted }]} numberOfLines={1}>
+                          {memberRole === 'admin' ? 'Admin' : 'Anëtar'}
+                        </Text>
+                      ) : item.role ? (
                         <Text style={[styles.memberRole, { color: colors.muted }]} numberOfLines={1}>
                           {item.role}
                         </Text>
@@ -1274,6 +1384,80 @@ export default function ConversationScreen({ route, navigation }) {
                 );
               }}
             />
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={showInvitePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInvitePicker(false)}
+      >
+        <View style={styles.membersModalRoot}>
+          <TouchableOpacity
+            style={styles.membersModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowInvitePicker(false)}
+          />
+          <View style={[styles.membersModalCard, { backgroundColor: colors.card }]}>
+            <View style={styles.membersModalHeader}>
+              <Text style={[styles.membersModalTitle, { color: colors.text }]}>Fto anëtarë</Text>
+              <TouchableOpacity onPress={() => setShowInvitePicker(false)} hitSlop={12}>
+                <Ionicons name="close" size={24} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.inviteHint, { color: colors.muted }]}>
+              Zgjidh nga kontaktet e tua (biseda 1-1).
+            </Text>
+            <FlatList
+              data={inviteContacts}
+              keyExtractor={(item) => String(item.id)}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={[styles.membersEmpty, { color: colors.muted }]}>
+                  Nuk ka kontakte të reja për ftesë. Fillo biseda 1-1 fillimisht.
+                </Text>
+              }
+              renderItem={({ item }) => {
+                const selected = inviteSelected.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    style={[styles.memberRow, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setInviteSelected((prev) =>
+                        selected ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+                      );
+                    }}
+                  >
+                    <UserAvatar uri={item.profilePhoto} user={item} size={40} style={styles.memberAvatar} />
+                    <Text style={[styles.memberName, { color: colors.text, flex: 1 }]} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Ionicons
+                      name={selected ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={selected ? colors.primaryText : colors.muted}
+                    />
+                  </TouchableOpacity>
+                );
+              }}
+            />
+            <TouchableOpacity
+              style={[
+                styles.inviteSubmitBtn,
+                { backgroundColor: colors.primary, opacity: inviteSelected.length ? 1 : 0.45 },
+              ]}
+              disabled={!inviteSelected.length || inviteBusy}
+              onPress={submitInvite}
+            >
+              {inviteBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.inviteSubmitText}>
+                  Shto {inviteSelected.length ? `(${inviteSelected.length})` : ''}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1527,6 +1711,34 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   membersModalTitle: { fontSize: 18, fontWeight: '800' },
+  membersActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  membersActionBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  membersActionText: { fontSize: 13, fontWeight: '700' },
+  inviteHint: { paddingHorizontal: 16, paddingBottom: 8, fontSize: 13, lineHeight: 18 },
+  inviteSubmitBtn: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  inviteSubmitText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   membersEmpty: { textAlign: 'center', paddingVertical: 28, fontSize: 14 },
   memberRow: {
     flexDirection: 'row',

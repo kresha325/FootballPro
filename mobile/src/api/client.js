@@ -203,6 +203,10 @@ export const endVideoCallRequest = (callId) => api.put(`/api/video-calls/${callI
 export const conversationsRequest = () => api.get('/api/messaging/conversations');
 export const createGroupConversationRequest = (name, memberIds) =>
   api.post('/api/messaging/conversations/group', { name, memberIds });
+export const addGroupMembersRequest = (conversationId, memberIds) =>
+  api.post(`/api/messaging/conversations/${conversationId}/members`, { memberIds });
+export const leaveGroupRequest = (conversationId) =>
+  api.post(`/api/messaging/conversations/${conversationId}/leave`);
 export const conversationDetailRequest = (conversationId) =>
   api.get(`/api/messaging/conversations/detail/${conversationId}`);
 export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');

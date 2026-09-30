@@ -11,6 +11,8 @@ const {
   sendMessage,
   markAsRead,
   createGroup,
+  addGroupMembers,
+  leaveGroup,
   editMessage,
   deleteMessage,
 } = require('../controllers/messaging');
@@ -51,6 +53,10 @@ router.get('/conversations/detail/:conversationId', auth, getConversationById);
 
 // Create group conversation
 router.post('/conversations/group', auth, createGroup);
+
+// Invite members / leave group
+router.post('/conversations/:conversationId/members', auth, addGroupMembers);
+router.post('/conversations/:conversationId/leave', auth, leaveGroup);
 
 // Get messages in a conversation
 router.get('/conversations/:conversationId/messages', auth, getMessages);

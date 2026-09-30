@@ -308,7 +308,7 @@ exports.getConversationById = async (req, res) => {
           as: 'members',
           attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
-          through: { attributes: [] },
+          through: { attributes: ['role'] },
         },
       ],
     });
@@ -319,7 +319,11 @@ exports.getConversationById = async (req, res) => {
 
     const data = conversation.toJSON();
     if (Array.isArray(data.members)) {
-      data.members = data.members.map((m) => shapeMemberRow(m, req));
+      data.members = data.members.map((m) => {
+        const shaped = shapeMemberRow(m, req);
+        const memberRole = m.ConversationMember?.role || m.conversation_members?.role || null;
+        return { ...shaped, memberRole };
+      });
     }
     res.json(data);
   } catch (err) {
@@ -594,6 +598,147 @@ exports.createGroup = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Create group error:', err);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+async function fetchGroupConversationPayload(conversationId, req) {
+  const fullConversation = await Conversation.findByPk(conversationId, {
+    include: [
+      {
+        model: User,
+        as: 'members',
+        attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
+        include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+        through: { attributes: ['role'] },
+      },
+    ],
+  });
+  if (!fullConversation) return null;
+  const data = fullConversation.toJSON();
+  if (Array.isArray(data.members)) {
+    data.members = data.members.map((m) => {
+      const shaped = shapeMemberRow(m, req);
+      const memberRole = m.ConversationMember?.role || m.conversation_members?.role || null;
+      return { ...shaped, memberRole };
+    });
+  }
+  return data;
+}
+
+/** Invite / add members to an existing group (any current member). */
+exports.addGroupMembers = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const rawIds = Array.isArray(req.body?.memberIds) ? req.body.memberIds : [];
+    if (Number.isNaN(conversationId)) {
+      return res.status(400).json({ msg: 'Invalid conversation id' });
+    }
+    const memberIds = [
+      ...new Set(
+        rawIds
+          .map((id) => parseInt(id, 10))
+          .filter((id) => Number.isFinite(id) && id > 0 && id !== Number(req.user.id))
+      ),
+    ];
+    if (!memberIds.length) {
+      return res.status(400).json({ msg: 'Zgjidh të paktën një anëtar për të ftuar' });
+    }
+
+    const conversation = await Conversation.findByPk(conversationId);
+    if (!conversation || !conversation.isGroup) {
+      return res.status(404).json({ msg: 'Grupi nuk u gjet' });
+    }
+
+    const myMembership = await ConversationMember.findOne({
+      where: { conversationId, userId: req.user.id },
+    });
+    if (!myMembership) {
+      return res.status(403).json({ msg: 'Nuk je anëtar i këtij grupi' });
+    }
+
+    const existing = await ConversationMember.findAll({
+      where: { conversationId, userId: { [Op.in]: memberIds } },
+      attributes: ['userId'],
+    });
+    const existingSet = new Set(existing.map((row) => Number(row.userId)));
+    const toAdd = memberIds.filter((id) => !existingSet.has(id));
+    if (!toAdd.length) {
+      const data = await fetchGroupConversationPayload(conversationId, req);
+      return res.json(data);
+    }
+
+    const users = await User.findAll({
+      where: { id: { [Op.in]: toAdd } },
+      attributes: ['id'],
+    });
+    const validIds = users.map((u) => Number(u.id));
+    if (!validIds.length) {
+      return res.status(400).json({ msg: 'Nuk u gjetën përdorues për ftesë' });
+    }
+
+    await ConversationMember.bulkCreate(
+      validIds.map((userId) => ({
+        conversationId,
+        userId,
+        role: 'member',
+      }))
+    );
+
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    res.json(data);
+  } catch (err) {
+    console.error('Add group members error:', err);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+/** Leave a group conversation. */
+exports.leaveGroup = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    if (Number.isNaN(conversationId)) {
+      return res.status(400).json({ msg: 'Invalid conversation id' });
+    }
+
+    const conversation = await Conversation.findByPk(conversationId);
+    if (!conversation || !conversation.isGroup) {
+      return res.status(404).json({ msg: 'Grupi nuk u gjet' });
+    }
+
+    const myMembership = await ConversationMember.findOne({
+      where: { conversationId, userId: req.user.id },
+    });
+    if (!myMembership) {
+      return res.status(403).json({ msg: 'Nuk je anëtar i këtij grupi' });
+    }
+
+    const remaining = await ConversationMember.findAll({
+      where: {
+        conversationId,
+        userId: { [Op.ne]: req.user.id },
+      },
+      order: [['joinedAt', 'ASC']],
+    });
+
+    if (myMembership.role === 'admin' && remaining.length > 0) {
+      const hasOtherAdmin = remaining.some((m) => m.role === 'admin');
+      if (!hasOtherAdmin) {
+        await remaining[0].update({ role: 'admin' });
+      }
+    }
+
+    await myMembership.destroy();
+
+    if (remaining.length === 0) {
+      await Message.destroy({ where: { conversationId } });
+      await conversation.destroy();
+      return res.json({ left: true, deleted: true, conversationId });
+    }
+
+    res.json({ left: true, deleted: false, conversationId });
+  } catch (err) {
+    console.error('Leave group error:', err);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };

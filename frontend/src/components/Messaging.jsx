@@ -101,6 +101,10 @@ function Messaging() {
   const [callType, setCallType] = useState('video'); // 'video' or 'audio'
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupMembersPanel, setShowGroupMembersPanel] = useState(false);
+  const [showInviteMembersPanel, setShowInviteMembersPanel] = useState(false);
+  const [inviteMemberIds, setInviteMemberIds] = useState([]);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -315,7 +319,48 @@ function Messaging() {
 
   useEffect(() => {
     setShowGroupMembersPanel(false);
+    setShowInviteMembersPanel(false);
+    setInviteMemberIds([]);
   }, [selectedConversation?.id]);
+
+  async function inviteMembersToGroup() {
+    if (!selectedConversation?.id || inviteMemberIds.length === 0) return;
+    setInviteBusy(true);
+    try {
+      const res = await api.post(`/messaging/conversations/${selectedConversation.id}/members`, {
+        memberIds: inviteMemberIds,
+      });
+      if (res?.data?.id) {
+        setSelectedConversation(res.data);
+        setConversations((prev) =>
+          prev.map((c) => (Number(c.id) === Number(res.data.id) ? { ...c, ...res.data } : c))
+        );
+      }
+      setShowInviteMembersPanel(false);
+      setInviteMemberIds([]);
+    } catch (err) {
+      alert(err?.response?.data?.msg || 'Nuk u shtuan anëtarët');
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function leaveSelectedGroup() {
+    if (!selectedConversation?.id || !selectedConversation.isGroup) return;
+    if (!window.confirm('Je i sigurt që do të dalësh nga ky grup?')) return;
+    setLeaveBusy(true);
+    try {
+      await api.post(`/messaging/conversations/${selectedConversation.id}/leave`);
+      const leftId = selectedConversation.id;
+      setShowGroupMembersPanel(false);
+      setSelectedConversation(null);
+      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(leftId)));
+    } catch (err) {
+      alert(err?.response?.data?.msg || 'Nuk u dal nga grupi');
+    } finally {
+      setLeaveBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (socket) {
@@ -708,6 +753,15 @@ function Messaging() {
     return Array.from(map.values());
   }, [conversations, user?.id]);
 
+  const inviteableContacts = useMemo(() => {
+    const existing = new Set(
+      (Array.isArray(selectedConversation?.members) ? selectedConversation.members : []).map((m) =>
+        Number(m.id)
+      )
+    );
+    return directContacts.filter((c) => !existing.has(Number(c.id)));
+  }, [directContacts, selectedConversation?.members]);
+
   async function createGroupConversation() {
     if (!groupName.trim()) {
       alert('Shkruaj emrin e grupit.');
@@ -968,6 +1022,27 @@ function Messaging() {
                 Mbyll
               </button>
             </div>
+            <div className="flex gap-2 border-b border-[var(--xt-color-border)] px-4 py-3">
+              <button
+                type="button"
+                className="btn btn-outline flex-1 min-h-10 text-sm"
+                disabled={inviteBusy || leaveBusy}
+                onClick={() => {
+                  setInviteMemberIds([]);
+                  setShowInviteMembersPanel(true);
+                }}
+              >
+                Fto anëtarë
+              </button>
+              <button
+                type="button"
+                className="btn btn-quiet flex-1 min-h-10 text-sm text-[var(--xt-color-danger)]"
+                disabled={leaveBusy || inviteBusy}
+                onClick={leaveSelectedGroup}
+              >
+                {leaveBusy ? 'Duke dalë…' : 'Dil nga grupi'}
+              </button>
+            </div>
             <div className="overflow-y-auto max-h-[min(55vh,26rem)]">
               {(Array.isArray(selectedConversation.members) ? selectedConversation.members : []).length === 0 ? (
                 <p className="p-6 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk ka anëtarë.</p>
@@ -976,6 +1051,7 @@ function Messaging() {
                   const name = `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Përdorues';
                   const isMe = Number(m.id) === Number(user?.id);
                   const photo = m.profilePhoto || m.Profile?.profilePhoto || '';
+                  const memberRole = m.memberRole || null;
                   return (
                     <Link
                       key={m.id}
@@ -999,7 +1075,11 @@ function Messaging() {
                           {name}
                           {isMe ? ' (ti)' : ''}
                         </div>
-                        {m.role ? (
+                        {memberRole ? (
+                          <div className="truncate text-xs text-[var(--xt-color-text-muted)]">
+                            {memberRole === 'admin' ? 'Admin' : 'Anëtar'}
+                          </div>
+                        ) : m.role ? (
                           <div className="truncate text-xs capitalize text-[var(--xt-color-text-muted)]">
                             {m.role}
                           </div>
@@ -1009,6 +1089,83 @@ function Messaging() {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showInviteMembersPanel && selectedConversation?.isGroup ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-3 backdrop-blur-sm sm:items-center"
+          onClick={() => setShowInviteMembersPanel(false)}
+          role="presentation"
+        >
+          <div
+            className="xt-card max-h-[min(70vh,32rem)] w-full max-w-md overflow-hidden rounded-t-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Fto anëtarë"
+          >
+            <div className="flex items-center justify-between border-b border-[var(--xt-color-border)] px-4 py-3">
+              <h3 className="font-extrabold text-[var(--xt-color-text)]">Fto anëtarë</h3>
+              <button
+                type="button"
+                className="btn btn-quiet min-h-10 px-3"
+                onClick={() => setShowInviteMembersPanel(false)}
+              >
+                Mbyll
+              </button>
+            </div>
+            <p className="px-4 pt-3 text-xs text-[var(--xt-color-text-muted)]">
+              Zgjidh nga kontaktet e tua (biseda 1-1).
+            </p>
+            <div className="overflow-y-auto max-h-[min(45vh,20rem)] px-2 py-2">
+              {inviteableContacts.length === 0 ? (
+                <p className="p-4 text-center text-sm text-[var(--xt-color-text-muted)]">
+                  Nuk ka kontakte të reja. Fillo biseda 1-1 fillimisht.
+                </p>
+              ) : (
+                inviteableContacts.map((m) => {
+                  const checked = inviteMemberIds.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--xt-color-surface-hover)]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setInviteMemberIds((prev) => [...prev, m.id]);
+                          } else {
+                            setInviteMemberIds((prev) => prev.filter((id) => id !== m.id));
+                          }
+                        }}
+                      />
+                      <span className="text-sm font-semibold text-[var(--xt-color-text)]">{m.name}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--xt-color-border)] px-4 py-3">
+              <button
+                type="button"
+                className="btn btn-quiet min-h-10 px-3"
+                onClick={() => setShowInviteMembersPanel(false)}
+              >
+                Anulo
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary min-h-10 px-4"
+                disabled={inviteBusy || inviteMemberIds.length === 0}
+                onClick={inviteMembersToGroup}
+              >
+                {inviteBusy ? 'Duke shtuar…' : `Shto (${inviteMemberIds.length})`}
+              </button>
             </div>
           </div>
         </div>
