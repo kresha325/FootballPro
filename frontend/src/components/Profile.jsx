@@ -19,6 +19,7 @@ import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 import { getFullUrl } from '../utils/mediaUrl';
+import { formatTotalsPoints } from '../utils/tournamentPoints';
 import { LiveStreamChat, LiveStreamReactions, LiveStreamGuests } from './profile/LiveStreamWidgets';
 import ProfileSponsorsPanel from './profile/ProfileSponsorsPanel';
 import ProfileGalleryPanel from './profile/ProfileGalleryPanel';
@@ -1305,7 +1306,7 @@ const Profile = () => {
                       ['Gola', profile.stats?.goals ?? tournamentSummary.totals?.scorerGoals],
                       ['Asiste', profile.stats?.assists ?? tournamentSummary.totals?.scorerAssists],
                       ['Minuta', profile.stats?.minutes],
-                      ['Pikë', tournamentSummary.totals?.points],
+                      ['Pikë', tournamentSummary.totals ? formatTotalsPoints(tournamentSummary.totals) : null],
                       ['Turne', tournamentSummary.totals?.tournamentsPlayed],
                     ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
                       <div className="xt-stat-card" key={label}>

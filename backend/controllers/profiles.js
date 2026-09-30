@@ -1721,7 +1721,15 @@ exports.getUserTournamentSummary = async (req, res) => {
       return res.json({
         userId,
         tournaments: [],
-        totals: { points: 0, goalsFor: 0, scorerGoals: 0, scorerAssists: 0, tournamentsPlayed: 0 },
+        totals: {
+          points: 0,
+          pointsPossible: 0,
+          goalsFor: 0,
+          scorerGoals: 0,
+          scorerAssists: 0,
+          tournamentsPlayed: 0,
+          matchesPlayed: 0,
+        },
       });
     }
 
@@ -1830,13 +1838,72 @@ exports.getUserTournamentSummary = async (req, res) => {
         scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
         scorerAssists: assistsByTournament[t.id] ?? 0,
         played: (myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0),
+        pointsPossible:
+          ((myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0)) * 3,
       });
     }
 
     for (const s of squadRows) {
-      if (seenTournamentIds.has(s.tournamentId)) continue;
       const t = tournamentById[s.tournamentId];
       if (!t) continue;
+
+      // Points / team goals / rank = club's row on the tournament table (not the athlete).
+      const tableRows = sortTournamentStandingRows(
+        (participantsByTournament[s.tournamentId] || []).map((ap) => {
+          const gf = Number(ap.goalsFor) || 0;
+          const ga = Number(ap.goalsAgainst) || 0;
+          return {
+            userId: ap.userId,
+            points: Number(ap.points) || 0,
+            wins: Number(ap.wins) || 0,
+            draws: Number(ap.draws) || 0,
+            losses: Number(ap.losses) || 0,
+            goalsFor: gf,
+            goalsAgainst: ga,
+            goalDifference: gf - ga,
+          };
+        })
+      );
+      const rankIdx = tableRows.findIndex((r) => Number(r.userId) === Number(s.clubUserId));
+      const clubRow = tableRows[rankIdx] || {
+        points: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+      };
+      const played = (clubRow.wins || 0) + (clubRow.draws || 0) + (clubRow.losses || 0);
+      const clubStanding = {
+        viaSquad: true,
+        clubUserId: s.clubUserId,
+        rank: rankIdx >= 0 ? rankIdx + 1 : null,
+        points: clubRow.points,
+        wins: clubRow.wins,
+        draws: clubRow.draws,
+        losses: clubRow.losses,
+        goalsFor: clubRow.goalsFor,
+        goalsAgainst: clubRow.goalsAgainst,
+        goalDifference: clubRow.goalDifference,
+        played,
+        pointsPossible: played * 3,
+      };
+
+      if (seenTournamentIds.has(s.tournamentId)) {
+        // Athlete may already be listed as a participant with empty table stats — use club standings.
+        const idx = tournaments.findIndex((row) => row.tournamentId === s.tournamentId);
+        if (idx >= 0) {
+          tournaments[idx] = {
+            ...tournaments[idx],
+            ...clubStanding,
+            scorerGoals: tournaments[idx].scorerGoals,
+            scorerAssists: tournaments[idx].scorerAssists,
+          };
+        }
+        continue;
+      }
+
       seenTournamentIds.add(t.id);
       tournaments.push({
         tournamentId: t.id,
@@ -1847,31 +1914,26 @@ exports.getUserTournamentSummary = async (req, res) => {
         tournamentStatus: t.status,
         tournamentCategory: t.category || 'open',
         participantStatus: 'accepted',
-        viaSquad: true,
-        clubUserId: s.clubUserId,
-        rank: null,
-        points: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        goalDifference: 0,
+        ...clubStanding,
         scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
         scorerAssists: assistsByTournament[t.id] ?? 0,
-        played: 0,
       });
     }
+
+    const pointsEarned = tournaments.reduce((sum, row) => sum + (row.points || 0), 0);
+    const pointsPossible = tournaments.reduce((sum, row) => sum + (row.pointsPossible || 0), 0);
 
     res.json({
       userId,
       tournaments,
       totals: {
-        points: tournaments.reduce((sum, row) => sum + (row.points || 0), 0),
+        points: pointsEarned,
+        pointsPossible,
         goalsFor: tournaments.reduce((sum, row) => sum + (row.goalsFor || 0), 0),
         scorerGoals: tournaments.reduce((sum, row) => sum + (row.scorerGoals || 0), 0),
         scorerAssists: tournaments.reduce((sum, row) => sum + (row.scorerAssists || 0), 0),
         tournamentsPlayed: tournaments.length,
+        matchesPlayed: tournaments.reduce((sum, row) => sum + (row.played || 0), 0),
       },
     });
   } catch (err) {

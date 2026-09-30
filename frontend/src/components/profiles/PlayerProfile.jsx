@@ -1,5 +1,6 @@
 import React from 'react';
 import { getFullUrl, getVideoPosterUrl, isVideoMedia } from '../../utils/mediaUrl';
+import { formatTotalsPoints } from '../../utils/tournamentPoints';
 
 const hasValue = (value) => value !== null && value !== undefined && value !== '';
 const numberValue = (value) => {
@@ -44,7 +45,7 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
     { label: 'Gola', value: goals },
     { label: 'Asiste', value: assists },
     { label: 'Minuta', value: minutes },
-    { label: 'Pikë', value: numberValue(totals.points) },
+    { label: 'Pikë', value: totals && (totals.points != null || totals.pointsPossible != null) ? formatTotalsPoints(totals) : null },
     { label: 'Turne', value: numberValue(totals.tournamentsPlayed) },
   ].filter((item) => item.value !== null);
   const identity = [

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 import { absoluteBackendUrl } from '../../config/constants';
 import { formatTournamentTitle } from '../../utils/footballSeason';
+import { formatTotalsPoints } from '../../utils/tournamentPoints';
 
 function formatCoachCategory(cat) {
   if (!cat) return '';
@@ -349,7 +350,7 @@ export default function PublicProfileOverviewTab({
     { key: 'g', label: 'Gola', value: goals, color: '#9A6B12' },
     { key: 'a', label: 'Asiste', value: assists, color: '#9A6B12' },
     { key: 'm', label: 'Minuta', value: minutes, color: '#9A6B12' },
-    { key: 'p', label: 'Pikë', value: numberValue(totals.points), color: '#9A6B12' },
+    { key: 'p', label: 'Pikë', value: totals && (totals.points != null || totals.pointsPossible != null) ? formatTotalsPoints(totals) : null, color: '#9A6B12' },
     { key: 't', label: 'Turne', value: numberValue(totals.tournamentsPlayed), color: '#9A6B12' },
   ].filter((c) => c.value !== null);
 

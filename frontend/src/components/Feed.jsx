@@ -21,6 +21,7 @@ import { API, matchesAPI } from '../services/api';
 import { ArrowRightIcon, ChartBarIcon, MagnifyingGlassIcon, PlusIcon, TrophyIcon, UserGroupIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { isEarlyAccessEnabled, EARLY_ACCESS_LABS_KEY } from '../utils/profileThemes';
 import { tournamentIdFromNotification } from '../utils/notificationLinks';
+import { formatTotalsPoints } from '../utils/tournamentPoints';
 import './ProfileTheme.css';
 
 const Feed = () => {
@@ -630,10 +631,10 @@ const Feed = () => {
       {['athlete', 'player', 'coach'].includes(role) && <section className="xt-card mb-6 bg-white p-4 dark:bg-[#0d1420] sm:p-5" aria-labelledby="performance-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Your progress</p><h2 id="performance-title" className="mt-1 text-lg text-slate-900 dark:text-white">Përmbledhje e performancës</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Profili im <ArrowRightIcon className="h-4 w-4" /></Link></div>
         {performanceError ? <p className="text-sm text-slate-500 dark:text-slate-400">Statistikat nuk mund të ngarkoheshin.</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Duke ngarkuar statistikat">{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', performanceSummary.points], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => (
+          {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', formatTotalsPoints(performanceSummary)], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-[#121c2a]">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
-              <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{Number(value) || 0}</p>
+              <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{label === 'Pikë' ? value : (Number(value) || 0)}</p>
             </div>
           ))}
         </div>}

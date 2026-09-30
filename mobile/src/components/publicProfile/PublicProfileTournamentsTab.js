@@ -1,4 +1,5 @@
 import { formatTournamentTitle } from '../../utils/footballSeason';
+import { formatTotalsPoints, formatTournamentPoints } from '../../utils/tournamentPoints';
 import { StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 
 function statusLabel(status) {
@@ -32,7 +33,7 @@ export default function PublicProfileTournamentsTab({
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Tournaments</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{totals.points ?? 0}</Text>
+              <Text style={[styles.totalValue, { color: '#9A6B12' }]}>{formatTotalsPoints(totals)}</Text>
               <Text style={[styles.totalLabel, { color: theme.muted }]}>Points</Text>
             </View>
             <View style={styles.totalItem}>
@@ -82,7 +83,7 @@ export default function PublicProfileTournamentsTab({
               {row.tournamentCategory ? ` · ${String(row.tournamentCategory).toUpperCase()}` : ''}
             </Text>
             <View style={styles.statsRow}>
-              <Text style={[styles.stat, { color: theme.text }]}>{row.points ?? 0} pts</Text>
+              <Text style={[styles.stat, { color: theme.text }]}>{formatTournamentPoints(row)} pts</Text>
               <Text style={[styles.stat, { color: theme.text }]}>{row.played ?? 0} pl</Text>
               <Text style={[styles.stat, { color: theme.text }]}>{row.goalsFor ?? 0} GF</Text>
               <Text style={[styles.stat, { color: theme.text }]}>{row.scorerGoals ?? 0} personal G</Text>

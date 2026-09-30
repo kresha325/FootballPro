@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatTotalsPoints, formatTournamentPoints } from '../utils/tournamentPoints';
 
 function statusLabel(status) {
   const map = {
@@ -40,7 +41,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
               { label: 'Tournaments', value: totals.tournamentsPlayed ?? 0 },
-              { label: 'Points', value: totals.points ?? 0 },
+              { label: 'Points', value: formatTotalsPoints(totals) },
               { label: 'Team goals', value: totals.goalsFor ?? 0 },
               { label: 'Personal goals', value: totals.scorerGoals ?? 0 },
               { label: 'Assists', value: totals.scorerAssists ?? 0 },
@@ -101,7 +102,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {[
-              { k: `${row.points ?? 0} pts`, c: 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' },
+              { k: `${formatTournamentPoints(row)} pts`, c: 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' },
               { k: `${row.played ?? 0} pl`, c: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200' },
               { k: `${row.goalsFor ?? 0} GF`, c: 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' },
               { k: `${row.scorerGoals ?? 0} G`, c: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200' },
