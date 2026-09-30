@@ -10,15 +10,23 @@ import {
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC, APP_HERO_DESKTOP, APP_HERO_DESKTOP_W, APP_HERO_DESKTOP_H, APP_HERO_MOBILE, APP_HERO_MOBILE_W, APP_HERO_MOBILE_H } from '../config/branding';
 import './LandingPage.css';
 
-// Existing public pricing configuration, preserved from the original landing page.
+/** Free 30 ditë · Basic €5.99/muaj · Pro €11.99/muaj · vjetore = 10 muaj (2 muaj falas). */
 const ROLE_GROUPS = {
   individual: {
     label: 'Lojtarë, Trajnerë & Skautë', roles: 'Atlet · Trajner · Skaut · Menaxher · Gjyqtar',
-    plans: { social: { name: 'Social', price: 0, period: 'përgjithmonë' }, basic: { name: 'Basic', price: 4.99, period: '/muaj' }, pro: { name: 'Pro', price: 9.99, period: '/muaj' } },
+    plans: {
+      social: { name: 'Free', price: 0, period: '30 ditë' },
+      basic: { name: 'Basic', price: 5.99, period: '/muaj', yearly: 59.9 },
+      pro: { name: 'Pro', price: 11.99, period: '/muaj', yearly: 119.9 },
+    },
   },
   organization: {
     label: 'Klube, Federata & Media', roles: 'Klub · Federatë · Ligë · Media · Biznes',
-    plans: { social: { name: 'Social', price: 0, period: 'përgjithmonë' }, basic: { name: 'Basic', price: 19.99, period: '/muaj' }, pro: { name: 'Pro', price: 49.99, period: '/muaj' } },
+    plans: {
+      social: { name: 'Free', price: 0, period: '30 ditë' },
+      basic: { name: 'Basic', price: 5.99, period: '/muaj', yearly: 59.9 },
+      pro: { name: 'Pro', price: 11.99, period: '/muaj', yearly: 119.9 },
+    },
   },
 };
 
@@ -180,10 +188,11 @@ export default function LandingPage() {
       <section id="pricing" className="xt-section xt-pricing-section"><div className="xt-container"><Reveal><SectionHeading eyebrow="CLEAR PLANS · REAL POSSIBILITIES" title="Gjej planin tënd të lojës." description="Zgjidh paketën që i përshtatet rolit tënd në futboll." align="center" /></Reveal>
         <div className="mb-5 flex justify-center"><div className="xt-plan-toggle" role="group" aria-label="Zgjidh llojin e llogarisë">{Object.entries(ROLE_GROUPS).map(([key, value]) => <button type="button" key={key} onClick={() => setRoleGroup(key)} aria-pressed={roleGroup === key} className={roleGroup === key ? 'active' : ''}>{value.label}</button>)}</div></div><p className="mb-9 text-center text-xs tracking-[.1em] text-[var(--xt-muted)]">{group.roles}</p>
         <div className="grid gap-3 lg:grid-cols-3">{['social', 'basic', 'pro'].map((planKey, index) => { const plan = group.plans[planKey]; const featured = planKey === 'pro'; return <Reveal key={planKey} delay={index * .06}><article className={`xt-plan-card ${featured ? 'featured' : ''}`}>
-          {featured && <span className="xt-plan-ribbon">PRO</span>}<span className="xt-plan-label">{plan.name}</span><div className="xt-plan-price">{plan.price === 0 ? 'Falas' : <>€{plan.price}<small> {plan.period}</small></>}</div>
+          {featured && <span className="xt-plan-ribbon">PRO</span>}<span className="xt-plan-label">{plan.name}</span><div className="xt-plan-price">{plan.price === 0 ? <>Falas<small> {plan.period}</small></> : <>€{plan.price}<small> {plan.period}</small></>}</div>
+          {plan.yearly ? <p className="xt-plan-yearly">ose €{plan.yearly}/vit · 2 muaj falas</p> : null}
           <ul>{FEATURE_MATRIX.filter(feature => feature[planKey]).map(feature => <li key={feature.label}><CheckIcon className="h-4 w-4 shrink-0 text-[var(--xt-gold)]" />{feature.label}</li>)}</ul><Link to="/register" className={`xt-button ${featured ? 'xt-button-gold' : 'xt-button-outline'} w-full`}>{plan.price === 0 ? 'Fillo Falas' : 'Regjistrohu'}<ArrowRightIcon className="h-4 w-4" /></Link>
         </article></Reveal>; })}</div>
-        <div className="mt-8 hidden overflow-hidden rounded-xl border border-white/10 md:block"><table className="xt-price-table"><thead><tr><th>Veçoria</th><th>Social</th><th>Basic</th><th>Pro</th></tr></thead><tbody>{FEATURE_MATRIX.map(feature => <tr key={feature.label}><td>{feature.label}</td>{['social', 'basic', 'pro'].map(key => <td key={key}>{feature[key] ? <CheckIcon className="mx-auto h-4 w-4 text-[var(--xt-gold)]" /> : <span aria-label="Nuk përfshihet">—</span>}</td>)}</tr>)}</tbody></table></div>
+        <div className="mt-8 hidden overflow-hidden rounded-xl border border-white/10 md:block"><table className="xt-price-table"><thead><tr><th>Veçoria</th><th>Free</th><th>Basic</th><th>Pro</th></tr></thead><tbody>{FEATURE_MATRIX.map(feature => <tr key={feature.label}><td>{feature.label}</td>{['social', 'basic', 'pro'].map(key => <td key={key}>{feature[key] ? <CheckIcon className="mx-auto h-4 w-4 text-[var(--xt-gold)]" /> : <span aria-label="Nuk përfshihet">—</span>}</td>)}</tr>)}</tbody></table></div>
       </div></section>
 
       <section id="contact" className="xt-final-cta"><div className="xt-container py-20 text-center md:py-28"><Reveal><p className="xt-eyebrow justify-center">TALENT HAS A FUTURE</p><h2>Zbulo. Zhvillo.<br /><span>Shko Më Tej.</span></h2><p className="mx-auto mt-5 max-w-xl text-white/65">Futbolli yt meriton mundësi të reja. Fillo rrugëtimin në X TALENTI.</p><div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Link to="/register" className="xt-button xt-button-gold">Regjistrohu Falas <ArrowRightIcon className="h-4 w-4" /></Link><a href="#platform" className="xt-button xt-button-outline">Shiko Platformën</a></div></Reveal></div></section>

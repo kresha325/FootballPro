@@ -5,16 +5,17 @@ const Payment = require('../models/Payment');
 const { stripeLiveReady } = require('../config/payments');
 const { createInvoiceIfNeeded } = require('../utils/invoices');
 
+/** Pro tier: €11.99/mo · yearly = 10× monthly (€119.90, 2 months free). */
 const PLANS = {
   monthly: {
-    name: 'X TALENTI Premium — Monthly',
-    amountCents: 999,
+    name: 'X TALENTI Pro — Monthly',
+    amountCents: 1199,
     days: 30,
     label: 'Monthly',
   },
   yearly: {
-    name: 'X TALENTI Premium — Yearly',
-    amountCents: 9999,
+    name: 'X TALENTI Pro — Yearly',
+    amountCents: 11990,
     days: 365,
     label: 'Yearly',
   },

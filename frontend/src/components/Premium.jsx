@@ -42,7 +42,7 @@ function Premium() {
   const plans = {
     monthly: {
       name: 'Monthly',
-      price: 9.99,
+      price: 11.99,
       period: '/month',
       features: [
         'Unlimited profile views',
@@ -56,10 +56,10 @@ function Premium() {
     },
     yearly: {
       name: 'Yearly',
-      price: 99.99,
-      originalPrice: 119.88,
+      price: 119.9,
+      originalPrice: 143.88,
       period: '/year',
-      savings: 'Save 17%',
+      savings: '2 months free',
       features: [
         'Everything in Monthly',
         '2 months free',
@@ -191,8 +191,8 @@ function Premium() {
         <div className="xt-card p-5 sm:p-8">
           <h3 className="text-2xl font-bold text-[var(--xt-color-text)] mb-2">Free</h3>
           <div className="text-4xl font-bold text-[var(--xt-color-text)] mb-6">
-            $0
-            <span className="text-lg font-normal text-gray-500">/month</span>
+            €0
+            <span className="text-lg font-normal text-gray-500"> / 30 days</span>
           </div>
           <ul className="space-y-3 mb-8">
             <li className="flex items-start gap-2">
@@ -235,12 +235,12 @@ function Premium() {
           </div>
           <h3 className="text-2xl font-bold mb-2">Premium</h3>
           <div className="text-4xl font-bold mb-2">
-            ${plans[selectedPlan].price}
+            €{plans[selectedPlan].price}
             <span className="text-lg font-normal opacity-90">{plans[selectedPlan].period}</span>
           </div>
           {plans[selectedPlan].originalPrice && (
             <div className="flex items-center gap-2 mb-4">
-              <span className="line-through text-white/60">${plans[selectedPlan].originalPrice}</span>
+              <span className="line-through text-white/60">€{plans[selectedPlan].originalPrice}</span>
               <span className="xt-badge xt-badge-gold">
                 {plans[selectedPlan].savings}
               </span>
@@ -334,7 +334,7 @@ function Premium() {
               Is there a free trial?
             </summary>
             <p className="mt-2 text-[var(--xt-color-text-muted)]">
-              Yes! New users get a 7-day free trial of Premium to try all features risk-free.
+              Yes! New users get 30 days free to try the platform, then can upgrade to Basic (€5.99/mo) or Pro (€11.99/mo).
             </p>
           </details>
           <details className="bg-[var(--xt-color-surface)] rounded-lg p-4">
@@ -374,7 +374,7 @@ function Premium() {
               <div className="flex justify-between items-center">
                 <span className="text-[var(--xt-color-text-muted)]">Total:</span>
                 <span className="text-2xl font-bold text-purple-600">
-                  ${plans[selectedPlan].price}
+                  €{plans[selectedPlan].price}
                 </span>
               </div>
             </div>

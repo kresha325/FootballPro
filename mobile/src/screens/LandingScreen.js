@@ -24,23 +24,24 @@ const ON_DARK = {
   outlineFill: 'rgba(255,255,255,0.1)',
 };
 
+/** Free 30 ditë · Basic €5.99/muaj · Pro €11.99/muaj · vjetore = 10 muaj (2 muaj falas). */
 const ROLE_GROUPS = {
   individual: {
     label: 'Lojtarë, Trajnerë & Skautë',
     roles: 'Atlet · Trajner · Skaut · Menaxher · Gjyqtar',
     plans: {
-      social: { name: 'Social', price: 0, period: 'përgjithmonë' },
-      basic: { name: 'Basic', price: 4.99, period: '/muaj' },
-      pro: { name: 'Pro', price: 9.99, period: '/muaj' },
+      social: { name: 'Free', price: 0, period: '30 ditë' },
+      basic: { name: 'Basic', price: 5.99, period: '/muaj', yearly: 59.9 },
+      pro: { name: 'Pro', price: 11.99, period: '/muaj', yearly: 119.9 },
     },
   },
   organization: {
     label: 'Klube, Federata & Media',
     roles: 'Klub · Federatë · Ligë · Media · Biznes',
     plans: {
-      social: { name: 'Social', price: 0, period: 'përgjithmonë' },
-      basic: { name: 'Basic', price: 19.99, period: '/muaj' },
-      pro: { name: 'Pro', price: 49.99, period: '/muaj' },
+      social: { name: 'Free', price: 0, period: '30 ditë' },
+      basic: { name: 'Basic', price: 5.99, period: '/muaj', yearly: 59.9 },
+      pro: { name: 'Pro', price: 11.99, period: '/muaj', yearly: 119.9 },
     },
   },
 };
@@ -272,19 +273,28 @@ export default function LandingScreen() {
                   ]}
                 >
                   {plan.price === 0 ? 'Falas' : `€${plan.price}`}
-                  {plan.price !== 0 ? (
-                    <Text
-                      style={[
-                        styles.planPeriod,
-                        { color: colors.muted },
-                        isPro && { color: ON_DARK.muted },
-                      ]}
-                    >
-                      {' '}
-                      {plan.period}
-                    </Text>
-                  ) : null}
+                  <Text
+                    style={[
+                      styles.planPeriod,
+                      { color: colors.muted },
+                      isPro && { color: ON_DARK.muted },
+                    ]}
+                  >
+                    {' '}
+                    {plan.period}
+                  </Text>
                 </Text>
+                {plan.yearly ? (
+                  <Text
+                    style={[
+                      styles.planYearly,
+                      { color: colors.muted },
+                      isPro && { color: ON_DARK.muted },
+                    ]}
+                  >
+                    ose €{plan.yearly}/vit · 2 muaj falas
+                  </Text>
+                ) : null}
                 {included.slice(0, 6).map((f) => (
                   <View key={f.label} style={styles.planRow}>
                     <Ionicons
@@ -536,10 +546,11 @@ const styles = StyleSheet.create({
   },
   planName: { fontSize: 20, fontWeight: '700', color: '#0F172A', marginBottom: 6 },
   planNamePro: { color: '#FBBF24' },
-  planPrice: { fontSize: 34, fontWeight: '800', color: '#0F172A', marginBottom: 14 },
+  planPrice: { fontSize: 34, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
   planPricePro: { color: '#FFFFFF' },
   planPeriod: { fontSize: 15, fontWeight: '500', color: '#64748B' },
   planPeriodPro: { color: '#CBD5E1' },
+  planYearly: { fontSize: 13, fontWeight: '600', marginBottom: 12, lineHeight: 18 },
   planRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   planCheck: { marginRight: 8, marginTop: 1 },
   planFeature: { flex: 1, color: '#334155', fontSize: 14, lineHeight: 20 },

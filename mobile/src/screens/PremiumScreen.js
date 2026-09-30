@@ -26,15 +26,15 @@ const PENDING_SESSION_KEY = 'premium_checkout_session_id';
 const plans = [
   {
     key: 'monthly',
-    title: 'Premium mujor',
-    price: '€9.99 / muaj',
-    perks: ['Analitika e avancuar', 'Rekomandime prioritare', 'Badge Premium', 'Më pak reklama'],
+    title: 'Pro mujor',
+    price: '€11.99 / muaj',
+    perks: ['Analitika e avancuar', 'Rekomandime prioritare', 'Badge Pro', 'Më pak reklama'],
   },
   {
     key: 'yearly',
-    title: 'Premium vjetor',
-    price: '€99.99 / vit',
-    badge: 'Kurseni ~17%',
+    title: 'Pro vjetor',
+    price: '€119.90 / vit',
+    badge: '2 muaj falas',
     perks: ['Gjithçka nga mujori', '2 muaj falas', 'Turne ekskluzive', 'Akses i hershëm'],
   },
 ];
