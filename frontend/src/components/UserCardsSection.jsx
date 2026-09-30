@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 // Helper për URL absolute/relative të fotos
 const apiRoot = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api','') : '';
@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import VerifiedBadge from './VerifiedBadge';
 import PersonName from './PersonName';
 
+const AUTO_ADVANCE_MS = 3000;
 
 const UserCardsSection = ({ role = 'athlete' }) => {
   const [profiles, setProfiles] = useState([]);
@@ -28,6 +29,8 @@ const UserCardsSection = ({ role = 'athlete' }) => {
   const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
   const navigate = useNavigate();
   const { user } = useAuth();
+  const scrollerRef = useRef(null);
+  const pausedRef = useRef(false);
 
   useEffect(() => {
     profileAPI.getAllProfiles({ role, limit: role === 'club' ? 6 : 8 })
@@ -60,6 +63,37 @@ const UserCardsSection = ({ role = 'athlete' }) => {
       .catch(() => setProfiles([]))
       .finally(() => setLoading(false));
   }, [user, role]);
+
+  // Auto-advance one card left every 3s (Discover + Club network)
+  useEffect(() => {
+    if (profiles.length < 2) return undefined;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined;
+    }
+
+    const tick = () => {
+      if (pausedRef.current) return;
+      const el = scrollerRef.current;
+      if (!el) return;
+      const card = el.querySelector('[data-user-card]');
+      if (!card) return;
+      const styles = window.getComputedStyle(el);
+      const gap = parseFloat(styles.columnGap || styles.gap || '12') || 12;
+      const step = card.getBoundingClientRect().width + gap;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 4) return;
+
+      const next = el.scrollLeft + step;
+      if (next >= maxScroll - 2) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: step, behavior: 'smooth' });
+      }
+    };
+
+    const id = window.setInterval(tick, AUTO_ADVANCE_MS);
+    return () => window.clearInterval(id);
+  }, [profiles.length, role]);
 
   const handleFollow = async (profileId) => {
     setLoadingFollow(lf => ({ ...lf, [profileId]: true }));
@@ -107,10 +141,20 @@ const UserCardsSection = ({ role = 'athlete' }) => {
 
   return (
     <div className="mb-2">
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 hide-scrollbar-mobile">
+      <div
+        ref={scrollerRef}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 hide-scrollbar-mobile"
+        onMouseEnter={() => { pausedRef.current = true; }}
+        onMouseLeave={() => { pausedRef.current = false; }}
+        onFocusCapture={() => { pausedRef.current = true; }}
+        onBlurCapture={() => { pausedRef.current = false; }}
+        onTouchStart={() => { pausedRef.current = true; }}
+        onTouchEnd={() => { pausedRef.current = false; }}
+      >
         {profiles.map(profile => (
           <div
             key={profile.id}
+            data-user-card
             className="group relative h-72 min-w-[min(72vw,15rem)] snap-start overflow-hidden rounded-2xl border border-white/10 shadow-[var(--xt-shadow-card)] sm:h-80 sm:min-w-[17rem]"
           >
             <img
@@ -141,8 +185,31 @@ const UserCardsSection = ({ role = 'athlete' }) => {
 
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/55 via-black/35 to-transparent">
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-white/90 drop-shadow">
-                {getProfileAge(profile) != null && <span className="xt-badge border-white/20 bg-black/35 text-white">{getProfileAge(profile)} vjeç</span>}
-                {profile.country && <span className="xt-badge border-white/20 bg-black/35 text-white">{profile.country}</span>}
+                {role === 'club' ? (
+                  <>
+                    {(profile.city || profile.Profile?.city) && (
+                      <span className="xt-badge border-white/20 bg-black/35 text-white">
+                        {profile.city || profile.Profile?.city}
+                      </span>
+                    )}
+                    {(profile.country || profile.Profile?.country) && (
+                      <span className="xt-badge border-white/20 bg-black/35 text-white">
+                        {profile.country || profile.Profile?.country}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {getProfileAge(profile) != null && (
+                      <span className="xt-badge border-white/20 bg-black/35 text-white">
+                        {getProfileAge(profile)} vjeç
+                      </span>
+                    )}
+                    {profile.country && (
+                      <span className="xt-badge border-white/20 bg-black/35 text-white">{profile.country}</span>
+                    )}
+                  </>
+                )}
               </div>
               <div className="flex gap-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-2">
                 <button
