@@ -51,14 +51,40 @@ function Navbar() {
   })();
   const [followedOnly, setFollowedOnly] = useState(initialFollowedOnly);
 
+  const fetchHeaderBadges = useCallback(async () => {
+    try {
+      const [notifRes, msgRes] = await Promise.all([
+        notificationsAPI.getUnreadCount(),
+        messagingAPI.getUnreadCount(),
+      ]);
+      const notifCount = Number(
+        notifRes?.data?.count ?? notifRes?.data?.unreadCount ?? notifRes?.data?.unread ?? 0
+      );
+      const messageCount = Number(
+        msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0
+      );
+      setUnreadCount(Number.isFinite(notifCount) ? Math.max(0, notifCount) : 0);
+      setMessagesUnread(Number.isFinite(messageCount) ? Math.max(0, messageCount) : 0);
+      window.dispatchEvent(
+        new CustomEvent('messaging-unread-count', {
+          detail: { count: Number.isFinite(messageCount) ? Math.max(0, messageCount) : 0 },
+        })
+      );
+    } catch (error) {
+      console.error('Error fetching header badges:', error);
+    }
+  }, []);
+
+  const burgerBadgeTotal = (Number(unreadCount) || 0) + (Number(messagesUnread) || 0);
 
   useEffect(() => {
-    if (user) {
-      fetchHeaderBadges();
-      const interval = setInterval(fetchHeaderBadges, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+    if (!user) return undefined;
+    void fetchHeaderBadges();
+    const interval = setInterval(() => {
+      void fetchHeaderBadges();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user, fetchHeaderBadges]);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -66,23 +92,12 @@ function Navbar() {
       void fetchHeaderBadges();
     };
     window.addEventListener('messaging-unread-changed', onBump);
-    return () => window.removeEventListener('messaging-unread-changed', onBump);
-  }, [user]);
-
-  const fetchHeaderBadges = async () => {
-    try {
-      const [notifRes, msgRes] = await Promise.all([
-        notificationsAPI.getUnreadCount(),
-        messagingAPI.getUnreadCount(),
-      ]);
-      setUnreadCount(notifRes.data.count || 0);
-      const messageCount = Number(msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0);
-      setMessagesUnread(messageCount);
-      window.dispatchEvent(new CustomEvent('messaging-unread-count', { detail: { count: messageCount } }));
-    } catch (error) {
-      console.error('Error fetching header badges:', error);
-    }
-  };
+    window.addEventListener('notifications-unread-changed', onBump);
+    return () => {
+      window.removeEventListener('messaging-unread-changed', onBump);
+      window.removeEventListener('notifications-unread-changed', onBump);
+    };
+  }, [user, fetchHeaderBadges]);
 
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
@@ -342,7 +357,11 @@ function Navbar() {
           ) : null}
 
           <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => {
+              const next = !isMenuOpen;
+              setIsMenuOpen(next);
+              if (next) void fetchHeaderBadges();
+            }}
             className="relative grid h-11 w-11 place-items-center rounded-lg text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--xt-color-gold-bright)]"
             aria-label="Toggle menu"
             aria-expanded={isMenuOpen}
@@ -350,9 +369,9 @@ function Navbar() {
             type="button"
           >
             {isMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
-            {!isMenuOpen && unreadCount > 0 && (
+            {!isMenuOpen && burgerBadgeTotal > 0 && (
               <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {burgerBadgeTotal > 9 ? '9+' : burgerBadgeTotal}
               </span>
             )}
           </button>
@@ -440,7 +459,7 @@ function Navbar() {
               <BellIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Njoftimet</span>
               {unreadCount > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
+                <span className="xt-drawer-badge">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -455,7 +474,7 @@ function Navbar() {
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Mesazhet</span>
               {messagesUnread > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
+                <span className="xt-drawer-badge">
                   {messagesUnread > 99 ? '99+' : messagesUnread}
                 </span>
               )}

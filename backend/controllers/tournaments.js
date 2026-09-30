@@ -708,6 +708,13 @@ exports.updateMatchScore = async (req, res) => {
       }
     }
 
+    try {
+      const { notifyMatchParticipants } = require('../utils/matchNotifications');
+      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+    } catch (notifyErr) {
+      console.warn('tournament updateMatchScore notify:', notifyErr?.message || notifyErr);
+    }
+
     res.json(match);
   } catch (err) {
     console.error('Update match score error:', err);
@@ -964,13 +971,11 @@ exports.scheduleMatch = async (req, res) => {
 
     await match.update({ matchDate });
 
-  // Notify participants
-    const scheduleText = `Your match has been scheduled for ${new Date(matchDate).toLocaleString()}`;
-    if (match.homeUserId) {
-      await notifyTournament(match.homeUserId, match.tournamentId, 'Match Scheduled', scheduleText);
-    }
-    if (match.awayUserId) {
-      await notifyTournament(match.awayUserId, match.tournamentId, 'Match Scheduled', scheduleText);
+    try {
+      const { notifyMatchParticipants } = require('../utils/matchNotifications');
+      await notifyMatchParticipants(match, match.Tournament, { kind: 'updated' });
+    } catch (notifyErr) {
+      console.warn('scheduleMatch notify:', notifyErr?.message || notifyErr);
     }
 
     res.json(match);
@@ -1246,6 +1251,13 @@ exports.updateMatchResultForTournament = async (req, res) => {
 
     if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
       await tryAdvanceKnockoutRound(match);
+    }
+
+    try {
+      const { notifyMatchParticipants } = require('../utils/matchNotifications');
+      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+    } catch (notifyErr) {
+      console.warn('updateMatchResultForTournament notify:', notifyErr?.message || notifyErr);
     }
 
     res.json({

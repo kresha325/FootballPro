@@ -45,7 +45,9 @@ const Notifications = () => {
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
-      setUnreadCount(response.data.count || 0);
+      const count = Number(response.data.count || 0);
+      setUnreadCount(count);
+      window.dispatchEvent(new CustomEvent('notifications-unread-changed', { detail: { count } }));
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
@@ -57,7 +59,11 @@ const Notifications = () => {
       setNotifications(notifications.map(notif =>
         notif.id === id ? { ...notif, isRead: true } : notif
       ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount(prev => {
+        const next = Math.max(0, prev - 1);
+        window.dispatchEvent(new CustomEvent('notifications-unread-changed', { detail: { count: next } }));
+        return next;
+      });
     } catch (error) {
       console.error('Error marking as read:', error);
     }
@@ -68,6 +74,7 @@ const Notifications = () => {
       await notificationsAPI.markAllAsRead();
       setNotifications(notifications.map(notif => ({ ...notif, isRead: true })));
       setUnreadCount(0);
+      window.dispatchEvent(new CustomEvent('notifications-unread-changed', { detail: { count: 0 } }));
     } catch (error) {
       console.error('Error marking all as read:', error);
     }

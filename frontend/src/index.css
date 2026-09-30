@@ -215,6 +215,20 @@ html.dark .xt-bottom-nav { background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 2
   background: rgb(255 255 255 / 8%) !important;
   color: #ffffff !important;
 }
+/* Keep unread badges readable (drawer link color !important would wash them out). */
+.xt-account-drawer .xt-drawer-badge {
+  color: #ffffff !important;
+  background: #ef4444 !important;
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
 .xt-account-drawer .dark\:border-gray-700,
 .xt-account-drawer .border-gray-200,
 .xt-account-drawer .border-b {

@@ -6,6 +6,7 @@ const User = db.User;
 const MatchScorer = db.MatchScorer;
 const { saveMatchGoalEvents } = require('../utils/matchGoalEvents');
 const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
+const { notifyMatchParticipants } = require('../utils/matchNotifications');
 
 // Update match details (edit)
 exports.updateMatch = async (req, res) => {
@@ -47,6 +48,13 @@ exports.updateMatch = async (req, res) => {
     match.round = round;
     match.stadiumId = stadiumId;
     await match.save();
+
+    try {
+      await notifyMatchParticipants(match, tournament, { kind: 'updated' });
+    } catch (notifyErr) {
+      console.warn('updateMatch notify:', notifyErr?.message || notifyErr);
+    }
+
     res.json(match);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -111,6 +119,12 @@ exports.saveMatchScorers = async (req, res) => {
 
     await saveMatchGoalEvents(matchId, events, match);
 
+    try {
+      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+    } catch (notifyErr) {
+      console.warn('saveMatchScorers notify:', notifyErr?.message || notifyErr);
+    }
+
     res.json({ msg: 'Scorers saved' });
   } catch (err) {
     console.error('saveMatchScorers error:', err);
@@ -148,6 +162,13 @@ exports.createMatch = async (req, res) => {
       stadiumId,
       status: 'scheduled',
     });
+
+    try {
+      await notifyMatchParticipants(match, tournament, { kind: 'created' });
+    } catch (notifyErr) {
+      console.warn('createMatch notify:', notifyErr?.message || notifyErr);
+    }
+
     res.status(201).json(match);
   } catch (err) {
     console.error('Error creating match:', err);
@@ -267,6 +288,12 @@ exports.updateMatchScore = async (req, res) => {
         p.points = s.points;
         await p.save();
       }
+    }
+
+    try {
+      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+    } catch (notifyErr) {
+      console.warn('updateMatchScore notify:', notifyErr?.message || notifyErr);
     }
 
     res.json(match);
