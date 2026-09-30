@@ -94,8 +94,7 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
           .filter(Boolean);
         if (!names.length) return null;
         const shown = names.slice(0, 3).join(', ');
-        const more = names.length > 3 ? ` +${names.length - 3}` : '';
-        return `${names.length} anëtarë · ${shown}${more}`;
+        return names.length > 3 ? `${shown}…` : shown;
       })()
     : null;
 

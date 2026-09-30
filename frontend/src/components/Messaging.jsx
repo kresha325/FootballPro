@@ -100,6 +100,7 @@ function Messaging() {
   const [showCall, setShowCall] = useState(false);
   const [callType, setCallType] = useState('video'); // 'video' or 'audio'
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showGroupMembersPanel, setShowGroupMembersPanel] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -148,16 +149,17 @@ function Messaging() {
       const names = members
         .map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim())
         .filter(Boolean);
-      const shown = names.slice(0, 4).join(', ');
-      const more = names.length > 4 ? ` +${names.length - 4}` : '';
+      const shown = names.slice(0, 3).join(', ');
       return {
         name: conversation.name || 'Group Chat',
         profilePhoto: conversation.avatar,
         id: null,
         members,
         memberLabel: names.length
-          ? `${names.length} anëtarë · ${shown}${more}`
-          : 'Grup',
+          ? names.length > 3
+            ? `${shown}…`
+            : shown
+          : 'Shiko anëtarët',
       };
     }
     if (!conversation.members || !Array.isArray(conversation.members)) {
@@ -309,6 +311,10 @@ function Messaging() {
     setEditingMessage(null);
     setShowEmojiBar(false);
     setMessagePagination({ page: 1, pages: 1, total: 0 });
+  }, [selectedConversation?.id]);
+
+  useEffect(() => {
+    setShowGroupMembersPanel(false);
   }, [selectedConversation?.id]);
 
   useEffect(() => {
@@ -937,6 +943,77 @@ function Messaging() {
         </div>
       ) : null}
 
+      {showGroupMembersPanel && selectedConversation?.isGroup ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 backdrop-blur-sm sm:items-center"
+          onClick={() => setShowGroupMembersPanel(false)}
+          role="presentation"
+        >
+          <div
+            className="xt-card max-h-[min(70vh,32rem)] w-full max-w-md overflow-hidden rounded-t-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Anëtarët e grupit"
+          >
+            <div className="flex items-center justify-between border-b border-[var(--xt-color-border)] px-4 py-3">
+              <h3 className="font-extrabold text-[var(--xt-color-text)]">
+                Anëtarët ({Array.isArray(selectedConversation.members) ? selectedConversation.members.length : 0})
+              </h3>
+              <button
+                type="button"
+                className="btn btn-quiet min-h-10 px-3"
+                onClick={() => setShowGroupMembersPanel(false)}
+              >
+                Mbyll
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[min(55vh,26rem)]">
+              {(Array.isArray(selectedConversation.members) ? selectedConversation.members : []).length === 0 ? (
+                <p className="p-6 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk ka anëtarë.</p>
+              ) : (
+                selectedConversation.members.map((m) => {
+                  const name = `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Përdorues';
+                  const isMe = Number(m.id) === Number(user?.id);
+                  const photo = m.profilePhoto || m.Profile?.profilePhoto || '';
+                  return (
+                    <Link
+                      key={m.id}
+                      to={`/profile/${m.id}`}
+                      onClick={() => setShowGroupMembersPanel(false)}
+                      className="flex items-center gap-3 border-b border-[var(--xt-color-border)] px-4 py-3 hover:bg-[var(--xt-color-surface-hover)]"
+                    >
+                      {photo ? (
+                        <img
+                          src={getFullUrl(photo)}
+                          alt=""
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--xt-color-gold)] text-sm font-bold text-slate-950">
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold text-[var(--xt-color-text)]">
+                          {name}
+                          {isMe ? ' (ti)' : ''}
+                        </div>
+                        {m.role ? (
+                          <div className="truncate text-xs capitalize text-[var(--xt-color-text-muted)]">
+                            {m.role}
+                          </div>
+                        ) : null}
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Messages Area */}
       {selectedConversation ? (
         <div className="flex-1 flex flex-col bg-[var(--xt-color-canvas)] relative min-h-0">
@@ -969,7 +1046,13 @@ function Messaging() {
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold text-[var(--xt-color-text)]">{other.id ? <Link to={`/profile/${other.id}`} className="hover:text-[var(--xt-color-gold-bright)]">{other.name}</Link> : other.name}</h3>
                         {selectedConversation.isGroup && other.memberLabel ? (
-                          <p className="truncate text-xs text-[var(--xt-color-text-muted)]">{other.memberLabel}</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowGroupMembersPanel(true)}
+                            className="block max-w-full truncate text-left text-xs text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-gold-bright)]"
+                          >
+                            {other.memberLabel}
+                          </button>
                         ) : null}
                         {!selectedConversation.isGroup && other.club ? (
                           <p className="truncate text-xs text-[var(--xt-color-text-subtle)]">{other.club}</p>

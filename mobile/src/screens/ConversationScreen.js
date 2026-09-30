@@ -313,6 +313,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [actionMessage, setActionMessage] = useState(null);
   const [othersRead, setOthersRead] = useState([]);
   const [groupMembers, setGroupMembers] = useState([]);
+  const [showGroupMembers, setShowGroupMembers] = useState(false);
   const [typingByUserId, setTypingByUserId] = useState({});
   const typingTimeoutRef = useRef(null);
   const composerBlurTimeoutRef = useRef(null);
@@ -413,10 +414,9 @@ export default function ConversationScreen({ route, navigation }) {
       const names = groupMembers
         .map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim())
         .filter(Boolean);
-      if (!names.length) return 'Grup';
-      const shown = names.slice(0, 4).join(', ');
-      const more = names.length > 4 ? ` +${names.length - 4}` : '';
-      return `${names.length} anëtarë · ${shown}${more}`;
+      if (!names.length) return 'Shiko anëtarët';
+      const shown = names.slice(0, 3).join(', ');
+      return names.length > 3 ? `${shown}…` : shown;
     }
     const peerTyping = Object.keys(typingByUserId).some(
       (id) => Number(id) !== Number(user?.id) && Number(id) === Number(otherUserId)
@@ -434,12 +434,16 @@ export default function ConversationScreen({ route, navigation }) {
       headerTitleAlign: 'center',
       headerTitle: () => (
         <TouchableOpacity
-          activeOpacity={otherUserId && !isGroup ? 0.7 : 1}
+          activeOpacity={isGroup || otherUserId ? 0.7 : 1}
           onPress={() => {
-            if (!isGroup && otherUserId) openUserProfile(navigation, otherUserId);
+            if (isGroup) {
+              setShowGroupMembers(true);
+              return;
+            }
+            if (otherUserId) openUserProfile(navigation, otherUserId);
           }}
           style={styles.headerTitleWrap}
-          disabled={isGroup || otherUserId == null}
+          disabled={!isGroup && otherUserId == null}
         >
           <Text style={[styles.headerTitleName, { color: colors.text }]} numberOfLines={1}>
             {headerName}
@@ -1207,6 +1211,72 @@ export default function ConversationScreen({ route, navigation }) {
           ) : null}
         </TouchableOpacity>
       </Modal>
+      <Modal
+        visible={showGroupMembers}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowGroupMembers(false)}
+      >
+        <View style={styles.membersModalRoot}>
+          <TouchableOpacity
+            style={styles.membersModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowGroupMembers(false)}
+          />
+          <View style={[styles.membersModalCard, { backgroundColor: colors.card }]}>
+            <View style={styles.membersModalHeader}>
+              <Text style={[styles.membersModalTitle, { color: colors.text }]}>
+                Anëtarët ({groupMembers.length})
+              </Text>
+              <TouchableOpacity onPress={() => setShowGroupMembers(false)} hitSlop={12}>
+                <Ionicons name="close" size={24} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={groupMembers}
+              keyExtractor={(item, index) => String(item?.id ?? index)}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={[styles.membersEmpty, { color: colors.muted }]}>Nuk ka anëtarë.</Text>
+              }
+              renderItem={({ item }) => {
+                const name = `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Përdorues';
+                const isMe = Number(item.id) === Number(user?.id);
+                return (
+                  <TouchableOpacity
+                    style={[styles.memberRow, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      if (item?.id == null) return;
+                      setShowGroupMembers(false);
+                      openUserProfile(navigation, item.id);
+                    }}
+                    disabled={item?.id == null}
+                  >
+                    <UserAvatar
+                      uri={item.profilePhoto || null}
+                      user={item}
+                      size={40}
+                      style={styles.memberAvatar}
+                    />
+                    <View style={styles.memberMeta}>
+                      <Text style={[styles.memberName, { color: colors.text }]} numberOfLines={1}>
+                        {name}
+                        {isMe ? ' (ti)' : ''}
+                      </Text>
+                      {item.role ? (
+                        <Text style={[styles.memberRole, { color: colors.muted }]} numberOfLines={1}>
+                          {item.role}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedSoft || colors.muted} />
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1437,4 +1507,36 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   imageModalImage: { width: '100%', height: '80%' },
+  membersModalRoot: { flex: 1, justifyContent: 'flex-end' },
+  membersModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  membersModalCard: {
+    maxHeight: '70%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 24,
+  },
+  membersModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
+  },
+  membersModalTitle: { fontSize: 18, fontWeight: '800' },
+  membersEmpty: { textAlign: 'center', paddingVertical: 28, fontSize: 14 },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  memberAvatar: { marginRight: 12 },
+  memberMeta: { flex: 1, minWidth: 0, paddingRight: 8 },
+  memberName: { fontSize: 16, fontWeight: '700' },
+  memberRole: { fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
 });
