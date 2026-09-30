@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
 import { WebView } from 'react-native-webview';
 import { youtubeEmbedUrl } from '../../utils/youtubeVideo';
 
