@@ -55,11 +55,24 @@ const Comment = require('./Comment');
 const Post = require('./Post');
 const Gallery = require('./Gallery');
 const Video = require('./Video');
+const MediaItem = require('./MediaItem');
+const MediaEvent = require('./MediaEvent');
 const PostSponsor = require('./PostSponsor');
 const EngagementMetrics = require('./EngagementMetrics');
 const VideoCallHistory = require('./VideoCallHistory')(sequelize, DataTypes);
 const LiveStream = require('./LiveStream');
 const Stream = require('./Stream');
+
+MediaItem.belongsTo(User, { as: 'uploader', foreignKey: 'uploadedBy' });
+MediaItem.belongsTo(User, { as: 'player', foreignKey: 'playerId' });
+MediaItem.belongsTo(User, { as: 'club', foreignKey: 'clubId' });
+MediaItem.belongsTo(User, { as: 'team', foreignKey: 'teamId' });
+MediaItem.belongsTo(Match, { as: 'match', foreignKey: 'matchId' });
+MediaItem.belongsTo(Tournament, { as: 'tournament', foreignKey: 'tournamentId' });
+User.hasMany(MediaItem, { as: 'uploadedMedia', foreignKey: 'uploadedBy' });
+MediaEvent.belongsTo(MediaItem, { foreignKey: 'mediaId', as: 'media' });
+MediaItem.hasMany(MediaEvent, { foreignKey: 'mediaId', as: 'events' });
+MediaEvent.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // User/Reward
 User.hasMany(UserReward, { foreignKey: 'userId' });
@@ -135,6 +148,8 @@ module.exports = {
   Post,
   Gallery,
   Video,
+  MediaItem,
+  MediaEvent,
   PostSponsor,
   ProfileView,
   EngagementMetrics,

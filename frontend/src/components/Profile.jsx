@@ -9,6 +9,7 @@ import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 // import userStreamsAPI from '../services/userStreamsAPI';
 import Videos from './Videos';
+import MediaSection from './media/MediaSection';
 import { usePosts } from '../contexts/PostsContext';
 import EditProfile from './EditProfile';
 import { useAuth } from '../contexts/AuthContext';
@@ -572,8 +573,9 @@ const Profile = () => {
     tabs.push({ key: 'stats', label: 'Performanca' }, { key: 'tournaments', label: 'Turnet' });
   }
   tabs.push(
-    { key: 'gallery', label: 'Galeria' },
-    { key: 'videos', label: 'Videot' },
+    { key: 'gallery', label: 'Foto' },
+    { key: 'videos', label: 'Video' },
+    { key: 'highlights', label: 'Highlights' },
     { key: 'about', label: isAthlete ? 'Karriera' : 'Rreth' },
     { key: 'contact', label: 'Kontakt' },
   );
@@ -1161,10 +1163,19 @@ const Profile = () => {
             )}
 
             {activeTab === 'videos' && (
-              <div>
-                {/* Videot e ruajtura live */}
+              <div className="space-y-8">
+                <MediaSection
+                  context={String(profile?.role || '').toLowerCase() === 'club' ? 'club' : 'player'}
+                  entityId={profile.userId || profile.id || id}
+                  canManage={isOwner}
+                  title="Video YouTube"
+                  defaults={{
+                    playerId: String(profile?.role || '').toLowerCase() === 'athlete' ? (profile.userId || profile.id) : undefined,
+                    clubId: String(profile?.role || '').toLowerCase() === 'club' ? (profile.userId || profile.id) : undefined,
+                  }}
+                />
                 {profile?.liveVideos?.length > 0 && (
-                  <div className="mb-6">
+                  <div>
                     <h3 className="text-xl font-bold mb-2">Live Videos</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {profile.liveVideos.map((video, idx) => (
@@ -1180,9 +1191,27 @@ const Profile = () => {
                     </div>
                   </div>
                 )}
-                <h3 className="text-xl font-bold mb-2 mt-2">Uploaded Videos</h3>
-                <Videos userId={id} onlyUserVideos />
+                <div>
+                  <h3 className="text-xl font-bold mb-2">Uploaded Videos</h3>
+                  <Videos userId={id} onlyUserVideos />
+                </div>
               </div>
+            )}
+
+            {activeTab === 'highlights' && (
+              <MediaSection
+                context={String(profile?.role || '').toLowerCase() === 'club' ? 'club' : 'player'}
+                entityId={profile.userId || profile.id || id}
+                canManage={isOwner}
+                title="Highlights & Gola"
+                categoryFilter="match_highlight,goal"
+                defaultCategory="match_highlight"
+                defaults={{
+                  playerId: String(profile?.role || '').toLowerCase() === 'athlete' ? (profile.userId || profile.id) : undefined,
+                  clubId: String(profile?.role || '').toLowerCase() === 'club' ? (profile.userId || profile.id) : undefined,
+                  category: 'match_highlight',
+                }}
+              />
             )}
 
             {activeTab === 'about' && (

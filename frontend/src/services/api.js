@@ -385,5 +385,18 @@ export const youtubeAPI = {
   resolveChannel: (url) => API.get('/youtube/resolve', { params: { url } }),
 };
 
+export const mediaAPI = {
+  list: (params) => API.get('/media', { params }),
+  get: (id) => API.get(`/media/${id}`),
+  create: (data) => API.post('/media', data),
+  update: (id, data) => API.put(`/media/${id}`, data),
+  remove: (id) => API.delete(`/media/${id}`),
+  trackEvent: (id, eventType) => API.post(`/media/${id}/events`, { eventType }),
+  listPlayer: (playerId, params) => API.get(`/players/${playerId}/media`, { params }),
+  listClub: (clubId, params) => API.get(`/clubs/${clubId}/media`, { params }),
+  listMatch: (matchId, params) => API.get(`/matches/${matchId}/media`, { params }),
+  adminList: (params) => API.get('/media/admin', { params }),
+};
+
 export default API;
 export { API };

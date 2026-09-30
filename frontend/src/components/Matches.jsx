@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import ParticipantPickGrid from './ParticipantPickGrid';
 import { Link } from 'react-router-dom';
+import MediaSection from './media/MediaSection';
 
 // Helper: fetch tournaments and participants
 const fetchTournaments = async () => {
@@ -182,6 +183,7 @@ function Matches() {
   });
   const [stadiums, setStadiums] = useState([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [mediaMatchId, setMediaMatchId] = useState(null);
   const [editMatch, setEditMatch] = useState(null);
   const [editParticipants, setEditParticipants] = useState([]);
   const [listSearch, setListSearch] = useState('');
@@ -398,9 +400,36 @@ function Matches() {
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--xt-color-border)] pt-3">
                   <span className={`xt-badge ${activeTab === 'live' ? 'xt-badge-gold' : ''}`}>{activeTab === 'live' ? 'LIVE' : match.status || 'E planifikuar'}</span>
                   {match.round != null && <span className="text-xs text-[var(--xt-color-text-subtle)]">Raundi {match.round}</span>}
-                  {activeTab === 'upcoming' && canEditThisMatch(match) && <button className="btn btn-quiet min-h-10 px-3 text-sm" onClick={() => handleEditMatch(match)}>Ndrysho ndeshjen</button>}
-                  {match.tournamentId && <Link className="btn btn-quiet min-h-10 px-3 text-sm" to={`/tournaments?tournamentId=${match.tournamentId}`}>Qendra e ndeshjes</Link>}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-quiet min-h-10 px-3 text-sm"
+                      onClick={() => setMediaMatchId((id) => (id === match.id ? null : match.id))}
+                    >
+                      {mediaMatchId === match.id ? 'Fshih median' : 'Media / YouTube'}
+                    </button>
+                    {activeTab === 'upcoming' && canEditThisMatch(match) && <button className="btn btn-quiet min-h-10 px-3 text-sm" onClick={() => handleEditMatch(match)}>Ndrysho ndeshjen</button>}
+                    {match.tournamentId && <Link className="btn btn-quiet min-h-10 px-3 text-sm" to={`/tournaments?tournamentId=${match.tournamentId}`}>Qendra e ndeshjes</Link>}
+                  </div>
                 </div>
+                {mediaMatchId === match.id ? (
+                  <div className="mt-4 border-t border-[var(--xt-color-border)] pt-4">
+                    <MediaSection
+                      context="match"
+                      entityId={match.id}
+                      canManage={canEditThisMatch(match) || Number(user?.id) === Number(match.homeUserId) || Number(user?.id) === Number(match.awayUserId)}
+                      title="Media e ndeshjes"
+                      defaultCategory="match"
+                      defaults={{
+                        matchId: match.id,
+                        tournamentId: match.tournamentId,
+                        clubId: user?.role === 'club' ? user.id : undefined,
+                        season: match.Tournament?.season,
+                        category: 'match',
+                      }}
+                    />
+                  </div>
+                ) : null}
                 {match.description && (
                   <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">
                     {match.description}

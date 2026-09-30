@@ -294,6 +294,16 @@ export const videosRequest = (params = {}) => api.get('/api/videos', { params })
 export const userVideosRequest = (userId) => api.get(`/api/videos/user/${userId}`);
 export const trendingVideosRequest = (params = {}) => api.get('/api/videos/trending', { params });
 export const likeVideoRequest = (videoId) => api.post(`/api/videos/${videoId}/like`);
+export const playerMediaRequest = (playerId, params = {}) =>
+  api.get(`/api/players/${playerId}/media`, { params });
+export const clubMediaRequest = (clubId, params = {}) =>
+  api.get(`/api/clubs/${clubId}/media`, { params });
+export const matchMediaRequest = (matchId, params = {}) =>
+  api.get(`/api/matches/${matchId}/media`, { params });
+export const createMediaRequest = (payload) => api.post('/api/media', payload);
+export const deleteMediaRequest = (id) => api.delete(`/api/media/${id}`);
+export const mediaEventRequest = (id, eventType) =>
+  api.post(`/api/media/${id}/events`, { eventType });
 export const uploadVideoRequest = (payload = {}) => {
   const form = new FormData();
   if (payload.title) form.append('title', String(payload.title));

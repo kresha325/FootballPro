@@ -4,6 +4,7 @@ import api from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
 import AdminStadiums from './AdminStadiums';
 import AdminTournaments from './AdminTournaments';
+import AdminMedia from './AdminMedia';
 import {
   UsersIcon,
   DocumentTextIcon,
@@ -20,6 +21,7 @@ import {
   BanknotesIcon,
   BuildingLibraryIcon,
   TrophyIcon,
+  FilmIcon,
 } from '@heroicons/react/24/outline';
 import {
   LineChart,
@@ -517,6 +519,17 @@ export default function AdminDashboard() {
         >
           <BuildingLibraryIcon className="w-5 h-5 inline mr-2" />
           Stadiume
+        </button>
+        <button
+          onClick={() => switchTab('media')}
+          className={`px-6 py-3 font-medium ${
+            activeTab === 'media'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <FilmIcon className="w-5 h-5 inline mr-2" />
+          Media
         </button>
         <button
           onClick={() => switchTab('tournaments')}
@@ -1535,11 +1548,13 @@ export default function AdminDashboard() {
     )}
 
       {activeTab === 'stadiums' && (
+        <AdminStadiums />
+      )}
+      {activeTab === 'media' && (
         <div className="lg:col-span-3">
-          <AdminStadiums />
+          <AdminMedia />
         </div>
       )}
-
       {activeTab === 'tournaments' && (
         <div className="lg:col-span-3">
           <AdminTournaments />

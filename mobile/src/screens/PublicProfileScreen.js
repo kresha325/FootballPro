@@ -42,6 +42,8 @@ import {
   userGalleryRequest,
   userPostsRequest,
   userVideosRequest,
+  playerMediaRequest,
+  clubMediaRequest,
   blockUserRequest,
   unblockUserRequest,
   blockStatusRequest,
@@ -85,6 +87,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [posts, setPosts] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [youtubeMedia, setYoutubeMedia] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [iBlocked, setIBlocked] = useState(false);
@@ -265,6 +268,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           postsRes,
           galleryRes,
           videosRes,
+          ytMediaRes,
           transferRes,
           staffRes,
           sponsorsRes,
@@ -279,6 +283,9 @@ export default function PublicProfileScreen({ route, navigation }) {
           userPostsRequest(userId).catch(() => ({ data: [] })),
           userGalleryRequest(userId).catch(() => ({ data: [] })),
           userVideosRequest(userId).catch(() => ({ data: [] })),
+          role === 'club'
+            ? clubMediaRequest(clubId, { limit: 24 }).catch(() => ({ data: { items: [] } }))
+            : playerMediaRequest(userId, { limit: 24 }).catch(() => ({ data: { items: [] } })),
           role === 'athlete' || role === 'coach' || role === 'trajner'
             ? transferHistoryByUserRequest(userId).catch(() => ({ data: [] }))
             : Promise.resolve({ data: [] }),
@@ -312,6 +319,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         setPostCount(postsData.length);
         setGallery(Array.isArray(galleryRes?.data) ? galleryRes.data : []);
         setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
+        setYoutubeMedia(Array.isArray(ytMediaRes?.data?.items) ? ytMediaRes.data.items : []);
         setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
         setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
         setSponsors(Array.isArray(sponsorsRes?.data) ? sponsorsRes.data : []);
@@ -904,7 +912,15 @@ export default function PublicProfileScreen({ route, navigation }) {
                 <PublicProfileVideosTab
                   videos={videos}
                   liveVideos={Array.isArray(profile?.liveVideos) ? profile.liveVideos : []}
+                  youtubeMedia={youtubeMedia}
                   theme={theme}
+                  canManage={isSelf}
+                  mediaDefaults={{
+                    playerId: String(profile?.role || '').toLowerCase() === 'athlete' ? userId : undefined,
+                    clubId: String(profile?.role || '').toLowerCase() === 'club' ? userId : undefined,
+                    category: 'profile',
+                  }}
+                  onMediaSaved={(item) => setYoutubeMedia((prev) => [item, ...prev])}
                 />
               ) : null}
               {profileTab === 'about' ? (

@@ -318,6 +318,8 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/video-calls', require('./routes/videoCalls'));
 app.use('/api/videos', require('./routes/videos'));
+app.use('/api/media', require('./routes/mediaItems'));
+app.use('/api', require('./routes/mediaNested'));
 app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/matches', require('./routes/matches'));
 app.use('/api/matches', require('./routes/matchScorers'));

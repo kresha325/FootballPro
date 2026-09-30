@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { clubMembersAPI, clubStaffAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { getFullUrl } from '../../utils/mediaUrl';
+import MediaSection from '../media/MediaSection';
 
 const ClubProfile = ({ profile = {}, isOwner }) => {
   const clubData = (profile && profile.stats) ? profile.stats : {};
@@ -637,6 +638,18 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
           </div>
         </div>
       )}
+
+      <div className="mt-8">
+        <MediaSection
+          context="club"
+          entityId={profile.userId || profile.User?.id || profile.id}
+          canManage={!!isOwner}
+          title="Media e klubit"
+          defaults={{
+            clubId: profile.userId || profile.User?.id || profile.id,
+          }}
+        />
+      </div>
     </div>
   );
 }
