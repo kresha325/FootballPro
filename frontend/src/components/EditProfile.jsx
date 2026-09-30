@@ -77,7 +77,7 @@ const EditProfile = ({ user, onClose }) => {
   };
 
   return (
-    <div>
+    <div className="xt-edit-profile-modal">
       <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
         {user.role === 'athlete' && (
           <EditAthleteProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
@@ -110,13 +110,14 @@ const EditProfile = ({ user, onClose }) => {
           <EditScoutProfile user={user} onSave={handleSave} loading={loading} errors={errors} />
         )}
       </div>
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+      <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
         <button
+          type="button"
           onClick={onClose}
-          className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50"
+          className="xt-edit-cancel rounded px-6 py-2 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={loading}
         >
-          Cancel
+          Anulo
         </button>
       </div>
     </div>

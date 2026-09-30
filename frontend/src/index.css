@@ -235,3 +235,52 @@ html.dark .xt-bottom-nav { background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 2
   html.dark { --xt-color-border: rgb(255 255 255 / 35%); --xt-color-border-strong: rgb(255 255 255 / 60%); }
   :focus-visible { outline-width: 3px; }
 }
+
+/* Edit Profile modal is a light surface even when the app is in dark mode. */
+.xt-edit-profile-modal {
+  color-scheme: light;
+  color: #111827;
+  background: #ffffff;
+}
+.xt-edit-profile-modal h3,
+.xt-edit-profile-modal h4 {
+  color: #111827;
+}
+.xt-edit-profile-modal label,
+.xt-edit-profile-modal .label {
+  color: #374151 !important;
+}
+.xt-edit-profile-modal p,
+.xt-edit-profile-modal .text-gray-500,
+.xt-edit-profile-modal .text-gray-800 {
+  color: #6b7280;
+}
+.xt-edit-profile-modal input:not([type='file']):not([type='checkbox']):not([type='radio']),
+.xt-edit-profile-modal textarea,
+.xt-edit-profile-modal select {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color-scheme: light;
+}
+.xt-edit-profile-modal input::placeholder,
+.xt-edit-profile-modal textarea::placeholder {
+  color: #9ca3af !important;
+}
+.xt-edit-profile-modal option {
+  color: #111827;
+  background: #ffffff;
+}
+.xt-edit-profile-modal .border-t,
+.xt-edit-profile-modal .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+.xt-edit-profile-modal .xt-edit-cancel {
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+.xt-edit-profile-modal .xt-edit-cancel:hover:not(:disabled) {
+  background: #f9fafb;
+  color: #111827;
+}

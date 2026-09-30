@@ -1450,9 +1450,9 @@ const Profile = () => {
 
       {editOpen && profile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative">
+          <div className="xt-edit-profile-modal relative w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
+              className="absolute top-2 right-2 text-2xl text-gray-500 hover:text-gray-800"
               onClick={() => setEditOpen(false)}
               aria-label="Mbyll"
             >

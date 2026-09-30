@@ -319,11 +319,14 @@ export default function EditProfileScreen({ navigation }) {
         add('country', trim(form.country));
         add('bio', trim(form.bio));
         add('careerHistory', trim(form.careerHistory));
-        try {
-          payload.contact = JSON.parse(form.contactJson || '{}');
-        } catch {
-          payload.contact = {};
-        }
+        payload.contact = {
+          phone: trim(form.phone) || undefined,
+          email: trim(form.email) || undefined,
+          website: trim(form.website) || undefined,
+          instagram: trim(form.instagram) || undefined,
+          facebook: trim(form.facebook) || undefined,
+          twitter: trim(form.twitter) || undefined,
+        };
         break;
       case 'referee':
         add('firstName', trim(form.firstName));
@@ -332,11 +335,14 @@ export default function EditProfileScreen({ navigation }) {
         add('city', trim(form.city));
         add('country', trim(form.country));
         add('careerHistory', trim(form.careerHistory));
-        try {
-          payload.contact = JSON.parse(form.contactJson || '{}');
-        } catch {
-          payload.contact = {};
-        }
+        payload.contact = {
+          phone: trim(form.phone) || undefined,
+          email: trim(form.email) || undefined,
+          website: trim(form.website) || undefined,
+          instagram: trim(form.instagram) || undefined,
+          facebook: trim(form.facebook) || undefined,
+          twitter: trim(form.twitter) || undefined,
+        };
         break;
       case 'club':
         add('club', trim(form.club));
@@ -690,8 +696,18 @@ export default function EditProfileScreen({ navigation }) {
           {input('bio', { multiline: true, style: [styles.input, styles.multiline] })}
           {labelFor('Career History')}
           {input('careerHistory', { multiline: true, style: [styles.input, styles.multilineSmall] })}
-          {labelFor('Contact (JSON)')}
-          {input('contactJson', { multiline: true, style: [styles.input, styles.multiline], autoCapitalize: 'none' })}
+          {labelFor('Telefon')}
+          {input('phone', { keyboardType: 'phone-pad' })}
+          {labelFor('Email')}
+          {input('email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+          {labelFor('Website')}
+          {input('website', { autoCapitalize: 'none', placeholder: 'https://...' })}
+          {labelFor('Instagram')}
+          {input('instagram', { autoCapitalize: 'none' })}
+          {labelFor('Facebook')}
+          {input('facebook', { autoCapitalize: 'none' })}
+          {labelFor('Twitter / X')}
+          {input('twitter', { autoCapitalize: 'none' })}
         </>
       )}
 
@@ -709,8 +725,18 @@ export default function EditProfileScreen({ navigation }) {
           {input('country')}
           {labelFor('Career History')}
           {input('careerHistory', { multiline: true, style: [styles.input, styles.multilineSmall] })}
-          {labelFor('Contact (JSON)')}
-          {input('contactJson', { multiline: true, style: [styles.input, styles.multiline], autoCapitalize: 'none' })}
+          {labelFor('Telefon')}
+          {input('phone', { keyboardType: 'phone-pad' })}
+          {labelFor('Email')}
+          {input('email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+          {labelFor('Website')}
+          {input('website', { autoCapitalize: 'none', placeholder: 'https://...' })}
+          {labelFor('Instagram')}
+          {input('instagram', { autoCapitalize: 'none' })}
+          {labelFor('Facebook')}
+          {input('facebook', { autoCapitalize: 'none' })}
+          {labelFor('Twitter / X')}
+          {input('twitter', { autoCapitalize: 'none' })}
         </>
       )}
 
