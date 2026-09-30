@@ -1,6 +1,9 @@
 import Modal from './Modal';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
 import {
   ChartBarIcon,
   UserGroupIcon,
@@ -73,17 +76,27 @@ const Analytics = () => {
     if (/^https?:\/\//.test(normalized)) return normalized;
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
+  const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [followerGrowth, setFollowerGrowth] = useState([]);
   const [engagementRate, setEngagementRate] = useState([]);
   const [period, setPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
+  const [planBlocked, setPlanBlocked] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedPost] = useState(null);
 
+  const canUseAnalytics = hasTier(user, 'basic');
+
   const fetchAnalytics = async () => {
+    if (!canUseAnalytics) {
+      setLoading(false);
+      setPlanBlocked(true);
+      return;
+    }
     try {
       setLoading(true);
+      setPlanBlocked(false);
       const [dashboardRes, growthRes, rateRes] = await Promise.all([
         api.get(`/analytics/dashboard?period=${period}`),
         api.get(`/analytics/follower-growth?period=${period}`),
@@ -94,6 +107,7 @@ const Analytics = () => {
       setEngagementRate(rateRes.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
+      if (error?.response?.status === 403) setPlanBlocked(true);
     } finally {
       setLoading(false);
     }
@@ -101,7 +115,22 @@ const Analytics = () => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [period]);
+  }, [period, canUseAnalytics]);
+
+  if (planBlocked || (!canUseAnalytics && !loading)) {
+    return (
+      <div className="xt-dashboard-page xt-analytics mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-[var(--xt-color-text)]">Analitika e avancuar</h1>
+        <p className="mt-3 text-[var(--xt-color-text-muted)]">
+          Plani yt aktualisht: <strong>{tierLabel(getEffectiveTier(user))}</strong>.
+          Analitika është e disponueshme me Basic, Pro ose trial 30-ditor.
+        </p>
+        <Link to="/premium" className="btn btn-primary mt-6 inline-flex min-h-11 px-6">
+          Shiko planet
+        </Link>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -125,6 +125,16 @@ exports.getRecommendations = async (req, res) => {
       return res.status(403).json({ msg: 'Qasja u refuzua. Kërkohet roli Scout ose Club.' });
     }
 
+    const { hasTier } = require('../utils/subscriptionAccess');
+    if (!hasTier(req.user, 'pro')) {
+      return res.status(403).json({
+        msg: 'Rekomandimet prioritare të skautëve kërkojnë planin Pro.',
+        code: 'PLAN_REQUIRED',
+        requiredTier: 'pro',
+        effectiveTier: req.user.effectiveTier || 'free',
+      });
+    }
+
     const scoutProfile = await Profile.findOne({ where: { userId: req.user.id } });
     if (!scoutProfile) return res.status(404).json({ msg: 'Profili nuk u gjet' });
 

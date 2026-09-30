@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { aiScoutSummaryRequest, extractErrorMessage, scoutingRecommendationsRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { hasTier } from '../utils/subscriptionAccess';
 
 const PAGE_SIZE = 10;
 const SCOUT_AI_ROLES = new Set(['scout', 'club', 'coach', 'manager', 'trajner']);
@@ -33,9 +35,10 @@ function RecommendationCard({ item, onAiSummary, aiLoadingId }) {
 
 export default function ScoutingScreen() {
   const { user } = useAuth();
-  const canUseScouting = ['scout', 'manager', 'federation'].includes(
-    String(user?.role || '').toLowerCase()
-  );
+  const navigation = useNavigation();
+  const roleOk = ['scout', 'club'].includes(String(user?.role || '').toLowerCase());
+  const planOk = hasTier(user, 'pro');
+  const canUseScouting = roleOk && planOk;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -87,10 +90,17 @@ export default function ScoutingScreen() {
   if (!canUseScouting) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.accessTitle}>Scouting access is restricted</Text>
+        <Text style={styles.accessTitle}>Qasja e scouting është e kufizuar</Text>
         <Text style={styles.accessText}>
-          Vetëm federation, scout dhe manager mund të përdorin scouting.
+          {roleOk
+            ? 'Rekomandimet e scouting kërkojnë planin Pro. Trial jep tipare Basic, jo Pro.'
+            : 'Vetëm Scout dhe Club me planin Pro mund të përdorin scouting.'}
         </Text>
+        {roleOk ? (
+          <TouchableOpacity style={styles.upgradeBtn} onPress={() => navigation.navigate('Premium')}>
+            <Text style={styles.upgradeBtnText}>Përmirëso në Pro</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
@@ -203,6 +213,13 @@ const styles = StyleSheet.create({
   error: { marginTop: 8, color: '#b91c1c' },
   footerText: { textAlign: 'center', color: '#64748b', marginVertical: 10 },
   accessTitle: { color: '#0f172a', fontWeight: '800', fontSize: 18, textAlign: 'center' },
-  accessText: { color: '#475569', marginTop: 8, textAlign: 'center' },
+  accessText: { color: '#475569', marginTop: 8, textAlign: 'center', marginBottom: 16 },
+  upgradeBtn: {
+    backgroundColor: '#9A6B12',
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  upgradeBtnText: { color: '#fff', fontWeight: '700' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 20 },
 });

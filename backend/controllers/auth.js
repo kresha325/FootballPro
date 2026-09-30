@@ -204,6 +204,10 @@ exports.login = async (req, res) => {
       }
     }
 
+    const { persistReconcileIfNeeded, buildAccessPayload } = require('../utils/subscriptionAccess');
+    await persistReconcileIfNeeded(user);
+    const access = buildAccessPayload(user);
+
     const payload = {
       user: {
         id: user.id,
@@ -223,6 +227,14 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         verified: Boolean(user.verified),
+        premium: access.premium,
+        premiumExpiresAt: user.premiumExpiresAt || null,
+        subscriptionPlan: access.subscriptionPlan,
+        effectiveTier: access.effectiveTier,
+        trialEndsAt: access.trialEndsAt,
+        inTrial: access.inTrial,
+        createdAt: user.createdAt,
+        access,
       },
     });
 

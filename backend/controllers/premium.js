@@ -41,6 +41,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   if (!user) return null;
 
   user.premium = true;
+  user.subscriptionPlan = 'premium';
 
   const now = new Date();
   const currentExpiry =
@@ -128,6 +129,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
       id: user.id,
       premium: user.premium,
       premiumExpiresAt: user.premiumExpiresAt,
+      subscriptionPlan: user.subscriptionPlan,
       firstName: user.firstName,
       lastName: user.lastName,
     },

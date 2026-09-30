@@ -294,9 +294,10 @@ const Settings = () => {
             <p className="text-sm text-gray-500">Verifikimi i prindit nuk kërkohet (18+).</p>
           ) : (
             <p className="text-sm text-gray-500">
-              Për trajner, referee dhe role të tjera: mjafton abonimi Premium për verifikim. Shiko{' '}
+              Për trajner, referee dhe role të tjera: badge i verifikuar me planin Basic ose Pro (ose trial
+              30-ditor). Shiko{' '}
               <Link to="/premium" className="text-teal-700 underline">
-                Premium
+                planet
               </Link>
               .
             </p>

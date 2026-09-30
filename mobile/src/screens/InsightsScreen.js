@@ -22,6 +22,9 @@ import {
 } from '../api/client';
 import { absoluteBackendUrl } from '../config/constants';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { getEffectiveTier, hasTier, tierLabel } from '../utils/subscriptionAccess';
+import { useNavigation } from '@react-navigation/native';
 
 const PERIODS = [
   { key: 7, label: '7 ditë' },
@@ -118,11 +121,15 @@ function SegmentTabs({ value, onChange, colors }) {
 
 export default function InsightsScreen() {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const navigation = useNavigation();
+  const canUseAnalytics = hasTier(user, 'basic');
   const [tab, setTab] = useState('analytics');
   const [period, setPeriod] = useState(30);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [planBlocked, setPlanBlocked] = useState(false);
   const [overview, setOverview] = useState(null);
   const [topPosts, setTopPosts] = useState([]);
   const [postType, setPostType] = useState(null);
@@ -137,6 +144,14 @@ export default function InsightsScreen() {
     if (!silent) setLoading(true);
     setError('');
     try {
+      const analyticsCalls = canUseAnalytics
+        ? [
+            dashboardAnalyticsRequest(period),
+            followerGrowthAnalyticsRequest(period).catch(() => ({ data: [] })),
+            engagementRateAnalyticsRequest(period).catch(() => ({ data: [] })),
+          ]
+        : [Promise.resolve({ data: null }), Promise.resolve({ data: [] }), Promise.resolve({ data: [] })];
+
       const [
         dashboardRes,
         growthRes,
@@ -146,24 +161,32 @@ export default function InsightsScreen() {
         badgesRes,
         leaderboardRes,
       ] = await Promise.all([
-        dashboardAnalyticsRequest(period),
-        followerGrowthAnalyticsRequest(period).catch(() => ({ data: [] })),
-        engagementRateAnalyticsRequest(period).catch(() => ({ data: [] })),
+        ...analyticsCalls,
         gamificationUserRequest().catch(() => ({ data: null })),
         gamificationAchievementsRequest().catch(() => ({ data: [] })),
         gamificationBadgesRequest().catch(() => ({ data: [] })),
         gamificationLeaderboardRequest().catch(() => ({ data: { leaderboard: [] } })),
       ]);
 
-      const dash = dashboardRes?.data || {};
-      setOverview(dash.overview || null);
-      setTopPosts(Array.isArray(dash.topPosts) ? dash.topPosts.slice(0, 3) : []);
-      setPostType(dash.postTypePerformance || null);
+      if (!canUseAnalytics) {
+        setPlanBlocked(true);
+        setOverview(null);
+        setTopPosts([]);
+        setPostType(null);
+        setFollowerGrowth([]);
+        setEngagementSeries([]);
+      } else {
+        setPlanBlocked(false);
+        const dash = dashboardRes?.data || {};
+        setOverview(dash.overview || null);
+        setTopPosts(Array.isArray(dash.topPosts) ? dash.topPosts.slice(0, 3) : []);
+        setPostType(dash.postTypePerformance || null);
 
-      const growth = growthRes?.data;
-      setFollowerGrowth(Array.isArray(growth) ? growth : []);
-      const eng = engagementRes?.data;
-      setEngagementSeries(Array.isArray(eng) ? eng : []);
+        const growth = growthRes?.data;
+        setFollowerGrowth(Array.isArray(growth) ? growth : []);
+        const eng = engagementRes?.data;
+        setEngagementSeries(Array.isArray(eng) ? eng : []);
+      }
 
       const gamif = gamificationRes?.data || null;
       setGamification(gamif);
@@ -178,12 +201,16 @@ export default function InsightsScreen() {
       const board = leaderboardRes?.data?.leaderboard || leaderboardRes?.data;
       setLeaderboard(Array.isArray(board) ? board.slice(0, 10) : []);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Nuk u ngarkuan insights'));
+      if (err?.response?.status === 403 && err?.response?.data?.code === 'PLAN_REQUIRED') {
+        setPlanBlocked(true);
+      } else {
+        setError(extractErrorMessage(err, 'Nuk u ngarkuan insights'));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [period]);
+  }, [period, canUseAnalytics]);
 
   useEffect(() => {
     loadData();
@@ -247,6 +274,20 @@ export default function InsightsScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {tab === 'analytics' ? (
+        planBlocked || !canUseAnalytics ? (
+          <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.planTitle, { color: colors.text }]}>Analitika e avancuar</Text>
+            <Text style={[styles.planText, { color: colors.muted }]}>
+              Plani yt: {tierLabel(getEffectiveTier(user))}. Analitika është me Basic, Pro ose trial 30-ditor.
+            </Text>
+            <TouchableOpacity
+              style={[styles.planBtn, { backgroundColor: colors.primary }]}
+              onPress={() => navigation.navigate('Premium')}
+            >
+              <Text style={[styles.planBtnText, { color: colors.onPrimary }]}>Shiko planet</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
         <View>
           <View style={styles.periodRow}>
             {PERIODS.map((p) => (
@@ -344,6 +385,7 @@ export default function InsightsScreen() {
             </View>
           ) : null}
         </View>
+        )
       ) : (
         <View>
           <View style={[styles.xpHero, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -526,6 +568,21 @@ const styles = StyleSheet.create({
   segmentText: { marginLeft: 6, color: '#94A3B8', fontWeight: '700', fontSize: 13 },
   segmentTextActive: { color: '#0F172A' },
   error: { color: '#B91C1C', marginHorizontal: 16, marginTop: 12 },
+  planCard: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  planTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  planText: { fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  planBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  planBtnText: { fontWeight: '700', fontSize: 14 },
   periodRow: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, marginBottom: 8 },
   periodChip: {
     paddingHorizontal: 14,

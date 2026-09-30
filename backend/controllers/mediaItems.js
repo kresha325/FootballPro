@@ -226,6 +226,34 @@ exports.createMedia = async (req, res) => {
     const cat = normalizeCategory(category || 'other');
     if (!cat) return res.status(400).json({ msg: 'Kategori e pavlefshme' });
 
+    const { hasTier, HIGHLIGHT_LIMIT_BASIC, getEffectiveTier } = require('../utils/subscriptionAccess');
+    const highlightCats = new Set(['match_highlight', 'goal', 'skills']);
+    if (highlightCats.has(cat)) {
+      if (!hasTier(req.user, 'basic')) {
+        return res.status(403).json({
+          msg: 'Highlights kërkojnë planin Basic/Pro ose trial 30-ditor.',
+          code: 'PLAN_REQUIRED',
+          requiredTier: 'basic',
+        });
+      }
+      const tier = getEffectiveTier(req.user);
+      if (tier !== 'pro') {
+        const count = await MediaItem.count({
+          where: {
+            uploadedBy: req.user.id,
+            category: { [Op.in]: [...highlightCats] },
+          },
+        });
+        if (count >= HIGHLIGHT_LIMIT_BASIC) {
+          return res.status(403).json({
+            msg: `Plani Basic lejon deri në ${HIGHLIGHT_LIMIT_BASIC} highlights. Upgrade në Pro për pa limit.`,
+            code: 'HIGHLIGHT_LIMIT',
+            limit: HIGHLIGHT_LIMIT_BASIC,
+          });
+        }
+      }
+    }
+
     const vis = normalizeVisibility(visibility || 'public');
     if (!vis) return res.status(400).json({ msg: 'Visibility e pavlefshme' });
 

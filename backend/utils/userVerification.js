@@ -47,7 +47,8 @@ function effectiveVerified(user) {
     }
     return Boolean(user.clubVerified);
   }
-  return Boolean(user.premium);
+  const { hasTier } = require('./subscriptionAccess');
+  return hasTier(user, 'basic');
 }
 
 /**
@@ -67,8 +68,9 @@ function syncOverallVerified(user) {
     return user;
   }
 
-  // Coach, referee, club, scout, … — abonimi mjafton
-  user.verified = Boolean(user.premium);
+  // Coach, referee, club, scout, … — Basic+ (trial/sponsor/paid) for badge
+  const { hasTier } = require('./subscriptionAccess');
+  user.verified = hasTier(user, 'basic');
   return user;
 }
 

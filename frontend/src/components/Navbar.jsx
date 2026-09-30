@@ -9,6 +9,7 @@ import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
 import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
+import { hasTier } from '../utils/subscriptionAccess';
 
 
 
@@ -85,6 +86,11 @@ function Navbar() {
 
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
+    if (!hasTier(user, 'pro')) {
+      alert('Live streaming kërkon planin Pro.');
+      navigate('/premium');
+      return;
+    }
     if (!cameraReady) {
       alert('Open camera first before starting live.');
       return;
@@ -147,7 +153,12 @@ function Navbar() {
       });
     } catch (err) {
       console.error('Failed to start live stream:', err);
-      alert('Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.');
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.msg ||
+        'Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.';
+      alert(msg);
+      if (err?.response?.data?.code === 'PLAN_REQUIRED') navigate('/premium');
     }
   };
 
@@ -500,8 +511,8 @@ function Navbar() {
               <span className="font-medium">Ndeshjet</span>
             </Link>
 
-            {/* Scouting (for scouts) */}
-            {user?.role === 'scout' && (
+            {/* Scouting (scout + club) */}
+            {(user?.role === 'scout' || user?.role === 'club') && (
               <Link 
                 to="/scouting" 
                 onClick={() => setIsMenuOpen(false)}

@@ -4,6 +4,7 @@ import { aiAPI, scoutingAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { getFullUrl } from '../utils/mediaUrl';
 import FeedScoutingReport from './FeedScoutingReport';
+import { hasTier } from '../utils/subscriptionAccess';
 
 const INITIAL_LIMIT = 20;
 const PAGE_SIZE = 20;
@@ -90,7 +91,8 @@ const Scouting = () => {
   const [aiError, setAiError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 
-  const authorized = String(user?.role || '').toLowerCase() === 'scout' && Boolean(user?.premium);
+  const authorized =
+    ['scout', 'club'].includes(String(user?.role || '').toLowerCase()) && hasTier(user, 'pro');
   const serverFilters = useMemo(() => ({ position: filters.position, minScore: filters.minScore }), [filters.position, filters.minScore]);
   const loadRecommendations = useCallback(async (currentLimit, currentFilters, signal) => {
     setLoading(true);
@@ -162,11 +164,21 @@ const Scouting = () => {
   };
 
   if (!authorized) {
+    const roleOk = ['scout', 'club'].includes(String(user?.role || '').toLowerCase());
     return (
       <main className="mx-auto max-w-3xl px-4 py-16">
         <section className="xt-card xt-empty-state">
           <h1 className="text-2xl font-bold">Qasja është e kufizuar</h1>
-          <p>Qendra e scouting është e disponueshme për llogaritë Scout Premium.</p>
+          <p>
+            {roleOk
+              ? 'Rekomandimet e scouting janë tipar Pro. Trial 30-ditor jep tipare Basic (analitikë, badge), jo Pro.'
+              : 'Qendra e scouting është për role Scout/Club me planin Pro.'}
+          </p>
+          {roleOk ? (
+            <Link to="/premium" className="btn btn-primary mt-6 inline-flex min-h-11 px-6">
+              Përmirëso në Pro
+            </Link>
+          ) : null}
         </section>
       </main>
     );

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { requireTier } = require('../utils/subscriptionAccess');
 const {
   trackProfileView,
   trackPostInteraction,
@@ -19,11 +20,11 @@ router.get('/club/:clubId', getClubAnalytics);
 router.post('/profile/:profileId/view', auth, trackProfileView);
 router.post('/post/:postId/:type', auth, trackPostInteraction);
 
-// Get analytics
-router.get('/user', auth, getUserAnalytics);
-router.get('/post/:postId', auth, getPostAnalytics);
-router.get('/dashboard', auth, getDashboardAnalytics);
-router.get('/follower-growth', auth, getFollowerGrowth);
-router.get('/engagement-rate', auth, getEngagementRate);
+// Advanced analytics — Basic+ (includes 30-day trial)
+router.get('/user', auth, requireTier('basic'), getUserAnalytics);
+router.get('/post/:postId', auth, requireTier('basic'), getPostAnalytics);
+router.get('/dashboard', auth, requireTier('basic'), getDashboardAnalytics);
+router.get('/follower-growth', auth, requireTier('basic'), getFollowerGrowth);
+router.get('/engagement-rate', auth, requireTier('basic'), getEngagementRate);
 
 module.exports = router;

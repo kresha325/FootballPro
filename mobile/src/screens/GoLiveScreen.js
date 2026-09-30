@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
+import { hasTier } from '../utils/subscriptionAccess';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
@@ -145,6 +146,13 @@ export default function GoLiveScreen({ route, navigation }) {
   };
 
   const onGoLive = () => {
+    if (!hasTier(user, 'pro')) {
+      Alert.alert('Plan Pro', 'Live streaming kërkon planin Pro.', [
+        { text: 'Anulo', style: 'cancel' },
+        { text: 'Shiko planet', onPress: () => navigation.navigate('Premium') },
+      ]);
+      return;
+    }
     const trimmedTitle = title.trim() || 'Live';
     const trimmedDesc = description.trim() || '';
     confirmGoLiveAlert({

@@ -297,6 +297,16 @@ exports.createStream = async (req, res) => {
     const { title, description, isPremium, youtubeChannelId: bodyChannel } = req.body;
     const streamerId = req.user.id;
 
+    const { hasTier } = require('../utils/subscriptionAccess');
+    // Live streaming (including unlimited) is a Pro feature per pricing matrix
+    if (!hasTier(req.user, 'pro')) {
+      return res.status(403).json({
+        error: 'Live streaming kërkon planin Pro.',
+        code: 'PLAN_REQUIRED',
+        requiredTier: 'pro',
+      });
+    }
+
     const trimmedBody =
       bodyChannel !== undefined && bodyChannel !== null ? String(bodyChannel).trim() : '';
     const playbackSource = String(req.body.playbackSource || 'auto').toLowerCase();

@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
+import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -59,12 +60,14 @@ export default function MoreScreen({ navigation }) {
   }, [messagesCount, notificationsCount]);
 
   const canUseScouting = user?.role === 'scout' || user?.role === 'club';
+  const hasScoutingPlan = hasTier(user, 'pro');
   const canUseInsights = ['athlete', 'coach', 'club', 'scout', 'manager', 'business', 'federation', 'admin'].includes(
     user?.role
   );
   const isAdmin = user?.role === 'admin';
   const isClub = user?.role === 'club';
   const canUseParentVerification = user?.role === 'athlete';
+  const planName = tierLabel(getEffectiveTier(user));
 
   const btn = (props) => <MenuButton {...props} colors={colors} />;
 
@@ -80,7 +83,10 @@ export default function MoreScreen({ navigation }) {
         ]}
       >
         <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.primaryText }]}>Menu — si burger në web</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.primaryText }]}>
+          Plani: {planName}
+          {user?.inTrial ? ' · trial' : ''}
+        </Text>
       </View>
 
       {alertLines.length > 0 ? (
@@ -125,7 +131,9 @@ export default function MoreScreen({ navigation }) {
       {canUseInsights
         ? btn({
             title: 'Insights',
-            subtitle: 'Analitika e profilit, XP dhe arritje',
+            subtitle: hasTier(user, 'basic')
+              ? 'Analitika e profilit, XP dhe arritje'
+              : 'Analitika kërkon Basic/Pro · XP është falas',
             onPress: () => navigation.navigate('Insights'),
           })
         : null}
@@ -134,7 +142,7 @@ export default function MoreScreen({ navigation }) {
       {canUseScouting
         ? btn({
             title: 'Scouting',
-            subtitle: 'Recommendations and filters',
+            subtitle: hasScoutingPlan ? 'Recommendations and filters' : 'Kërkon planin Pro',
             onPress: () => navigation.navigate('Scouting'),
           })
         : null}
@@ -190,7 +198,19 @@ export default function MoreScreen({ navigation }) {
         >
           <Text style={[styles.noteTitle, { color: colors.warningText }]}>Scouting Access</Text>
           <Text style={[styles.noteText, { color: colors.warningText }]}>
-            Scouting features are available for scout or club roles.
+            Scouting është për Scout/Club me planin Pro.
+          </Text>
+        </View>
+      ) : !hasScoutingPlan ? (
+        <View
+          style={[
+            styles.noteCard,
+            { backgroundColor: colors.warningSoft, borderColor: colors.warningBorder },
+          ]}
+        >
+          <Text style={[styles.noteTitle, { color: colors.warningText }]}>Plan Pro</Text>
+          <Text style={[styles.noteText, { color: colors.warningText }]}>
+            Rekomandimet e scouting kërkojnë Pro. Trial jep tipare Basic (analitikë).
           </Text>
         </View>
       ) : null}

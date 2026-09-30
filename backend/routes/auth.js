@@ -103,6 +103,7 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
         'points',
         'level',
         'premium',
+        'premiumExpiresAt',
         'subscriptionPlan',
         'verified',
         'createdAt',
@@ -114,7 +115,17 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
+    const { persistReconcileIfNeeded, buildAccessPayload } = require('../utils/subscriptionAccess');
+    await persistReconcileIfNeeded(user);
+
     const plain = user.get({ plain: true });
+    const access = buildAccessPayload(plain);
+    plain.premium = access.premium;
+    plain.effectiveTier = access.effectiveTier;
+    plain.trialEndsAt = access.trialEndsAt;
+    plain.inTrial = access.inTrial;
+    plain.access = access;
+
     meCache.set(req.user.id, { plain, expiry: now + ME_CACHE_TTL });
 
     res.json(meJsonWithAbsolutePhoto(plain, req));

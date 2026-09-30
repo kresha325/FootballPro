@@ -27,6 +27,7 @@ import ShareProfileCvButton from './ShareProfileCvButton';
 import VerifiedBadge from './VerifiedBadge';
 import ParentVerificationModal from './ParentVerificationModal';
 import { MapPinIcon } from '@heroicons/react/24/outline';
+import { hasTier } from '../utils/subscriptionAccess';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -196,6 +197,11 @@ const Profile = () => {
 
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
+    if (!hasTier(user, 'pro')) {
+      alert('Live streaming kërkon planin Pro.');
+      navigate('/premium');
+      return;
+    }
     if (!cameraReady) {
       alert('Hape kamerën fillimisht para se të nisësh live.');
       return;
@@ -259,7 +265,12 @@ const Profile = () => {
       });
     } catch (err) {
       console.error('Failed to start live stream:', err);
-      alert('Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.');
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.msg ||
+        'Nuk u arrit nisja e transmetimit live. Ju lutem provoni përsëri.';
+      alert(msg);
+      if (err?.response?.data?.code === 'PLAN_REQUIRED') navigate('/premium');
     }
   };
 
