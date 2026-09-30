@@ -334,7 +334,8 @@ export const clubMembersAPI = {
   getClubMembers: (clubId, status) => API.get(`/club-members/club/${clubId}${status ? `?status=${status}` : ''}`),
   getAthleteMemberships: (athleteId) => API.get(`/club-members/athlete/${athleteId}`),
   requestMembership: (data) => API.post('/club-members/request', data),
-  updateMembershipStatus: (membershipId, status) => API.put(`/club-members/${membershipId}/status`, { status }),
+  updateMembershipStatus: (membershipId, status, extra = {}) =>
+    API.put(`/club-members/${membershipId}/status`, { status, ...extra }),
   updateMember: (membershipId, data) => API.patch(`/club-members/${membershipId}`, data),
   removeMember: (membershipId) => API.delete(`/club-members/${membershipId}`),
 };

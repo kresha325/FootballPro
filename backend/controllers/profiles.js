@@ -1766,6 +1766,7 @@ exports.getUserTournamentSummary = async (req, res) => {
         tournamentSeason: t.season || null,
         tournamentType: t.type,
         tournamentStatus: t.status,
+        tournamentCategory: t.category || 'open',
         participantStatus: p.status,
         rank: rankIdx >= 0 ? rankIdx + 1 : null,
         points: myRow.points,

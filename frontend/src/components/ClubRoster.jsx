@@ -298,15 +298,16 @@ function ClubRoster() {
         teamTypeToSave = selectedCompetitionCategory || 'youth';
       }
 
-      await clubMembersAPI.updateMembershipStatus(selectedMembership.id, 'approved');
-      await clubMembersAPI.updateMember(selectedMembership.id, {
+      const competitionCategory =
+        selectedTeamType === 'first_team' && !isYouthCategory
+          ? selectedCompetitionCategory === 'open'
+            ? 'senior'
+            : selectedCompetitionCategory
+          : selectedCompetitionCategory;
+
+      await clubMembersAPI.updateMembershipStatus(selectedMembership.id, 'approved', {
         teamType: teamTypeToSave,
-        competitionCategory:
-          selectedTeamType === 'first_team' && !isYouthCategory
-            ? selectedCompetitionCategory === 'open'
-              ? 'senior'
-              : selectedCompetitionCategory
-            : selectedCompetitionCategory,
+        competitionCategory,
       });
       
       setShowTeamSelectModal(false);

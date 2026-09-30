@@ -72,6 +72,12 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
                   : row.tournamentSeason
                     ? `${row.tournamentName} (${row.tournamentSeason})`
                     : row.tournamentName}
+                {row.tournamentCategory &&
+                !['open', 'senior'].includes(String(row.tournamentCategory).toLowerCase()) ? (
+                  <span className="ml-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {String(row.tournamentCategory).toUpperCase()}
+                  </span>
+                ) : null}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {statusLabel(row.tournamentStatus)}
@@ -79,6 +85,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
                   ? ` · ${statusLabel(row.participantStatus)}`
                   : ''}
                 {row.tournamentType ? ` · ${row.tournamentType}` : ''}
+                {row.tournamentCategory ? ` · ${String(row.tournamentCategory).toUpperCase()}` : ''}
               </p>
             </div>
             {row.rank ? (

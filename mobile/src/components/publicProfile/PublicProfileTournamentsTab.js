@@ -79,6 +79,7 @@ export default function PublicProfileTournamentsTab({
                 ? ` · ${statusLabel(row.participantStatus)}`
                 : ''}
               {row.tournamentType ? ` · ${row.tournamentType}` : ''}
+              {row.tournamentCategory ? ` · ${String(row.tournamentCategory).toUpperCase()}` : ''}
             </Text>
             <View style={styles.statsRow}>
               <Text style={[styles.stat, { color: theme.text }]}>{row.points ?? 0} pts</Text>

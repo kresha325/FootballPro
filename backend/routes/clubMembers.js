@@ -489,7 +489,15 @@ router.delete('/:membershipId', protect, async (req, res) => {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 
+    const athleteId = membership.athleteId;
+    const clubId = membership.clubId;
     await membership.destroy();
+    try {
+      const { removeAthleteFromClubLigaTournaments } = require('../utils/ligaTournaments');
+      await removeAthleteFromClubLigaTournaments(athleteId, clubId);
+    } catch (syncErr) {
+      console.error('removeAthleteFromClubLigaTournaments:', syncErr);
+    }
     res.json({ msg: 'Member removed successfully' });
   } catch (error) {
     console.error('Remove member error:', error);

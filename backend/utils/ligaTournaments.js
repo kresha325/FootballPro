@@ -41,12 +41,17 @@ function ligaIncludesClub(liga, clubId) {
 }
 
 /**
- * Ensure a liga has a linked tournament named after the liga.
+ * Ensure a liga has a linked tournament for the given category (e.g. open, u15).
  */
 async function ensureLigaTournament(liga, { category } = {}) {
   if (!liga?.id || !liga.userId) return null;
 
   const cat = normalizeCategory(category || 'open');
+  const displayName =
+    cat === 'open' || cat === 'senior'
+      ? liga.name
+      : `${liga.name} (${String(cat).toUpperCase()})`;
+
   let tournament = await Tournament.findOne({
     where: { ligaId: liga.id, category: cat },
   });
@@ -68,8 +73,8 @@ async function ensureLigaTournament(liga, { category } = {}) {
 
   if (tournament) {
     let dirty = false;
-    if (tournament.name !== liga.name) {
-      tournament.name = liga.name;
+    if (tournament.name !== displayName) {
+      tournament.name = displayName;
       dirty = true;
     }
     if (liga.description && tournament.description !== liga.description) {
@@ -89,7 +94,7 @@ async function ensureLigaTournament(liga, { category } = {}) {
   }
 
   tournament = await Tournament.create({
-    name: liga.name,
+    name: displayName,
     description: liga.description || `Turneu i ligës ${liga.name}`,
     type: 'league',
     season,
@@ -105,8 +110,9 @@ async function ensureLigaTournament(liga, { category } = {}) {
 }
 
 /**
- * Sync an approved club member into matching liga tournaments as accepted participant
- * (for goals/assists registration by the liga — not as a "club" entry).
+ * Sync an approved club member into the liga tournament for their competition category.
+ * Ensures the category tournament exists (e.g. U15), adds the athlete there, and removes
+ * them from other non-matching liga tournaments of the same liga.
  */
 async function syncClubMemberToLigaTournaments(membership) {
   if (!membership || membership.status !== 'approved') return { synced: 0 };
@@ -118,37 +124,39 @@ async function syncClubMemberToLigaTournaments(membership) {
   );
 
   const ligas = await Liga.findAll();
-  const relevantLigaIds = ligas.filter((l) => ligaIncludesClub(l, clubId)).map((l) => l.id);
-  if (!relevantLigaIds.length) return { synced: 0 };
-
-  const tournaments = await Tournament.findAll({
-    where: {
-      ligaId: { [Op.in]: relevantLigaIds },
-      status: { [Op.in]: ['open', 'ongoing'] },
-    },
-  });
+  const relevantLigas = ligas.filter((l) => ligaIncludesClub(l, clubId));
+  if (!relevantLigas.length) return { synced: 0 };
 
   let synced = 0;
-  for (const t of tournaments) {
-    const tCat = normalizeCategory(t.category || 'open');
-    const categoryMatch =
-      tCat === 'open' ||
-      memberCategory === 'open' ||
-      tCat === memberCategory ||
-      (memberCategory === 'senior' && (tCat === 'open' || tCat === 'senior'));
 
-    if (!categoryMatch) {
-      // Remove from non-matching liga tournaments if previously added via sync
-      await TournamentParticipant.destroy({
-        where: { tournamentId: t.id, userId: athleteId },
-      });
+  for (const liga of relevantLigas) {
+    // Ensure the liga has a tournament for this exact category (creates U15 etc. if missing).
+    const target = await ensureLigaTournament(liga, { category: memberCategory });
+    if (!target) continue;
+
+    // Only sync into open/ongoing tournaments.
+    if (!['open', 'ongoing'].includes(String(target.status || ''))) {
       continue;
     }
 
+    // Remove athlete from other categories of this liga (keep only the approved band).
+    const siblingTournaments = await Tournament.findAll({
+      where: {
+        ligaId: liga.id,
+        id: { [Op.ne]: target.id },
+      },
+      attributes: ['id', 'category'],
+    });
+    for (const sibling of siblingTournaments) {
+      await TournamentParticipant.destroy({
+        where: { tournamentId: sibling.id, userId: athleteId },
+      });
+    }
+
     const [row, created] = await TournamentParticipant.findOrCreate({
-      where: { tournamentId: t.id, userId: athleteId },
+      where: { tournamentId: target.id, userId: athleteId },
       defaults: {
-        tournamentId: t.id,
+        tournamentId: target.id,
         userId: athleteId,
         status: 'accepted',
         points: 0,
@@ -180,6 +188,28 @@ async function syncClubAthletesToLiga(liga, clubId) {
     synced += r.synced || 0;
   }
   return { synced, members: members.length };
+}
+
+async function removeAthleteFromClubLigaTournaments(athleteId, clubId) {
+  if (!athleteId || !clubId) return { removed: 0 };
+  const ligas = await Liga.findAll();
+  const relevantLigaIds = ligas.filter((l) => ligaIncludesClub(l, clubId)).map((l) => l.id);
+  if (!relevantLigaIds.length) return { removed: 0 };
+
+  const tournaments = await Tournament.findAll({
+    where: { ligaId: { [Op.in]: relevantLigaIds } },
+    attributes: ['id'],
+  });
+  const tournamentIds = tournaments.map((t) => t.id);
+  if (!tournamentIds.length) return { removed: 0 };
+
+  const removed = await TournamentParticipant.destroy({
+    where: {
+      tournamentId: { [Op.in]: tournamentIds },
+      userId: athleteId,
+    },
+  });
+  return { removed };
 }
 
 async function removeClubAthletesFromLiga(liga, clubId) {
@@ -266,6 +296,7 @@ module.exports = {
   syncClubMemberToLigaTournaments,
   syncClubAthletesToLiga,
   removeClubAthletesFromLiga,
+  removeAthleteFromClubLigaTournaments,
   ligaIncludesClub,
   findLigasForClub,
   normalizeClubsArray,

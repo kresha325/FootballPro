@@ -151,7 +151,45 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
           {achievements.length ? <ul className="space-y-3">{achievements.slice(0, 8).map((item, index) => <li key={item.id || index} className="flex items-start gap-3 rounded-lg border border-[var(--xt-color-border)] p-3"><span className="xt-badge xt-badge-gold">{item.year || 'Arritje'}</span><span className="font-medium">{item.title || item.name || item.description}</span></li>)}</ul> : <Empty>Arritjet dhe çmimet do të shfaqen kur të shtohen.</Empty>}
         </Section>
         <Section title="Turnet" eyebrow="Pjesëmarrja">
-          {tournaments.length ? <ul className="space-y-3">{tournaments.slice(0, 6).map((item, index) => <li key={item.id || index} className="flex items-center justify-between gap-4 rounded-lg border border-[var(--xt-color-border)] p-3"><div><p className="font-semibold">{item.name || item.tournamentName || item.title || 'Turne'}</p><p className="text-sm text-[var(--xt-color-text-muted)]">{[item.season, item.played != null ? `${item.played} ndeshje` : null].filter(Boolean).join(' · ')}</p></div>{hasValue(item.rank) && <span className="xt-badge xt-badge-gold">#{item.rank}</span>}</li>)}</ul> : <Empty>Nuk ka pjesëmarrje në turne për t'u shfaqur.</Empty>}
+          {tournaments.length ? (
+            <ul className="space-y-3">
+              {tournaments.slice(0, 6).map((item, index) => {
+                const categoryLabel = item.tournamentCategory || item.category;
+                const categoryText =
+                  categoryLabel && String(categoryLabel).toLowerCase() !== 'open'
+                    ? String(categoryLabel).toUpperCase()
+                    : null;
+                return (
+                  <li
+                    key={item.id || item.tournamentId || index}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-[var(--xt-color-border)] p-3"
+                  >
+                    <div>
+                      <p className="font-semibold">
+                        {item.name || item.tournamentName || item.title || 'Turne'}
+                        {categoryText ? (
+                          <span className="ml-2 text-sm font-semibold text-[var(--xt-color-gold-bright)]">
+                            {categoryText}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-sm text-[var(--xt-color-text-muted)]">
+                        {[
+                          item.season || item.tournamentSeason,
+                          item.played != null ? `${item.played} ndeshje` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </div>
+                    {hasValue(item.rank) && <span className="xt-badge xt-badge-gold">#{item.rank}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <Empty>Nuk ka pjesëmarrje në turne për t'u shfaqur.</Empty>
+          )}
         </Section>
       </div>
     </div>
