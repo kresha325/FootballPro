@@ -8,6 +8,7 @@ import {
   UserGroupIcon, UserIcon, VideoCameraIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC, APP_HERO_DESKTOP, APP_HERO_DESKTOP_W, APP_HERO_DESKTOP_H, APP_HERO_MOBILE, APP_HERO_MOBILE_W, APP_HERO_MOBILE_H } from '../config/branding';
+import LandingPlayerShowcase from './LandingPlayerShowcase';
 import './LandingPage.css';
 
 /** Free 30 ditë · Basic €5.99/muaj · Pro €11.99/muaj · vjetore = 10 muaj (2 muaj falas). */
@@ -146,11 +147,11 @@ export default function LandingPage() {
       <section id="platform" className="xt-section xt-platform-section">
         <div className="xt-container">
           <div className="grid items-center gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-20">
-            <Reveal><SectionHeading eyebrow="ONE PLATFORM · MANY POSSIBILITIES" title="Më shumë se një profil futbolli." description="X TALENTI krijon një hapësirë ku talenti mund të ndërtohet, prezantohet dhe zbulohet." /><p className="text-xs font-semibold uppercase tracking-[.18em] text-[var(--xt-muted)]">PAMJE ILUSTRUESE E PLATFORMËS</p></Reveal>
+            <Reveal><SectionHeading eyebrow="ONE PLATFORM · MANY POSSIBILITIES" title="Më shumë se një profil futbolli." description="X TALENTI krijon një hapësirë ku talenti mund të ndërtohet, prezantohet dhe zbulohet." /><p className="text-xs font-semibold uppercase tracking-[.18em] text-[var(--xt-muted)]">PROFILE REALE NGA PLATFORMË</p></Reveal>
             <Reveal delay={.12}><div className="xt-dashboard-preview">
-              <div className="xt-preview-top"><div className="flex items-center gap-2"><span className="xt-dot" /><span className="xt-dot" /><span className="xt-dot" /></div><span className="text-xs tracking-[.12em] text-white/50">X TALENTI / PLAYER SPACE</span><span className="text-[10px] text-white/45">PREVIEW</span></div>
+              <div className="xt-preview-top"><div className="flex items-center gap-2"><span className="xt-dot" /><span className="xt-dot" /><span className="xt-dot" /></div><span className="text-xs tracking-[.12em] text-white/50">X TALENTI / PLAYER SPACE</span><span className="text-[10px] text-white/45">LIVE</span></div>
               <div className="grid gap-4 p-4 sm:grid-cols-[.82fr_1.18fr] sm:p-6">
-                <div className="xt-preview-profile"><div className="xt-player-silhouette"><UserIcon className="h-12 w-12" /></div><span className="xt-preview-tag">PLAYER PROFILE</span><h3>Player Profile</h3><p>Profile · CV · Highlights</p><div className="xt-progress"><span /></div><small>PROFILE COMPLETION</small></div>
+                <LandingPlayerShowcase />
                 <div className="grid grid-cols-2 gap-3">
                   {[[ChartBarIcon, 'Performance', 'Statistics & progress'], [PlayIcon, 'Matches', 'Match history'], [MagnifyingGlassIcon, 'Scouting', 'Player discovery'], [MapPinIcon, 'Opportunities', 'Career connections']].map(([_Icon, title, desc]) => <div key={title} className="xt-preview-tile"><_Icon className="h-5 w-5 text-[var(--xt-gold)]" /><h4>{title}</h4><p>{desc}</p><div className="xt-skeleton-line" /></div>)}
                   <div className="xt-preview-activity col-span-2"><span className="xt-live-mark" /> YOUR FOOTBALL JOURNEY, CONNECTED <ArrowRightIcon className="ml-auto h-4 w-4" /></div>

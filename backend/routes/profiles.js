@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { 
   getProfile,
   getPublicProfileCv,
+  getLandingShowcase,
   createProfile, 
   updateProfile, 
   getAllProfiles, 
@@ -23,6 +24,9 @@ const uploadCloud = require('../middleware/uploadCloudinary');
  * GET /api/profiles?role=athlete&search=john
  */
 router.get('/', auth, getAllProfiles);
+
+/** Public landing showcase — real athletes, no auth */
+router.get('/showcase', getLandingShowcase);
 
 /**
  * GET PROFILE BY ID (public, but auth required)

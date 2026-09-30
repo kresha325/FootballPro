@@ -48,12 +48,26 @@
 .xt-preview-top { display: flex; height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 15px; border-bottom: 1px solid rgb(255 255 255 / 8%); }
 .xt-dot { display: block; height: 6px; width: 6px; border-radius: 50%; background: rgb(255 255 255 / 30%); }
 .xt-preview-profile { min-height: 250px; padding: 17px; border: 1px solid rgb(255 255 255 / 8%); background: linear-gradient(160deg, #132131, #0b131d); }
+.xt-preview-profile--live { display: flex; flex-direction: column; }
 .xt-player-silhouette { display: grid; height: 92px; place-items: center; margin-bottom: 15px; background: radial-gradient(ellipse at 50% 95%, #b18439 0, #493a26 25%, #142131 26%, #101720 70%); color: rgb(255 255 255 / 70%); }
+.xt-player-silhouette--loading { animation: xt-pulse 1.2s ease-in-out infinite; }
+.xt-player-photo-wrap { position: relative; margin-bottom: 15px; }
+.xt-player-photo { display: block; width: 100%; height: 132px; object-fit: cover; object-position: center top; border: 1px solid rgb(255 255 255 / 10%); background: #101720; }
+.xt-player-initials { color: var(--xt-gold-bright); font-size: 22px; font-weight: 800; letter-spacing: .08em; }
+.xt-player-dots { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 5px; }
+.xt-player-dots button { height: 6px; width: 6px; border: 0; border-radius: 50%; background: rgb(255 255 255 / 35%); cursor: pointer; padding: 0; }
+.xt-player-dots button.is-active { background: var(--xt-gold-bright); box-shadow: 0 0 8px rgb(217 164 65 / 55%); }
 .xt-preview-tag { color: var(--xt-gold); font-size: 8px; font-weight: 800; letter-spacing: .16em; }
-.xt-preview-profile h3 { margin-top: 5px; color: white; font-size: 16px; font-weight: 750; }
+.xt-preview-profile h3 { margin-top: 5px; color: white; font-size: 16px; font-weight: 750; display: flex; align-items: center; gap: 7px; }
+.xt-verified-dot { display: inline-block; height: 8px; width: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
 .xt-preview-profile p, .xt-preview-tile p { margin-top: 3px; color: rgb(255 255 255 / 43%); font-size: 9px; }
-.xt-progress { height: 3px; margin-top: 22px; background: rgb(255 255 255 / 9%); }.xt-progress span { display: block; height: 100%; width: 72%; background: var(--xt-gold); }
+.xt-progress { height: 3px; margin-top: 22px; background: rgb(255 255 255 / 9%); overflow: hidden; }
+.xt-progress span { display: block; height: 100%; width: 72%; background: var(--xt-gold); }
+.xt-progress--timed span { width: 0; animation-name: xt-progress-fill; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes xt-progress-fill { from { width: 0; } to { width: 100%; } }
+@keyframes xt-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 .xt-preview-profile small { display: block; margin-top: 6px; color: rgb(255 255 255 / 37%); font-size: 7px; letter-spacing: .12em; }
+.xt-preview-cta { margin-top: 12px; color: var(--xt-gold-bright) !important; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-decoration: underline; text-underline-offset: 3px; }
 .xt-preview-tile { min-height: 112px; padding: 12px; border: 1px solid rgb(255 255 255 / 8%); background: #0e1823; }
 .xt-preview-tile h4 { margin-top: 8px; color: white; font-size: 11px; font-weight: 700; }.xt-skeleton-line { height: 3px; width: 62%; margin-top: 12px; background: linear-gradient(90deg, rgb(217 164 65 / 65%) 55%, rgb(255 255 255 / 8%) 55%); }
 .xt-preview-activity { display: flex; align-items: center; gap: 9px; padding: 12px; color: rgb(255 255 255 / 58%); font-size: 8px; font-weight: 700; letter-spacing: .1em; }

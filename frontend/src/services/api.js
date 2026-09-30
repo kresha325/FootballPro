@@ -180,6 +180,7 @@ export const postsAPI = {
 ========================= */
 export const profileAPI = {
   getAllProfiles: (params) => API.get('/profiles', { params }),
+  getLandingShowcase: (params) => API.get('/profiles/showcase', { params }),
   getMyProfile: () => API.get('/profiles/me'),
   getProfile: (id) => API.get(`/profiles/${id}`),
   getPublicCv: (id) => API.get(`/profiles/cv/${id}`),

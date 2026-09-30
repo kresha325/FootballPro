@@ -1757,3 +1757,95 @@ exports.checkFollowStatus = async (req, res) => {
     res.status(500).json({ msg: 'Gabim në server', error: err.message });
   }
 };
+
+/**
+ * Public landing showcase — real athlete profiles (no auth).
+ * Prefer players with photos; safe public fields only.
+ */
+exports.getLandingShowcase = async (req, res) => {
+  try {
+    const limitRaw = parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 12) : 8;
+
+    const userInclude = {
+      model: User,
+      attributes: [
+        'id',
+        'firstName',
+        'lastName',
+        'role',
+        'verified',
+        'dateOfBirth',
+        'bannedAt',
+        'deletedAt',
+        'email',
+      ],
+      where: {
+        role: 'athlete',
+        deletedAt: null,
+        bannedAt: null,
+      },
+      required: true,
+    };
+
+    let rows = [];
+    try {
+      rows = await Profile.findAll({
+        include: [userInclude],
+        order: [['updatedAt', 'DESC']],
+        limit: 60,
+      });
+    } catch (includeErr) {
+      console.warn('Landing showcase include error:', includeErr.message);
+      const athletes = await User.findAll({
+        where: { role: 'athlete', deletedAt: null, bannedAt: null },
+        attributes: userInclude.attributes,
+        limit: 60,
+        order: [['id', 'DESC']],
+      });
+      const ids = athletes.map((u) => u.id);
+      const profiles = await Profile.findAll({ where: { userId: { [Op.in]: ids } } });
+      const map = new Map(profiles.map((p) => [p.userId, p]));
+      rows = athletes
+        .map((u) => {
+          const p = map.get(u.id);
+          if (!p) return null;
+          p.User = u;
+          return p;
+        })
+        .filter(Boolean);
+    }
+
+    const mapped = rows
+      .filter((profile) => profile?.User)
+      .filter((profile) => !String(profile.User.email || '').includes('@footballpro-smoke.invalid'))
+      .map((profile) => {
+        const user = profile.User;
+        const age = typeof user.getAge === 'function' ? user.getAge() : null;
+        let photo = profile.profilePhoto || null;
+        if (photo) photo = toAbsoluteUploadsUrl(req, photo);
+        return {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          verified: Boolean(user.verified),
+          position: profile.position || null,
+          club: profile.club || null,
+            city: profile.city || null,
+          country: profile.country || null,
+          age,
+          profilePhoto: photo,
+          hasPhoto: Boolean(photo),
+        };
+      });
+
+    const withPhoto = mapped.filter((p) => p.hasPhoto);
+    const withoutPhoto = mapped.filter((p) => !p.hasPhoto);
+    const selected = [...withPhoto, ...withoutPhoto].slice(0, limit).map(({ hasPhoto, ...rest }) => rest);
+
+    res.json({ players: selected, count: selected.length });
+  } catch (err) {
+    console.error('Landing showcase error:', err);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
