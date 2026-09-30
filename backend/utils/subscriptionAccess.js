@@ -4,7 +4,8 @@
  * Plan access for X TALENTI:
  * - free: social features only (after trial)
  * - basic: analytics, verified (non-athlete), highlights ≤10  (+ Free 30-day trial)
- * - pro: scout recommendations, unlimited live, premium streams, themes
+ * - pro: scout recommendations, unlimited live, premium streams, themes,
+ *        early access labs, priority support
  *
  * Sources: paid premium flag, sponsor subscriptionPlan, first-30-days trial.
  */
@@ -83,6 +84,8 @@ function buildAccessPayload(user, now = new Date()) {
       scoutRecommendations: hasTier(user, 'pro', now),
       liveUnlimited: hasTier(user, 'pro', now),
       profileThemes: hasTier(user, 'pro', now),
+      earlyAccess: hasTier(user, 'pro', now),
+      prioritySupport: hasTier(user, 'pro', now),
     },
   };
 }

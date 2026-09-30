@@ -28,6 +28,7 @@ import VerifiedBadge from './VerifiedBadge';
 import ParentVerificationModal from './ParentVerificationModal';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import { hasTier } from '../utils/subscriptionAccess';
+import './ProfileTheme.css';
 
 const Profile = () => {
     // const [streams, setStreams] = useState([]);
@@ -595,10 +596,13 @@ const Profile = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <div
+      className="xt-profile-themed mx-auto max-w-7xl px-4 sm:px-6"
+      data-profile-theme={profile?.profileTheme || 'default'}
+    >
 
       {/* Cover Photo */}
-      <div className="relative flex h-52 items-center justify-center overflow-hidden rounded-t-xl bg-[var(--xt-color-surface-raised)] sm:h-64">
+      <div className="relative flex h-52 items-center justify-center overflow-hidden rounded-t-xl bg-[var(--xt-profile-accent-soft)] sm:h-64">
         {profile.coverPhoto && (
           <img
             src={getFullUrl(profile.coverPhoto)}
@@ -637,7 +641,7 @@ const Profile = () => {
             {/* Avatar + verification chips under photo */}
             <div className="flex shrink-0 flex-col items-center md:-mt-20">
               <div className="relative">
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
+                <div className="xt-profile-accent-ring w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-gray-800 bg-gray-200 overflow-hidden shadow-lg flex items-center justify-center">
                   {profile.profilePhoto && !avatarBroken ? (
                     <img
                       src={getFullUrl(profile.profilePhoto)}
@@ -1006,7 +1010,7 @@ const Profile = () => {
                   onClick={() => setActiveTab(tab.key)}
                   className={`min-h-12 whitespace-nowrap border-b-2 px-3 py-3 font-medium transition ${
                     activeTab === tab.key
-                      ? 'border-[var(--xt-color-gold)] text-[var(--xt-color-gold-bright)]'
+                      ? 'xt-profile-tab-active border-[var(--xt-profile-accent)] text-[var(--xt-profile-accent)]'
                       : 'border-transparent text-[var(--xt-color-text-muted)] hover:text-[var(--xt-color-text)]'
                   }`}
                 >

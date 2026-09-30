@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { PROFILE_THEMES } from '../utils/profileThemes';
 import {
   addTransferHistoryRequest,
   clubMembersByClubRequest,
@@ -612,11 +613,13 @@ export default function PublicProfileScreen({ route, navigation }) {
   const photoUri = profile.profilePhoto && typeof profile.profilePhoto === 'string' ? profile.profilePhoto : null;
   const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const contact = profile.contact && typeof profile.contact === 'object' ? profile.contact : {};
+  const themeAccent =
+    PROFILE_THEMES.find((t) => t.id === (profile.profileTheme || 'default'))?.accent || '#9A6B12';
 
   const Chip = ({ icon, imageUri, onPress, children }) => {
     if (!children) return null;
     const body = (
-      <View style={[styles.chip, { backgroundColor: theme.chipBg }]}>
+      <View style={[styles.chip, { backgroundColor: theme.chipBg, borderColor: themeAccent, borderWidth: 1 }]}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.chipLogo} />
         ) : icon ? (

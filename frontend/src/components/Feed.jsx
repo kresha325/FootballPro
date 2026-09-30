@@ -19,9 +19,22 @@ import VerifiedBadge from './VerifiedBadge';
 import PersonName from './PersonName';
 import { API, matchesAPI } from '../services/api';
 import { ArrowRightIcon, ChartBarIcon, MagnifyingGlassIcon, PlusIcon, TrophyIcon, UserGroupIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
+import { isEarlyAccessEnabled, EARLY_ACCESS_LABS_KEY } from '../utils/profileThemes';
+import './ProfileTheme.css';
 
 const Feed = () => {
   const { user } = useAuth();
+  const [denseFeed, setDenseFeed] = useState(() => isEarlyAccessEnabled('dense_feed'));
+
+  useEffect(() => {
+    const sync = () => setDenseFeed(isEarlyAccessEnabled('dense_feed'));
+    window.addEventListener('xt-early-access-changed', sync);
+    window.addEventListener('storage', (e) => {
+      if (e.key === EARLY_ACCESS_LABS_KEY) sync();
+    });
+    return () => window.removeEventListener('xt-early-access-changed', sync);
+  }, []);
+
   const apiRoot = import.meta.env.VITE_API_URL
     ? import.meta.env.VITE_API_URL.replace('/api','')
     : '';
@@ -532,7 +545,7 @@ const Feed = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-5 sm:py-7">
+    <div className={`mx-auto max-w-7xl px-4 py-5 sm:py-7 ${denseFeed ? 'xt-feed-dense' : ''}`}>
 
       <header className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_top_right,rgba(217,164,65,.14),transparent_45%),linear-gradient(145deg,#121c2a,#0b111a)] p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-5">

@@ -1031,6 +1031,26 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
+    if (req.body.profileTheme !== undefined) {
+      const { normalizeProfileTheme } = require('../utils/profileThemes');
+      const { hasTier } = require('../utils/subscriptionAccess');
+      const theme = normalizeProfileTheme(req.body.profileTheme);
+      if (!theme) {
+        return res.status(400).json({
+          msg: 'Tema e profilit nuk është e vlefshme.',
+          field: 'profileTheme',
+        });
+      }
+      if (theme !== 'default' && !hasTier(req.user, 'pro')) {
+        return res.status(403).json({
+          msg: 'Temat e personalizuara kërkojnë planin Pro.',
+          code: 'PLAN_REQUIRED',
+          requiredTier: 'pro',
+        });
+      }
+      updateData.profileTheme = theme;
+    }
+
     // Handle file uploads and add to gallery (Cloudinary)
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));

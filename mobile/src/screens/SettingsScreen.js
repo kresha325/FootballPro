@@ -27,6 +27,14 @@ import {
   getPushPreference,
 } from '../notifications/push';
 import { WEB_APP_URL } from '../config/constants';
+import { hasTier } from '../utils/subscriptionAccess';
+import {
+  PROFILE_THEMES,
+  EARLY_ACCESS_FEATURES,
+  loadEarlyAccessPrefs,
+  saveEarlyAccessPrefs,
+  prioritySupportMailto,
+} from '../utils/profileThemes';
 
 const YOUTUBE_STUDIO_HELP = 'https://www.youtube.com/account_advanced';
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
@@ -46,6 +54,7 @@ function profileFromUser(user) {
     city: user?.Profile?.city || '',
     country: user?.Profile?.country || '',
     youtubeChannelId: user?.Profile?.youtubeChannelId || user?.youtubeChannelId || '',
+    profileTheme: user?.Profile?.profileTheme || 'default',
   };
 }
 
@@ -61,10 +70,20 @@ export default function SettingsScreen() {
   const [resolveError, setResolveError] = useState('');
   const resolveSkipRef = useRef(false);
   const [profile, setProfile] = useState(() => profileFromUser(user));
+  const [profileTheme, setProfileTheme] = useState(
+    () => user?.Profile?.profileTheme || 'default'
+  );
+  const [labs, setLabs] = useState({});
+  const isPro = hasTier(user, 'pro');
 
   useEffect(() => {
     setProfile(profileFromUser(user));
+    setProfileTheme(user?.Profile?.profileTheme || 'default');
   }, [user]);
+
+  useEffect(() => {
+    loadEarlyAccessPrefs().then(setLabs).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -435,6 +454,96 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Përfitime Pro</Text>
+        <Text style={[styles.hint, { color: colors.mutedSoft }]}>
+          {isPro
+            ? 'Tema, Labs dhe suport prioritar.'
+            : 'Aktivizo Pro për tema, akses të hershëm dhe suport prioritar.'}
+        </Text>
+
+        <Text style={[styles.fieldLabel, { color: colors.muted, marginTop: 10 }]}>Tema e profilit</Text>
+        <View style={styles.themeRow}>
+          {PROFILE_THEMES.map((t) => {
+            const selected = profileTheme === t.id;
+            const locked = !isPro && t.id !== 'default';
+            return (
+              <TouchableOpacity
+                key={t.id}
+                disabled={locked || saving}
+                onPress={async () => {
+                  if (locked) {
+                    Alert.alert('Pro', 'Temat e personalizuara kërkojnë planin Pro.');
+                    return;
+                  }
+                  setSaving(true);
+                  try {
+                    await updateMyProfileRequest({ profileTheme: t.id });
+                    setProfileTheme(t.id);
+                    await refreshMe?.();
+                  } catch (err) {
+                    Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u ruajt tema'));
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                style={[
+                  styles.themeChip,
+                  {
+                    borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: selected ? colors.primarySoft || colors.card : colors.card,
+                    opacity: locked ? 0.45 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.themeDot, { backgroundColor: t.accent }]} />
+                <Text style={[styles.themeChipText, { color: colors.text }]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.fieldLabel, { color: colors.muted, marginTop: 14 }]}>
+          Akses i hershëm (Labs)
+        </Text>
+        {EARLY_ACCESS_FEATURES.map((f) => (
+          <View key={f.id} style={styles.labRow}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={[styles.labTitle, { color: colors.text }]}>{f.label}</Text>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>{f.description}</Text>
+            </View>
+            <Switch
+              value={Boolean(labs[f.id])}
+              disabled={!isPro}
+              onValueChange={async (next) => {
+                const updated = { ...labs, [f.id]: next };
+                setLabs(updated);
+                await saveEarlyAccessPrefs(updated);
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
+        ))}
+
+        <TouchableOpacity
+          style={[styles.linkBtn, { marginTop: 8 }]}
+          onPress={() => {
+            if (!isPro) {
+              Alert.alert('Pro', 'Suporti prioritar është për anëtarët Pro.');
+              return;
+            }
+            const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+            Linking.openURL(
+              prioritySupportMailto({ userId: user?.id, name, email: user?.email })
+            );
+          }}
+        >
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>
+            {isPro ? 'Shkruaj support prioritar' : 'Suport prioritar (kërkon Pro)'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>Ndihmë, info & ligjore</Text>
         <TouchableOpacity onPress={() => openExternal(HELP_URL)} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Ndihmë & FAQ</Text>
@@ -531,6 +640,27 @@ const styles = StyleSheet.create({
   label: { color: '#334155' },
   fieldLabel: { color: '#0f172a', fontWeight: '700', fontSize: 13, marginBottom: 4 },
   fieldLabelTop: { marginTop: 8 },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  themeDot: { width: 12, height: 12, borderRadius: 6 },
+  themeChipText: { fontSize: 12, fontWeight: '700' },
+  labRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#e2e8f0',
+  },
+  labTitle: { fontSize: 14, fontWeight: '700' },
   bullet: { color: '#475569', fontSize: 13, lineHeight: 19, marginBottom: 2 },
   step: { color: '#64748b', fontSize: 13, lineHeight: 19, marginBottom: 2 },
   mono: { fontFamily: 'Menlo', fontSize: 12, color: '#9A6B12' },

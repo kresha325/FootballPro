@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { aiAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasTier } from '../../utils/subscriptionAccess';
+import { isEarlyAccessEnabled } from '../../utils/profileThemes';
 
 export default function AiGenerateBioButton({ hints = {}, onBio, className = '' }) {
+  const { user } = useAuth();
+  const showBeta = hasTier(user, 'pro') && isEarlyAccessEnabled('ai_tools');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,7 +38,7 @@ export default function AiGenerateBioButton({ hints = {}, onBio, className = '' 
         disabled={loading}
         className="text-sm px-3 py-1.5 rounded-md border border-teal-600 text-teal-700 hover:bg-teal-50 disabled:opacity-50"
       >
-        {loading ? 'Duke gjeneruar…' : '✨ Gjenero bio me AI'}
+        {loading ? 'Duke gjeneruar…' : showBeta ? '✨ Bio AI · Labs' : '✨ Gjenero bio me AI'}
       </button>
       {error ? <p className="text-xs text-red-600 mt-1">{error}</p> : null}
     </div>

@@ -6,6 +6,7 @@ import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtube
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import ParentVerificationForm from './ParentVerificationForm';
 import { Link } from 'react-router-dom';
+import ProPerksPanel from './ProPerksPanel';
 
 const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
 
@@ -18,6 +19,7 @@ const Settings = () => {
     bio: '',
     youtubeChannelId: '',
   });
+  const [profileTheme, setProfileTheme] = useState('default');
   const [verification, setVerification] = useState({
     needsParentVerification: false,
     parentVerified: false,
@@ -51,6 +53,7 @@ const Settings = () => {
       .getProfile(user.id)
       .then((res) => {
         const p = res.data || {};
+        setProfileTheme(p.profileTheme || 'default');
         setVerification({
           needsParentVerification: Boolean(p.needsParentVerification),
           parentVerified: Boolean(p.parentVerified),
@@ -407,6 +410,14 @@ const Settings = () => {
       </div>
 
       {/* Privacy & Security */}
+      <div className="mb-8">
+        <ProPerksPanel
+          user={user}
+          profileTheme={profileTheme}
+          onThemeSaved={(id) => setProfileTheme(id)}
+        />
+      </div>
+
       <div>
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <ShieldCheckIcon className="w-6 h-6 mr-2" />

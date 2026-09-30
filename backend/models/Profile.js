@@ -68,6 +68,12 @@ const Profile = sequelize.define('Profile', {
     type: DataTypes.STRING(32),
     allowNull: true,
   },
+  /** Pro-only accent theme for public profile (default|gold|midnight|forest|crimson|ocean). */
+  profileTheme: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    defaultValue: 'default',
+  },
 });
 
 Profile.belongsTo(User, { foreignKey: 'userId' });
