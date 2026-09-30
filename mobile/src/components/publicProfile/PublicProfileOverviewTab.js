@@ -323,11 +323,18 @@ export default function PublicProfileOverviewTab({
   if (!profile) return null;
 
   let careerItems = parseCareerHistory(profile.careerHistory);
-  if ((!careerItems || !careerItems.length) && profile.club && profile.clubJoinedYear) {
+  const joinedYearRaw = Number(profile.clubJoinedYear);
+  const joinedYear =
+    Number.isFinite(joinedYearRaw) &&
+    joinedYearRaw >= 1950 &&
+    joinedYearRaw <= new Date().getFullYear() + 1
+      ? joinedYearRaw
+      : null;
+  if ((!careerItems || !careerItems.length) && profile.club && joinedYear) {
     careerItems = [
       {
         club: profile.club,
-        season: `nga ${profile.clubJoinedYear} · vazhdon`,
+        season: `nga ${joinedYear} · vazhdon`,
         ongoing: true,
       },
     ];

@@ -62,12 +62,18 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
   const career = profile?.careerHistory;
   const careerText = typeof career === 'string' ? career.trim() : '';
   const careerRows = Array.isArray(career) ? career : [];
+  const joinedYear =
+    profile?.clubJoinedYear != null &&
+    Number(profile.clubJoinedYear) >= 1950 &&
+    Number(profile.clubJoinedYear) <= new Date().getFullYear() + 1
+      ? Number(profile.clubJoinedYear)
+      : null;
   const syntheticCareer =
     !careerRows.length &&
     !careerText &&
     profile?.club &&
-    profile?.clubJoinedYear
-      ? [{ club: profile.club, season: `nga ${profile.clubJoinedYear} · vazhdon`, ongoing: true }]
+    joinedYear
+      ? [{ club: profile.club, season: `nga ${joinedYear} · vazhdon`, ongoing: true }]
       : [];
   const displayCareerRows = careerRows.length ? careerRows : syntheticCareer;
 

@@ -605,8 +605,11 @@ export default function EditProfileScreen({ navigation }) {
               })}
             </View>
           ) : null}
-          {labelFor('Nga viti')}
+          {labelFor('Nga viti (klubi aktual)')}
           {input('clubJoinedYear', { keyboardType: 'number-pad', placeholder: 'p.sh. 2024' })}
+          <Text style={{ color: '#64748b', fontSize: 12, marginTop: -6, marginBottom: 10 }}>
+            Ky vit shfaqet te Karriera si «nga YYYY · vazhdon». Mund ta ndryshosh kur të duash.
+          </Text>
           {labelFor('Jersey Number')}
           {input('jerseyNumber', { keyboardType: 'number-pad' })}
           {labelFor('City')}

@@ -55,18 +55,174 @@ function currentClubSeasonLabel(year) {
 }
 
 function currentClubCareerEntry(clubName, year) {
+  const safeYear = parseClubJoinedYear(year);
   return {
     club: clubName,
-    season: `${currentClubSeasonLabel(year)} · vazhdon`,
-    fromYear: year,
+    season: safeYear ? `${currentClubSeasonLabel(safeYear)} · vazhdon` : 'vazhdon',
+    fromYear: safeYear,
     ongoing: true,
   };
 }
 
 function isAutoCareerHistory(careerHistory) {
-  if (!Array.isArray(careerHistory) || careerHistory.length !== 1) return false;
-  const row = careerHistory[0];
-  return Boolean(row && (row.ongoing === true || row.fromYear != null));
+  if (!Array.isArray(careerHistory) || careerHistory.length === 0) return false;
+  if (careerHistory.length === 1) {
+    const row = careerHistory[0];
+    return Boolean(row && (row.ongoing === true || row.fromYear != null || row.transferId != null));
+  }
+  // Fully derived from transfers (every row has transferId)
+  return careerHistory.every((row) => row && row.transferId != null);
+}
+
+/**
+ * Build full club timeline from confirmed transfers (newest first).
+ * @param {number} userId
+ * @param {{ currentJoinedYear?: number|null }} [options]
+ */
+async function buildCareerHistoryFromTransfers(userId, options = {}) {
+  const uid = Number(userId);
+  if (!Number.isFinite(uid) || uid <= 0) return [];
+
+  const preferredCurrentYear = parseClubJoinedYear(options.currentJoinedYear);
+
+  const transfers = await TransferHistory.findAll({
+    where: {
+      userId: uid,
+      status: 'confirmed',
+    },
+    order: [
+      ['transferDate', 'ASC'],
+      ['id', 'ASC'],
+    ],
+  });
+
+  const real = transfers.filter((t) => t.notes !== CURRENT_CLUB_NOTE);
+  const list = real.length ? real : transfers.filter((t) => t.notes === CURRENT_CLUB_NOTE);
+
+  const chronological = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const t = list[i];
+    const club = String(t.toClub || '').trim();
+    if (!club) continue;
+    if (chronological.length && chronological[chronological.length - 1].club === club) {
+      continue;
+    }
+    const year = parseClubJoinedYear(yearFromTransfer(t));
+    chronological.push({
+      club,
+      clubUserId: t.toClubUserId || null,
+      season: year ? String(year) : String(t.season || '').replace(/^nga\s+/i, '') || null,
+      fromYear: year,
+      ongoing: false,
+      transferId: t.id,
+      position: t.position || null,
+    });
+  }
+
+  if (chronological.length) {
+    const last = chronological[chronological.length - 1];
+    last.ongoing = true;
+    if (preferredCurrentYear) {
+      last.fromYear = preferredCurrentYear;
+    }
+    last.season = last.fromYear
+      ? `${currentClubSeasonLabel(last.fromYear)} · vazhdon`
+      : 'vazhdon';
+
+    for (let i = 0; i < chronological.length - 1; i += 1) {
+      const row = chronological[i];
+      const next = chronological[i + 1];
+      if (row.fromYear && next.fromYear && next.fromYear !== row.fromYear) {
+        row.season = `${row.fromYear}–${next.fromYear}`;
+      } else if (row.fromYear) {
+        row.season = String(row.fromYear);
+      }
+    }
+  }
+
+  return chronological.reverse();
+}
+
+/**
+ * Persist careerHistory from transfers when empty or previously auto-generated.
+ */
+async function syncCareerHistoryFromTransfers(userId, profileLike = null) {
+  const uid = Number(userId);
+  if (!Number.isFinite(uid) || uid <= 0) return null;
+
+  const profile = profileLike || (await Profile.findOne({ where: { userId: uid } }));
+  if (!profile) return null;
+
+  const career = profile.careerHistory;
+  const emptyCareer =
+    career == null || career === '' || (Array.isArray(career) && career.length === 0);
+  if (!emptyCareer && !isAutoCareerHistory(career)) return career;
+
+  const entries = await buildCareerHistoryFromTransfers(uid, {
+    currentJoinedYear: profile.clubJoinedYear,
+  });
+  if (!entries.length) return career;
+
+  await profile.update({ careerHistory: entries });
+  return entries;
+}
+
+/**
+ * Update the displayed "nga YYYY · vazhdon" year for the current club.
+ * Works even when the athlete already has real transfers.
+ */
+async function applyCurrentClubJoinedYear(userId, year, profileLike = null) {
+  const uid = Number(userId);
+  const joinedYear = parseClubJoinedYear(year);
+  if (!Number.isFinite(uid) || uid <= 0 || !joinedYear) return null;
+
+  const profile = profileLike || (await Profile.findOne({ where: { userId: uid } }));
+  if (!profile) return null;
+
+  await profile.update({ clubJoinedYear: joinedYear });
+
+  try {
+    const autoStint = await TransferHistory.findOne({
+      where: { userId: uid, notes: CURRENT_CLUB_NOTE },
+      order: [['id', 'DESC']],
+    });
+    if (autoStint) {
+      await autoStint.update({
+        season: currentClubSeasonLabel(joinedYear),
+        transferDate: new Date(Date.UTC(joinedYear, 0, 1)),
+        contractUntil: 'vazhdon',
+        status: 'confirmed',
+      });
+    }
+  } catch (err) {
+    console.warn('applyCurrentClubJoinedYear transfer:', err?.message || err);
+  }
+
+  try {
+    const career = profile.careerHistory;
+    const emptyCareer =
+      career == null || career === '' || (Array.isArray(career) && career.length === 0);
+    if (emptyCareer || isAutoCareerHistory(career)) {
+      await syncCareerHistoryFromTransfers(uid, profile);
+    } else if (Array.isArray(career) && career.length) {
+      const next = career.map((row) => ({ ...row }));
+      const ongoingIdx = next.findIndex((r) => r && r.ongoing);
+      const idx = ongoingIdx >= 0 ? ongoingIdx : 0;
+      if (next[idx]) {
+        next[idx] = {
+          ...next[idx],
+          fromYear: joinedYear,
+          season: `${currentClubSeasonLabel(joinedYear)} · vazhdon`,
+          ongoing: true,
+        };
+        await profile.update({ careerHistory: next });
+      }
+    }
+  } catch (err) {
+    console.warn('applyCurrentClubJoinedYear career:', err?.message || err);
+  }
+
+  return { clubJoinedYear: joinedYear };
 }
 
 /**
@@ -84,7 +240,7 @@ async function syncProfileCurrentClubFromTransfer(userId, transferLike) {
     clubUserId: transferLike.toClubUserId,
     clubName: toClub,
   });
-  const joinedYear = yearFromTransfer(transferLike);
+  const joinedYear = parseClubJoinedYear(yearFromTransfer(transferLike));
 
   const patch = {
     club: toClub,
@@ -95,17 +251,7 @@ async function syncProfileCurrentClubFromTransfer(userId, transferLike) {
   await profile.update(patch);
 
   try {
-    const career = profile.careerHistory;
-    const emptyCareer =
-      career == null ||
-      career === '' ||
-      (Array.isArray(career) && career.length === 0);
-    if (emptyCareer || isAutoCareerHistory(career)) {
-      const year = joinedYear || new Date().getFullYear();
-      await profile.update({
-        careerHistory: [currentClubCareerEntry(toClub, year)],
-      });
-    }
+    await syncCareerHistoryFromTransfers(uid, profile);
   } catch (err) {
     console.warn('syncProfileCurrentClubFromTransfer careerHistory:', err?.message || err);
   }
@@ -205,16 +351,7 @@ async function syncCurrentClubCareer({
 
   if (profile) {
     try {
-      const career = profile.careerHistory;
-      const emptyCareer =
-        career == null ||
-        career === '' ||
-        (Array.isArray(career) && career.length === 0);
-      if (emptyCareer || isAutoCareerHistory(career)) {
-        await profile.update({
-          careerHistory: [currentClubCareerEntry(trimmedClub, joinedYear)],
-        });
-      }
+      await syncCareerHistoryFromTransfers(userId, profile);
     } catch (err) {
       console.warn('syncCurrentClubCareer careerHistory update skipped:', err && err.message);
     }
@@ -229,6 +366,9 @@ module.exports = {
   currentClubSeasonLabel,
   currentClubCareerEntry,
   isAutoCareerHistory,
+  buildCareerHistoryFromTransfers,
+  syncCareerHistoryFromTransfers,
+  applyCurrentClubJoinedYear,
   syncCurrentClubCareer,
   syncProfileCurrentClubFromTransfer,
   syncProfileCurrentClubFromLatestTransfer,

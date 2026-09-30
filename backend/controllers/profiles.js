@@ -14,8 +14,41 @@ const TournamentSquadMember = require('../models/TournamentSquadMember');
 const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
 const sequelize = require('../config/database');
-const { parseClubJoinedYear, syncCurrentClubCareer } = require('../utils/currentClubCareer');
+const { parseClubJoinedYear, syncCurrentClubCareer, buildCareerHistoryFromTransfers, isAutoCareerHistory, applyCurrentClubJoinedYear } = require('../utils/currentClubCareer');
 const { loadRecentMatchesForUser } = require('../utils/userRecentMatches');
+
+/** Prefer full transfer-derived club timeline over a single auto current-club row. */
+async function resolveCareerHistoryForProfile(userId, role, existingCareer, clubJoinedYear = null) {
+  if (String(role || '').toLowerCase() !== 'athlete') return existingCareer;
+  const empty =
+    existingCareer == null ||
+    existingCareer === '' ||
+    (Array.isArray(existingCareer) && existingCareer.length === 0);
+  if (!empty && !isAutoCareerHistory(existingCareer)) {
+    // Still refresh "nga YYYY · vazhdon" from profile year when present
+    const y = parseClubJoinedYear(clubJoinedYear);
+    if (y && Array.isArray(existingCareer) && existingCareer.length) {
+      return existingCareer.map((row) => {
+        if (!row || !row.ongoing) return row;
+        return {
+          ...row,
+          fromYear: y,
+          season: `nga ${y} · vazhdon`,
+        };
+      });
+    }
+    return existingCareer;
+  }
+  try {
+    const fromTransfers = await buildCareerHistoryFromTransfers(userId, {
+      currentJoinedYear: clubJoinedYear,
+    });
+    if (fromTransfers.length) return fromTransfers;
+  } catch (err) {
+    console.warn('resolveCareerHistoryForProfile:', err?.message || err);
+  }
+  return existingCareer;
+}
 
 /**
  * Numëron ndjekësit / duke ndjekur duke përjashtuar:
@@ -524,6 +557,18 @@ exports.getProfile = async (req, res) => {
       console.warn('getProfile recent matches:', matchErr?.message || matchErr);
     }
 
+    try {
+      response.careerHistory = await resolveCareerHistoryForProfile(
+        userId,
+        role,
+        response.careerHistory,
+        response.clubJoinedYear
+      );
+      response.clubJoinedYear = parseClubJoinedYear(response.clubJoinedYear);
+    } catch (careerErr) {
+      console.warn('getProfile career history:', careerErr?.message || careerErr);
+    }
+
     if (isOrg) {
       response.foundingYear = getFoundingYear(response);
       response.age = null;
@@ -705,6 +750,18 @@ exports.getPublicProfileCv = async (req, res) => {
       }
     } catch (matchErr) {
       console.warn('getPublicProfileCv recent matches:', matchErr?.message || matchErr);
+    }
+
+    try {
+      response.careerHistory = await resolveCareerHistoryForProfile(
+        userId,
+        role,
+        response.careerHistory,
+        response.clubJoinedYear
+      );
+      response.clubJoinedYear = parseClubJoinedYear(response.clubJoinedYear);
+    } catch (careerErr) {
+      console.warn('getPublicProfileCv career history:', careerErr?.message || careerErr);
     }
 
     if (isOrg) {
@@ -1278,6 +1335,11 @@ exports.updateProfile = async (req, res) => {
           position: updateData.position || profile.position,
           profile,
         });
+        try {
+          await applyCurrentClubJoinedYear(req.user.id, joinedYear, profile);
+        } catch (yearErr) {
+          console.warn('applyCurrentClubJoinedYear:', yearErr?.message || yearErr);
+        }
       }
     }
 

@@ -244,7 +244,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </div>
         </div>
         <div>
-          <label htmlFor="athlete-club-year" className="block text-sm font-medium mb-1">Nga viti</label>
+          <label htmlFor="athlete-club-year" className="block text-sm font-medium mb-1">Nga viti (klubi aktual)</label>
           <input
             id="athlete-club-year"
             name="clubJoinedYear"
@@ -258,7 +258,9 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
             autoComplete="off"
             required={Boolean(form.club?.trim())}
           />
-          <p className="mt-1 text-xs text-gray-500">Viti nga kur je në këtë klub (shfaqet te Karriera / Transferet).</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Ky vit shfaqet te Karriera si «nga YYYY · vazhdon». Ndryshoje këtu dhe Ruaj.
+          </p>
         </div>
         <div>
           <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">Jersey Number</label>
