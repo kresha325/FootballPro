@@ -158,10 +158,15 @@ export default function AuthScreen({ initialMode }) {
       }
 
       if (mode === 'register') {
-        const dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
-        if (!dateOfBirth) {
-          setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
-          return;
+        const normalizedRole = (role || 'athlete').trim().toLowerCase();
+        const isAthlete = normalizedRole === 'athlete';
+        let dateOfBirth;
+        if (isAthlete) {
+          dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
+          if (!dateOfBirth) {
+            setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
+            return;
+          }
         }
         if (!acceptedTerms) {
           setInlineError('Duhet të pranosh kushtet e përdorimit.');
@@ -172,8 +177,8 @@ export default function AuthScreen({ initialMode }) {
           lastName: lastName.trim(),
           email: email.trim().toLowerCase(),
           password,
-          role: (role || 'athlete').trim().toLowerCase(),
-          dateOfBirth,
+          role: normalizedRole,
+          ...(dateOfBirth ? { dateOfBirth } : {}),
         });
         if (result.success) {
           setOnboardingPending();
@@ -281,42 +286,46 @@ export default function AuthScreen({ initialMode }) {
                 <span className="text-[var(--xt-color-text-muted)]" aria-hidden="true">▾</span>
               </button>
 
-              <label className="label">Datëlindja</label>
-              <div className="flex gap-2">
-                <input
-                  className={`${inputClass} flex-1`}
-                  placeholder="DD"
-                  aria-label="Dita e lindjes"
-                  inputMode="numeric"
-                  maxLength={2}
-                  value={dobDay}
-                  onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  autoComplete="bday-day"
-                />
-                <input
-                  className={`${inputClass} flex-1`}
-                  placeholder="MM"
-                  aria-label="Muaji i lindjes"
-                  inputMode="numeric"
-                  maxLength={2}
-                  value={dobMonth}
-                  onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  autoComplete="bday-month"
-                />
-                <input
-                  className={`${inputClass} flex-[1.4]`}
-                  placeholder="VVVV"
-                  aria-label="Viti i lindjes"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={dobYear}
-                  onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  autoComplete="bday-year"
-                />
-              </div>
-              <p className="text-xs leading-snug text-[var(--xt-color-text-muted)]">
-                Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.
-              </p>
+              {String(role || '').toLowerCase() === 'athlete' ? (
+                <>
+                  <label className="label">Datëlindja</label>
+                  <div className="flex gap-2">
+                    <input
+                      className={`${inputClass} flex-1`}
+                      placeholder="DD"
+                      aria-label="Dita e lindjes"
+                      inputMode="numeric"
+                      maxLength={2}
+                      value={dobDay}
+                      onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                      autoComplete="bday-day"
+                    />
+                    <input
+                      className={`${inputClass} flex-1`}
+                      placeholder="MM"
+                      aria-label="Muaji i lindjes"
+                      inputMode="numeric"
+                      maxLength={2}
+                      value={dobMonth}
+                      onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                      autoComplete="bday-month"
+                    />
+                    <input
+                      className={`${inputClass} flex-[1.4]`}
+                      placeholder="VVVV"
+                      aria-label="Viti i lindjes"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={dobYear}
+                      onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      autoComplete="bday-year"
+                    />
+                  </div>
+                  <p className="text-xs leading-snug text-[var(--xt-color-text-muted)]">
+                    Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.
+                  </p>
+                </>
+              ) : null}
             </>
           ) : null}
 

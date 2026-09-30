@@ -14,6 +14,7 @@ const surfaceBg = new Map([
   ['#f8fafc', 'bg'], ['#f9fafb', 'bg'], ['#fafafa', 'bg'], ['#f3f4f6', 'bg'],
   ['#f1f5f9', 'bgElevated'], ['#f5f5f5', 'bgElevated'],
   ['#f0f9ff', 'bgElevated'], ['#eff6ff', 'bgElevated'], ['#ecfeff', 'bgElevated'],
+  ['#f0fdfa', 'bg'], ['#ccfbf1', 'primarySoft'],
   ['#ecfdf5', 'successSoft'], ['#f0fdf4', 'successSoft'], ['#fffbeb', 'warningSoft'],
   ['#fef3c7', 'warningSoft'], ['#fff7f7', 'dangerSoft'], ['#fff1f2', 'dangerSoft'],
   ['#e2e8f0', 'border'], ['#e5e7eb', 'border'], ['#f3f4f6', 'bg'],

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,12 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { updateMyProfileRequest } from '../api/client';
 import AiBioButton from '../components/AiBioButton';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { registerRoleLabel } from '../constants/registerRoles';
 
 const COUNTRY_SUGGESTIONS = ['Kosovë', 'Shqipëri', 'Maqedoni e Veriut', 'Zvicër', 'Gjermani', 'Tjetër'];
 
 export default function RegisterOnboardingScreen({ navigation }) {
   const { user, completeOnboarding, requiresParentVerification } = useAuth();
+  const { colors } = useTheme();
   const [step, setStep] = useState(1);
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -29,6 +31,39 @@ export default function RegisterOnboardingScreen({ navigation }) {
 
   const role = user?.role || 'athlete';
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Përdorues';
+
+  const themed = useMemo(
+    () => ({
+      root: { flex: 1, backgroundColor: colors.bg },
+      welcome: { color: colors.text },
+      title: { color: colors.text },
+      sub: { color: colors.muted },
+      label: { color: colors.textSecondary },
+      roleBadge: {
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primaryBorder,
+      },
+      roleBadgeText: { color: colors.primaryText },
+      input: {
+        backgroundColor: colors.card,
+        borderColor: colors.borderStrong,
+        color: colors.text,
+      },
+      chip: {
+        backgroundColor: colors.card,
+        borderColor: colors.borderStrong,
+      },
+      chipText: { color: colors.text },
+      tips: {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+      },
+      tipText: { color: colors.muted },
+      secondaryBtnText: { color: colors.primaryText },
+      dot: { backgroundColor: colors.border },
+    }),
+    [colors]
+  );
 
   const finish = async (goEditProfile) => {
     setSaving(true);
@@ -105,45 +140,49 @@ export default function RegisterOnboardingScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={themed.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.progress}>
-          <View style={[styles.dot, step >= 1 && styles.dotActive]} />
-          <View style={[styles.dot, step >= 2 && styles.dotActive]} />
+          <View style={[styles.dot, themed.dot, step >= 1 && styles.dotActive]} />
+          <View style={[styles.dot, themed.dot, step >= 2 && styles.dotActive]} />
         </View>
 
-        <Text style={styles.welcome}>Mirë se erdhe, {name}!</Text>
-        <View style={styles.roleBadgeWrap}>
-          <Text style={styles.roleBadgeText}>{registerRoleLabel(role)}</Text>
+        <Text style={[styles.welcome, themed.welcome]}>Mirë se erdhe, {name}!</Text>
+        <View style={[styles.roleBadgeWrap, themed.roleBadge]}>
+          <Text style={[styles.roleBadgeText, themed.roleBadgeText]}>{registerRoleLabel(role)}</Text>
         </View>
 
         {step === 1 ? (
           <>
-            <Text style={styles.title}>Ku luan / punon?</Text>
-            <Text style={styles.sub}>
+            <Text style={[styles.title, themed.title]}>Ku luan / punon?</Text>
+            <Text style={[styles.sub, themed.sub]}>
               Kjo ndihmon skautët dhe klubet të të gjejnë në rajonin tënd.
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, themed.input]}
               placeholder="Qyteti (p.sh. Prishtinë)"
+              placeholderTextColor={colors.mutedSoft}
               value={city}
               onChangeText={setCity}
             />
-            <Text style={styles.label}>Shteti / rajoni</Text>
+            <Text style={[styles.label, themed.label]}>Shteti / rajoni</Text>
             <View style={styles.chips}>
               {COUNTRY_SUGGESTIONS.map((c) => (
                 <TouchableOpacity
                   key={c}
-                  style={[styles.chip, country === c && styles.chipActive]}
+                  style={[styles.chip, themed.chip, country === c && styles.chipActive]}
                   onPress={() => setCountry(c)}
                 >
-                  <Text style={[styles.chipText, country === c && styles.chipTextActive]}>{c}</Text>
+                  <Text style={[styles.chipText, themed.chipText, country === c && styles.chipTextActive]}>
+                    {c}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, themed.input]}
               placeholder="Ose shkruaj shtetin"
+              placeholderTextColor={colors.mutedSoft}
               value={country}
               onChangeText={setCountry}
             />
@@ -153,8 +192,8 @@ export default function RegisterOnboardingScreen({ navigation }) {
           </>
         ) : (
           <>
-            <Text style={styles.title}>Prezantimi yt</Text>
-            <Text style={styles.sub}>
+            <Text style={[styles.title, themed.title]}>Prezantimi yt</Text>
+            <Text style={[styles.sub, themed.sub]}>
               {role === 'athlete'
                 ? 'Pozita, klubi, objektivi — mund ta ndryshosh më vonë.'
                 : 'Një fjali për ty — klubet dhe lojtarët të njohin.'}
@@ -164,16 +203,19 @@ export default function RegisterOnboardingScreen({ navigation }) {
               onBio={setBio}
             />
             <TextInput
-              style={[styles.input, styles.bio]}
+              style={[styles.input, themed.input, styles.bio]}
               placeholder="Bio (opsionale)"
+              placeholderTextColor={colors.mutedSoft}
               value={bio}
               onChangeText={setBio}
               multiline
               maxLength={500}
             />
-            <View style={styles.tips}>
-              <Ionicons name="videocam" size={20} color="#9A6B12" />
-              <Text style={styles.tipText}>Pas kësaj: ngarko video ose nis LIVE nga profili.</Text>
+            <View style={[styles.tips, themed.tips]}>
+              <Ionicons name="videocam" size={20} color={colors.primaryText} />
+              <Text style={[styles.tipText, themed.tipText]}>
+                Pas kësaj: ngarko video ose nis LIVE nga profili.
+              </Text>
             </View>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -187,7 +229,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
               )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryBtn} disabled={saving} onPress={() => finish(false)}>
-              <Text style={styles.secondaryBtnText}>Hyr në app</Text>
+              <Text style={[styles.secondaryBtnText, themed.secondaryBtnText]}>Hyr në app</Text>
             </TouchableOpacity>
           </>
         )}
@@ -197,33 +239,30 @@ export default function RegisterOnboardingScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f0fdfa' },
   container: { padding: 24, paddingBottom: 40 },
   progress: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  dot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#cbd5e1' },
+  dot: { flex: 1, height: 4, borderRadius: 2 },
   dotActive: { backgroundColor: '#9A6B12' },
-  welcome: { fontSize: 26, fontWeight: '800', color: '#0f172a' },
+  welcome: { fontSize: 26, fontWeight: '800' },
   roleBadgeWrap: {
     alignSelf: 'flex-start',
     marginTop: 8,
     marginBottom: 20,
-    backgroundColor: '#ccfbf1',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  roleBadgeText: { color: '#9A6B12', fontWeight: '700', fontSize: 13 },
-  title: { fontSize: 20, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
-  sub: { fontSize: 14, color: '#64748b', lineHeight: 20, marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 8 },
+  roleBadgeText: { fontWeight: '700', fontSize: 13 },
+  title: { fontSize: 20, fontWeight: '800', marginBottom: 6 },
+  sub: { fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 11,
     marginBottom: 12,
-    backgroundColor: '#fff',
     fontSize: 16,
   },
   bio: { minHeight: 100, textAlignVertical: 'top' },
@@ -233,24 +272,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#fff',
   },
   chipActive: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
-  chipText: { color: '#334155', fontSize: 13, fontWeight: '600' },
+  chipText: { fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   tips: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
     padding: 12,
     borderRadius: 10,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
-  tipText: { flex: 1, fontSize: 13, color: '#475569', lineHeight: 18 },
+  tipText: { flex: 1, fontSize: 13, lineHeight: 18 },
   primaryBtn: {
     backgroundColor: '#9A6B12',
     borderRadius: 12,
@@ -260,5 +295,5 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   secondaryBtn: { paddingVertical: 12, alignItems: 'center' },
-  secondaryBtnText: { color: '#9A6B12', fontWeight: '700' },
+  secondaryBtnText: { fontWeight: '700' },
 });

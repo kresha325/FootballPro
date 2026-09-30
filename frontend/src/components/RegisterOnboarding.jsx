@@ -67,34 +67,41 @@ export default function RegisterOnboarding() {
     }
   };
 
+  const inputClass =
+    'w-full px-3 py-2.5 rounded-lg border border-[var(--xt-color-border-strong)] bg-[var(--xt-color-surface)] text-[var(--xt-color-text)] placeholder:text-[var(--xt-color-text-subtle)]';
+
   return (
-    <div className="min-h-screen bg-teal-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-        <div className="flex gap-2 mb-6">
-          <div className={`h-1 flex-1 rounded ${step >= 1 ? 'bg-teal-600' : 'bg-gray-200'}`} />
-          <div className={`h-1 flex-1 rounded ${step >= 2 ? 'bg-teal-600' : 'bg-gray-200'}`} />
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--xt-color-canvas)] px-4 py-12 text-[var(--xt-color-text)]">
+      <div className="xt-card w-full max-w-md p-6 sm:p-8">
+        <div className="mb-6 flex gap-2">
+          <div className={`h-1 flex-1 rounded ${step >= 1 ? 'bg-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-border)]'}`} />
+          <div className={`h-1 flex-1 rounded ${step >= 2 ? 'bg-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-border)]'}`} />
         </div>
 
         {step === 1 ? (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Ku je aktiv?</h1>
-            <p className="text-sm text-gray-600 mb-6">Qyteti dhe shteti ndihmojnë skautët dhe klubet të të gjejnë.</p>
+            <h1 className="mb-2 text-2xl font-bold text-[var(--xt-color-text)]">Ku je aktiv?</h1>
+            <p className="mb-6 text-sm text-[var(--xt-color-text-muted)]">
+              Qyteti dhe shteti ndihmojnë skautët dhe klubet të të gjejnë.
+            </p>
             <input
               type="text"
               placeholder="Qyteti"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="w-full mb-3 px-3 py-2 border rounded-md"
+              className={`${inputClass} mb-3`}
             />
-            <p className="text-sm font-medium text-gray-700 mb-2">Shteti</p>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <p className="mb-2 text-sm font-semibold text-[var(--xt-color-text)]">Shteti</p>
+            <div className="mb-3 flex flex-wrap gap-2">
               {COUNTRIES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setCountry(c)}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    country === c ? 'bg-teal-600 text-white border-teal-600' : 'bg-white border-gray-300'
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    country === c
+                      ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[#101114]'
+                      : 'border-[var(--xt-color-border-strong)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)]'
                   }`}
                 >
                   {c}
@@ -106,21 +113,17 @@ export default function RegisterOnboarding() {
               placeholder="Ose shkruaj shtetin"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="w-full mb-6 px-3 py-2 border rounded-md"
+              className={`${inputClass} mb-6`}
             />
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="w-full py-2 bg-teal-600 text-white font-semibold rounded-md"
-            >
+            <button type="button" onClick={() => setStep(2)} className="btn btn-primary w-full">
               Vazhdo
             </button>
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Prezantimi yt</h1>
-            <p className="text-sm text-gray-600 mb-4">Mund ta ndryshosh më vonë te profili.</p>
-            <div className="flex justify-end mb-2">
+            <h1 className="mb-2 text-2xl font-bold text-[var(--xt-color-text)]">Prezantimi yt</h1>
+            <p className="mb-4 text-sm text-[var(--xt-color-text-muted)]">Mund ta ndryshosh më vonë te profili.</p>
+            <div className="mb-2 flex justify-end">
               <AiGenerateBioButton
                 hints={{ city, country, extra: 'Regjistrim i ri në X TALENTI' }}
                 onBio={setBio}
@@ -132,14 +135,18 @@ export default function RegisterOnboarding() {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               maxLength={500}
-              className="w-full mb-4 px-3 py-2 border rounded-md"
+              className={`${inputClass} mb-4`}
             />
-            {error ? <p className="text-red-600 text-sm mb-3">{error}</p> : null}
+            {error ? (
+              <p className="mb-3 text-sm font-semibold text-[var(--xt-color-danger)]" role="alert">
+                {error}
+              </p>
+            ) : null}
             <button
               type="button"
               disabled={saving}
               onClick={() => finish(true)}
-              className="w-full py-2 mb-2 bg-teal-600 text-white font-semibold rounded-md disabled:opacity-50"
+              className="btn btn-primary mb-2 w-full"
             >
               {saving ? 'Duke ruajtur…' : 'Shiko profilin'}
             </button>
@@ -147,7 +154,7 @@ export default function RegisterOnboarding() {
               type="button"
               disabled={saving}
               onClick={() => finish(false)}
-              className="w-full py-2 text-teal-700 font-medium"
+              className="btn btn-quiet w-full"
             >
               Hyr në feed
             </button>

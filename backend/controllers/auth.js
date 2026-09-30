@@ -10,6 +10,7 @@ const {
   ageFromDateOnly,
 } = require('../utils/registerValidation');
 const { getJwtSecret } = require('../utils/jwtSecret');
+const { needsParentVerification } = require('../utils/userVerification');
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase();
@@ -115,9 +116,8 @@ exports.register = async (req, res) => {
       expiresIn: '7d',
     });
 
-    // Determine if parent verification is required (under 18)
-    const requiresParentVerification =
-      !!user.dateOfBirth && ageFromDateOnly(user.dateOfBirth) < 18;
+    // Parent verification: athlete minors only (< 18). Media/coach/club/etc. never.
+    const requiresParentVerification = needsParentVerification(user);
 
     console.log('BACKEND: Sending success response');
     // 6. Response

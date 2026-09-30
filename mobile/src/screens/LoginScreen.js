@@ -118,10 +118,14 @@ export default function LoginScreen() {
       return;
     }
 
-    const dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
-    if (!dateOfBirth) {
-      setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
-      return;
+    const isAthlete = normalizedRole === 'athlete';
+    let dateOfBirth;
+    if (isAthlete) {
+      dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
+      if (!dateOfBirth) {
+        setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
+        return;
+      }
     }
 
     if (!acceptedTerms) {
@@ -135,7 +139,7 @@ export default function LoginScreen() {
       email: email.trim().toLowerCase(),
       password,
       role: normalizedRole,
-      dateOfBirth,
+      ...(dateOfBirth ? { dateOfBirth } : {}),
     });
     if (!result.ok) {
       setInlineError(result.message || 'Regjistrimi dështoi');
@@ -254,34 +258,38 @@ export default function LoginScreen() {
               <Text style={styles.pickerBtnText}>{registerRoleLabel(role)}</Text>
               <Ionicons name="chevron-down" size={20} color="#64748b" />
             </TouchableOpacity>
-            <Text style={styles.fieldLabel}>Datëlindja</Text>
-            <View style={styles.dobRow}>
-              <TextInput
-                style={[styles.input, styles.dobInput]}
-                placeholder="DD"
-                value={dobDay}
-                onChangeText={(v) => setDobDay(v.replace(/\D/g, '').slice(0, 2))}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-              <TextInput
-                style={[styles.input, styles.dobInput]}
-                placeholder="MM"
-                value={dobMonth}
-                onChangeText={(v) => setDobMonth(v.replace(/\D/g, '').slice(0, 2))}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-              <TextInput
-                style={[styles.input, styles.dobInputWide]}
-                placeholder="VVVV"
-                value={dobYear}
-                onChangeText={(v) => setDobYear(v.replace(/\D/g, '').slice(0, 4))}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-            </View>
-            <Text style={styles.hint}>Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.</Text>
+            {String(role || '').toLowerCase() === 'athlete' ? (
+              <>
+                <Text style={styles.fieldLabel}>Datëlindja</Text>
+                <View style={styles.dobRow}>
+                  <TextInput
+                    style={[styles.input, styles.dobInput]}
+                    placeholder="DD"
+                    value={dobDay}
+                    onChangeText={(v) => setDobDay(v.replace(/\D/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.dobInput]}
+                    placeholder="MM"
+                    value={dobMonth}
+                    onChangeText={(v) => setDobMonth(v.replace(/\D/g, '').slice(0, 2))}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.dobInputWide]}
+                    placeholder="VVVV"
+                    value={dobYear}
+                    onChangeText={(v) => setDobYear(v.replace(/\D/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                  />
+                </View>
+                <Text style={styles.hint}>Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.</Text>
+              </>
+            ) : null}
           </>
         ) : null}
 
