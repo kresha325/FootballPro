@@ -229,28 +229,28 @@ function Premium() {
         </div>
 
         {/* Premium Plan */}
-        <div className="xt-card relative overflow-hidden border-[var(--xt-color-gold)]/35 bg-[var(--xt-color-surface-raised)] p-5 text-white shadow-xl sm:p-8">
+        <div className="xt-card relative overflow-hidden border-2 border-[var(--xt-color-gold)]/50 bg-[var(--xt-color-surface-raised)] p-5 text-[var(--xt-color-text)] shadow-xl sm:p-8">
           <div className="absolute right-0 top-0 rounded-bl-lg bg-[var(--xt-color-gold)] px-4 py-1 text-sm font-bold text-slate-950">
             RECOMMENDED
           </div>
-          <h3 className="text-2xl font-bold mb-2">Premium</h3>
-          <div className="text-4xl font-bold mb-2">
+          <h3 className="mb-2 text-2xl font-bold text-[var(--xt-color-text)]">Premium</h3>
+          <div className="mb-2 text-4xl font-bold text-[var(--xt-color-text)]">
             €{plans[selectedPlan].price}
-            <span className="text-lg font-normal opacity-90">{plans[selectedPlan].period}</span>
+            <span className="text-lg font-normal text-[var(--xt-color-text-muted)]">{plans[selectedPlan].period}</span>
           </div>
           {plans[selectedPlan].originalPrice && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="line-through text-white/60">€{plans[selectedPlan].originalPrice}</span>
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-[var(--xt-color-text-subtle)] line-through">€{plans[selectedPlan].originalPrice}</span>
               <span className="xt-badge xt-badge-gold">
                 {plans[selectedPlan].savings}
               </span>
             </div>
           )}
-          <ul className="space-y-3 mb-8">
+          <ul className="mb-8 space-y-3">
             {plans[selectedPlan].features.map((feature, index) => (
               <li key={index} className="flex items-start gap-2">
-                <CheckIcon className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" />
-                <span className="text-white">{feature}</span>
+                <CheckIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--xt-color-gold-bright)]" />
+                <span className="text-[var(--xt-color-text-muted)]">{feature}</span>
               </li>
             ))}
           </ul>
