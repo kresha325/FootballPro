@@ -270,6 +270,7 @@ function MatchBroadcastModal({
                     onChange={(e) => setScoreHomeInput(e.target.value)}
                     className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
+                    aria-label="Gola vendas"
                   />
                   <span className="text-2xl font-bold text-slate-400">:</span>
                   <input
@@ -279,8 +280,12 @@ function MatchBroadcastModal({
                     onChange={(e) => setScoreAwayInput(e.target.value)}
                     className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
+                    aria-label="Gola mysafir"
                   />
                 </div>
+                <p className="mb-3 text-center text-[11px] text-slate-400">
+                  Rezultati përditësohet automatikisht nga golat (Vendas / Mysafir).
+                </p>
                 <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-4 ring-1 ring-emerald-500/20">
                   <MatchGoalEventsForm
                     participants={participants}
@@ -288,6 +293,10 @@ function MatchBroadcastModal({
                     awayUserId={m.awayUserId}
                     initialEvents={goalEvents}
                     onChange={setGoalEvents}
+                    onScoreChange={({ scoreHome, scoreAway }) => {
+                      setScoreHomeInput(String(scoreHome));
+                      setScoreAwayInput(String(scoreAway));
+                    }}
                     variant="dark"
                   />
                 </div>

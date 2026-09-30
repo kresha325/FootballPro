@@ -44,6 +44,39 @@ function participantLabel(p, participantType) {
   return name || (tag ? `User ${tag}` : 'User');
 }
 
+function athleteId(p) {
+  return resolveParticipantUserId(p) || p?.id || p?.userId || null;
+}
+
+function athleteLabel(p) {
+  const name = [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim();
+  const id = athleteId(p);
+  return name || (id ? `Lojtari #${id}` : 'Lojtari');
+}
+
+/** Squad athletes for home/away club in this tournament; individual falls back to the participant. */
+function squadMembersForSide(participants, clubOrUserId) {
+  if (clubOrUserId == null || clubOrUserId === '') return [];
+  const list = Array.isArray(participants) ? participants : [];
+  const club = list.find((p) => String(resolveParticipantUserId(p)) === String(clubOrUserId));
+  if (!club) return [];
+  const squad = Array.isArray(club.squadAthletes) ? club.squadAthletes.filter(Boolean) : [];
+  if (squad.length > 0) return squad;
+  if (String(club.role || '').toLowerCase() !== 'club') return [club];
+  return [];
+}
+
+function countGoalsBySide(events) {
+  let home = 0;
+  let away = 0;
+  (Array.isArray(events) ? events : []).forEach((ev) => {
+    if (!ev?.userId) return;
+    if (ev.side === 'home') home += 1;
+    else if (ev.side === 'away') away += 1;
+  });
+  return { home, away };
+}
+
 function TournamentStatsBlock({ stats, onOpenMatch }) {
   if (!stats || typeof stats !== 'object') return null;
 
@@ -367,16 +400,51 @@ export default function TournamentDetailScreen({ route, navigation }) {
     return Number(creatorId) === Number(user.id);
   };
 
+  const syncScoresFromGoals = (events) => {
+    const { home, away } = countGoalsBySide(events);
+    setScoreHomeInput(String(home));
+    setScoreAwayInput(String(away));
+  };
+
   const addGoalEvent = () => {
-    setGoalEvents((prev) => [...prev, { userId: '', minute: '', assistUserId: '', side: '' }]);
+    setGoalEvents((prev) => {
+      const next = [...prev, { userId: '', minute: '', assistUserId: '', side: 'home' }];
+      syncScoresFromGoals(next);
+      return next;
+    });
   };
 
   const updateGoalEvent = (index, patch) => {
-    setGoalEvents((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    const match = matchModal.data?.match;
+    setGoalEvents((prev) => {
+      const next = prev.map((row, i) => {
+        if (i !== index) return row;
+        const updated = { ...row, ...patch };
+        if (patch.side != null && patch.side !== row.side) {
+          const allowed = new Set(
+            squadMembersForSide(
+              participants,
+              patch.side === 'home' ? match?.homeUserId : match?.awayUserId
+            ).map((p) => String(athleteId(p)))
+          );
+          if (updated.userId && !allowed.has(String(updated.userId))) updated.userId = '';
+          if (updated.assistUserId && !allowed.has(String(updated.assistUserId))) {
+            updated.assistUserId = '';
+          }
+        }
+        return updated;
+      });
+      syncScoresFromGoals(next);
+      return next;
+    });
   };
 
   const removeGoalEvent = (index) => {
-    setGoalEvents((prev) => prev.filter((_, i) => i !== index));
+    setGoalEvents((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      syncScoresFromGoals(next);
+      return next;
+    });
   };
 
   const onSaveMatchScore = async () => {
@@ -788,70 +856,143 @@ export default function TournamentDetailScreen({ route, navigation }) {
                         maxLength={3}
                       />
                     </View>
+                    <Text style={styles.muted}>Rezultati përditësohet nga golat (Vendas / Mysafir).</Text>
                     <Text style={styles.scoreFormTitle}>Golat (golashënues, minuta, asist)</Text>
                     {goalEvents.map((ev, index) => {
-                      const scorer = participants.find((p) => String(resolveParticipantUserId(p)) === String(ev.userId));
-                      const assist = participants.find((p) => String(resolveParticipantUserId(p)) === String(ev.assistUserId));
+                      const match = matchModal.data.match;
+                      const side = ev.side === 'away' ? 'away' : ev.side === 'home' ? 'home' : '';
+                      const sideMembers = side
+                        ? squadMembersForSide(
+                            participants,
+                            side === 'home' ? match.homeUserId : match.awayUserId
+                          )
+                        : [];
+                      const scorer = sideMembers.find((p) => String(athleteId(p)) === String(ev.userId));
+                      const assist = sideMembers.find((p) => String(athleteId(p)) === String(ev.assistUserId));
+                      const assistOptions = sideMembers.filter(
+                        (p) => String(athleteId(p)) !== String(ev.userId)
+                      );
                       return (
-                        <View key={`goal-${index}`} style={styles.goalEventRow}>
-                          <Text style={styles.goalEventText} numberOfLines={2}>
-                            {scorer ? participantLabel(scorer, pt) : 'Zgjidh golashënuesin'} · min {ev.minute || '—'}
-                            {assist ? ` · asist ${participantLabel(assist, pt)}` : ''}
-                          </Text>
-                          <View style={styles.goalEventActions}>
+                        <View key={`goal-${index}`} style={styles.goalPickerBox}>
+                          <View style={styles.goalEventRow}>
+                            <Text style={styles.goalEventText}>
+                              Goli #{index + 1}
+                              {scorer ? ` · ${athleteLabel(scorer)}` : ''}
+                              {ev.minute ? ` · ${ev.minute}'` : ''}
+                              {assist ? ` · asist ${athleteLabel(assist)}` : ''}
+                            </Text>
                             <TouchableOpacity onPress={() => removeGoalEvent(index)}>
                               <Text style={styles.rejectBtnText}>Fshi</Text>
                             </TouchableOpacity>
                           </View>
+                          <Text style={styles.muted}>Ekipi</Text>
+                          <View style={styles.sideRow}>
+                            {[
+                              { key: 'home', label: 'Vendas' },
+                              { key: 'away', label: 'Mysafir' },
+                            ].map((opt) => (
+                              <TouchableOpacity
+                                key={opt.key}
+                                style={[styles.chipBtn, side === opt.key && styles.chipBtnActive]}
+                                onPress={() => updateGoalEvent(index, { side: opt.key })}
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipBtnText,
+                                    side === opt.key && styles.chipBtnTextActive,
+                                  ]}
+                                >
+                                  {opt.label}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          <Text style={styles.muted}>Golashënuesi</Text>
+                          {!side ? (
+                            <Text style={styles.muted}>Zgjidh Vendas ose Mysafir.</Text>
+                          ) : sideMembers.length === 0 ? (
+                            <Text style={styles.muted}>
+                              Ky klub nuk ka lojtarë në skuadrën e turneut.
+                            </Text>
+                          ) : (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                              {sideMembers.map((p) => {
+                                const id = athleteId(p);
+                                const selected = String(ev.userId) === String(id);
+                                return (
+                                  <TouchableOpacity
+                                    key={`scorer-${index}-${id}`}
+                                    style={[styles.chipBtn, selected && styles.chipBtnActive]}
+                                    onPress={() =>
+                                      updateGoalEvent(index, { userId: String(id), side })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipBtnText,
+                                        selected && styles.chipBtnTextActive,
+                                      ]}
+                                    >
+                                      {athleteLabel(p)}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </ScrollView>
+                          )}
+                          <TextInput
+                            style={styles.goalMinuteInput}
+                            keyboardType="number-pad"
+                            placeholder="Minuta"
+                            value={ev.minute || ''}
+                            onChangeText={(v) => updateGoalEvent(index, { minute: v })}
+                          />
+                          <Text style={styles.muted}>Asist (opsional)</Text>
+                          {side ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                              <TouchableOpacity
+                                style={[styles.chipBtn, !ev.assistUserId && styles.chipBtnActive]}
+                                onPress={() => updateGoalEvent(index, { assistUserId: '' })}
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipBtnText,
+                                    !ev.assistUserId && styles.chipBtnTextActive,
+                                  ]}
+                                >
+                                  Pa asist
+                                </Text>
+                              </TouchableOpacity>
+                              {assistOptions.map((p) => {
+                                const id = athleteId(p);
+                                const selected = String(ev.assistUserId) === String(id);
+                                return (
+                                  <TouchableOpacity
+                                    key={`assist-${index}-${id}`}
+                                    style={[styles.chipBtn, selected && styles.chipBtnActive]}
+                                    onPress={() =>
+                                      updateGoalEvent(index, { assistUserId: String(id) })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipBtnText,
+                                        selected && styles.chipBtnTextActive,
+                                      ]}
+                                    >
+                                      {athleteLabel(p)}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </ScrollView>
+                          ) : null}
                         </View>
                       );
                     })}
                     <TouchableOpacity style={styles.secondaryBtn} onPress={addGoalEvent}>
                       <Text style={styles.secondaryBtnText}>+ Shto gol</Text>
                     </TouchableOpacity>
-                    {goalEvents.length > 0 && goalEvents[goalEvents.length - 1]?.userId === '' ? (
-                      <View style={styles.goalPickerBox}>
-                        <Text style={styles.muted}>Golashënuesi (ID nga lista e pjesëmarrësve)</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          {participants.map((p) => (
-                            <TouchableOpacity
-                              key={`scorer-pick-${resolveParticipantUserId(p)}`}
-                              style={styles.chipBtn}
-                              onPress={() =>
-                                updateGoalEvent(goalEvents.length - 1, {
-                                  userId: String(resolveParticipantUserId(p)),
-                                })
-                              }
-                            >
-                              <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                        <TextInput
-                          style={styles.goalMinuteInput}
-                          keyboardType="number-pad"
-                          placeholder="Minuta"
-                          value={goalEvents[goalEvents.length - 1]?.minute || ''}
-                          onChangeText={(v) => updateGoalEvent(goalEvents.length - 1, { minute: v })}
-                        />
-                        <Text style={styles.muted}>Asist (opsional)</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          {participants.map((p) => (
-                            <TouchableOpacity
-                              key={`assist-pick-${resolveParticipantUserId(p)}`}
-                              style={styles.chipBtn}
-                              onPress={() =>
-                                updateGoalEvent(goalEvents.length - 1, {
-                                  assistUserId: String(resolveParticipantUserId(p)),
-                                })
-                              }
-                            >
-                              <Text style={styles.chipBtnText}>{participantLabel(p, pt)}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    ) : null}
                     <TouchableOpacity
                       style={[styles.primaryBtn, savingScore && styles.btnDisabled]}
                       onPress={onSaveMatchScore}
@@ -1035,7 +1176,13 @@ const styles = StyleSheet.create({
     marginRight: 6,
     marginBottom: 6,
   },
+  chipBtnActive: {
+    backgroundColor: '#9A6B12',
+    borderColor: '#9A6B12',
+  },
   chipBtnText: { color: '#9A6B12', fontWeight: '700', fontSize: 12 },
+  chipBtnTextActive: { color: '#fff' },
+  sideRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 },
   goalMinuteInput: {
     borderWidth: 1,
     borderColor: '#cbd5e1',
