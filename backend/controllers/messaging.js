@@ -87,15 +87,25 @@ exports.upload = upload;
 exports.getConversations = async (req, res) => {
   try {
     console.log('🔵 getConversations called for user:', req.user.id);
-    
+
+    // Two-step load so filtered memberships don't collapse belongsToMany `members`
+    // (Sequelize often returns only the current user when both are joined together).
+    const myMemberships = await ConversationMember.findAll({
+      where: { userId: req.user.id },
+      attributes: ['conversationId', 'lastReadAt', 'role'],
+    });
+    const conversationIds = myMemberships.map((m) => m.conversationId);
+    if (!conversationIds.length) {
+      return res.json([]);
+    }
+
+    const membershipByConvId = new Map(
+      myMemberships.map((m) => [Number(m.conversationId), m])
+    );
+
     const conversations = await Conversation.findAll({
+      where: { id: { [Op.in]: conversationIds } },
       include: [
-        {
-          model: ConversationMember,
-          as: 'memberships',
-          where: { userId: req.user.id },
-          attributes: ['lastReadAt', 'role'],
-        },
         {
           model: User,
           as: 'members',
@@ -107,6 +117,7 @@ exports.getConversations = async (req, res) => {
           model: Message,
           as: 'messages',
           limit: 1,
+          separate: true,
           order: [['createdAt', 'DESC']],
           include: [SENDER_WITH_PROFILE],
         },
@@ -116,17 +127,16 @@ exports.getConversations = async (req, res) => {
 
     console.log('🔵 Found conversations:', conversations.length);
 
-    // Calculate unread count for each conversation
     const conversationsWithUnread = await Promise.all(
       conversations.map(async (conv) => {
-        const membership = conv.memberships[0];
+        const membership = membershipByConvId.get(Number(conv.id));
         const unreadCount = await Message.count({
           where: {
             conversationId: conv.id,
             senderId: { [Op.ne]: req.user.id },
             deleted: false,
             createdAt: {
-              [Op.gt]: membership.lastReadAt || new Date(0),
+              [Op.gt]: membership?.lastReadAt || new Date(0),
             },
           },
         });
@@ -141,6 +151,9 @@ exports.getConversations = async (req, res) => {
 
         return {
           ...convData,
+          memberships: membership
+            ? [{ lastReadAt: membership.lastReadAt, role: membership.role }]
+            : [],
           lastMessage,
           unreadCount,
         };

@@ -141,21 +141,33 @@ function Messaging() {
 
   const getOtherMember = (conversation) => {
     if (!conversation) {
-      return { name: 'Unknown', profilePhoto: '', id: null };
+      return { name: 'Unknown', profilePhoto: '', id: null, members: [], memberLabel: '' };
     }
     if (conversation.isGroup) {
+      const members = Array.isArray(conversation.members) ? conversation.members : [];
+      const names = members
+        .map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim())
+        .filter(Boolean);
+      const shown = names.slice(0, 4).join(', ');
+      const more = names.length > 4 ? ` +${names.length - 4}` : '';
       return {
         name: conversation.name || 'Group Chat',
         profilePhoto: conversation.avatar,
         id: null,
+        members,
+        memberLabel: names.length
+          ? `${names.length} anëtarë · ${shown}${more}`
+          : 'Grup',
       };
     }
     if (!conversation.members || !Array.isArray(conversation.members)) {
-      return { name: 'Unknown', profilePhoto: '', id: null };
+      return { name: 'Unknown', profilePhoto: '', id: null, members: [], memberLabel: '' };
     }
-    const otherMember = conversation.members.find(m => m.id !== user?.id);
+    const otherMember = conversation.members.find(
+      (m) => Number(m.id) !== Number(user?.id)
+    );
     if (!otherMember) {
-      return { name: 'Unknown', profilePhoto: '', id: null };
+      return { name: 'Unknown', profilePhoto: '', id: null, members: [], memberLabel: '' };
     }
     return {
       name: `${otherMember.firstName || ''} ${otherMember.lastName || ''}`.trim() || 'Unknown',
@@ -166,6 +178,8 @@ function Messaging() {
       id: otherMember.id || null,
       role: otherMember.role || null,
       club: otherMember.Profile?.club || otherMember.club || null,
+      members: [],
+      memberLabel: '',
     };
   };
 
@@ -224,7 +238,7 @@ function Messaging() {
       for (const conv of conversations) {
         // Only check for 1-1 conversations
         if (!conv.isGroup) {
-          const other = conv.members.find(m => m.id !== user.id);
+          const other = conv.members.find((m) => Number(m.id) !== Number(user.id));
           if (other && other.id) {
             try {
               const res = await api.get(`/users/${other.id}/online`);
@@ -676,7 +690,7 @@ function Messaging() {
     const map = new Map();
     conversations.forEach((conv) => {
       if (conv?.isGroup || !Array.isArray(conv?.members)) return;
-      const other = conv.members.find((m) => m?.id !== user?.id);
+      const other = conv.members.find((m) => Number(m?.id) !== Number(user?.id));
       if (other?.id && !map.has(other.id)) {
         map.set(other.id, {
           id: other.id,
@@ -805,7 +819,17 @@ function Messaging() {
             return (
               <div
                 key={conv.id}
-                onClick={() => setSelectedConversation(conv)}
+                onClick={() => {
+                  setSelectedConversation(conv);
+                  if (conv?.isGroup && conv?.id) {
+                    api
+                      .get(`/messaging/conversations/detail/${conv.id}`)
+                      .then((res) => {
+                        if (res?.data?.id) setSelectedConversation(res.data);
+                      })
+                      .catch(() => {});
+                  }
+                }}
                 className={`p-4 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                   selectedConversation?.id === conv.id ? 'bg-[var(--xt-color-gold)]/10' : ''
                 }`}
@@ -837,7 +861,9 @@ function Messaging() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate dark:text-white">{other.name}</h3>
                     <p className="text-sm text-[var(--xt-color-text-subtle)] truncate">
-                      {conv.lastMessage || 'Start the conversation'}
+                      {conv.isGroup && other.memberLabel
+                        ? other.memberLabel
+                        : conv.lastMessage || 'Start the conversation'}
                     </p>
                   </div>
                   {conv.lastMessageAt && (
@@ -942,7 +968,12 @@ function Messaging() {
                       </div>
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold text-[var(--xt-color-text)]">{other.id ? <Link to={`/profile/${other.id}`} className="hover:text-[var(--xt-color-gold-bright)]">{other.name}</Link> : other.name}</h3>
-                        {other.club && <p className="truncate text-xs text-[var(--xt-color-text-subtle)]">{other.club}</p>}
+                        {selectedConversation.isGroup && other.memberLabel ? (
+                          <p className="truncate text-xs text-[var(--xt-color-text-muted)]">{other.memberLabel}</p>
+                        ) : null}
+                        {!selectedConversation.isGroup && other.club ? (
+                          <p className="truncate text-xs text-[var(--xt-color-text-subtle)]">{other.club}</p>
+                        ) : null}
                       </div>
                     </>
                   );

@@ -204,7 +204,7 @@ export default function AuthScreen({ initialMode }) {
     }
   };
 
-  const inputClass = 'input';
+  const inputClass = 'input !bg-[var(--xt-color-surface-raised)] !text-[var(--xt-color-text)] placeholder:!text-[var(--xt-color-text-subtle)]';
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--xt-color-canvas)] px-4 py-8 text-[var(--xt-color-text)]">

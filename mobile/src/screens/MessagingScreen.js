@@ -87,6 +87,17 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
   const photoUri = photoRaw ? resolvePhotoUrl(photoRaw) : null;
 
   const timeLabel = formatConvTime(item.lastMessageAt);
+  const groupMembersLabel = item.isGroup
+    ? (() => {
+        const names = members
+          .map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim())
+          .filter(Boolean);
+        if (!names.length) return null;
+        const shown = names.slice(0, 3).join(', ');
+        const more = names.length > 3 ? ` +${names.length - 3}` : '';
+        return `${names.length} anëtarë · ${shown}${more}`;
+      })()
+    : null;
 
   return (
     <TouchableOpacity
@@ -112,7 +123,7 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
             </View>
           </View>
           <Text style={[styles.preview, { color: colors.muted }]} numberOfLines={1}>
-            {item.lastMessage || 'Ende pa mesazhe.'}
+            {groupMembersLabel || item.lastMessage || 'Ende pa mesazhe.'}
           </Text>
         </View>
       </View>

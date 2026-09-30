@@ -107,9 +107,18 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .btn-outline:hover:not(:disabled) { background: rgb(217 164 65 / 10%); }
   .btn-quiet { color: var(--xt-color-text); border-color: var(--xt-color-border); background: var(--xt-color-surface-raised); }
   .btn-quiet:hover:not(:disabled) { background: var(--xt-color-surface-hover); }
-  .input, .select { width: 100%; min-height: 44px; padding: .625rem .875rem; color: var(--xt-color-text); border: 1px solid var(--xt-color-border-strong); border-radius: var(--xt-radius-md); background: var(--xt-color-surface); transition: border-color var(--xt-motion-fast), box-shadow var(--xt-motion-fast); }
-  .input::placeholder, textarea.input::placeholder { color: var(--xt-color-text-subtle); }
+  .input, .select { width: 100%; min-height: 44px; padding: .625rem .875rem; color: var(--xt-color-text); border: 1px solid var(--xt-color-border-strong); border-radius: var(--xt-radius-md); background: var(--xt-color-surface-raised); transition: border-color var(--xt-motion-fast), box-shadow var(--xt-motion-fast); }
+  .input::placeholder, textarea.input::placeholder, .select::placeholder { color: var(--xt-color-text-subtle); }
   .input:focus, .select:focus { outline: none; border-color: var(--xt-color-gold); box-shadow: var(--xt-shadow-focus); }
+  .input:-webkit-autofill,
+  .input:-webkit-autofill:hover,
+  .input:-webkit-autofill:focus,
+  .select:-webkit-autofill {
+    -webkit-text-fill-color: var(--xt-color-text);
+    caret-color: var(--xt-color-text);
+    box-shadow: 0 0 0 1000px var(--xt-color-surface-raised) inset;
+    transition: background-color 99999s ease-in-out 0s;
+  }
   .label { display: block; margin-bottom: var(--xt-space-2); color: var(--xt-color-text-muted); font-size: .875rem; font-weight: 600; }
   .xt-badge { display: inline-flex; min-height: 24px; align-items: center; gap: .3rem; padding: .125rem .55rem; border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-full); color: var(--xt-color-text-muted); background: var(--xt-color-surface-raised); font-size: .75rem; font-weight: 650; white-space: nowrap; }
   .xt-badge-gold { color: var(--xt-color-gold-bright); border-color: rgb(217 164 65 / 35%); background: rgb(217 164 65 / 10%); }

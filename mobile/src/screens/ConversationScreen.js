@@ -312,6 +312,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [forwardMessage, setForwardMessage] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [othersRead, setOthersRead] = useState([]);
+  const [groupMembers, setGroupMembers] = useState([]);
   const [typingByUserId, setTypingByUserId] = useState({});
   const typingTimeoutRef = useRef(null);
   const composerBlurTimeoutRef = useRef(null);
@@ -329,13 +330,15 @@ export default function ConversationScreen({ route, navigation }) {
         const data = res?.data;
         const group = !!data?.isGroup;
         setIsGroup(group);
+        const members = Array.isArray(data?.members) ? data.members : [];
         if (group) {
           const name = data?.name || paramTitle || 'Grup';
           setPeerTitle(name);
+          setGroupMembers(members);
           return;
         }
+        setGroupMembers([]);
         if (user?.id == null) return;
-        const members = Array.isArray(data?.members) ? data.members : [];
         const other = members.find((m) => Number(m.id) !== Number(user.id));
         if (other?.id != null) {
           setOtherUserId(other.id);
@@ -406,7 +409,15 @@ export default function ConversationScreen({ route, navigation }) {
   }, [isGroup, peerTitle, paramTitle]);
 
   const headerSubtitle = useMemo(() => {
-    if (isGroup) return 'Grup';
+    if (isGroup) {
+      const names = groupMembers
+        .map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim())
+        .filter(Boolean);
+      if (!names.length) return 'Grup';
+      const shown = names.slice(0, 4).join(', ');
+      const more = names.length > 4 ? ` +${names.length - 4}` : '';
+      return `${names.length} anëtarë · ${shown}${more}`;
+    }
     const peerTyping = Object.keys(typingByUserId).some(
       (id) => Number(id) !== Number(user?.id) && Number(id) === Number(otherUserId)
     );
@@ -415,7 +426,7 @@ export default function ConversationScreen({ route, navigation }) {
       lastSeenAt: peerLastSeen,
       typing: peerTyping,
     });
-  }, [isGroup, typingByUserId, user?.id, otherUserId, peerOnline, peerLastSeen]);
+  }, [isGroup, groupMembers, typingByUserId, user?.id, otherUserId, peerOnline, peerLastSeen]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
