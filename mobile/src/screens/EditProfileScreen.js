@@ -117,6 +117,7 @@ const defaultForm = () => ({
   twitter: '',
   facebook: '',
   selectedClubId: null,
+  clubJoinedYear: '',
 });
 
 export default function EditProfileScreen({ navigation }) {
@@ -202,6 +203,7 @@ export default function EditProfileScreen({ navigation }) {
           twitter: p.contact?.twitter != null ? String(p.contact.twitter) : '',
           facebook: p.contact?.facebook != null ? String(p.contact.facebook) : '',
           selectedClubId: p.clubId != null ? Number(p.clubId) : null,
+          clubJoinedYear: p.clubJoinedYear != null ? String(p.clubJoinedYear) : '',
         });
         if (normalizeEditRole(p.role || user?.role) === 'athlete') {
           const extras = loadAthleteExtrasFromProfile(p);
@@ -281,6 +283,12 @@ export default function EditProfileScreen({ navigation }) {
         add('city', trim(form.city));
         add('country', trim(form.country));
         if (form.selectedClubId) payload.clubId = form.selectedClubId;
+        if (trim(form.club)) {
+          const year = trim(form.clubJoinedYear);
+          if (year) payload.clubJoinedYear = year;
+        } else {
+          payload.clubJoinedYear = '';
+        }
         payload.stats = {
           height: trim(form.height),
           weight: trim(form.weight),
@@ -438,6 +446,22 @@ export default function EditProfileScreen({ navigation }) {
 
   const onSave = async () => {
     if (editRole === 'liga') return;
+    if (editRole === 'athlete') {
+      const trimmedClub = form.club?.trim();
+      const yearRaw = String(form.clubJoinedYear || '').trim();
+      if (trimmedClub && !yearRaw) {
+        Alert.alert('Klubi', 'Vendos vitin nga kur je në këtë klub.');
+        return;
+      }
+      if (yearRaw) {
+        const yearNum = parseInt(yearRaw, 10);
+        const maxYear = new Date().getFullYear() + 1;
+        if (!Number.isFinite(yearNum) || yearNum < 1950 || yearNum > maxYear) {
+          Alert.alert('Klubi', 'Viti i klubit nuk është i vlefshëm.');
+          return;
+        }
+      }
+    }
     setSaving(true);
     try {
       const payload = buildPayload();
@@ -575,6 +599,8 @@ export default function EditProfileScreen({ navigation }) {
               })}
             </View>
           ) : null}
+          {labelFor('Nga viti')}
+          {input('clubJoinedYear', { keyboardType: 'number-pad', placeholder: 'p.sh. 2024' })}
           {labelFor('Jersey Number')}
           {input('jerseyNumber', { keyboardType: 'number-pad' })}
           {labelFor('City')}

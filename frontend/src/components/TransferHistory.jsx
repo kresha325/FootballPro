@@ -117,6 +117,13 @@ function ClubName({ name, userId }) {
   return <span className="font-semibold text-gray-900 dark:text-white">{name}</span>;
 }
 
+function isCurrentClubStint(transfer) {
+  return (
+    transfer?.notes === '__current_club__' ||
+    String(transfer?.contractUntil || '').toLowerCase() === 'vazhdon'
+  );
+}
+
 const emptyForm = () => ({
   transferType: 'player_transfer',
   fromClub: '',
@@ -269,29 +276,43 @@ const TransferHistory = ({ userId, isOwner }) => {
                 <div className="flex items-start gap-3 flex-1">
                   <div className="text-3xl">{getTransferIcon(transfer.transferType)}</div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
-                      <span className="text-gray-400">→</span>
-                      <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <span>📅 {transfer.season}</span>
-                      {transfer.position && <span>⚽ {transfer.position}</span>}
-                      {transfer.transferFee && <span>💰 {transfer.transferFee}</span>}
-                      {transfer.contractUntil && <span>📝 Until {transfer.contractUntil}</span>}
-                      {transfer.transferDate ? (
-                        <span>
-                          🗓{' '}
-                          {new Date(transfer.transferDate).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      ) : null}
-                    </div>
-                    {transfer.notes && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{transfer.notes}</p>
+                    {isCurrentClubStint(transfer) ? (
+                      <>
+                        <div className="mb-1">
+                          <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span>📅 {transfer.season || '—'} · vazhdon</span>
+                          {transfer.position && <span>⚽ {transfer.position}</span>}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
+                          <span className="text-gray-400">→</span>
+                          <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span>📅 {transfer.season}</span>
+                          {transfer.position && <span>⚽ {transfer.position}</span>}
+                          {transfer.transferFee && <span>💰 {transfer.transferFee}</span>}
+                          {transfer.contractUntil && <span>📝 Until {transfer.contractUntil}</span>}
+                          {transfer.transferDate ? (
+                            <span>
+                              🗓{' '}
+                              {new Date(transfer.transferDate).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          ) : null}
+                        </div>
+                        {transfer.notes && transfer.notes !== '__current_club__' ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{transfer.notes}</p>
+                        ) : null}
+                      </>
                     )}
                   </div>
                 </div>

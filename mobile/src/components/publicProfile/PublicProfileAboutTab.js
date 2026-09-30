@@ -12,6 +12,13 @@ function transferIcon(type) {
   return icons[type] || '📍';
 }
 
+function isCurrentClubStint(transfer) {
+  return (
+    transfer?.notes === '__current_club__' ||
+    String(transfer?.contractUntil || '').toLowerCase() === 'vazhdon'
+  );
+}
+
 export default function PublicProfileAboutTab({
   profile,
   transfers = [],
@@ -45,30 +52,46 @@ export default function PublicProfileAboutTab({
           {transfers.length === 0 ? (
             <Text style={[styles.mutedCenter, { color: theme.muted }]}>No transfer history</Text>
           ) : (
-            transfers.map((t) => (
-              <View
-                key={String(t.id)}
-                style={[styles.transferRow, { borderColor: theme.border, backgroundColor: theme.chipBg }]}
-              >
-                <Text style={styles.transferIcon}>{transferIcon(t.transferType)}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.transferClubs, { color: theme.text }]}>
-                    {t.fromClub || 'Free agent'} → <Text style={{ color: '#2563eb' }}>{t.toClub || '—'}</Text>
-                  </Text>
-                  <Text style={[styles.transferMeta, { color: theme.muted }]}>
-                    {[t.season, t.position, t.transferFee, t.contractUntil].filter(Boolean).join(' · ')}
-                  </Text>
-                  {t.notes ? (
-                    <Text style={[styles.notes, { color: theme.muted }]}>{t.notes}</Text>
+            transfers.map((t) => {
+              const current = isCurrentClubStint(t);
+              return (
+                <View
+                  key={String(t.id)}
+                  style={[styles.transferRow, { borderColor: theme.border, backgroundColor: theme.chipBg }]}
+                >
+                  <Text style={styles.transferIcon}>{transferIcon(t.transferType)}</Text>
+                  <View style={{ flex: 1 }}>
+                    {current ? (
+                      <>
+                        <Text style={[styles.transferClubs, { color: theme.text }]}>
+                          <Text style={{ color: '#2563eb' }}>{t.toClub || '—'}</Text>
+                        </Text>
+                        <Text style={[styles.transferMeta, { color: theme.muted }]}>
+                          {[t.season, 'vazhdon', t.position].filter(Boolean).join(' · ')}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.transferClubs, { color: theme.text }]}>
+                          {t.fromClub || 'Free agent'} → <Text style={{ color: '#2563eb' }}>{t.toClub || '—'}</Text>
+                        </Text>
+                        <Text style={[styles.transferMeta, { color: theme.muted }]}>
+                          {[t.season, t.position, t.transferFee, t.contractUntil].filter(Boolean).join(' · ')}
+                        </Text>
+                        {t.notes && t.notes !== '__current_club__' ? (
+                          <Text style={[styles.notes, { color: theme.muted }]}>{t.notes}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
+                  {isOwner && onDeleteTransfer ? (
+                    <TouchableOpacity onPress={() => onDeleteTransfer(t)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                    </TouchableOpacity>
                   ) : null}
                 </View>
-                {isOwner && onDeleteTransfer ? (
-                  <TouchableOpacity onPress={() => onDeleteTransfer(t)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={18} color="#dc2626" />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       ) : null}

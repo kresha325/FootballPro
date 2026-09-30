@@ -11,6 +11,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     bio: user.bio || '',
     position: user.position || '',
     club: user.club || '',
+    clubJoinedYear: user.clubJoinedYear != null ? String(user.clubJoinedYear) : '',
     city: user.city || '',
     country: user.country || '',
     height: user.stats?.height || '',
@@ -28,7 +29,10 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   const [clubSuggestions, setClubSuggestions] = useState([]);
   const [showClubSuggestions, setShowClubSuggestions] = useState(false);
   const [clubQuery, setClubQuery] = useState(user.club || '');
-  const [selectedClubId, setSelectedClubId] = useState(null);
+  const [selectedClubId, setSelectedClubId] = useState(
+    user.clubId != null ? Number(user.clubId) : null
+  );
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     const query = clubQuery.trim();
@@ -65,6 +69,21 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
+    const trimmedClub = form.club?.trim();
+    const yearRaw = String(form.clubJoinedYear || '').trim();
+    if (trimmedClub && !yearRaw) {
+      setFormError('Vendos vitin nga kur je në këtë klub.');
+      return;
+    }
+    if (yearRaw) {
+      const yearNum = parseInt(yearRaw, 10);
+      const maxYear = new Date().getFullYear() + 1;
+      if (!Number.isFinite(yearNum) || yearNum < 1950 || yearNum > maxYear) {
+        setFormError('Viti i klubit nuk është i vlefshëm.');
+        return;
+      }
+    }
     const formData = new FormData();
     // Fushat që shkojnë te User/Profile direkt
     const directFields = [
@@ -75,6 +94,11 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     });
     if (selectedClubId) {
       formData.append('clubId', selectedClubId);
+    }
+    if (trimmedClub && yearRaw) {
+      formData.append('clubJoinedYear', yearRaw);
+    } else if (!trimmedClub) {
+      formData.append('clubJoinedYear', '');
     }
     // Paketoj fushat e statistikave si objekt stats
     const stats = {
@@ -89,7 +113,6 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
     }
     await onSave(formData);
 
-    const trimmedClub = form.club?.trim();
     if (trimmedClub) {
       try {
         // Kërkesë membership (ruan në ClubMembers)
@@ -175,7 +198,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </select>
         </div>
         <div>
-          <label htmlFor="athlete-club" className="block text-sm font-medium mb-1">Club</label>
+          <label htmlFor="athlete-club" className="block text-sm font-medium mb-1">Klubi</label>
           <div className="relative">
             <input
               id="athlete-club"
@@ -221,6 +244,23 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </div>
         </div>
         <div>
+          <label htmlFor="athlete-club-year" className="block text-sm font-medium mb-1">Nga viti</label>
+          <input
+            id="athlete-club-year"
+            name="clubJoinedYear"
+            value={form.clubJoinedYear}
+            onChange={handleChange}
+            type="number"
+            min="1950"
+            max={new Date().getFullYear() + 1}
+            placeholder="p.sh. 2024"
+            className="w-full p-2 border border-gray-300 rounded"
+            autoComplete="off"
+            required={Boolean(form.club?.trim())}
+          />
+          <p className="mt-1 text-xs text-gray-500">Viti nga kur je në këtë klub (shfaqet te Karriera / Transferet).</p>
+        </div>
+        <div>
           <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">Jersey Number</label>
           <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
@@ -254,7 +294,9 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
-      {errors && errors.general && <div className="text-red-500 mt-2">{errors.general}</div>}
+      {(formError || (errors && errors.general)) && (
+        <div className="text-red-500 mt-2">{formError || errors.general}</div>
+      )}
     </form>
   );
 };

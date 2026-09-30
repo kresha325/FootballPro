@@ -20,6 +20,8 @@ const Profile = sequelize.define('Profile', {
   country: DataTypes.STRING,
   club: DataTypes.STRING,
   clubId: DataTypes.INTEGER,
+  /** Year the athlete joined their current club (shown in career when no transfers). */
+  clubJoinedYear: DataTypes.INTEGER,
   clubLogo: DataTypes.STRING,
   /** Club org info (also mirrored into stats for older UI). */
   founded: DataTypes.INTEGER,

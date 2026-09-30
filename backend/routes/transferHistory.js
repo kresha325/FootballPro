@@ -6,6 +6,7 @@ const { protect } = require('../middleware/auth');
 const TransferHistory = require('../models/TransferHistory');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const { CURRENT_CLUB_NOTE } = require('../utils/currentClubCareer');
 
 function transferBodyValidators({ requireCore }) {
   const list = [
@@ -150,6 +151,16 @@ router.post('/', protect, ...transferBodyValidators({ requireCore: true }), asyn
       userId: req.user.id,
       ...payload,
     });
+    // Real transfer entered — drop the auto "current club" placeholder if present.
+    if (payload.notes !== CURRENT_CLUB_NOTE) {
+      try {
+        await TransferHistory.destroy({
+          where: { userId: req.user.id, notes: CURRENT_CLUB_NOTE },
+        });
+      } catch (_e) {
+        /* non-fatal */
+      }
+    }
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Add transfer error:', error);

@@ -13,6 +13,7 @@ const { Tournament, TournamentParticipant } = require('../models/Tournament');
 const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
 const sequelize = require('../config/database');
+const { parseClubJoinedYear, syncCurrentClubCareer } = require('../utils/currentClubCareer');
 
 /**
  * Numëron ndjekësit / duke ndjekur duke përjashtuar:
@@ -297,6 +298,7 @@ exports.createProfile = async (req, res) => {
     }
 
     // Create new profile
+    const joinedYearOnCreate = parseClubJoinedYear(req.body.clubJoinedYear);
     const profile = await Profile.create({
       userId: req.user.id,
       bio: req.body.bio || '',
@@ -304,6 +306,7 @@ exports.createProfile = async (req, res) => {
       country: req.body.country || '',
       club: req.body.club || '',
       clubId: req.body.clubId || null,
+      clubJoinedYear: joinedYearOnCreate,
       position: req.body.position || '',
     });
 
@@ -329,6 +332,17 @@ exports.createProfile = async (req, res) => {
             jerseyNumber: req.body.stats?.jerseyNumber,
           });
         }
+      }
+
+      if (String(clubName || '').trim() && joinedYearOnCreate) {
+        await syncCurrentClubCareer({
+          userId: req.user.id,
+          clubName,
+          clubUserId: clubUser?.id || clubId || null,
+          year: joinedYearOnCreate,
+          position: req.body.position,
+          profile,
+        });
       }
     }
 
@@ -653,6 +667,7 @@ exports.getPublicProfileCv = async (req, res) => {
       careerHistory: plainProfile.careerHistory || '',
       club: plainProfile.club || null,
       clubId: plainProfile.clubId || null,
+      clubJoinedYear: plainProfile.clubJoinedYear ?? null,
       city: plainProfile.city || null,
       country: plainProfile.country || null,
       position: plainProfile.position || null,
@@ -839,6 +854,7 @@ exports.updateProfile = async (req, res) => {
       'country',
       'club',
       'clubId',
+      'clubJoinedYear',
       'clubLogo',
       'position',
       'stats',
@@ -867,6 +883,10 @@ exports.updateProfile = async (req, res) => {
               updateData[key] = parsed;
             }
           }
+          continue;
+        }
+        if (key === 'clubJoinedYear') {
+          updateData.clubJoinedYear = parseClubJoinedYear(req.body.clubJoinedYear);
           continue;
         }
         if (key === 'founded' || key === 'capacity') {
@@ -1142,13 +1162,27 @@ exports.updateProfile = async (req, res) => {
 
     if (req.user?.role === 'athlete') {
       const clubName = req.body.club || updateData.club;
-      const clubId = req.body.clubId;
+      const clubId = req.body.clubId || updateData.clubId;
+      const trimmedClubName = clubName != null ? String(clubName).trim() : '';
 
-      if (clubId || clubName) {
+      if (!trimmedClubName && req.body.club !== undefined) {
+        updateData.clubJoinedYear = null;
         try {
-          const clubUser = await resolveClubUser({ clubId, clubName });
+          await profile.update({ clubJoinedYear: null });
+        } catch (_e) {
+          /* non-fatal */
+        }
+      }
+
+      let resolvedClubUserId = clubId ? parseInt(clubId, 10) : null;
+      if (Number.isNaN(resolvedClubUserId)) resolvedClubUserId = null;
+
+      if (clubId || trimmedClubName) {
+        try {
+          const clubUser = await resolveClubUser({ clubId, clubName: trimmedClubName });
 
           if (clubUser) {
+            resolvedClubUserId = clubUser.id;
             const existing = await ClubMember.findOne({
               where: {
                 clubId: clubUser.id,
@@ -1174,6 +1208,30 @@ exports.updateProfile = async (req, res) => {
         } catch (clubMemberError) {
           console.warn('Club member request error:', clubMemberError.message);
         }
+      }
+
+      const joinedYear =
+        updateData.clubJoinedYear !== undefined
+          ? updateData.clubJoinedYear
+          : parseClubJoinedYear(req.body.clubJoinedYear) ?? profile.clubJoinedYear;
+
+      if (trimmedClubName && joinedYear) {
+        if (updateData.clubJoinedYear === undefined) {
+          updateData.clubJoinedYear = joinedYear;
+          try {
+            await profile.update({ clubJoinedYear: joinedYear });
+          } catch (_e) {
+            /* non-fatal */
+          }
+        }
+        await syncCurrentClubCareer({
+          userId: req.user.id,
+          clubName: trimmedClubName,
+          clubUserId: resolvedClubUserId,
+          year: joinedYear,
+          position: updateData.position || profile.position,
+          profile,
+        });
       }
     }
 

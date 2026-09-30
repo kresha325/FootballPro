@@ -264,7 +264,16 @@ export default function PublicProfileOverviewTab({
 
   const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const role = String(profile.role || '').toLowerCase();
-  const careerItems = parseCareerHistory(profile.careerHistory);
+  let careerItems = parseCareerHistory(profile.careerHistory);
+  if ((!careerItems || !careerItems.length) && profile.club && profile.clubJoinedYear) {
+    careerItems = [
+      {
+        club: profile.club,
+        season: `nga ${profile.clubJoinedYear} · vazhdon`,
+        ongoing: true,
+      },
+    ];
+  }
   const careerText =
     careerItems == null && profile.careerHistory != null && profile.careerHistory !== ''
       ? typeof profile.careerHistory === 'object'
@@ -558,7 +567,7 @@ export default function PublicProfileOverviewTab({
               );
             }
             const title = item.club || item.name || item.organization || 'Entry';
-            const sub = [item.role, item.period, item.position].filter(Boolean).join(' · ');
+            const sub = [item.season, item.role, item.period, item.position].filter(Boolean).join(' · ');
             return (
               <View key={String(idx)} style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}>
                 <Text style={[styles.listTitle, { color: theme.text }]}>{title}</Text>

@@ -61,6 +61,14 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
   const career = profile?.careerHistory;
   const careerText = typeof career === 'string' ? career.trim() : '';
   const careerRows = Array.isArray(career) ? career : [];
+  const syntheticCareer =
+    !careerRows.length &&
+    !careerText &&
+    profile?.club &&
+    profile?.clubJoinedYear
+      ? [{ club: profile.club, season: `nga ${profile.clubJoinedYear} · vazhdon`, ongoing: true }]
+      : [];
+  const displayCareerRows = careerRows.length ? careerRows : syntheticCareer;
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
@@ -91,9 +99,9 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
       </Section>
 
       <Section title="Karriera" eyebrow="Klube dhe sezone">
-        {careerRows.length ? (
+        {displayCareerRows.length ? (
           <ol className="space-y-3">
-            {careerRows.map((entry, index) => {
+            {displayCareerRows.map((entry, index) => {
               const row = typeof entry === 'string' ? { club: entry } : entry || {};
               const name = row.club || row.clubName || row.team || row.name || row.competition || 'Klub';
               const meta = [row.season, row.competition, row.position].filter(Boolean).join(' · ');
