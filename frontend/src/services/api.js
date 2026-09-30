@@ -237,6 +237,11 @@ export const messagingAPI = {
   getUnreadCount: () => API.get('/messaging/unread-count'),
 };
 
+export const supportAPI = {
+  openPriorityChat: (opts = {}) =>
+    API.post(`/support/priority-chat${opts.force ? '?force=1' : ''}`, opts.body || {}),
+};
+
 /* =========================
    NOTIFICATIONS
 ========================= */

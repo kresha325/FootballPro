@@ -16,9 +16,11 @@ import {
   updateMyProfileRequest,
   youtubeResolveChannelRequest,
   deleteMyAccountRequest,
+  openPrioritySupportChatRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import {
   disablePushNotifications,
@@ -60,6 +62,7 @@ function profileFromUser(user) {
 
 export default function SettingsScreen() {
   const { user, refreshMe, logout } = useAuth();
+  const navigation = useNavigation();
   const { colors, isDark, preference, setPreference, setDarkMode, darkModeEnabled } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushBusy, setPushBusy] = useState(false);
@@ -526,21 +529,65 @@ export default function SettingsScreen() {
 
         <TouchableOpacity
           style={[styles.linkBtn, { marginTop: 8 }]}
-          onPress={() => {
+          onPress={async () => {
             if (!isPro) {
               Alert.alert('Pro', 'Suporti prioritar është për anëtarët Pro.');
               return;
             }
-            const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
-            Linking.openURL(
-              prioritySupportMailto({ userId: user?.id, name, email: user?.email })
-            );
+            try {
+              const res = await openPrioritySupportChatRequest();
+              const conversationId = res?.data?.conversationId || res?.data?.conversation?.id;
+              if (!conversationId) throw new Error('Biseda nuk u krijua');
+              const params = {
+                conversationId,
+                title: res?.data?.teamName || 'X Talenti Team',
+              };
+              const parent = navigation.getParent?.();
+              if (parent?.navigate) {
+                parent.navigate('Messages', { screen: 'Conversation', params });
+              } else {
+                navigation.navigate('Messages', { screen: 'Conversation', params });
+              }
+            } catch (err) {
+              const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+              Alert.alert(
+                'Support',
+                extractErrorMessage(err, 'Nuk u hap chat. Mund të përdorësh email.'),
+                [
+                  {
+                    text: 'Email',
+                    onPress: () =>
+                      Linking.openURL(
+                        prioritySupportMailto({
+                          userId: user?.id,
+                          name,
+                          email: user?.email,
+                        })
+                      ),
+                  },
+                  { text: 'OK', style: 'cancel' },
+                ]
+              );
+            }
           }}
         >
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>
-            {isPro ? 'Shkruaj support prioritar' : 'Suport prioritar (kërkon Pro)'}
+            {isPro ? 'Chat me X Talenti Team' : 'Suport prioritar (kërkon Pro)'}
           </Text>
         </TouchableOpacity>
+        {isPro ? (
+          <TouchableOpacity
+            style={styles.linkBtn}
+            onPress={() => {
+              const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+              Linking.openURL(
+                prioritySupportMailto({ userId: user?.id, name, email: user?.email })
+              );
+            }}
+          >
+            <Text style={[styles.linkBtnText, { color: colors.primary }]}>Email prioritar</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>

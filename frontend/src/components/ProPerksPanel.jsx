@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { profileAPI } from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { profileAPI, supportAPI } from '../services/api';
 import { hasTier } from '../utils/subscriptionAccess';
 import {
   PROFILE_THEMES,
@@ -11,13 +11,34 @@ import {
 } from '../utils/profileThemes';
 
 export default function ProPerksPanel({ user, profileTheme = 'default', onThemeSaved }) {
+  const navigate = useNavigate();
   const isPro = hasTier(user, 'pro');
   const [theme, setTheme] = useState(profileTheme || 'default');
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeMsg, setThemeMsg] = useState('');
   const [labs, setLabs] = useState(() => loadEarlyAccessPrefs());
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState('');
 
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+
+  const openPriorityChat = async () => {
+    setChatBusy(true);
+    setChatError('');
+    try {
+      const { data } = await supportAPI.openPriorityChat();
+      const cid = data.conversationId || data.conversation?.id;
+      if (!cid) throw new Error('Biseda nuk u krijua');
+      navigate(`/messaging?conversationId=${cid}`);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.msg ||
+        'Nuk u hap chat me X Talenti Team. Provo email.';
+      setChatError(msg);
+    } finally {
+      setChatBusy(false);
+    }
+  };
 
   const saveTheme = async (nextId) => {
     if (!isPro && nextId !== 'default') {
@@ -133,24 +154,35 @@ export default function ProPerksPanel({ user, profileTheme = 'default', onThemeS
       <section className="rounded-lg border border-[var(--xt-color-gold)]/40 bg-[var(--xt-color-gold)]/10 p-4">
         <h3 className="font-semibold text-gray-900 dark:text-white">Suport prioritar</h3>
         <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
-          Anëtarët Pro dërgojnë kërkesa me etikettën Priority — ekipi i jep përparësi.
+          Hap chat direkt me <strong>X Talenti Team</strong> (prioritet Pro), ose dërgo email.
         </p>
         {isPro ? (
-          <a
-            href={prioritySupportMailto({
-              userId: user?.id,
-              name: displayName,
-              email: user?.email,
-            })}
-            className="btn btn-primary mt-3 inline-flex min-h-11"
-          >
-            Shkruaj support prioritar
-          </a>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={chatBusy}
+              onClick={openPriorityChat}
+              className="btn btn-primary min-h-11 disabled:opacity-50"
+            >
+              {chatBusy ? 'Duke hapur…' : 'Chat me X Talenti Team'}
+            </button>
+            <a
+              href={prioritySupportMailto({
+                userId: user?.id,
+                name: displayName,
+                email: user?.email,
+              })}
+              className="btn btn-outline min-h-11"
+            >
+              Email prioritar
+            </a>
+          </div>
         ) : (
           <Link to="/premium" className="btn btn-outline mt-3 inline-flex min-h-11">
             Aktivizo Pro për suport prioritar
           </Link>
         )}
+        {chatError ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{chatError}</p> : null}
       </section>
     </div>
   );

@@ -211,6 +211,8 @@ export const conversationDetailRequest = (conversationId) =>
   api.get(`/api/messaging/conversations/detail/${conversationId}`);
 export const messagingUnreadCountRequest = () => api.get('/api/messaging/unread-count');
 export const getOrCreateConversationRequest = (userId) => api.get(`/api/messaging/conversations/user/${userId}`);
+export const openPrioritySupportChatRequest = (force = false) =>
+  api.post(`/api/support/priority-chat${force ? '?force=1' : ''}`);
 export const conversationMessagesRequest = (conversationId, params = {}) =>
   api.get(`/api/messaging/conversations/${conversationId}/messages`, { params });
 export const sendConversationMessageRequest = (conversationId, options = {}) => {

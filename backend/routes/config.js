@@ -3,6 +3,7 @@ const router = express.Router();
 const { paymentsLiveEnabled, stripeLiveReady } = require('../config/payments');
 const { isEmailConfigured } = require('../config/email');
 const { isAiConfigured } = require('../config/ai');
+const { isSupportChatConfiguredSync } = require('../utils/supportTeam');
 
 function livekitConfigured() {
   return !!(
@@ -19,6 +20,7 @@ router.get('/public', (_req, res) => {
     livekitConfigured: livekitConfigured(),
     emailConfigured: isEmailConfigured(),
     aiConfigured: isAiConfigured(),
+    supportChatConfigured: isSupportChatConfiguredSync(),
     marketplacePayments: 'joncoin',
     premiumMode: stripeLiveReady() ? 'stripe' : 'demo',
     version: process.env.APP_VERSION || '1.0.2-cv',
