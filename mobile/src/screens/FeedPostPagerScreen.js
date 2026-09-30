@@ -30,6 +30,7 @@ import {
   updatePostRequest,
 } from '../api/client';
 import ReportSheet from '../components/ReportSheet';
+import HomeCompetitionShortcuts from '../components/HomeCompetitionShortcuts';
 import PostSponsorStrip, { SponsoredLabel } from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { absoluteBackendUrl } from '../config/constants';
@@ -251,16 +252,15 @@ function FeedPagerPage({
         ]}
         pointerEvents={chromeHidden ? 'none' : 'auto'}
       >
-        <View style={styles.topBarSpacer} />
-        <View style={styles.topBarSpacer} />
+        <View style={styles.topIconsRow}>
+          <HomeCompetitionShortcuts compact />
+        </View>
         {hasSponsors ? (
           <View style={styles.topSponsorSlot}>
             <SponsoredLabel isDark />
             <PostSponsorStrip sponsors={sponsors} isDark={false} variant="overlay" />
           </View>
-        ) : (
-          <View style={styles.topBarSpacer} />
-        )}
+        ) : null}
       </Animated.View>
 
       <Animated.View
@@ -1020,12 +1020,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     paddingHorizontal: 8,
     zIndex: 30,
     elevation: 30,
+  },
+  topIconsRow: {
+    width: '100%',
+    alignItems: 'stretch',
   },
   topBarSpacer: {
     width: 44,
@@ -1033,8 +1036,9 @@ const styles = StyleSheet.create({
   },
   topSponsorSlot: {
     maxWidth: '46%',
+    alignSelf: 'flex-end',
     alignItems: 'flex-end',
-    paddingTop: 2,
+    paddingTop: 6,
   },
   closeBtn: {
     width: 44,

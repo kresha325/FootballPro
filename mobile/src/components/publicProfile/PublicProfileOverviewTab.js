@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
+import { absoluteBackendUrl } from '../../config/constants';
+import { formatTournamentTitle } from '../../utils/footballSeason';
 
 function formatCoachCategory(cat) {
   if (!cat) return '';
@@ -64,12 +66,51 @@ function StatGrid({ cards, theme }) {
   );
 }
 
-function Section({ title, theme, children }) {
-  if (!children) return null;
+function hasValue(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
+function numberValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function isVideoItem(item) {
+  if (!item || typeof item !== 'object') return false;
+  if (item.type === 'video' || item.videoUrl) return true;
+  const u = String(item.imageUrl || item.url || item.mediaUrl || '');
+  return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u);
+}
+
+function mediaUri(path) {
+  if (!path || typeof path !== 'string') return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path;
+  try {
+    return absoluteBackendUrl(path);
+  } catch (_e) {
+    return path;
+  }
+}
+
+function EmptyLine({ theme, children }) {
+  return <Text style={[styles.emptyInline, { color: theme.muted, borderColor: theme.border }]}>{children}</Text>;
+}
+
+function Section({ title, eyebrow, theme, action, children }) {
+  if (children == null) return null;
   return (
     <View style={[styles.box, { borderColor: theme.border, backgroundColor: theme.chipBg }]}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>{title}</Text>
-      {children}
+      <View style={styles.sectionHeader}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          {eyebrow ? (
+            <Text style={[styles.eyebrow, { color: '#9A6B12' }]}>{eyebrow}</Text>
+          ) : null}
+          <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>{title}</Text>
+        </View>
+        {action || null}
+      </View>
+      <View style={{ marginTop: 10 }}>{children}</View>
     </View>
   );
 }
@@ -259,11 +300,27 @@ export default function PublicProfileOverviewTab({
   clubMembers = [],
   clubStaff = [],
   onPressUser,
+  tournamentSummary = null,
+  gallery = [],
+  videos = [],
+  onOpenTab,
 }) {
+  const stats = profile?.stats && typeof profile.stats === 'object' ? profile.stats : {};
+  const role = String(profile?.role || '').toLowerCase();
+  const isAthlete = role === 'athlete';
+  const tournaments = Array.isArray(tournamentSummary?.tournaments) ? tournamentSummary.tournaments : [];
+  const totals = tournamentSummary?.totals || {};
+  const matches = Array.isArray(profile?.matches) ? profile.matches : [];
+  const achievements = Array.isArray(profile?.achievements) ? profile.achievements : [];
+
+  const highlightVideos = useMemo(() => {
+    const fromGallery = (Array.isArray(gallery) ? gallery : []).filter(isVideoItem);
+    if (fromGallery.length) return fromGallery;
+    return Array.isArray(videos) ? videos : [];
+  }, [gallery, videos]);
+
   if (!profile) return null;
 
-  const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
-  const role = String(profile.role || '').toLowerCase();
   let careerItems = parseCareerHistory(profile.careerHistory);
   if ((!careerItems || !careerItems.length) && profile.club && profile.clubJoinedYear) {
     careerItems = [
@@ -281,24 +338,32 @@ export default function PublicProfileOverviewTab({
         : String(profile.careerHistory)
       : null;
 
-  const athletePhysicalCards = [];
-  if (stats.height != null && String(stats.height) !== '') {
-    athletePhysicalCards.push({ key: 'h', label: 'Height', value: `${stats.height} cm`, color: '#2563eb' });
-  }
-  if (stats.weight != null && String(stats.weight) !== '') {
-    athletePhysicalCards.push({ key: 'w', label: 'Weight', value: `${stats.weight} kg`, color: '#16a34a' });
-  }
-  if (stats.jerseyNumber != null && String(stats.jerseyNumber) !== '') {
-    athletePhysicalCards.push({ key: 'j', label: 'Jersey', value: `#${stats.jerseyNumber}`, color: '#9333ea' });
-  }
-  if (stats.preferredFoot) {
-    athletePhysicalCards.push({
-      key: 'f',
-      label: 'Foot',
-      value: String(stats.preferredFoot).charAt(0).toUpperCase() + String(stats.preferredFoot).slice(1),
-      color: '#ea580c',
-    });
-  }
+  const numericAppearances = numberValue(stats.appearances);
+  const tournamentAppearances = tournaments.reduce((sum, item) => sum + (numberValue(item.played) || 0), 0);
+  const appearances = numericAppearances ?? (tournaments.length ? tournamentAppearances : null);
+  const goals = numberValue(stats.goals) ?? numberValue(totals.scorerGoals);
+  const assists = numberValue(stats.assists) ?? numberValue(totals.scorerAssists);
+  const minutes = numberValue(stats.minutes);
+  const performanceCards = [
+    { key: 'nd', label: 'Ndeshje', value: appearances, color: '#9A6B12' },
+    { key: 'g', label: 'Gola', value: goals, color: '#9A6B12' },
+    { key: 'a', label: 'Asiste', value: assists, color: '#9A6B12' },
+    { key: 'm', label: 'Minuta', value: minutes, color: '#9A6B12' },
+    { key: 'p', label: 'Pikë', value: numberValue(totals.points), color: '#9A6B12' },
+    { key: 't', label: 'Turne', value: numberValue(totals.tournamentsPlayed), color: '#9A6B12' },
+  ].filter((c) => c.value !== null);
+
+  const identityRows = [
+    ['Pozicioni', profile?.position],
+    ['Këmba e preferuar', stats.preferredFoot],
+    ['Gjatësia', hasValue(stats.height) ? `${stats.height} cm` : null],
+    ['Pesha', hasValue(stats.weight) ? `${stats.weight} kg` : null],
+    ['Numri', hasValue(stats.jerseyNumber) ? `#${stats.jerseyNumber}` : null],
+    ['Mosha', profile?.age != null ? `${profile.age}${profile.ageGroup ? ` (${profile.ageGroup})` : ''}` : null],
+    ['Shtetësia', profile?.country],
+    ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ') || null],
+    ['Klubi aktual', profile?.club],
+  ].filter(([, value]) => hasValue(value));
 
   const scoutCards = [
     { key: 'y', label: 'Years', value: String(stats.yearsExperience ?? 0), color: '#2563eb' },
@@ -322,7 +387,16 @@ export default function PublicProfileOverviewTab({
   ];
 
   const hasRoleContent =
-    (role === 'athlete' && (athletePhysicalCards.length || profile.position || profile.club)) ||
+    (isAthlete &&
+      (performanceCards.length ||
+        identityRows.length ||
+        careerItems?.length ||
+        careerText ||
+        matches.length ||
+        achievements.length ||
+        tournaments.length ||
+        highlightVideos.length ||
+        profile.bio)) ||
     role === 'scout' ||
     role === 'manager' ||
     role === 'referee' ||
@@ -330,8 +404,7 @@ export default function PublicProfileOverviewTab({
     role === 'coach' ||
     role === 'trajner' ||
     ['business', 'media', 'federation'].includes(role) ||
-    careerItems?.length ||
-    careerText;
+    (!isAthlete && (careerItems?.length || careerText));
 
   return (
     <View style={styles.wrap}>
@@ -342,44 +415,279 @@ export default function PublicProfileOverviewTab({
         </View>
       ) : null}
 
-      {role === 'athlete' ? (
+      {isAthlete ? (
         <>
-          {(profile.position || profile.club) ? (
-            <Section title="Player" theme={theme}>
-              {profile.position ? (
-                <Text style={[styles.line, { color: theme.muted }]}>
-                  <Text style={{ fontWeight: '700', color: theme.text }}>Position: </Text>
-                  {profile.position}
-                </Text>
-              ) : null}
-              {profile.club ? (
-                <TouchableOpacity
-                  disabled={!profile.clubId || !onPressUser}
-                  onPress={() => profile.clubId && onPressUser?.(profile.clubId)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.line,
-                      { color: theme.muted },
-                      profile.clubId ? { textDecorationLine: 'underline' } : null,
-                    ]}
+          <Section title="Performanca" eyebrow="Përmbledhje e karrierës" theme={theme}>
+            {performanceCards.length ? (
+              <StatGrid cards={performanceCards} theme={theme} />
+            ) : (
+              <EmptyLine theme={theme}>
+                Statistikat e ndeshjeve do të shfaqen këtu kur të jenë të disponueshme.
+              </EmptyLine>
+            )}
+          </Section>
+
+          <Section title="Identiteti i lojtarit" eyebrow="Të dhënat kryesore" theme={theme}>
+            {identityRows.length ? (
+              <View style={styles.identityGrid}>
+                {identityRows.map(([label, value]) => {
+                  const isClub = label === 'Klubi aktual' && profile.clubId && onPressUser;
+                  const cell = (
+                    <>
+                      <Text style={[styles.identityLabel, { color: theme.muted }]}>{label}</Text>
+                      <Text
+                        style={[
+                          styles.identityValue,
+                          { color: theme.text },
+                          isClub ? { textDecorationLine: 'underline', color: '#9A6B12' } : null,
+                        ]}
+                      >
+                        {value}
+                      </Text>
+                    </>
+                  );
+                  if (isClub) {
+                    return (
+                      <TouchableOpacity
+                        key={label}
+                        style={[styles.identityCell, { borderBottomColor: theme.border }]}
+                        onPress={() => onPressUser(profile.clubId)}
+                        activeOpacity={0.75}
+                      >
+                        {cell}
+                      </TouchableOpacity>
+                    );
+                  }
+                  return (
+                    <View key={label} style={[styles.identityCell, { borderBottomColor: theme.border }]}>
+                      {cell}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <EmptyLine theme={theme}>Informacioni i lojtarit nuk është shtuar ende.</EmptyLine>
+            )}
+          </Section>
+
+          <Section title="Karriera" eyebrow="Klube dhe sezone" theme={theme}>
+            {careerItems?.length ? (
+              careerItems.map((item, idx) => {
+                if (typeof item !== 'object' || item == null) {
+                  return (
+                    <Text key={String(idx)} style={[styles.line, { color: theme.muted }]}>
+                      • {String(item)}
+                    </Text>
+                  );
+                }
+                const title = item.club || item.clubName || item.team || item.name || item.competition || 'Klub';
+                const sub = [item.season, item.competition, item.role, item.period, item.position]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <View
+                    key={String(item.id || `${title}-${idx}`)}
+                    style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}
                   >
-                    <Text style={{ fontWeight: '700', color: theme.text }}>Club: </Text>
-                    {profile.club}
-                  </Text>
+                    <Text style={[styles.listTitle, { color: theme.text }]}>{title}</Text>
+                    {sub ? <Text style={[styles.listMeta, { color: theme.muted }]}>{sub}</Text> : null}
+                  </View>
+                );
+              })
+            ) : careerText ? (
+              <Text style={[styles.career, { color: theme.muted, borderColor: theme.border }]}>{careerText}</Text>
+            ) : (
+              <EmptyLine theme={theme}>Historia e klubeve dhe sezoneve do të shfaqet kur të plotësohet.</EmptyLine>
+            )}
+          </Section>
+
+          <Section
+            title="Ndeshjet e fundit"
+            eyebrow="Historiku"
+            theme={theme}
+            action={
+              matches.length && onOpenTab ? (
+                <TouchableOpacity onPress={() => onOpenTab('matches')} hitSlop={8}>
+                  <Text style={styles.linkAction}>Shiko të gjitha</Text>
                 </TouchableOpacity>
-              ) : null}
-              {profile.age != null ? (
-                <Text style={[styles.line, { color: theme.muted }]}>
-                  <Text style={{ fontWeight: '700', color: theme.text }}>Age: </Text>
-                  {profile.age}
-                  {profile.ageGroup ? ` (${profile.ageGroup})` : ''}
-                </Text>
-              ) : null}
-            </Section>
-          ) : null}
-          <StatGrid cards={athletePhysicalCards} theme={theme} />
+              ) : null
+            }
+          >
+            {matches.length ? (
+              matches.slice(0, 8).map((match, index) => {
+                const ga = [
+                  hasValue(match.goals) ? `${match.goals} G` : null,
+                  hasValue(match.assists) ? `${match.assists} A` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <View
+                    key={String(match.id || index)}
+                    style={[styles.listRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                  >
+                    <Text style={[styles.listTitle, { color: theme.text }]}>
+                      {match.opponent || match.title || match.homeTeam || match.name || 'Ndeshje'}
+                    </Text>
+                    <Text style={[styles.listMeta, { color: theme.muted }]}>
+                      {[
+                        match.competition || match.tournament,
+                        match.score || match.result,
+                        match.date ? new Date(match.date).toLocaleDateString() : null,
+                        ga || null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                );
+              })
+            ) : (
+              <EmptyLine theme={theme}>Nuk ka ndeshje të regjistruara ende.</EmptyLine>
+            )}
+          </Section>
+
+          <Section
+            title="Highlights"
+            eyebrow="Video dhe momente"
+            theme={theme}
+            action={
+              (gallery.length > 0 || videos.length > 0) && onOpenTab ? (
+                <TouchableOpacity onPress={() => onOpenTab(gallery.length ? 'gallery' : 'videos')} hitSlop={8}>
+                  <Text style={styles.linkAction}>Hap galerinë</Text>
+                </TouchableOpacity>
+              ) : null
+            }
+          >
+            {highlightVideos.length ? (
+              <View style={styles.highlightRow}>
+                {highlightVideos.slice(0, 3).map((video, index) => {
+                  const posterRaw =
+                    video.thumbnail ||
+                    video.thumbnailUrl ||
+                    (video.imageUrl && !isVideoItem({ imageUrl: video.imageUrl }) ? video.imageUrl : null);
+                  const poster = mediaUri(posterRaw);
+                  return (
+                    <TouchableOpacity
+                      key={String(video.id || index)}
+                      style={[styles.highlightCard, { borderColor: theme.border, backgroundColor: theme.card }]}
+                      onPress={() => onOpenTab?.('videos')}
+                      activeOpacity={0.85}
+                    >
+                      {poster ? (
+                        <Image source={{ uri: poster }} style={styles.highlightImg} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.highlightImg, styles.highlightFallback]}>
+                          <Text style={{ color: '#9A6B12', fontSize: 22 }}>▶</Text>
+                        </View>
+                      )}
+                      <Text style={[styles.highlightTitle, { color: theme.text }]} numberOfLines={2}>
+                        {video.title || video.matchContext || 'Highlight'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <EmptyLine theme={theme}>
+                {gallery.length
+                  ? 'Media e profilit është në galeri.'
+                  : 'Videot dhe momentet e lojës do të shfaqen këtu.'}
+              </EmptyLine>
+            )}
+          </Section>
+
+          <Section
+            title="Arritjet"
+            eyebrow="Çmime dhe turne"
+            theme={theme}
+            action={
+              achievements.length && onOpenTab ? (
+                <TouchableOpacity onPress={() => onOpenTab('achievements')} hitSlop={8}>
+                  <Text style={styles.linkAction}>Shiko</Text>
+                </TouchableOpacity>
+              ) : null
+            }
+          >
+            {achievements.length ? (
+              achievements.slice(0, 8).map((item, index) => (
+                <View
+                  key={String(item.id || index)}
+                  style={[styles.listRow, styles.achieveRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                >
+                  <View style={styles.badgeGold}>
+                    <Text style={styles.badgeGoldText}>{item.year || 'Arritje'}</Text>
+                  </View>
+                  <Text style={[styles.listTitle, { color: theme.text, flex: 1 }]}>
+                    {item.title || item.name || item.description}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <EmptyLine theme={theme}>Arritjet dhe çmimet do të shfaqen kur të shtohen.</EmptyLine>
+            )}
+          </Section>
+
+          <Section
+            title="Turnet"
+            eyebrow="Pjesëmarrja"
+            theme={theme}
+            action={
+              tournaments.length && onOpenTab ? (
+                <TouchableOpacity onPress={() => onOpenTab('tournaments')} hitSlop={8}>
+                  <Text style={styles.linkAction}>Shiko</Text>
+                </TouchableOpacity>
+              ) : null
+            }
+          >
+            {tournaments.length ? (
+              tournaments.slice(0, 6).map((item, index) => {
+                const categoryLabel = item.tournamentCategory || item.category;
+                const categoryText =
+                  categoryLabel && String(categoryLabel).toLowerCase() !== 'open'
+                    ? String(categoryLabel).toUpperCase()
+                    : null;
+                const name =
+                  formatTournamentTitle(item) ||
+                  item.name ||
+                  item.tournamentName ||
+                  item.title ||
+                  'Turne';
+                return (
+                  <View
+                    key={String(item.id || item.tournamentId || index)}
+                    style={[styles.listRow, styles.achieveRow, { borderColor: theme.border, backgroundColor: theme.card }]}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.listTitle, { color: theme.text }]}>
+                        {name}
+                        {categoryText ? (
+                          <Text style={{ color: '#9A6B12', fontWeight: '700' }}> {categoryText}</Text>
+                        ) : null}
+                      </Text>
+                      <Text style={[styles.listMeta, { color: theme.muted }]}>
+                        {[
+                          categoryText,
+                          item.tournamentDescription || item.description,
+                          item.season || item.tournamentSeason,
+                          item.played != null ? `${item.played} ndeshje` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+                    {hasValue(item.rank) ? (
+                      <View style={styles.badgeGold}>
+                        <Text style={styles.badgeGoldText}>#{item.rank}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })
+            ) : (
+              <EmptyLine theme={theme}>Nuk ka pjesëmarrje në turne për t'u shfaqur.</EmptyLine>
+            )}
+          </Section>
         </>
       ) : null}
 
@@ -556,7 +864,7 @@ export default function PublicProfileOverviewTab({
         </Section>
       ) : null}
 
-      {careerItems?.length ? (
+      {!isAthlete && careerItems?.length ? (
         <Section title="Career" theme={theme}>
           {careerItems.map((item, idx) => {
             if (typeof item !== 'object' || item == null) {
@@ -578,7 +886,7 @@ export default function PublicProfileOverviewTab({
         </Section>
       ) : null}
 
-      {careerText ? (
+      {!isAthlete && careerText ? (
         <Section title="Career notes" theme={theme}>
           <Text style={[styles.career, { color: theme.muted, borderColor: theme.border }]}>{careerText}</Text>
         </Section>
@@ -596,7 +904,49 @@ export default function PublicProfileOverviewTab({
 const styles = StyleSheet.create({
   wrap: { paddingBottom: 8 },
   sectionTitle: { fontSize: 17, fontWeight: '800', marginBottom: 8 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
+  linkAction: { fontSize: 13, fontWeight: '700', color: '#9A6B12' },
   bio: { fontSize: 15, lineHeight: 22 },
+  identityGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  identityCell: {
+    width: '50%',
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+    marginBottom: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  identityLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  identityValue: { fontSize: 15, fontWeight: '600', marginTop: 4 },
+  highlightRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  highlightCard: {
+    width: '31%',
+    minWidth: 96,
+    flexGrow: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  highlightImg: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#0f172a' },
+  highlightFallback: { alignItems: 'center', justifyContent: 'center' },
+  highlightTitle: { fontSize: 12, fontWeight: '600', padding: 8 },
+  achieveRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  badgeGold: {
+    backgroundColor: 'rgba(154,107,18,0.18)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  badgeGoldText: { color: '#9A6B12', fontWeight: '800', fontSize: 12 },
+  emptyInline: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontStyle: 'italic',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    padding: 12,
+  },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   personMeta: { flex: 1, minWidth: 0 },
   avatar: { width: 40, height: 40, borderRadius: 20 },

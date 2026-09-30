@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const optionalAuth = auth.optionalAuth || ((req, res, next) => next());
 
 const { 
   getProfile,
@@ -40,7 +41,8 @@ router.get('/me', auth, (req, res, next) => {
 /** Public digital CV — no auth */
 router.get('/cv/:id', getPublicProfileCv);
 
-router.get('/:userId/tournament-summary', auth, getUserTournamentSummary);
+/** Tournament summary — public (optional auth); syncs club-category participation */
+router.get('/:userId/tournament-summary', optionalAuth, getUserTournamentSummary);
 router.get('/:userId/followers', auth, getFollowers);
 router.get('/:userId/following', auth, getFollowing);
 router.get('/:userId/follow-status', auth, checkFollowStatus);

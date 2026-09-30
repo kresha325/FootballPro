@@ -787,6 +787,12 @@ exports.getPublicProfileCv = async (req, res) => {
 
     if (String(role).toLowerCase() === 'athlete') {
       try {
+        const { syncAthleteApprovedMemberships } = require('../utils/ligaTournaments');
+        await syncAthleteApprovedMemberships(userId);
+      } catch (_syncErr) {
+        /* non-fatal */
+      }
+      try {
         const participations = await TournamentParticipant.findAll({
           where: { userId, status: { [Op.in]: ['accepted', 'pending'] } },
           attributes: ['points', 'goalsFor'],
@@ -1669,6 +1675,14 @@ exports.getUserTournamentSummary = async (req, res) => {
       return res.status(400).json({ msg: 'ID e përdoruesit është e pavlefshme' });
     }
 
+    // Backfill: approved club category → liga/club tournament participation
+    try {
+      const { syncAthleteApprovedMemberships } = require('../utils/ligaTournaments');
+      await syncAthleteApprovedMemberships(userId);
+    } catch (syncErr) {
+      console.warn('syncAthleteApprovedMemberships:', syncErr && syncErr.message);
+    }
+
     const participations = await TournamentParticipant.findAll({
       where: {
         userId,
@@ -1763,6 +1777,7 @@ exports.getUserTournamentSummary = async (req, res) => {
       tournaments.push({
         tournamentId: t.id,
         tournamentName: t.name,
+        tournamentDescription: t.description || null,
         tournamentSeason: t.season || null,
         tournamentType: t.type,
         tournamentStatus: t.status,

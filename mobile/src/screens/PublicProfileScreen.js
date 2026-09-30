@@ -883,7 +883,11 @@ export default function PublicProfileScreen({ route, navigation }) {
                   staffAssignments={staffAssignments}
                   clubMembers={clubMembers}
                   clubStaff={clubStaff}
+                  tournamentSummary={tournamentSummary}
+                  gallery={gallery}
+                  videos={videos}
                   onPressUser={(uid) => navigation.push('PublicProfile', { userId: uid })}
+                  onOpenTab={setProfileTab}
                 />
               ) : null}
               {profileTab === 'posts' ? <PublicProfilePostsTab posts={posts} theme={theme} /> : null}

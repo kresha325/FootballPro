@@ -135,6 +135,8 @@ const Feed = () => {
   const [matchesError, setMatchesError] = useState(false);
   const [performanceSummary, setPerformanceSummary] = useState(null);
   const [performanceError, setPerformanceError] = useState(false);
+  const [myTournamentRows, setMyTournamentRows] = useState([]);
+  const [myTournaments, setMyTournaments] = useState([]);
   useEffect(() => {
     const fetchTrending = async () => {
       try {
@@ -163,16 +165,27 @@ const Feed = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // My tournaments (sidebar): tournaments where user is creator or participant
-  const [myTournaments, setMyTournaments] = useState([]);
+  // My tournaments (sidebar): prefer summary with standings rank + description
   useEffect(() => {
-    if (!user) return;
+    if (!user) return undefined;
+    if (myTournamentRows.length) {
+      setMyTournaments(
+        myTournamentRows.slice(0, 6).map((row) => ({
+          id: row.tournamentId,
+          name: row.tournamentName,
+          description: row.tournamentDescription,
+          category: row.tournamentCategory,
+          rank: row.rank,
+        }))
+      );
+      return undefined;
+    }
     const fetchMine = async () => {
       try {
         const res = await API.get('/tournaments');
-        const list = (res.data || []).filter(t => {
+        const list = (res.data || []).filter((t) => {
           const isCreator = t.creatorId === user.id;
-          const isParticipant = (t.participants || []).some(p => p.id === user.id);
+          const isParticipant = (t.participants || []).some((p) => p.id === user.id);
           return isCreator || isParticipant;
         });
         setMyTournaments(list.slice(0, 6));
@@ -181,7 +194,8 @@ const Feed = () => {
       }
     };
     fetchMine();
-  }, [user]);
+    return undefined;
+  }, [user, myTournamentRows]);
 
   const saveSponsorData = async () => {
     if (!activeSponsorPost || !user) return;
@@ -458,10 +472,46 @@ const Feed = () => {
     if (!user?.id || !['athlete', 'player', 'coach'].includes(role)) return undefined;
     let cancelled = false;
     profileAPI.getProfileTournamentSummary(user.id)
-      .then((res) => { if (!cancelled) setPerformanceSummary(res?.data?.totals || null); })
-      .catch(() => { if (!cancelled) setPerformanceError(true); });
+      .then((res) => {
+        if (cancelled) return;
+        setPerformanceSummary(res?.data?.totals || null);
+        setMyTournamentRows(Array.isArray(res?.data?.tournaments) ? res.data.tournaments : []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPerformanceError(true);
+          setMyTournamentRows([]);
+        }
+      });
     return () => { cancelled = true; };
   }, [user?.id, role]);
+
+  const myRankByTournamentId = useMemo(() => {
+    const map = {};
+    for (const row of myTournamentRows) {
+      if (row?.tournamentId != null && row.rank != null) {
+        map[String(row.tournamentId)] = row.rank;
+      }
+    }
+    return map;
+  }, [myTournamentRows]);
+
+  const tournamentMetaLine = (t) => {
+    const category =
+      t?.category && !['open', 'senior'].includes(String(t.category).toLowerCase())
+        ? String(t.category).toUpperCase()
+        : t?.tournamentCategory && !['open', 'senior'].includes(String(t.tournamentCategory).toLowerCase())
+          ? String(t.tournamentCategory).toUpperCase()
+          : null;
+    const description = String(t?.description || t?.tournamentDescription || '').trim();
+    return [category, description].filter(Boolean).join(' · ');
+  };
+
+  const rankBadgeLabel = (tournamentId) => {
+    const rank = myRankByTournamentId[String(tournamentId)];
+    if (rank != null) return `Vendi ${rank}`;
+    return null;
+  };
 
   const roleName = ({ athlete: 'Player', player: 'Player', scout: 'Scout', club: 'Club', coach: 'Coach', manager: 'Manager', admin: 'Admin', federation: 'Federation' })[role] || 'Member';
   const quickActions = ['scout', 'manager', 'federation'].includes(role)
@@ -1158,12 +1208,76 @@ const Feed = () => {
       </section>
 
       <section className="xt-card p-4" aria-labelledby="tournaments-widget-title">
-        <div className="mb-3 flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">Competition</p><h2 id="tournaments-widget-title" className="mt-1 text-base">Turne aktive</h2></div><TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" /></div>
-        {trendingError ? <p className="text-sm text-[var(--xt-color-text-muted)]" role="status">Turnetë nuk mund të ngarkoheshin.</p> : trending.length ? <ul className="space-y-2">{trending.slice(0, 4).map((t) => <li key={t.id} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-white/5"><span className="min-w-0 truncate text-sm font-medium">{t.name}</span><span className="xt-badge shrink-0">{t.participants?.length || 0} lojtarë</span></li>)}</ul> : <div className="xt-empty-state px-2 py-4"><p className="text-sm">Nuk ka turne aktive për momentin.</p></div>}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">Competition</p>
+            <h2 id="tournaments-widget-title" className="mt-1 text-base">Turne aktive</h2>
+          </div>
+          <TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
+        </div>
+        {trendingError ? (
+          <p className="text-sm text-[var(--xt-color-text-muted)]" role="status">Turnetë nuk mund të ngarkoheshin.</p>
+        ) : trending.length ? (
+          <ul className="space-y-2">
+            {trending.slice(0, 4).map((t) => {
+              const meta = tournamentMetaLine(t);
+              const rankLabel = rankBadgeLabel(t.id);
+              return (
+                <li key={t.id} className="flex items-start justify-between gap-3 rounded-lg px-2 py-2 hover:bg-white/5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{t.name}</p>
+                    {meta ? (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-[var(--xt-color-text-muted)]">{meta}</p>
+                    ) : null}
+                  </div>
+                  {rankLabel ? (
+                    <span className="xt-badge xt-badge-gold shrink-0">{rankLabel}</span>
+                  ) : t.category && !['open', 'senior'].includes(String(t.category).toLowerCase()) ? (
+                    <span className="xt-badge shrink-0">{String(t.category).toUpperCase()}</span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="xt-empty-state px-2 py-4">
+            <p className="text-sm">Nuk ka turne aktive për momentin.</p>
+          </div>
+        )}
         <Link to="/tournaments" className="btn btn-quiet mt-3 w-full text-sm">Shfleto turnetë</Link>
       </section>
 
-      {myTournaments.length > 0 && <section className="xt-card p-4" aria-labelledby="my-tournaments-title"><h2 id="my-tournaments-title" className="mb-3 text-base">Turnetë e mia</h2><ul className="space-y-2">{myTournaments.slice(0, 3).map((t) => <li key={t.id}><Link to="/tournaments" className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white"><span className="truncate">{t.name}</span><ArrowRightIcon className="h-4 w-4 shrink-0" /></Link></li>)}</ul></section>}
+      {myTournaments.length > 0 && (
+        <section className="xt-card p-4" aria-labelledby="my-tournaments-title">
+          <h2 id="my-tournaments-title" className="mb-3 text-base">Turnetë e mia</h2>
+          <ul className="space-y-2">
+            {myTournaments.slice(0, 3).map((t) => {
+              const meta = tournamentMetaLine(t);
+              const rankLabel =
+                t.rank != null ? `Vendi ${t.rank}` : rankBadgeLabel(t.id);
+              return (
+                <li key={t.id}>
+                  <Link
+                    to={`/tournaments?tournamentId=${t.id}`}
+                    className="flex min-h-10 items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--xt-color-text)]">{t.name}</p>
+                      {meta ? (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-[var(--xt-color-text-subtle)]">{meta}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {rankLabel ? <span className="xt-badge xt-badge-gold">{rankLabel}</span> : null}
+                      <ArrowRightIcon className="h-4 w-4" />
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="xt-card p-4" aria-labelledby="quick-actions-title"><h2 id="quick-actions-title" className="mb-3 text-base">Veprime të shpejta</h2><ul className="space-y-1">{quickActions.map(({ label, to, icon }) => <li key={to}><Link to={to} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)]">{icon}{label}</Link></li>)}</ul></section>
       <StadiumStrip />

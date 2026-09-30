@@ -33,6 +33,7 @@ import {
   updatePostRequest,
 } from '../api/client';
 import FeedAdSlot from '../components/FeedAdSlot';
+import HomeCompetitionShortcuts from '../components/HomeCompetitionShortcuts';
 import ListSearchBar from '../components/ListSearchBar';
 import { absoluteBackendUrl } from '../config/constants';
 import { filterBySearch } from '../utils/listSearch';
@@ -384,6 +385,18 @@ export default function FeedScreen({ navigation }) {
         parent.navigate('More', { screen: 'GoLive', params: params || undefined });
       } else {
         navigation.navigate('GoLive', params);
+      }
+    },
+    [navigation]
+  );
+
+  const navigateToMoreScreen = useCallback(
+    (screen, params) => {
+      const parent = navigation.getParent?.();
+      if (parent?.navigate) {
+        parent.navigate('More', { screen, params: params || undefined });
+      } else {
+        navigation.navigate(screen, params);
       }
     },
     [navigation]
@@ -781,12 +794,19 @@ export default function FeedScreen({ navigation }) {
 
   return (
     <>
+    <View style={styles.screenRoot}>
     <FlatList
       data={feedListData}
       keyExtractor={(item) => item.key}
+      style={styles.feedList}
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
       ListHeaderComponent={
         <View>
+          <HomeCompetitionShortcuts
+            onPressMatches={() => navigateToMoreScreen('Matches')}
+            onPressTournaments={() => navigateToMoreScreen('Tournaments')}
+            onPressMyTournaments={() => navigateToMoreScreen('Tournaments')}
+          />
           {liveStreams.length > 0 ? (
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
               <View style={styles.liveHeaderRow}>
@@ -891,6 +911,7 @@ export default function FeedScreen({ navigation }) {
       }
       ListEmptyComponent={<Text style={styles.empty}>No posts yet.</Text>}
     />
+    </View>
     <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>
       <View style={styles.editModalBackdrop}>
         <View style={[styles.editModalCard, isDark && styles.cardDark]}>
@@ -926,6 +947,12 @@ export default function FeedScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+  },
+  feedList: {
+    flex: 1,
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',

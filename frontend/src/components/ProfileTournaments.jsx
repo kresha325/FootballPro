@@ -87,6 +87,11 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
                 {row.tournamentType ? ` · ${row.tournamentType}` : ''}
                 {row.tournamentCategory ? ` · ${String(row.tournamentCategory).toUpperCase()}` : ''}
               </p>
+              {row.tournamentDescription ? (
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {row.tournamentDescription}
+                </p>
+              ) : null}
             </div>
             {row.rank ? (
               <span className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 px-3 py-1.5 text-sm font-black text-white shadow-lg shadow-emerald-500/30">

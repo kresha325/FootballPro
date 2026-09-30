@@ -175,6 +175,8 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
                       </p>
                       <p className="text-sm text-[var(--xt-color-text-muted)]">
                         {[
+                          categoryText,
+                          item.tournamentDescription || item.description,
                           item.season || item.tournamentSeason,
                           item.played != null ? `${item.played} ndeshje` : null,
                         ]
