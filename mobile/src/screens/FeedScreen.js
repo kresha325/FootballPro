@@ -805,7 +805,7 @@ export default function FeedScreen({ navigation }) {
           <HomeCompetitionShortcuts
             onPressMatches={() => navigateToMoreScreen('Matches')}
             onPressTournaments={() => navigateToMoreScreen('Tournaments')}
-            onPressMyTournaments={() => navigateToMoreScreen('Tournaments')}
+            onPressMyTournaments={() => navigateToMoreScreen('Tournaments', { filter: 'mine' })}
           />
           {liveStreams.length > 0 ? (
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>

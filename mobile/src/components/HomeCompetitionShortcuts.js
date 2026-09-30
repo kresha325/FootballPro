@@ -17,12 +17,12 @@ export default function HomeCompetitionShortcuts({
 }) {
   const navigation = useNavigation();
 
-  const goMore = (screen) => {
+  const goMore = (screen, params) => {
     const parent = navigation.getParent?.();
     if (parent?.navigate) {
-      parent.navigate('More', { screen });
+      parent.navigate('More', { screen, params: params || undefined });
     } else {
-      navigation.navigate(screen);
+      navigation.navigate(screen, params);
     }
   };
 
@@ -43,7 +43,7 @@ export default function HomeCompetitionShortcuts({
       key: 'mine',
       icon: ICON_MY_TOURNAMENTS,
       label: 'Turnetë e mia',
-      onPress: onPressMyTournaments || (() => goMore('Tournaments')),
+      onPress: onPressMyTournaments || (() => goMore('Tournaments', { filter: 'mine' })),
     },
   ];
 

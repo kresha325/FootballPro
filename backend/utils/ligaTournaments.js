@@ -106,7 +106,7 @@ async function ensureLigaTournament(liga, { category } = {}) {
     type: 'league',
     season,
     status: 'open',
-    participantType: 'individual',
+    participantType: 'club',
     maxParticipants: 500,
     creatorId: liga.userId,
     ligaId: liga.id,
@@ -117,6 +117,13 @@ async function ensureLigaTournament(liga, { category } = {}) {
 }
 
 async function upsertAthleteParticipant(tournamentId, athleteId) {
+  const tournament = await Tournament.findByPk(tournamentId, {
+    attributes: ['id', 'participantType'],
+  });
+  // Club tournaments: athletes belong on the club squad list, not the points table.
+  if (tournament && (tournament.participantType || 'individual') === 'club') {
+    return false;
+  }
   const [row, created] = await TournamentParticipant.findOrCreate({
     where: { tournamentId, userId: athleteId },
     defaults: {
@@ -181,7 +188,7 @@ async function syncClubMemberToLigaTournaments(membership) {
     const clubTournamentIds = clubParticipations.map((p) => p.tournamentId).filter(Boolean);
     const clubTournaments = await Tournament.findAll({
       where: { id: { [Op.in]: clubTournamentIds } },
-      attributes: ['id', 'ligaId', 'category', 'status', 'sourceRole'],
+      attributes: ['id', 'ligaId', 'category', 'status', 'sourceRole', 'participantType'],
     });
     const ligaIdsFromTournaments = [
       ...new Set(clubTournaments.map((t) => t.ligaId).filter(Boolean)),
@@ -197,10 +204,18 @@ async function syncClubMemberToLigaTournaments(membership) {
       }
     }
 
-    // Directly add athlete to matching tournaments the club already joined.
+    // Directly add athlete only for non-club tournaments the club already joined.
     for (const t of clubTournaments) {
       if (!['open', 'ongoing'].includes(String(t.status || ''))) continue;
       if (!categoriesMatch(memberCategory, t.category)) continue;
+      const full = await Tournament.findByPk(t.id, { attributes: ['id', 'participantType', 'status', 'category'] });
+      if ((full?.participantType || 'individual') === 'club') {
+        // Remove accidental athlete standings rows; club nominates squad separately.
+        await TournamentParticipant.destroy({
+          where: { tournamentId: t.id, userId: athleteId },
+        });
+        continue;
+      }
       await upsertAthleteParticipant(t.id, athleteId);
       joinedTournamentIds.add(t.id);
       synced += 1;
@@ -211,6 +226,14 @@ async function syncClubMemberToLigaTournaments(membership) {
     const target = await ensureLigaTournament(liga, { category: memberCategory });
     if (!target) continue;
     if (!['open', 'ongoing'].includes(String(target.status || ''))) continue;
+
+    // New liga editions are club standings — do not place athletes on the table.
+    if ((target.participantType || 'individual') === 'club') {
+      await TournamentParticipant.destroy({
+        where: { tournamentId: target.id, userId: athleteId },
+      });
+      continue;
+    }
 
     const siblingTournaments = await Tournament.findAll({
       where: {

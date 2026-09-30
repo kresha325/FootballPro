@@ -10,6 +10,7 @@ const ClubStaff = require('../models/ClubStaff');
 const { Op, fn, col, where: sequelizeWhere } = require('sequelize');
 const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
+const TournamentSquadMember = require('../models/TournamentSquadMember');
 const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
 const sequelize = require('../config/database');
@@ -1691,7 +1692,12 @@ exports.getUserTournamentSummary = async (req, res) => {
       order: [['updatedAt', 'DESC']],
     });
 
-    if (!participations.length) {
+    const squadRows = await TournamentSquadMember.findAll({
+      where: { athleteUserId: userId },
+      order: [['updatedAt', 'DESC']],
+    });
+
+    if (!participations.length && !squadRows.length) {
       return res.json({
         userId,
         tournaments: [],
@@ -1699,7 +1705,12 @@ exports.getUserTournamentSummary = async (req, res) => {
       });
     }
 
-    const tournamentIds = [...new Set(participations.map((p) => p.tournamentId).filter(Boolean))];
+    const tournamentIds = [
+      ...new Set([
+        ...participations.map((p) => p.tournamentId),
+        ...squadRows.map((s) => s.tournamentId),
+      ].filter(Boolean)),
+    ];
     const tournamentRows = await Tournament.findAll({ where: { id: tournamentIds } });
     const tournamentById = Object.fromEntries(tournamentRows.map((t) => [t.id, t]));
 
@@ -1743,9 +1754,12 @@ exports.getUserTournamentSummary = async (req, res) => {
     }
 
     const tournaments = [];
+    const seenTournamentIds = new Set();
+
     for (const p of participations) {
       const t = tournamentById[p.tournamentId];
       if (!t) continue;
+      seenTournamentIds.add(t.id);
 
       const tableRows = sortTournamentStandingRows(
         (participantsByTournament[p.tournamentId] || []).map((ap) => {
@@ -1783,6 +1797,8 @@ exports.getUserTournamentSummary = async (req, res) => {
         tournamentStatus: t.status,
         tournamentCategory: t.category || 'open',
         participantStatus: p.status,
+        viaSquad: false,
+        clubUserId: null,
         rank: rankIdx >= 0 ? rankIdx + 1 : null,
         points: myRow.points,
         wins: myRow.wins,
@@ -1794,6 +1810,36 @@ exports.getUserTournamentSummary = async (req, res) => {
         scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
         scorerAssists: assistsByTournament[t.id] ?? 0,
         played: (myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0),
+      });
+    }
+
+    for (const s of squadRows) {
+      if (seenTournamentIds.has(s.tournamentId)) continue;
+      const t = tournamentById[s.tournamentId];
+      if (!t) continue;
+      seenTournamentIds.add(t.id);
+      tournaments.push({
+        tournamentId: t.id,
+        tournamentName: t.name,
+        tournamentDescription: t.description || null,
+        tournamentSeason: t.season || null,
+        tournamentType: t.type,
+        tournamentStatus: t.status,
+        tournamentCategory: t.category || 'open',
+        participantStatus: 'accepted',
+        viaSquad: true,
+        clubUserId: s.clubUserId,
+        rank: null,
+        points: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
+        scorerAssists: assistsByTournament[t.id] ?? 0,
+        played: 0,
       });
     }
 

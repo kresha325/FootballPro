@@ -169,6 +169,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [savingScore, setSavingScore] = useState(false);
   const [goalEvents, setGoalEvents] = useState([]);
   const [startingTournament, setStartingTournament] = useState(false);
+  const [expandedSquadClubId, setExpandedSquadClubId] = useState(null);
 
   const parseGoalEvents = (data) => {
     const all = [
@@ -212,15 +213,45 @@ export default function TournamentDetailScreen({ route, navigation }) {
   }, [loadDetail]);
 
   const participants = Array.isArray(tournament?.participants) ? tournament.participants : [];
-  const participantCount = participants.length;
-  const isJoined = participants.some((p) => String(resolveParticipantUserId(p)) === String(user?.id));
-  const isCreator = String(tournament?.creatorId) === String(user?.id);
   const pt = tournament?.participantType || 'individual';
+  const isLigaTournament = !!(tournament?.ligaId || tournament?.sourceRole === 'liga');
+  const displayParticipants =
+    pt === 'club' ? participants.filter((p) => p.role === 'club' || p.squadCount != null) : participants;
+  const participantCount = displayParticipants.length;
+  const isInSquad = participants.some((p) =>
+    (Array.isArray(p.squadAthletes) ? p.squadAthletes : []).some(
+      (a) => String(a.id || a.userId) === String(user?.id)
+    )
+  );
+  const isJoined =
+    isInSquad ||
+    participants.some((p) => String(resolveParticipantUserId(p)) === String(user?.id));
+  const isCreator = String(tournament?.creatorId) === String(user?.id);
+  const canJoin =
+    !isJoined &&
+    tournament?.status === 'open' &&
+    participantCount < (tournament?.maxParticipants || 999) &&
+    !(user?.role === 'athlete' && isLigaTournament) &&
+    !(pt === 'club' && user?.role !== 'club') &&
+    !(pt === 'mixed' && !['club', 'athlete'].includes(user?.role)) &&
+    !(pt === 'individual' && user?.role === 'club');
 
   const onJoin = async () => {
+    if (user?.role === 'athlete' && isLigaTournament) {
+      Alert.alert(
+        'Nuk mund të bashkoheni',
+        'Atletët marrin pjesë në turnet e ligës përmes klubit (skuadra), jo me Join.'
+      );
+      return;
+    }
     try {
-      await joinTournamentRequest(tournamentId);
-      Alert.alert('Sukses', 'U bashkove në turne.');
+      await joinTournamentRequest(tournamentId, { athleteIds: [] });
+      Alert.alert(
+        'Sukses',
+        pt === 'club' || (pt === 'mixed' && user?.role === 'club')
+          ? 'Klubi u bashkua. Hap turneun në web ose përdor «Cakto lojtarët» për të zgjedhur atletët e skuadrës.'
+          : 'U bashkove në turne.'
+      );
       loadDetail();
     } catch (err) {
       Alert.alert('Bashkimi dështoi', extractErrorMessage(err, 'Nuk u arrit bashkimi'));
@@ -466,17 +497,24 @@ export default function TournamentDetailScreen({ route, navigation }) {
       </View>
 
       <View style={styles.actions}>
-        {!isJoined && tournament?.status === 'open' && participantCount < (tournament?.maxParticipants || 999) ? (
+        {canJoin ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={onJoin}>
             <Text style={styles.primaryBtnText}>Bashkohu</Text>
           </TouchableOpacity>
         ) : null}
-        {isJoined && !isCreator ? (
+        {!isJoined && user?.role === 'athlete' && isLigaTournament && tournament?.status === 'open' ? (
+          <Text style={styles.hint}>
+            Atletët nuk bashkohen drejtpërdrejt — klubi ju cakton në skuadrën e turneut.
+          </Text>
+        ) : null}
+        {isJoined && !isCreator && !isInSquad ? (
           <TouchableOpacity style={styles.secondaryBtn} onPress={onLeave}>
             <Text style={styles.secondaryBtnText}>Dil</Text>
           </TouchableOpacity>
         ) : null}
-        {isJoined ? <Text style={styles.joinedLabel}>✓ Në turne</Text> : null}
+        {isJoined ? (
+          <Text style={styles.joinedLabel}>{isInSquad ? '✓ Në skuadrën e klubit' : '✓ Në turne'}</Text>
+        ) : null}
         {canStartTournament ? (
           <TouchableOpacity
             style={[styles.startBtn, startingTournament && styles.btnDisabled]}
@@ -521,44 +559,87 @@ export default function TournamentDetailScreen({ route, navigation }) {
       {tab === 'overview' ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pjesëmarrës ({participantCount})</Text>
-          {participants.length === 0 ? (
+          {['club', 'mixed'].includes(pt) ? (
+            <Text style={styles.muted}>
+              Tabela është vetëm për klube. Kliko numrin e lojtarëve për listën e atletëve të caktuar.
+            </Text>
+          ) : null}
+          {displayParticipants.length === 0 ? (
             <Text style={styles.muted}>Ende nuk ka pjesëmarrës.</Text>
           ) : (
-            participants.slice(0, 30).map((p) => {
+            displayParticipants.slice(0, 30).map((p) => {
               const joinStatus = participantJoinStatus(p);
               const uid = resolveParticipantUserId(p);
               const canOpenProfile = uid && joinStatus !== 'pending';
+              const squadAthletes = Array.isArray(p.squadAthletes) ? p.squadAthletes : [];
+              const squadCount = p.squadCount != null ? p.squadCount : squadAthletes.length;
+              const isClubRow = p.role === 'club' || pt === 'club';
+              const expanded = expandedSquadClubId != null && String(expandedSquadClubId) === String(uid);
               return (
-                <View key={String(uid || p.id)} style={styles.participantRow}>
-                  <TouchableOpacity
-                    style={styles.participantInfo}
-                    activeOpacity={canOpenProfile ? 0.85 : 1}
-                    disabled={!canOpenProfile}
-                    onPress={() => canOpenProfile && openUserProfile(navigation, uid)}
-                  >
-                    <UserAvatar
-                      user={p}
-                      uri={resolveUserPhotoUri(p)}
-                      size={36}
-                      style={styles.standAvatar}
-                    />
-                    <View style={styles.standBody}>
-                      <Text style={[styles.row, canOpenProfile && styles.rowLink]}>
-                        {participantLabel(p, pt)}
-                      </Text>
-                      {joinStatus !== 'accepted' ? (
-                        <Text style={styles.participantStatus}>{joinStatus}</Text>
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                  {isCreator && tournament?.status === 'open' && joinStatus === 'pending' && uid ? (
-                    <View style={styles.participantActions}>
-                      <TouchableOpacity style={styles.acceptBtn} onPress={() => onAcceptParticipant(uid)}>
-                        <Text style={styles.acceptBtnText}>Prano</Text>
+                <View key={String(uid || p.id)} style={styles.participantRowWrap}>
+                  <View style={styles.participantRow}>
+                    <TouchableOpacity
+                      style={styles.participantInfo}
+                      activeOpacity={canOpenProfile ? 0.85 : 1}
+                      disabled={!canOpenProfile}
+                      onPress={() => canOpenProfile && openUserProfile(navigation, uid)}
+                    >
+                      <UserAvatar
+                        user={p}
+                        uri={resolveUserPhotoUri(p)}
+                        size={36}
+                        style={styles.standAvatar}
+                      />
+                      <View style={styles.standBody}>
+                        <Text style={[styles.row, canOpenProfile && styles.rowLink]}>
+                          {participantLabel(p, pt)}
+                        </Text>
+                        {joinStatus !== 'accepted' ? (
+                          <Text style={styles.participantStatus}>{joinStatus}</Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                    {isClubRow && ['club', 'mixed'].includes(pt) ? (
+                      <TouchableOpacity
+                        style={styles.squadCountBtn}
+                        onPress={() => setExpandedSquadClubId(expanded ? null : uid)}
+                      >
+                        <Text style={styles.squadCountNum}>{squadCount}</Text>
+                        <Text style={styles.squadCountLabel}>lojtarë</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.rejectBtn} onPress={() => onRejectParticipant(uid)}>
-                        <Text style={styles.rejectBtnText}>Refuzo</Text>
-                      </TouchableOpacity>
+                    ) : null}
+                    {isCreator && tournament?.status === 'open' && joinStatus === 'pending' && uid ? (
+                      <View style={styles.participantActions}>
+                        <TouchableOpacity style={styles.acceptBtn} onPress={() => onAcceptParticipant(uid)}>
+                          <Text style={styles.acceptBtnText}>Prano</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.rejectBtn} onPress={() => onRejectParticipant(uid)}>
+                          <Text style={styles.rejectBtnText}>Refuzo</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                  </View>
+                  {expanded ? (
+                    <View style={styles.squadList}>
+                      {squadAthletes.length ? (
+                        squadAthletes.map((ath) => {
+                          const aid = ath.id || ath.userId;
+                          const aname =
+                            `${ath.firstName || ''} ${ath.lastName || ''}`.trim() || `Lojtari #${aid}`;
+                          return (
+                            <TouchableOpacity
+                              key={String(aid)}
+                              style={styles.squadAthleteRow}
+                              onPress={() => openUserProfile(navigation, aid)}
+                            >
+                              <UserAvatar user={ath} uri={resolveUserPhotoUri(ath)} size={28} />
+                              <Text style={styles.squadAthleteName}>{aname}</Text>
+                            </TouchableOpacity>
+                          );
+                        })
+                      ) : (
+                        <Text style={styles.muted}>Klubi nuk ka caktuar ende lojtarë.</Text>
+                      )}
                     </View>
                   ) : null}
                 </View>
@@ -883,6 +964,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
+  participantRowWrap: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  squadCountBtn: {
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(154,107,18,0.12)',
+    marginLeft: 6,
+  },
+  squadCountNum: { fontSize: 16, fontWeight: '800', color: '#9A6B12' },
+  squadCountLabel: { fontSize: 9, fontWeight: '700', color: '#78500c', textTransform: 'uppercase' },
+  squadList: { paddingLeft: 46, paddingBottom: 10, gap: 6 },
+  squadAthleteRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  squadAthleteName: { color: '#0f172a', fontWeight: '600', fontSize: 13 },
   participantInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
   rowLink: { color: '#9A6B12' },
   participantStatus: { color: '#b45309', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },

@@ -15,6 +15,7 @@ import {
 import axios from 'axios';
 import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
 import { TrophyIcon, ShieldCheckIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { clubMembersAPI } from '../services/api';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -356,10 +357,20 @@ export default function TournamentSimple() {
   const [savingMatch, setSavingMatch] = useState(false);
   /** Seksioni aktiv në modalin e turneut: përmbledhje | tabelë sipas pikëve | ndeshjet | skuadra */
   const [detailTab, setDetailTab] = useState('overview');
+  const [joinSquadModal, setJoinSquadModal] = useState({
+    open: false,
+    tournamentId: null,
+    mode: 'join', // join | edit
+    loading: false,
+    members: [],
+    selectedIds: [],
+  });
+  const [expandedSquadClubId, setExpandedSquadClubId] = useState(null);
 
   const openTournamentModal = (tournament, tab = 'overview') => {
     setDetailTab(tab);
     setSelectedTournament(tournament);
+    setExpandedSquadClubId(null);
   };
   const [newTournament, setNewTournament] = useState({
     name: '',
@@ -542,10 +553,95 @@ export default function TournamentSimple() {
     }
   };
 
-  const joinTournament = async (tournamentId) => {
+  const openClubSquadPicker = async (tournamentId, mode = 'join') => {
+    if (!user?.id || user.role !== 'club') {
+      if (mode === 'join') {
+        await joinTournament(tournamentId, []);
+      }
+      return;
+    }
     try {
-      await API.post(`/tournaments/${tournamentId}/join`);
-      alert('Successfully joined tournament!');
+      setJoinSquadModal({
+        open: true,
+        tournamentId,
+        mode,
+        loading: true,
+        members: [],
+        selectedIds: [],
+      });
+      const res = await clubMembersAPI.getClubMembers(user.id, 'approved');
+      const members = Array.isArray(res.data) ? res.data : [];
+      let selectedIds = [];
+      if (mode === 'edit') {
+        const squadRes = await API.get(`/tournaments/${tournamentId}/squad`, {
+          params: { clubUserId: user.id },
+        });
+        selectedIds = (squadRes.data?.athletes || []).map((a) => a.id || a.userId).filter(Boolean);
+      }
+      setJoinSquadModal({
+        open: true,
+        tournamentId,
+        mode,
+        loading: false,
+        members,
+        selectedIds,
+      });
+    } catch (error) {
+      console.error(error);
+      setJoinSquadModal((s) => ({ ...s, open: false, loading: false }));
+      alert(error.response?.data?.msg || 'Nuk u ngarkua lista e lojtarëve.');
+    }
+  };
+
+  const toggleSquadAthlete = (athleteId) => {
+    setJoinSquadModal((s) => {
+      const id = Number(athleteId);
+      const has = s.selectedIds.some((x) => Number(x) === id);
+      return {
+        ...s,
+        selectedIds: has ? s.selectedIds.filter((x) => Number(x) !== id) : [...s.selectedIds, id],
+      };
+    });
+  };
+
+  const submitClubSquadModal = async () => {
+    const { tournamentId, mode, selectedIds } = joinSquadModal;
+    if (!tournamentId) return;
+    try {
+      setJoinSquadModal((s) => ({ ...s, loading: true }));
+      if (mode === 'join') {
+        await joinTournament(tournamentId, selectedIds);
+      } else {
+        await API.put(`/tournaments/${tournamentId}/squad`, { athleteIds: selectedIds });
+        alert('Skuadra e turneut u përditësua.');
+        fetchTournaments();
+        if (selectedTournament?.id === tournamentId) {
+          const detail = await API.get(`/tournaments/${tournamentId}`);
+          setSelectedTournament(detail.data);
+        }
+      }
+      setJoinSquadModal({
+        open: false,
+        tournamentId: null,
+        mode: 'join',
+        loading: false,
+        members: [],
+        selectedIds: [],
+      });
+    } catch (error) {
+      setJoinSquadModal((s) => ({ ...s, loading: false }));
+      alert(error.response?.data?.msg || 'Nuk u ruajt skuadra.');
+    }
+  };
+
+  const joinTournament = async (tournamentId, athleteIds = []) => {
+    try {
+      await API.post(`/tournaments/${tournamentId}/join`, { athleteIds });
+      alert(
+        athleteIds?.length
+          ? `U bashkuat me ${athleteIds.length} lojtarë të caktuar.`
+          : 'Successfully joined tournament!'
+      );
       fetchTournaments();
     } catch (error) {
       console.error('Error joining tournament:', error);
@@ -700,7 +796,9 @@ export default function TournamentSimple() {
             (p) => resolveParticipantUserId(p) === user?.id
           );
           const pt = tournament.participantType || 'individual';
+          const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
           const joinBlocked =
+            (user?.role === 'athlete' && isLigaTournament) ||
             (pt === 'club' && user?.role !== 'club') ||
             (pt === 'mixed' && !['club', 'athlete'].includes(user?.role)) ||
             (pt === 'individual' && user?.role === 'club');
@@ -785,7 +883,11 @@ export default function TournamentSimple() {
                   !joinBlocked && (
                     <button
                       type="button"
-                      onClick={() => joinTournament(tournament.id)}
+                      onClick={() =>
+                        pt === 'club' || (pt === 'mixed' && user?.role === 'club')
+                          ? openClubSquadPicker(tournament.id, 'join')
+                          : joinTournament(tournament.id, [])
+                      }
                       className="btn btn-primary min-h-11 w-full"
                     >
                     {pt === 'club' ? 'Bashkohu si klub' : pt === 'mixed' ? 'Bashkohu (klub ose atlet)' : 'Bashkohu'}
@@ -794,7 +896,9 @@ export default function TournamentSimple() {
                 {joinBlocked && tournament.status === 'open' && (
                   <p className="text-xs text-center text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg py-2 px-2">
                     {tournament.ligaId || tournament.sourceRole === 'liga'
-                      ? 'Për turnet e ligës, klubi bashkohet nga profili i ligës (Bashkohu). Lojtarët hyjnë automatikisht.'
+                      ? user?.role === 'athlete'
+                        ? 'Atletët nuk bashkohen drejtpërdrejt — pjesëmarrja bëhet përmes klubit.'
+                        : 'Për turnet e ligës, klubi bashkohet dhe cakton lojtarët e skuadrës. Tabela mbetet vetëm për klube.'
                       : pt === 'club'
                       ? 'Vetëm llogaria e klubit mund të regjistrohet.'
                       : pt === 'mixed'
@@ -807,6 +911,15 @@ export default function TournamentSimple() {
                     <div className="w-full py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
                       ✓ Në turne
                     </div>
+                    {user?.role === 'club' && ['club', 'mixed'].includes(pt) ? (
+                      <button
+                        type="button"
+                        onClick={() => openClubSquadPicker(tournament.id, 'edit')}
+                        className="btn btn-quiet min-h-10 w-full text-sm"
+                      >
+                        Cakto / ndrysho lojtarët
+                      </button>
+                    ) : null}
                     {tournament.status === 'open' && (
                       <button
                         type="button"
@@ -1406,47 +1519,109 @@ export default function TournamentSimple() {
             {detailTab === 'squad' && !detailLoading && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-[var(--xt-color-text)]">Lista e pjesëmarrësve</h3>
+                {['club', 'mixed'].includes(selectedTournament.participantType || '') ? (
+                  <p className="text-sm text-[var(--xt-color-text-muted)]">
+                    Klubet janë në tabelë. Kliko numrin e lojtarëve për të parë atletët e caktuar nga klubi për këtë turne.
+                  </p>
+                ) : null}
                 {selectedTournament.participants?.length > 0 ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {selectedTournament.participants.map((participant) => {
+                    {(selectedTournament.participantType === 'club'
+                      ? selectedTournament.participants.filter((p) => p.role === 'club' || (p.squadCount != null))
+                      : selectedTournament.participants
+                    ).map((participant) => {
                       const uid = resolveParticipantUserId(participant);
                       const label = participantLabel(participant, selectedTournament.participantType || 'individual');
+                      const squadAthletes = Array.isArray(participant.squadAthletes)
+                        ? participant.squadAthletes
+                        : [];
+                      const squadCount =
+                        participant.squadCount != null ? participant.squadCount : squadAthletes.length;
+                      const isClubRow =
+                        participant.role === 'club' ||
+                        (selectedTournament.participantType || '') === 'club';
+                      const expanded = expandedSquadClubId != null && Number(expandedSquadClubId) === Number(uid);
                       return (
                         <div
                           key={uid || `p-${participant.firstName}-${participant.lastName}`}
-                          className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700"
+                          className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700"
                         >
-                          <UserAvatarLink
-                            user={participant}
-                            userId={uid}
-                            size={40}
-                            name={label}
-                          />
-                          <div className="min-w-0 flex-1">
-                            {uid ? (
-                              <Link
-                                to={`/profile/${uid}`}
-                                className="truncate text-sm font-medium text-[var(--xt-color-text)] hover:text-emerald-600 hover:underline"
-                              >
-                                {label}
-                              </Link>
-                            ) : (
-                              <p className="truncate text-sm font-medium text-[var(--xt-color-text)]">{label}</p>
-                            )}
-                            {participant.Profile?.club &&
-                              ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
-                              participant.role === 'athlete' && (
-                                <p className="truncate text-xs text-gray-500">Klubi: {participant.Profile.club}</p>
+                          <div className="flex items-center gap-3">
+                            <UserAvatarLink
+                              user={participant}
+                              userId={uid}
+                              size={40}
+                              name={label}
+                            />
+                            <div className="min-w-0 flex-1">
+                              {uid ? (
+                                <Link
+                                  to={`/profile/${uid}`}
+                                  className="truncate text-sm font-medium text-[var(--xt-color-text)] hover:text-emerald-600 hover:underline"
+                                >
+                                  {label}
+                                </Link>
+                              ) : (
+                                <p className="truncate text-sm font-medium text-[var(--xt-color-text)]">{label}</p>
                               )}
-                            {participant.participantStatus && participant.participantStatus !== 'accepted' ? (
-                              <p className="text-xs capitalize text-amber-600">{participant.participantStatus}</p>
-                            ) : (
-                              <p className="text-xs text-emerald-600">Accepted</p>
-                            )}
-                            {uid ? (
-                              <p className="text-[10px] text-gray-400">ID #{uid}</p>
+                              {participant.Profile?.club &&
+                                ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
+                                participant.role === 'athlete' && (
+                                  <p className="truncate text-xs text-gray-500">Klubi: {participant.Profile.club}</p>
+                                )}
+                              {participant.participantStatus && participant.participantStatus !== 'accepted' ? (
+                                <p className="text-xs capitalize text-amber-600">{participant.participantStatus}</p>
+                              ) : (
+                                <p className="text-xs text-emerald-600">Accepted</p>
+                              )}
+                            </div>
+                            {isClubRow && ['club', 'mixed'].includes(selectedTournament.participantType || '') ? (
+                              <button
+                                type="button"
+                                className="shrink-0 rounded-lg border border-[var(--xt-color-border)] bg-white/5 px-3 py-2 text-center hover:bg-white/10"
+                                onClick={() =>
+                                  setExpandedSquadClubId(expanded ? null : uid)
+                                }
+                              >
+                                <span className="block text-lg font-black tabular-nums text-[var(--xt-color-gold-bright)]">
+                                  {squadCount}
+                                </span>
+                                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-muted)]">
+                                  lojtarë
+                                </span>
+                              </button>
                             ) : null}
                           </div>
+                          {expanded && (
+                            <ul className="mt-3 space-y-2 border-t border-[var(--xt-color-border)] pt-3">
+                              {squadAthletes.length ? (
+                                squadAthletes.map((ath) => {
+                                  const aid = ath.id || ath.userId;
+                                  const aname = [ath.firstName, ath.lastName].filter(Boolean).join(' ') || `Lojtari #${aid}`;
+                                  return (
+                                    <li key={String(aid)} className="flex items-center gap-2 text-sm">
+                                      <UserAvatarLink user={ath} userId={aid} size={28} name={aname} />
+                                      <Link
+                                        to={`/profile/${aid}`}
+                                        className="font-medium text-[var(--xt-color-text)] hover:underline"
+                                      >
+                                        {aname}
+                                      </Link>
+                                      {ath.Profile?.position ? (
+                                        <span className="text-xs text-[var(--xt-color-text-muted)]">
+                                          · {ath.Profile.position}
+                                        </span>
+                                      ) : null}
+                                    </li>
+                                  );
+                                })
+                              ) : (
+                                <li className="text-xs text-[var(--xt-color-text-muted)]">
+                                  Klubi nuk ka caktuar ende lojtarë për këtë turne.
+                                </li>
+                              )}
+                            </ul>
+                          )}
                         </div>
                       );
                     })}
@@ -1459,6 +1634,81 @@ export default function TournamentSimple() {
           </div>
         </div>
       )}
+
+      {joinSquadModal.open ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] shadow-xl">
+            <div className="border-b border-[var(--xt-color-border)] px-4 py-3">
+              <h3 className="text-lg font-bold text-[var(--xt-color-text)]">
+                {joinSquadModal.mode === 'join' ? 'Bashkohu & cakto lojtarët' : 'Lojtarët e turneut'}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">
+                Zgjidh atletët e aprovuar që do të marrin pjesë me klubin. Ata shfaqen te Pjesëmarrësit, jo në tabelën e pikëve.
+              </p>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto px-4 py-3">
+              {joinSquadModal.loading ? (
+                <p className="text-sm text-[var(--xt-color-text-muted)]">Duke ngarkuar…</p>
+              ) : joinSquadModal.members.length === 0 ? (
+                <p className="text-sm text-[var(--xt-color-text-muted)]">Nuk ka atletë të aprovuar në klub.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {joinSquadModal.members.map((m) => {
+                    const athlete = m.athlete || m.User || m.user || {};
+                    const aid = athlete.id || m.athleteId;
+                    const name = `${athlete.firstName || ''} ${athlete.lastName || ''}`.trim() || `Lojtari #${aid}`;
+                    const checked = joinSquadModal.selectedIds.some((x) => Number(x) === Number(aid));
+                    return (
+                      <li key={String(m.id || aid)}>
+                        <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--xt-color-border)] px-3 py-2 hover:bg-white/5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSquadAthlete(aid)}
+                          />
+                          <span className="min-w-0 flex-1 font-medium text-[var(--xt-color-text)]">{name}</span>
+                          <span className="text-xs text-[var(--xt-color-text-muted)]">
+                            {[m.competitionCategory || m.teamType, m.position].filter(Boolean).join(' · ')}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+            <div className="flex gap-2 border-t border-[var(--xt-color-border)] px-4 py-3">
+              <button
+                type="button"
+                className="btn btn-quiet flex-1"
+                disabled={joinSquadModal.loading}
+                onClick={() =>
+                  setJoinSquadModal({
+                    open: false,
+                    tournamentId: null,
+                    mode: 'join',
+                    loading: false,
+                    members: [],
+                    selectedIds: [],
+                  })
+                }
+              >
+                Anulo
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary flex-1"
+                disabled={joinSquadModal.loading}
+                onClick={submitClubSquadModal}
+              >
+                {joinSquadModal.mode === 'join'
+                  ? `Bashkohu${joinSquadModal.selectedIds.length ? ` (${joinSquadModal.selectedIds.length})` : ''}`
+                  : `Ruaj (${joinSquadModal.selectedIds.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <MatchBroadcastModal
         open={matchModal.open}

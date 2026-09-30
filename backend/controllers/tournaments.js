@@ -14,6 +14,12 @@ const {
   normalizeCategory,
 } = require('../utils/ligaTournaments');
 const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
+const {
+  attachSquadToSerializedTournament,
+  setClubTournamentSquad,
+  demoteAthleteParticipantsOnClubTournament,
+  loadSquadByClub,
+} = require('../utils/tournamentSquad');
 
 /** Siguron që çdo pjesëmarrës ka userId/id të user-it (jo id të rreshtit në TournamentParticipant). */
 function serializeTournamentParticipants(participants) {
@@ -268,11 +274,12 @@ exports.getTournament = async (req, res) => {
           { model: Match, include: [{ model: User, as: 'homeUser' }, { model: User, as: 'awayUser' }] },
         ],
       });
-      return res.json(serializeTournament(refreshed));
+      return res.json(await attachSquadToSerializedTournament(serializeTournament(refreshed)));
     }
 
-    res.json(serializeTournament(tournament));
+    res.json(await attachSquadToSerializedTournament(serializeTournament(tournament)));
   } catch (err) {
+    console.error('getTournament:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -284,6 +291,13 @@ exports.joinTournament = async (req, res) => {
     if (tournament.status !== 'open') return res.status(400).json({ msg: 'Tournament not open for joining' });
 
     const participantType = tournament.participantType || 'individual';
+    const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
+
+    if (req.user.role === 'athlete' && isLigaTournament) {
+      return res.status(400).json({
+        msg: 'Atletët nuk bashkohen drejtpërdrejt në turnet e ligës — pjesëmarrja bëhet përmes klubit (skuadra e turneut).',
+      });
+    }
     if (participantType === 'club' && req.user.role !== 'club') {
       return res.status(400).json({
         msg: 'Ky turne është vetëm për klube — vetëm llogaria me rol «club» mund të bashkohet.',
@@ -301,7 +315,17 @@ exports.joinTournament = async (req, res) => {
     }
 
     const participants = await TournamentParticipant.findAll({ where: { tournamentId: req.params.id } });
-    if (participants.length >= tournament.maxParticipants) return res.status(400).json({ msg: 'Tournament full' });
+    // Count only standings participants (clubs for club tournaments)
+    let standingCount = participants.length;
+    if (participantType === 'club') {
+      const users = await User.findAll({
+        where: { id: { [Op.in]: participants.map((p) => p.userId) } },
+        attributes: ['id', 'role'],
+      });
+      const clubIds = new Set(users.filter((u) => u.role === 'club').map((u) => u.id));
+      standingCount = participants.filter((p) => clubIds.has(p.userId)).length;
+    }
+    if (standingCount >= tournament.maxParticipants) return res.status(400).json({ msg: 'Tournament full' });
 
     const already = participants.some((p) => p.userId === req.user.id);
     if (already) return res.status(400).json({ msg: 'Already joined this tournament' });
@@ -311,8 +335,80 @@ exports.joinTournament = async (req, res) => {
       userId: req.user.id,
       status: 'accepted',
     });
-    res.json({ msg: 'Joined tournament' });
+
+    // Club may nominate athletes for this tournament on join
+    let squadByClub = {};
+    if (req.user.role === 'club' && (participantType === 'club' || participantType === 'mixed')) {
+      const athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+      if (athleteIds.length) {
+        squadByClub = await setClubTournamentSquad(tournament.id, req.user.id, athleteIds);
+      }
+    }
+
+    if (participantType === 'club') {
+      await demoteAthleteParticipantsOnClubTournament(tournament.id);
+    }
+
+    res.json({
+      msg: 'Joined tournament',
+      squadAthletes: squadByClub[req.user.id] || [],
+    });
   } catch (err) {
+    console.error('joinTournament:', err);
+    if (err.status === 400) return res.status(400).json({ msg: err.message, invalid: err.invalid });
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+/** Club sets / updates nominated athletes for a tournament (not standings rows). */
+exports.setTournamentSquad = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id);
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    const pt = tournament.participantType || 'individual';
+    if (pt !== 'club' && pt !== 'mixed') {
+      return res.status(400).json({ msg: 'Skuadra e lojtarëve vlen vetëm për turne klubi ose mixed.' });
+    }
+    if (req.user.role !== 'club') {
+      return res.status(403).json({ msg: 'Vetëm klubi mund të caktojë lojtarët e skuadrës.' });
+    }
+
+    const clubJoined = await TournamentParticipant.findOne({
+      where: { tournamentId: tournament.id, userId: req.user.id },
+    });
+    if (!clubJoined) {
+      return res.status(400).json({ msg: 'Bashkohuni në turne para se të caktoni lojtarët.' });
+    }
+
+    const athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+    const squadByClub = await setClubTournamentSquad(tournament.id, req.user.id, athleteIds);
+    res.json({
+      msg: 'Skuadra e turneut u përditësua',
+      squadAthletes: squadByClub[req.user.id] || [],
+      squadByClub,
+    });
+  } catch (err) {
+    console.error('setTournamentSquad:', err);
+    if (err.status === 400) return res.status(400).json({ msg: err.message, invalid: err.invalid });
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.getTournamentSquad = async (req, res) => {
+  try {
+    const tournament = await Tournament.findByPk(req.params.id, { attributes: ['id', 'participantType'] });
+    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
+    if ((tournament.participantType || 'individual') === 'club') {
+      await demoteAthleteParticipantsOnClubTournament(tournament.id);
+    }
+    const clubUserId = req.query.clubUserId ? parseInt(req.query.clubUserId, 10) : null;
+    const squadByClub = await loadSquadByClub(tournament.id);
+    if (Number.isFinite(clubUserId) && clubUserId > 0) {
+      return res.json({ clubUserId, athletes: squadByClub[clubUserId] || [] });
+    }
+    res.json({ squadByClub });
+  } catch (err) {
+    console.error('getTournamentSquad:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -391,6 +487,11 @@ exports.getStandings = async (req, res) => {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
 
+    const participantType = tournament.participantType || 'individual';
+    if (participantType === 'club') {
+      await demoteAthleteParticipantsOnClubTournament(tournament.id);
+    }
+
     const participants = await TournamentParticipant.findAll({
       where: { tournamentId: req.params.id },
       include: [
@@ -402,14 +503,20 @@ exports.getStandings = async (req, res) => {
       ],
     });
 
+    // Club tournaments: only club accounts appear in the points table.
+    const standingParticipants =
+      participantType === 'club'
+        ? participants.filter((p) => String(p.User?.role || '').toLowerCase() === 'club')
+        : participants;
+
     // Always derive from finished matches (source of truth). Stored W/D/L inflated
     // when older code incremented on every score edit — heal by recomputing.
     await recomputeTournamentStandings(tournament.id);
 
-    const ids = participants.map((p) => p.userId);
+    const ids = standingParticipants.map((p) => p.userId);
     const derived = sortStandingsRows(await standingsFromFinishedMatches(tournament.id, ids));
-    const userById = Object.fromEntries(participants.map((p) => [p.userId, p.User]));
-    const statusById = Object.fromEntries(participants.map((p) => [p.userId, p.status]));
+    const userById = Object.fromEntries(standingParticipants.map((p) => [p.userId, p.User]));
+    const statusById = Object.fromEntries(standingParticipants.map((p) => [p.userId, p.status]));
 
     const rankingMode = tournament.type === 'league' ? 'points_table' : 'matches_derived';
     const rows = derived.map((r, i) => ({
@@ -430,11 +537,13 @@ exports.getStandings = async (req, res) => {
     res.json({
       tournamentId: tournament.id,
       tournamentType: tournament.type,
-      participantType: tournament.participantType || 'individual',
+      participantType,
       rankingMode,
       caption:
         tournament.type === 'league'
-          ? 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore. Llogaritet vetëm nga ndeshjet e përfunduara.'
+          ? participantType === 'club'
+            ? 'Tabela e klubeve sipas pikëve (3-1-0). Lojtarët e caktuar nga klubi shfaqen te Pjesëmarrësit, jo në këtë tabelë.'
+            : 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore. Llogaritet vetëm nga ndeshjet e përfunduara.'
           : 'Për cup/knockout, kjo tabelë përmbledh statistikat nga ndeshjet e përfunduara; kalimi në raund tjetër varet nga bracket-i / rezultatet.',
       rows,
     });

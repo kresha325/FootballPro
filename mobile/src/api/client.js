@@ -353,7 +353,14 @@ export const tournamentStatsRequest = (tournamentId) => api.get(`/api/tournament
 export const tournamentMatchDetailRequest = (tournamentId, matchId) =>
   api.get(`/api/tournaments/${tournamentId}/matches/${matchId}`);
 export const trendingTournamentsRequest = () => api.get('/api/tournaments/trending');
-export const joinTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/join`);
+export const joinTournamentRequest = (tournamentId, payload = {}) =>
+  api.post(`/api/tournaments/${tournamentId}/join`, payload);
+export const tournamentSquadRequest = (tournamentId, clubUserId) =>
+  api.get(`/api/tournaments/${tournamentId}/squad`, {
+    params: clubUserId ? { clubUserId } : undefined,
+  });
+export const setTournamentSquadRequest = (tournamentId, athleteIds) =>
+  api.put(`/api/tournaments/${tournamentId}/squad`, { athleteIds });
 export const leaveTournamentRequest = (tournamentId) => api.delete(`/api/tournaments/${tournamentId}/leave`);
 export const startTournamentRequest = (tournamentId) => api.post(`/api/tournaments/${tournamentId}/start`);
 export const generateTournamentBracketRequest = (tournamentId) =>

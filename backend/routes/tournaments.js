@@ -24,6 +24,8 @@ const {
   acceptParticipant,
   rejectParticipant,
   removeParticipant,
+  setTournamentSquad,
+  getTournamentSquad,
 } = require('../controllers/tournaments');
 
 // Tournament CRUD
@@ -64,6 +66,8 @@ router.delete('/:id', auth, async (req, res) => {
 
 // Participation
 router.post('/:id/join', auth, joinTournament);
+router.get('/:id/squad', auth, getTournamentSquad);
+router.put('/:id/squad', auth, setTournamentSquad);
 router.delete('/:id/leave', auth, leaveTournament);
 
 // Accept, reject, remove participant
