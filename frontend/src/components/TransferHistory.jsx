@@ -472,8 +472,12 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                     ) : (
                       <>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
-                          <span className="text-gray-400">→</span>
+                          {transfer.fromClub ? (
+                            <>
+                              <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
+                              <span className="text-gray-400">→</span>
+                            </>
+                          ) : null}
                           <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge(transfer).className}`}
@@ -485,7 +489,10 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                           <span>📅 {transfer.season}</span>
                           {transfer.position && <span>⚽ {transfer.position}</span>}
                           {transfer.transferFee && <span>💰 {transfer.transferFee}</span>}
-                          {transfer.contractUntil && <span>📝 Until {transfer.contractUntil}</span>}
+                          {transfer.contractUntil &&
+                          String(transfer.contractUntil).toLowerCase() !== 'vazhdon' ? (
+                            <span>📝 Until {transfer.contractUntil}</span>
+                          ) : null}
                           {transfer.transferDate ? (
                             <span>
                               🗓{' '}

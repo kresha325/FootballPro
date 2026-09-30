@@ -85,21 +85,62 @@ async function buildCareerHistoryFromTransfers(userId, options = {}) {
 
   const preferredCurrentYear = parseClubJoinedYear(options.currentJoinedYear);
 
-  const transfers = await TransferHistory.findAll({
-    where: {
-      userId: uid,
-      status: 'confirmed',
-    },
-    order: [
-      ['transferDate', 'ASC'],
-      ['id', 'ASC'],
-    ],
+  let transfers = [];
+  try {
+    transfers = await TransferHistory.findAll({
+      where: {
+        userId: uid,
+        [Op.or]: [
+          { status: { [Op.notIn]: ['pending', 'rejected', 'cancelled'] } },
+          { status: { [Op.is]: null } },
+        ],
+      },
+      order: [
+        ['transferDate', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+  } catch (err) {
+    // status column may be missing before migration
+    console.warn('buildCareerHistoryFromTransfers status filter:', err?.message || err);
+    transfers = await TransferHistory.findAll({
+      where: { userId: uid },
+      order: [
+        ['transferDate', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+  }
+
+  transfers = transfers.filter((t) => {
+    const s = String(t.status || 'confirmed').toLowerCase();
+    return !['pending', 'rejected', 'cancelled'].includes(s);
   });
 
   const real = transfers.filter((t) => t.notes !== CURRENT_CLUB_NOTE);
   const list = real.length ? real : transfers.filter((t) => t.notes === CURRENT_CLUB_NOTE);
 
   const chronological = [];
+
+  // Seed previous club from the earliest fromClub when it isn't already a toClub
+  if (list.length) {
+    const first = list[0];
+    const fromName = String(first.fromClub || '').trim();
+    const firstTo = String(first.toClub || '').trim();
+    if (fromName && fromName.toLowerCase() !== firstTo.toLowerCase()) {
+      const fromYear = parseClubJoinedYear(yearFromTransfer(first));
+      chronological.push({
+        club: fromName,
+        clubUserId: first.fromClubUserId || null,
+        season: fromYear ? String(fromYear) : null,
+        fromYear,
+        ongoing: false,
+        transferId: null,
+        position: null,
+      });
+    }
+  }
+
   for (let i = 0; i < list.length; i += 1) {
     const t = list[i];
     const club = String(t.toClub || '').trim();
@@ -144,9 +185,12 @@ async function buildCareerHistoryFromTransfers(userId, options = {}) {
 }
 
 /**
- * Persist careerHistory from transfers when empty or previously auto-generated.
+ * Persist careerHistory from transfers.
+ * @param {number} userId
+ * @param {object|null} profileLike
+ * @param {{ force?: boolean }} [options]
  */
-async function syncCareerHistoryFromTransfers(userId, profileLike = null) {
+async function syncCareerHistoryFromTransfers(userId, profileLike = null, options = {}) {
   const uid = Number(userId);
   if (!Number.isFinite(uid) || uid <= 0) return null;
 
@@ -156,7 +200,7 @@ async function syncCareerHistoryFromTransfers(userId, profileLike = null) {
   const career = profile.careerHistory;
   const emptyCareer =
     career == null || career === '' || (Array.isArray(career) && career.length === 0);
-  if (!emptyCareer && !isAutoCareerHistory(career)) return career;
+  if (!options.force && !emptyCareer && !isAutoCareerHistory(career)) return career;
 
   const entries = await buildCareerHistoryFromTransfers(uid, {
     currentJoinedYear: profile.clubJoinedYear,
@@ -165,6 +209,31 @@ async function syncCareerHistoryFromTransfers(userId, profileLike = null) {
 
   await profile.update({ careerHistory: entries });
   return entries;
+}
+
+/**
+ * Keep previous club in history instead of deleting the auto current-club stint.
+ */
+async function closeCurrentClubAutoStints(userId, { endLabel } = {}) {
+  const uid = Number(userId);
+  if (!Number.isFinite(uid) || uid <= 0) return 0;
+
+  const autos = await TransferHistory.findAll({
+    where: { userId: uid, notes: CURRENT_CLUB_NOTE },
+  });
+  if (!autos.length) return 0;
+
+  const end = endLabel || String(new Date().getFullYear());
+  for (const row of autos) {
+    await row.update({
+      notes: null,
+      contractUntil: end,
+      status: 'confirmed',
+      fromClubConfirmedAt: row.fromClubConfirmedAt || new Date(),
+      toClubConfirmedAt: row.toClubConfirmedAt || new Date(),
+    });
+  }
+  return autos.length;
 }
 
 /**
@@ -203,7 +272,7 @@ async function applyCurrentClubJoinedYear(userId, year, profileLike = null) {
     const emptyCareer =
       career == null || career === '' || (Array.isArray(career) && career.length === 0);
     if (emptyCareer || isAutoCareerHistory(career)) {
-      await syncCareerHistoryFromTransfers(uid, profile);
+      await syncCareerHistoryFromTransfers(uid, profile, { force: true });
     } else if (Array.isArray(career) && career.length) {
       const next = career.map((row) => ({ ...row }));
       const ongoingIdx = next.findIndex((r) => r && r.ongoing);
@@ -251,7 +320,29 @@ async function syncProfileCurrentClubFromTransfer(userId, transferLike) {
   await profile.update(patch);
 
   try {
-    await syncCareerHistoryFromTransfers(uid, profile);
+    const transferId = transferLike?.id != null ? Number(transferLike.id) : null;
+    if (transferId) {
+      await TransferHistory.update(
+        { contractUntil: null },
+        {
+          where: {
+            userId: uid,
+            contractUntil: 'vazhdon',
+            id: { [Op.ne]: transferId },
+          },
+        }
+      );
+      await TransferHistory.update(
+        { contractUntil: 'vazhdon', status: 'confirmed' },
+        { where: { id: transferId } }
+      );
+    }
+  } catch (err) {
+    console.warn('syncProfileCurrentClubFromTransfer mark current:', err?.message || err);
+  }
+
+  try {
+    await syncCareerHistoryFromTransfers(uid, profile, { force: true });
   } catch (err) {
     console.warn('syncProfileCurrentClubFromTransfer careerHistory:', err?.message || err);
   }
@@ -351,7 +442,7 @@ async function syncCurrentClubCareer({
 
   if (profile) {
     try {
-      await syncCareerHistoryFromTransfers(userId, profile);
+      await syncCareerHistoryFromTransfers(userId, profile, { force: true });
     } catch (err) {
       console.warn('syncCurrentClubCareer careerHistory update skipped:', err && err.message);
     }
@@ -368,6 +459,7 @@ module.exports = {
   isAutoCareerHistory,
   buildCareerHistoryFromTransfers,
   syncCareerHistoryFromTransfers,
+  closeCurrentClubAutoStints,
   applyCurrentClubJoinedYear,
   syncCurrentClubCareer,
   syncProfileCurrentClubFromTransfer,

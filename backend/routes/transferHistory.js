@@ -12,6 +12,8 @@ const {
   resolveClubUserId,
   syncProfileCurrentClubFromTransfer,
   syncProfileCurrentClubFromLatestTransfer,
+  closeCurrentClubAutoStints,
+  syncCareerHistoryFromTransfers,
 } = require('../utils/currentClubCareer');
 
 // resolveClubUserId may not be exported yet — fallback
@@ -318,9 +320,11 @@ router.post('/', protect, ...transferBodyValidators({ requireCore: true }), asyn
 
     if (!isAuto) {
       try {
-        await TransferHistory.destroy({
-          where: { userId: req.user.id, notes: CURRENT_CLUB_NOTE },
+        // Keep previous club in history (do not delete the auto stint)
+        await closeCurrentClubAutoStints(req.user.id, {
+          endLabel: payload.season || String(new Date().getFullYear()),
         });
+        await syncCareerHistoryFromTransfers(req.user.id, null, { force: true });
       } catch (_e) {
         /* non-fatal */
       }

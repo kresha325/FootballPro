@@ -20,12 +20,31 @@ const { loadRecentMatchesForUser } = require('../utils/userRecentMatches');
 /** Prefer full transfer-derived club timeline over a single auto current-club row. */
 async function resolveCareerHistoryForProfile(userId, role, existingCareer, clubJoinedYear = null) {
   if (String(role || '').toLowerCase() !== 'athlete') return existingCareer;
+  try {
+    const fromTransfers = await buildCareerHistoryFromTransfers(userId, {
+      currentJoinedYear: clubJoinedYear,
+    });
+    if (fromTransfers.length) {
+      // Persist so CV / other clients stay in sync
+      try {
+        const existingLen = Array.isArray(existingCareer) ? existingCareer.length : 0;
+        if (existingLen !== fromTransfers.length || isAutoCareerHistory(existingCareer)) {
+          await Profile.update({ careerHistory: fromTransfers }, { where: { userId } });
+        }
+      } catch (_e) {
+        /* non-fatal */
+      }
+      return fromTransfers;
+    }
+  } catch (err) {
+    console.warn('resolveCareerHistoryForProfile:', err?.message || err);
+  }
+
   const empty =
     existingCareer == null ||
     existingCareer === '' ||
     (Array.isArray(existingCareer) && existingCareer.length === 0);
   if (!empty && !isAutoCareerHistory(existingCareer)) {
-    // Still refresh "nga YYYY · vazhdon" from profile year when present
     const y = parseClubJoinedYear(clubJoinedYear);
     if (y && Array.isArray(existingCareer) && existingCareer.length) {
       return existingCareer.map((row) => {
@@ -38,14 +57,6 @@ async function resolveCareerHistoryForProfile(userId, role, existingCareer, club
       });
     }
     return existingCareer;
-  }
-  try {
-    const fromTransfers = await buildCareerHistoryFromTransfers(userId, {
-      currentJoinedYear: clubJoinedYear,
-    });
-    if (fromTransfers.length) return fromTransfers;
-  } catch (err) {
-    console.warn('resolveCareerHistoryForProfile:', err?.message || err);
   }
   return existingCareer;
 }

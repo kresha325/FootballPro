@@ -939,6 +939,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   staffAssignments={staffAssignments}
                   clubMembers={clubMembers}
                   clubStaff={clubStaff}
+                  transfers={transfers}
                   tournamentSummary={tournamentSummary}
                   gallery={gallery}
                   videos={videos}

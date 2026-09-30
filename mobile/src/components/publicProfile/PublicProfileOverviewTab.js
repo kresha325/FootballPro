@@ -50,6 +50,52 @@ function parseCareerHistory(raw) {
   }
 }
 
+/** Build career rows from transfer history when profile.careerHistory is incomplete. */
+function careerFromTransfers(transfers = [], profile = {}) {
+  const list = (Array.isArray(transfers) ? transfers : [])
+    .filter((t) => {
+      const s = String(t?.status || 'confirmed').toLowerCase();
+      return !['pending', 'rejected', 'cancelled'].includes(s);
+    })
+    .slice()
+    .sort((a, b) => {
+      const da = new Date(a.transferDate || 0).getTime();
+      const db = new Date(b.transferDate || 0).getTime();
+      return da - db;
+    });
+
+  const real = list.filter((t) => t.notes !== '__current_club__');
+  const use = real.length ? real : list;
+  const rows = [];
+
+  if (use.length) {
+    const first = use[0];
+    const fromName = String(first.fromClub || '').trim();
+    const firstTo = String(first.toClub || '').trim();
+    if (fromName && fromName.toLowerCase() !== firstTo.toLowerCase()) {
+      rows.push({ club: fromName, season: first.season || null, ongoing: false });
+    }
+  }
+
+  use.forEach((t, i) => {
+    const club = String(t.toClub || '').trim();
+    if (!club) return;
+    if (rows.length && String(rows[rows.length - 1].club).toLowerCase() === club.toLowerCase()) return;
+    const ongoing = i === use.length - 1;
+    rows.push({
+      club,
+      season: ongoing
+        ? profile.clubJoinedYear
+          ? `nga ${profile.clubJoinedYear} · vazhdon`
+          : t.season || 'vazhdon'
+        : t.season || null,
+      ongoing,
+    });
+  });
+
+  return rows.reverse();
+}
+
 function StatGrid({ cards, theme }) {
   if (!cards.length) return null;
   return (
@@ -300,6 +346,7 @@ export default function PublicProfileOverviewTab({
   staffAssignments = [],
   clubMembers = [],
   clubStaff = [],
+  transfers = [],
   onPressUser,
   tournamentSummary = null,
   gallery = [],
@@ -323,6 +370,10 @@ export default function PublicProfileOverviewTab({
   if (!profile) return null;
 
   let careerItems = parseCareerHistory(profile.careerHistory);
+  const fromTransfers = careerFromTransfers(transfers, profile);
+  if (fromTransfers.length > (careerItems?.length || 0)) {
+    careerItems = fromTransfers;
+  }
   const joinedYearRaw = Number(profile.clubJoinedYear);
   const joinedYear =
     Number.isFinite(joinedYearRaw) &&
