@@ -11,6 +11,7 @@ const {
 } = require('../utils/registerValidation');
 const { getJwtSecret } = require('../utils/jwtSecret');
 const { needsParentVerification } = require('../utils/userVerification');
+const { isOrgProfileRole } = require('../utils/orgProfile');
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase();
@@ -24,7 +25,7 @@ exports.register = async (req, res) => {
 
   try {
     // 1. Validim bazë
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password || !firstName) {
       console.log('BACKEND: Missing required fields');
       return res.status(400).json({ msg: 'Të gjitha fushat janë të detyrueshme' });
     }
@@ -40,6 +41,16 @@ exports.register = async (req, res) => {
     const normalizedRole = String(role || 'athlete').trim().toLowerCase();
     if (!ALLOWED_REGISTER_ROLES.includes(normalizedRole)) {
       return res.status(400).json({ msg: 'Lloji i llogarisë është i pavlefshëm' });
+    }
+
+    const isOrg = isOrgProfileRole(normalizedRole);
+    const trimmedFirst = String(firstName || '').trim();
+    const trimmedLast = isOrg ? '' : String(lastName || '').trim();
+    if (!trimmedFirst) {
+      return res.status(400).json({ msg: 'Vendos emrin' });
+    }
+    if (!isOrg && !trimmedLast) {
+      return res.status(400).json({ msg: 'Vendos emrin dhe mbiemrin' });
     }
 
     let parsedDob = null;
@@ -78,8 +89,8 @@ exports.register = async (req, res) => {
       email,
       password: hashedPassword,
       role: normalizedRole,
-      firstName: String(firstName).trim(),
-      lastName: String(lastName).trim(),
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
     };
     if (parsedDob) {
       userPayload.dateOfBirth = parsedDob;
@@ -89,11 +100,16 @@ exports.register = async (req, res) => {
     // 4.5 Krijo profile automatikisht (best-effort)
     console.log('BACKEND: Creating profile for user (best-effort):', user.id);
     try {
-      await Profile.create({
+      const profilePayload = {
         userId: user.id,
         city: city ? String(city).trim() : null,
         country: country ? String(country).trim() : null,
-      });
+      };
+      // Org accounts store the public name on profile.club for club discovery/display.
+      if (normalizedRole === 'club') {
+        profilePayload.club = [trimmedFirst, trimmedLast].filter(Boolean).join(' ').trim() || trimmedFirst;
+      }
+      await Profile.create(profilePayload);
     } catch (profileErr) {
       console.warn('BACKEND: Profile creation failed (non-fatal):', profileErr && profileErr.message);
     }

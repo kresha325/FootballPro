@@ -125,6 +125,20 @@ async function enrichClubDisplayFields(req, response) {
   if (clubId) {
     response.clubId = clubId;
     try {
+      const clubUser = await User.findByPk(clubId, {
+        attributes: ['id', 'firstName', 'lastName', 'role'],
+      });
+      if (clubUser && String(clubUser.role || '').toLowerCase() === 'club') {
+        const clubDisplayName = [clubUser.firstName, clubUser.lastName]
+          .map((part) => String(part || '').trim())
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        if (clubDisplayName) {
+          response.club = clubDisplayName;
+        }
+      }
+
       const clubProfile = await Profile.findOne({
         where: { userId: clubId },
         attributes: ['profilePhoto', 'club', 'clubLogo'],

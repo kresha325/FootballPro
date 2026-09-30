@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { APP_BRAND_WORDMARK } from '../config/branding';
 import { WEB_APP_URL } from '../config/constants';
+import { isOrgProfileRole } from '../utils/orgProfile';
 
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 const PRIVACY_URL = `${WEB_BASE}/privacy`;
@@ -164,6 +165,7 @@ export default function LoginScreen() {
     }
 
     const isAthlete = normalizedRole === 'athlete';
+    const isOrg = isOrgProfileRole(normalizedRole);
     let dateOfBirth;
     if (isAthlete) {
       dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
@@ -180,7 +182,7 @@ export default function LoginScreen() {
 
     const result = await register({
       firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      lastName: isOrg ? '' : lastName.trim(),
       email: email.trim().toLowerCase(),
       password,
       role: normalizedRole,
@@ -214,7 +216,11 @@ export default function LoginScreen() {
       return;
     }
     if (mode === 'register') {
-      if (!firstName.trim() || !lastName.trim()) {
+      if (!firstName.trim()) {
+        setInlineError(isOrgProfileRole(role) ? 'Vendos emrin e organizatës.' : 'Vendos emrin dhe mbiemrin.');
+        return;
+      }
+      if (!isOrgProfileRole(role) && !lastName.trim()) {
         setInlineError('Vendos emrin dhe mbiemrin.');
         return;
       }
@@ -313,20 +319,25 @@ export default function LoginScreen() {
           <>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder="Emri"
+              placeholder={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
               value={firstName}
               onChangeText={setFirstName}
               {...inputProps}
             />
-            <TextInput
-              style={[styles.input, themed.input]}
-              placeholder="Mbiemri"
-              value={lastName}
-              onChangeText={setLastName}
-              {...inputProps}
-            />
+            {!isOrgProfileRole(role) ? (
+              <TextInput
+                style={[styles.input, themed.input]}
+                placeholder="Mbiemri"
+                value={lastName}
+                onChangeText={setLastName}
+                {...inputProps}
+              />
+            ) : null}
             <Text style={[styles.fieldLabel, themed.fieldLabel]}>Lloji i llogarisë</Text>
-            <TouchableOpacity style={[styles.pickerBtn, themed.pickerBtn]} onPress={() => setRolePickerOpen(true)}>
+            <TouchableOpacity
+              style={[styles.pickerBtn, themed.pickerBtn]}
+              onPress={() => setRolePickerOpen(true)}
+            >
               <Text style={[styles.pickerBtnText, themed.pickerBtnText]}>{registerRoleLabel(role)}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.muted} />
             </TouchableOpacity>
@@ -452,7 +463,10 @@ export default function LoginScreen() {
       <RolePickerModal
         visible={rolePickerOpen}
         selectedValue={role}
-        onSelect={setRole}
+        onSelect={(value) => {
+          setRole(value);
+          if (isOrgProfileRole(value)) setLastName('');
+        }}
         onClose={() => setRolePickerOpen(false)}
         colors={colors}
       />

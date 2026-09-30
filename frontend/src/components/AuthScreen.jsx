@@ -5,6 +5,7 @@ import { authAPI } from '../services/api';
 import { APP_BRAND_WORDMARK } from '../config/branding';
 import { setOnboardingPending } from './RegisterOnboarding';
 import { safeNextPath } from '../utils/safeNextPath';
+import { isOrgProfileRole } from '../utils/orgProfile';
 
 const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
 
@@ -137,7 +138,11 @@ export default function AuthScreen({ initialMode }) {
       setInlineError('Fjalëkalimet nuk përputhen.');
       return;
     }
-    if (mode === 'register' && (!firstName.trim() || !lastName.trim())) {
+    if (mode === 'register' && !firstName.trim()) {
+      setInlineError(isOrgProfileRole(role) ? 'Vendos emrin e organizatës.' : 'Vendos emrin dhe mbiemrin.');
+      return;
+    }
+    if (mode === 'register' && !isOrgProfileRole(role) && !lastName.trim()) {
       setInlineError('Vendos emrin dhe mbiemrin.');
       return;
     }
@@ -160,6 +165,7 @@ export default function AuthScreen({ initialMode }) {
       if (mode === 'register') {
         const normalizedRole = (role || 'athlete').trim().toLowerCase();
         const isAthlete = normalizedRole === 'athlete';
+        const isOrg = isOrgProfileRole(normalizedRole);
         let dateOfBirth;
         if (isAthlete) {
           dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
@@ -174,7 +180,7 @@ export default function AuthScreen({ initialMode }) {
         }
         const result = await register({
           firstName: firstName.trim(),
-          lastName: lastName.trim(),
+          lastName: isOrg ? '' : lastName.trim(),
           email: email.trim().toLowerCase(),
           password,
           role: normalizedRole,
@@ -259,20 +265,22 @@ export default function AuthScreen({ initialMode }) {
             <>
               <input
                 className={inputClass}
-                aria-label="Emri"
-                placeholder="Emri"
+                aria-label={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+                placeholder={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                autoComplete="given-name"
+                autoComplete={isOrgProfileRole(role) ? 'organization' : 'given-name'}
               />
-              <input
-                className={inputClass}
-                aria-label="Mbiemri"
-                placeholder="Mbiemri"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                autoComplete="family-name"
-              />
+              {!isOrgProfileRole(role) ? (
+                <input
+                  className={inputClass}
+                  aria-label="Mbiemri"
+                  placeholder="Mbiemri"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                />
+              ) : null}
 
               <label className="label">Lloji i llogarisë</label>
               <button
@@ -423,6 +431,7 @@ export default function AuthScreen({ initialMode }) {
                     type="button"
                     onClick={() => {
                       setRole(item.value);
+                      if (isOrgProfileRole(item.value)) setLastName('');
                       setRolePickerOpen(false);
                     }}
                     className={`flex min-h-14 w-full items-center justify-between border-b border-[var(--xt-color-border)] px-5 py-3 text-left transition-colors hover:bg-white/5 ${

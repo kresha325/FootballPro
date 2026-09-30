@@ -53,7 +53,7 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
     ['Gjatësia', hasValue(stats.height) ? `${stats.height} cm` : null],
     ['Pesha', hasValue(stats.weight) ? `${stats.weight} kg` : null],
     ['Numri', hasValue(stats.jerseyNumber) ? `#${stats.jerseyNumber}` : null],
-    ['Kombësia', profile?.country],
+    ['Shtetësia', profile?.country],
     ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ')],
     ['Klubi aktual', profile?.club],
   ].filter(([, value]) => hasValue(value));
