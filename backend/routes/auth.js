@@ -244,8 +244,14 @@ router.get('/facebook', (req, res, next) => {
     callbackURL: typeof facebookCallbackURL === 'function' ? facebookCallbackURL() : null,
     mobile: isMobile,
   });
+  // Request email only after it is added under Meta Use cases → Permissions (+ Add).
+  // Invalid Scopes: email happens when the permission is not yet on the app.
+  const facebookScopes = ['public_profile'];
+  if (String(process.env.FACEBOOK_REQUEST_EMAIL || '').trim() === '1') {
+    facebookScopes.push('email');
+  }
   passport.authenticate('facebook', {
-    scope: ['email', 'public_profile'],
+    scope: facebookScopes,
     state: isMobile ? 'mobile' : 'web',
   })(req, res, next);
 });
