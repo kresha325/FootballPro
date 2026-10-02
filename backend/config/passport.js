@@ -5,10 +5,32 @@ const AppleStrategy = require('@nicokaiser/passport-apple').Strategy;
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
 
 async function randomUnusablePassword() {
   const raw = crypto.randomBytes(32).toString('hex');
   return bcrypt.hash(raw, 10);
+}
+
+/** Register creates Profile; OAuth must too or /api/profiles/:id 404s. */
+async function ensureOAuthProfile(user) {
+  if (!user?.id) return user;
+  try {
+    const existing = await Profile.findOne({
+      where: { userId: user.id },
+      attributes: ['id', 'userId'],
+    });
+    if (!existing) {
+      await Profile.create({ userId: user.id }, { fields: ['userId'] });
+    }
+  } catch (err) {
+    console.warn('[oauth] ensure profile failed:', err?.message || err);
+  }
+  return user;
+}
+
+function isPlaceholderOAuthEmail(email) {
+  return /@users\.xtalenti\.local$/i.test(String(email || ''));
 }
 
 function backendPublicOrigin() {
@@ -52,21 +74,47 @@ function facebookCallbackURL() {
 async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
   if (!profileId) throw new Error('OAuth profile id mungon');
 
-  let user = await User.findOne({ where: { [idField]: profileId } });
-  if (user) return user;
-
   let normalizedEmail = email ? String(email).trim().toLowerCase() : '';
   // Facebook sometimes omits email — still create a usable account
   if (!normalizedEmail && idField === 'facebookId') {
     normalizedEmail = `fb_${profileId}@users.xtalenti.local`;
   }
 
+  let user = await User.findOne({ where: { [idField]: profileId } });
+  if (user) {
+    // If we later get a real email, attach to the existing email account when possible
+    if (
+      normalizedEmail &&
+      !isPlaceholderOAuthEmail(normalizedEmail) &&
+      isPlaceholderOAuthEmail(user.email)
+    ) {
+      const byEmail = await User.findOne({ where: { email: normalizedEmail } });
+      if (byEmail && byEmail.id !== user.id) {
+        const placeholder = user;
+        byEmail[idField] = profileId;
+        if (firstName && !byEmail.firstName) byEmail.firstName = firstName;
+        if (lastName && !byEmail.lastName) byEmail.lastName = lastName;
+        await byEmail.save();
+        placeholder[idField] = null;
+        await placeholder.save().catch(() => {});
+        return ensureOAuthProfile(byEmail);
+      }
+      user.email = normalizedEmail;
+      if (firstName) user.firstName = firstName;
+      if (lastName != null) user.lastName = lastName;
+      await user.save();
+    }
+    return ensureOAuthProfile(user);
+  }
+
   if (normalizedEmail) {
     user = await User.findOne({ where: { email: normalizedEmail } });
     if (user) {
       user[idField] = profileId;
+      if (firstName && !user.firstName) user.firstName = firstName;
+      if (lastName && !user.lastName) user.lastName = lastName;
       await user.save();
-      return user;
+      return ensureOAuthProfile(user);
     }
   }
 
@@ -76,7 +124,7 @@ async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
     );
   }
 
-  return User.create({
+  user = await User.create({
     [idField]: profileId,
     email: normalizedEmail,
     firstName: firstName || 'User',
@@ -84,6 +132,7 @@ async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
     role: 'athlete',
     password: await randomUnusablePassword(),
   });
+  return ensureOAuthProfile(user);
 }
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {

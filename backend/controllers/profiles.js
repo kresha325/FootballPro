@@ -464,7 +464,25 @@ exports.getProfile = async (req, res) => {
     });
 
     if (!profile) {
-      return res.status(404).json({ msg: 'Profili nuk u gjet' });
+      // OAuth / edge cases: User exists without Profile row — self-heal for owner
+      const viewerId = req.user?.id != null ? Number(req.user.id) : null;
+      if (viewerId != null && viewerId === userId) {
+        try {
+          await Profile.create({ userId }, { fields: ['userId'] });
+          profile = await Profile.findOne({
+            where: { userId },
+            include: [{
+              model: User,
+              attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'dateOfBirth', 'gender', 'joncoinBalance', 'verified', 'adminVerified', 'premium', 'parentVerified', 'clubVerified', 'clubVerifiedAt']
+            }]
+          });
+        } catch (createErr) {
+          console.warn('getProfile auto-create failed:', createErr?.message || createErr);
+        }
+      }
+      if (!profile) {
+        return res.status(404).json({ msg: 'Profili nuk u gjet' });
+      }
     }
 
     // Calculate age and age group (athletes/people only — orgs get founding year)
