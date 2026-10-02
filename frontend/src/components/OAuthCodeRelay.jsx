@@ -2,19 +2,32 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BACKEND_URL } from '../config/api';
 
+function resolveApiOrigin() {
+  const fromEnv = String(BACKEND_URL || '').replace(/\/$/, '');
+  let host = '';
+  try {
+    host = window.location.hostname;
+  } catch {
+    host = '';
+  }
+  // On the SPA host, never call itself for the passport callback.
+  if (host && /xtalenti\.com$/i.test(host)) {
+    if (fromEnv && !/xtalenti\.com/i.test(fromEnv)) return fromEnv;
+    return 'https://footballpro.onrender.com';
+  }
+  if (fromEnv) return fromEnv;
+  return 'https://footballpro.onrender.com';
+}
+
 /**
  * Meta/Google redirect to SPA first (App Domains = xtalenti.com),
  * then we forward ?code=&state= to the API passport callback.
- *
- * Routes:
- *   /auth/facebook/callback → /api/auth/facebook/callback
- *   /auth/google/callback   → /api/auth/google/callback
  */
 export default function OAuthCodeRelay({ provider }) {
   const location = useLocation();
 
   useEffect(() => {
-    const base = String(BACKEND_URL || '').replace(/\/$/, '');
+    const base = resolveApiOrigin();
     const path =
       provider === 'google' ? '/api/auth/google/callback' : '/api/auth/facebook/callback';
     const qs = location.search || '';
