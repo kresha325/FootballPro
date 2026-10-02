@@ -11,6 +11,32 @@ async function randomUnusablePassword() {
   return bcrypt.hash(raw, 10);
 }
 
+function backendPublicOrigin() {
+  // Prefer explicit backend host. Avoid PUBLIC_BASE_URL if it points at the SPA.
+  const candidates = [
+    process.env.BACKEND_PUBLIC_URL,
+    process.env.RENDER_EXTERNAL_URL,
+    process.env.PUBLIC_BASE_URL,
+  ];
+  for (const raw of candidates) {
+    const v = String(raw || '').trim().replace(/\/$/, '');
+    if (!v) continue;
+    if (/xtalenti\.com/i.test(v)) continue; // frontend host — not OAuth callback host
+    return v.replace(/\/api$/i, '');
+  }
+  return 'https://footballpro.onrender.com';
+}
+
+function googleCallbackURL() {
+  if (process.env.GOOGLE_CALLBACK_URL) return String(process.env.GOOGLE_CALLBACK_URL).trim();
+  return `${backendPublicOrigin()}/api/auth/google/callback`;
+}
+
+function facebookCallbackURL() {
+  if (process.env.FACEBOOK_CALLBACK_URL) return String(process.env.FACEBOOK_CALLBACK_URL).trim();
+  return `${backendPublicOrigin()}/api/auth/facebook/callback`;
+}
+
 /**
  * Link or create user from OAuth profile.
  * @param {'googleId'|'facebookId'|'appleId'} idField
@@ -21,7 +47,12 @@ async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
   let user = await User.findOne({ where: { [idField]: profileId } });
   if (user) return user;
 
-  const normalizedEmail = email ? String(email).trim().toLowerCase() : '';
+  let normalizedEmail = email ? String(email).trim().toLowerCase() : '';
+  // Facebook sometimes omits email — still create a usable account
+  if (!normalizedEmail && idField === 'facebookId') {
+    normalizedEmail = `fb_${profileId}@users.xtalenti.local`;
+  }
+
   if (normalizedEmail) {
     user = await User.findOne({ where: { email: normalizedEmail } });
     if (user) {
@@ -32,7 +63,6 @@ async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
   }
 
   if (!normalizedEmail) {
-    // Apple may omit email on later logins — without prior appleId row we cannot create safely
     throw new Error(
       'Email nuk u dha nga ofruesi. Hyr një herë me email të dukshëm, ose lidh llogarinë ekzistuese.'
     );
@@ -54,7 +84,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback',
+        callbackURL: googleCallbackURL(),
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -81,21 +111,25 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
       {
         clientID: process.env.FACEBOOK_APP_ID,
         clientSecret: process.env.FACEBOOK_APP_SECRET,
-        callbackURL: '/api/auth/facebook/callback',
-        profileFields: ['id', 'emails', 'name'],
+        callbackURL: facebookCallbackURL(),
+        profileFields: ['id', 'emails', 'name', 'displayName'],
+        enableProof: true,
+        graphAPIVersion: 'v21.0',
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          const email = profile.emails?.[0]?.value;
-          const user = await upsertOAuthUser(
-            'facebookId',
-            profile.id,
-            email,
-            profile.name?.givenName,
-            profile.name?.familyName
-          );
+          const email = profile.emails?.[0]?.value || null;
+          const first =
+            profile.name?.givenName ||
+            (profile.displayName ? String(profile.displayName).split(' ')[0] : '') ||
+            'User';
+          const last =
+            profile.name?.familyName ||
+            (profile.displayName ? String(profile.displayName).split(' ').slice(1).join(' ') : '');
+          const user = await upsertOAuthUser('facebookId', profile.id, email, first, last);
           return done(null, user);
         } catch (err) {
+          console.error('Facebook OAuth upsert failed:', err?.message || err);
           return done(err, null);
         }
       }
@@ -124,12 +158,7 @@ function appleCallbackURL() {
   if (process.env.APPLE_CALLBACK_URL) {
     return String(process.env.APPLE_CALLBACK_URL).trim();
   }
-  const origin = (
-    process.env.BACKEND_PUBLIC_URL ||
-    process.env.RENDER_EXTERNAL_URL ||
-    'https://footballpro.onrender.com'
-  ).replace(/\/$/, '');
-  return `${origin}/api/auth/apple/callback`;
+  return `${backendPublicOrigin()}/api/auth/apple/callback`;
 }
 
 if (appleConfigured()) {
@@ -179,3 +208,5 @@ passport.deserializeUser(async (id, done) => {
 module.exports = passport;
 module.exports.appleConfigured = appleConfigured;
 module.exports.appleCallbackURL = appleCallbackURL;
+module.exports.facebookCallbackURL = facebookCallbackURL;
+module.exports.googleCallbackURL = googleCallbackURL;
