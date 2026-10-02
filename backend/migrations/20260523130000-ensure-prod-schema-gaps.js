@@ -125,6 +125,11 @@ module.exports = {
         allowNull: true,
         unique: true,
       });
+      await addColumnIfMissing(queryInterface, Sequelize, 'Users', 'appleId', {
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
+      });
       await addColumnIfMissing(queryInterface, Sequelize, 'Users', 'pushTokenMobile', {
         type: Sequelize.STRING,
         allowNull: true,

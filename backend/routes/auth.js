@@ -137,28 +137,73 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
 
 /**
  * ============================
+ * OAUTH PROVIDERS STATUS
+ * ============================
+ */
+router.get('/providers', (_req, res) => {
+  const { appleConfigured } = require('../config/passport');
+  res.json({
+    google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    facebook: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
+    apple: typeof appleConfigured === 'function' ? appleConfigured() : false,
+  });
+});
+
+function oauthState(req) {
+  return String(req.query?.state || req.body?.state || '');
+}
+
+function oauthFailureRedirect(req) {
+  const isMobile = oauthState(req) === 'mobile';
+  if (isMobile) {
+    return 'xtalenti://auth/callback?error=oauth_failed';
+  }
+  const front = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
+  return `${front}/login?error=oauth_failed`;
+}
+
+function oauthSuccessRedirect(req, token) {
+  const isMobile = oauthState(req) === 'mobile';
+  if (isMobile) {
+    return `xtalenti://auth/callback?token=${encodeURIComponent(token)}`;
+  }
+  const front = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
+  return `${front}/auth/callback?token=${encodeURIComponent(token)}`;
+}
+
+function issueOAuthJwtRedirect(req, res) {
+  const token = jwt.sign(
+    { user: { id: req.user.id } },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+  res.redirect(oauthSuccessRedirect(req, token));
+}
+
+/**
+ * ============================
  * GOOGLE OAUTH
  * ============================
  */
-router.get(
-  '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+router.get('/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(503).json({ msg: 'Google OAuth nuk është konfiguruar' });
+  }
+  const isMobile = req.query.app === '1' || req.query.mobile === '1';
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: isMobile ? 'mobile' : 'web',
+  })(req, res, next);
+});
 
 router.get(
   '/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login' }),
-  (req, res) => {
-    const token = jwt.sign(
-      { user: { id: req.user.id } },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/auth/callback?token=${token}`
-    );
-  }
+  (req, res, next) => {
+    passport.authenticate('google', {
+      failureRedirect: oauthFailureRedirect(req),
+    })(req, res, next);
+  },
+  issueOAuthJwtRedirect
 );
 
 /**
@@ -166,25 +211,59 @@ router.get(
  * FACEBOOK OAUTH
  * ============================
  */
-router.get(
-  '/facebook',
-  passport.authenticate('facebook', { scope: ['email'] })
-);
+router.get('/facebook', (req, res, next) => {
+  if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+    return res.status(503).json({ msg: 'Facebook OAuth nuk është konfiguruar' });
+  }
+  const isMobile = req.query.app === '1' || req.query.mobile === '1';
+  passport.authenticate('facebook', {
+    scope: ['email'],
+    state: isMobile ? 'mobile' : 'web',
+  })(req, res, next);
+});
 
 router.get(
   '/facebook/callback',
-  passport.authenticate('facebook', { failureRedirect: '/login' }),
-  (req, res) => {
-    const token = jwt.sign(
-      { user: { id: req.user.id } },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/auth/callback?token=${token}`
-    );
-  }
+  (req, res, next) => {
+    passport.authenticate('facebook', {
+      failureRedirect: oauthFailureRedirect(req),
+    })(req, res, next);
+  },
+  issueOAuthJwtRedirect
 );
+
+/**
+ * ============================
+ * APPLE SIGN IN
+ * ============================
+ * Apple returns via HTTPS POST (form_post). Register Return URL:
+ *   https://YOUR-BACKEND/api/auth/apple/callback
+ */
+router.get('/apple', (req, res, next) => {
+  const { appleConfigured } = require('../config/passport');
+  if (!appleConfigured()) {
+    return res.status(503).json({ msg: 'Apple Sign In nuk është konfiguruar' });
+  }
+  const isMobile = req.query.app === '1' || req.query.mobile === '1';
+  passport.authenticate('apple', {
+    state: isMobile ? 'mobile' : 'web',
+  })(req, res, next);
+});
+
+router.post(
+  '/apple/callback',
+  (req, res, next) => {
+    passport.authenticate('apple', {
+      failureRedirect: oauthFailureRedirect(req),
+      session: false,
+    })(req, res, next);
+  },
+  issueOAuthJwtRedirect
+);
+
+// Some Apple flows / proxies may GET; keep a soft fallback
+router.get('/apple/callback', (req, res) => {
+  res.redirect(oauthFailureRedirect(req));
+});
 
 module.exports = router;

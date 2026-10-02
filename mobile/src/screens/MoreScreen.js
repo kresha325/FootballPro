@@ -1,15 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
-import { WEB_APP_URL } from '../config/constants';
-
-const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
-const HELP_URL = `${WEB_BASE}/help`;
-const PRIVACY_URL = `${WEB_BASE}/privacy`;
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -154,8 +149,13 @@ export default function MoreScreen({ navigation }) {
       {btn({ title: 'Search', subtitle: 'Users, posts and discovery', onPress: () => navigation.navigate('Search') })}
       {btn({ title: 'Matches', subtitle: 'View and schedule matches', onPress: () => navigation.navigate('Matches') })}
       {btn({
-        title: 'Streams & Go Live',
-        subtitle: 'Live, regjistrime, ngarkim video',
+        title: 'Streams',
+        subtitle: 'Live now, regjistrime, Go Live',
+        onPress: () => navigation.navigate('Streams'),
+      })}
+      {btn({
+        title: 'Go Live',
+        subtitle: 'Nis transmetimin LiveKit / YouTube',
         onPress: () => navigation.navigate('GoLive'),
       })}
       {btn({ title: 'Premium', subtitle: 'Membership plans and perks', onPress: () => navigation.navigate('Premium') })}
@@ -165,12 +165,12 @@ export default function MoreScreen({ navigation }) {
       {btn({
         title: 'Ndihmë & FAQ',
         subtitle: 'Si funksionon platforma',
-        onPress: () => Linking.openURL(HELP_URL),
+        onPress: () => navigation.navigate('Legal', { kind: 'help' }),
       })}
       {btn({
         title: 'Privatësia & të dhënat',
         subtitle: 'Privacy, kushtet, fshirja e llogarisë',
-        onPress: () => Linking.openURL(PRIVACY_URL),
+        onPress: () => navigation.navigate('Legal', { kind: 'privacy' }),
       })}
       {btn({
         title: 'Dil nga llogaria',

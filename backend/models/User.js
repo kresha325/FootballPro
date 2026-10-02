@@ -66,6 +66,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     unique: true,
   },
+  appleId: {
+    type: DataTypes.STRING,
+    unique: true,
+  },
   pushTokenMobile: {
     type: DataTypes.STRING,
   },

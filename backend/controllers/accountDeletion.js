@@ -45,6 +45,7 @@ exports.deleteMyAccount = async (req, res) => {
     user.pushTokenWeb = null;
     user.googleId = null;
     user.facebookId = null;
+    user.appleId = null;
     user.resetPasswordToken = null;
     user.resetPasswordExpire = null;
     user.parentEmail = null;

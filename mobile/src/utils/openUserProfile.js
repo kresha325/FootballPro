@@ -35,3 +35,22 @@ export function openTournamentDetail(navigation, tournamentId) {
     parent.navigate('More', { screen: 'TournamentDetail', params: { tournamentId } });
   }
 }
+
+/** Open digital CV screen from any stack. */
+export function openPublicCv(navigation, userId) {
+  if (!navigation || userId == null || userId === '') return;
+
+  const id = userId;
+  const state = navigation.getState?.();
+  const routeNames = state?.routeNames || [];
+
+  if (routeNames.includes('PublicCv')) {
+    navigation.navigate('PublicCv', { userId: id });
+    return;
+  }
+
+  const parent = navigation.getParent?.();
+  if (parent?.navigate) {
+    parent.navigate('Profile', { screen: 'PublicCv', params: { userId: id } });
+  }
+}

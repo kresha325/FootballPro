@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,8 @@ import {
   adminInvoicesRequest,
   adminJoncoinPendingRequest,
   adminJoncoinUpdateStatusRequest,
+  adminMediaDeleteRequest,
+  adminMediaListRequest,
   adminPostsRequest,
   adminReportsRequest,
   adminResetUserPasswordRequest,
@@ -46,6 +49,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'users', label: 'Users' },
   { id: 'content', label: 'Content' },
+  { id: 'media', label: 'Media' },
   { id: 'reports', label: 'Reports' },
   { id: 'joncoin', label: 'XCoin' },
   { id: 'invoices', label: 'Invoices' },
@@ -87,6 +91,7 @@ export default function AdminDashboardScreen() {
   const [invoices, setInvoices] = useState([]);
   const [stadiums, setStadiums] = useState([]);
   const [tournaments, setTournaments] = useState([]);
+  const [mediaItems, setMediaItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -224,10 +229,12 @@ export default function AdminDashboardScreen() {
         return stadiums;
       case 'tournaments':
         return tournaments;
+      case 'media':
+        return mediaItems;
       default:
         return [];
     }
-  }, [activeTab, users, posts, reports, joncoinPending, invoices, stadiums, tournaments]);
+  }, [activeTab, users, posts, reports, joncoinPending, invoices, stadiums, tournaments, mediaItems]);
 
   const loadData = useCallback(
     async ({ silent } = { silent: false }) => {
@@ -280,6 +287,14 @@ export default function AdminDashboardScreen() {
           const tRes = await adminTournamentsRequest({ q: search || undefined, limit: 100 });
           setTournaments(Array.isArray(tRes?.data?.tournaments) ? tRes.data.tournaments : []);
           setPages(1);
+        } else if (activeTab === 'media') {
+          const mediaRes = await adminMediaListRequest({
+            page,
+            limit: 20,
+            q: search || undefined,
+          });
+          setMediaItems(Array.isArray(mediaRes?.data?.items) ? mediaRes.data.items : []);
+          setPages(Number(mediaRes?.data?.totalPages || 1));
         } else {
           setPages(1);
         }
@@ -333,10 +348,47 @@ export default function AdminDashboardScreen() {
   const health = analytics?.systemHealth || {};
   const recent = analytics?.recentActivity || {};
 
-  const showSearch = ['users', 'content', 'invoices', 'stadiums', 'tournaments'].includes(activeTab);
-  const showPagination = ['users', 'content', 'reports', 'invoices'].includes(activeTab);
+  const showSearch = ['users', 'content', 'media', 'invoices', 'stadiums', 'tournaments'].includes(activeTab);
+  const showPagination = ['users', 'content', 'media', 'reports', 'invoices'].includes(activeTab);
 
   const renderItem = ({ item }) => {
+    if (activeTab === 'media') {
+      return (
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+            {item?.title || `Media #${item?.id || '-'}`}
+          </Text>
+          <Text style={[styles.meta, { color: colors.muted }]}>
+            #{item?.id} · {item?.category || '-'} · {item?.visibility || '-'}
+            {item?.season ? ` · ${item.season}` : ''}
+          </Text>
+          {item?.youtubeUrl ? (
+            <TouchableOpacity onPress={() => Linking.openURL(item.youtubeUrl)}>
+              <Text style={[styles.meta, { color: colors.primaryText }]} numberOfLines={2}>
+                {item.youtubeUrl}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            {item?.youtubeUrl ? (
+              <TouchableOpacity
+                style={[styles.action, { backgroundColor: colors.primary }]}
+                onPress={() => Linking.openURL(item.youtubeUrl)}
+              >
+                <Text style={styles.actionText}>Hap</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.action, styles.remove]}
+              onPress={() => askDelete('media', () => runAction(adminMediaDeleteRequest, item.id))}
+            >
+              <Text style={styles.actionText}>Fshi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     if (activeTab === 'content') {
       return (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>

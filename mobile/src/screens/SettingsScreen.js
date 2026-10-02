@@ -28,7 +28,6 @@ import {
   getNotificationPermissionGranted,
   getPushPreference,
 } from '../notifications/push';
-import { WEB_APP_URL } from '../config/constants';
 import { hasTier } from '../utils/subscriptionAccess';
 import {
   PROFILE_THEMES,
@@ -39,14 +38,12 @@ import {
 } from '../utils/profileThemes';
 
 const YOUTUBE_STUDIO_HELP = 'https://www.youtube.com/account_advanced';
-const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
-const HELP_URL = `${WEB_BASE}/help`;
-const ABOUT_URL = `${WEB_BASE}/about`;
-const COMMUNITY_GUIDELINES_URL = `${WEB_BASE}/community-guidelines`;
-const PRIVACY_URL = `${WEB_BASE}/privacy`;
-const TERMS_URL = `${WEB_BASE}/terms`;
-const COOKIES_URL = `${WEB_BASE}/cookies`;
-const DATA_URL = `${WEB_BASE}/data`;
+
+function openLegal(navigation, kind) {
+  if (navigation?.navigate) {
+    navigation.navigate('Legal', { kind });
+  }
+}
 
 function profileFromUser(user) {
   return {
@@ -235,10 +232,6 @@ export default function SettingsScreen() {
 
   const openYoutubeHelp = () => {
     Linking.openURL(YOUTUBE_STUDIO_HELP).catch(() => {});
-  };
-
-  const openExternal = (url) => {
-    Linking.openURL(url).catch(() => Alert.alert('Gabim', 'Nuk u hap lidhja'));
   };
 
   const runDeleteAccount = async () => {
@@ -592,25 +585,25 @@ export default function SettingsScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>Ndihmë, info & ligjore</Text>
-        <TouchableOpacity onPress={() => openExternal(HELP_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'help')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Ndihmë & FAQ</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(ABOUT_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'about')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Rreth X TALENTI</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(COMMUNITY_GUIDELINES_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'community-guidelines')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Udhëzuesit e komunitetit</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(PRIVACY_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'privacy')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e privatësisë</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(TERMS_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'terms')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Kushtet e përdorimit</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(COOKIES_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'cookies')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e cookies</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openExternal(DATA_URL)} style={styles.linkBtn}>
+        <TouchableOpacity onPress={() => openLegal(navigation, 'data')} style={styles.linkBtn}>
           <Text style={[styles.linkBtnText, { color: colors.primary }]}>Të dhënat e tua (akses / fshirje)</Text>
         </TouchableOpacity>
         <TouchableOpacity

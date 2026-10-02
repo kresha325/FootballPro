@@ -91,6 +91,9 @@ export const registerRequest = (payload) => api.post('/api/auth/register', paylo
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
 export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
 export const meRequest = () => api.get('/api/auth/me');
+export const oauthProvidersRequest = () => api.get('/api/auth/providers');
+export const adminMediaListRequest = (params = {}) => api.get('/api/media/admin', { params });
+export const adminMediaDeleteRequest = (id) => api.delete(`/api/media/${id}`);
 export const postsRequest = (params = {}) => api.get('/api/posts', { params });
 export const getPostRequest = (postId) => api.get(`/api/posts/${postId}`);
 export const userPostsRequest = (userId) => api.get(`/api/posts/user/${userId}`);
@@ -113,6 +116,7 @@ export const setPostSponsorsRequest = (postId, sponsorIds = []) =>
   api.post(`/api/posts/${postId}/sponsors`, { sponsorIds });
 export const myProfileRequest = () => api.get('/api/profiles/me');
 export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
+export const publicProfileCvRequest = (userId) => api.get(`/api/profiles/cv/${userId}`);
 export const profileTournamentSummaryRequest = (userId) =>
   api.get(`/api/profiles/${userId}/tournament-summary`);
 export const profilesRequest = (params = {}) => api.get('/api/profiles', { params });

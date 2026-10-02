@@ -202,6 +202,11 @@ exports.login = async (req, res) => {
           msg: 'Kjo llogari përdor hyrjen me Facebook në web. Përdor “Ke harruar fjalëkalimin?” në aplikacion për të vendosur fjalëkalim.',
         });
       }
+      if (user.appleId) {
+        return res.status(400).json({
+          msg: 'Kjo llogari përdor hyrjen me Apple. Përdor “Ke harruar fjalëkalimin?” në aplikacion për të vendosur fjalëkalim.',
+        });
+      }
       return res.status(400).json({ msg: 'Kredencialet janë të pasakta' });
     }
 

@@ -43,6 +43,8 @@ const StreamsPage = lazyWithReload(() => import('./components/StreamsPage'));
 const EmbedOutboundCall = lazyWithReload(() => import('./components/EmbedOutboundCall'));
 const LegalPage = lazyWithReload(() => import('./components/LegalPage'));
 const PublicCvPage = lazyWithReload(() => import('./components/PublicCvPage'));
+const SponsorsAdsHub = lazyWithReload(() => import('./components/SponsorsAdsHub'));
+const InsightsHub = lazyWithReload(() => import('./components/InsightsHub'));
 const EmbedIncomingCall = lazyWithReload(() => import('./components/EmbedIncomingCall'));
 const EmbedGoLive = lazyWithReload(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
@@ -153,10 +155,13 @@ function App() {
             <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/tournaments/:tournamentId" element={user ? <Tournaments /> : <Navigate to="/login" />} />
-            <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
-            <Route path="/gamification" element={user ? <Gamification /> : <Navigate to="/login" />} />
+            <Route path="/analytics" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
+            <Route path="/gamification" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/gamification/:userId" element={user ? <Gamification /> : <Navigate to="/login" />} />
+            <Route path="/insights" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/premium" element={user ? <Premium /> : <Navigate to="/login" />} />
+            <Route path="/sponsors" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
+            <Route path="/ads" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
             <Route path="/matches" element={user ? <Matches /> : <Navigate to="/login" />} />
             <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/feed" />} />
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />

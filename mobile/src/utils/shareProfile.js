@@ -1,5 +1,6 @@
 import { Alert, Linking, Share } from 'react-native';
 import { WEB_APP_URL, SHARE_ORIGIN, publicAssetBaseUrl, BACKEND_URL } from '../config/constants';
+import { openPublicCv } from './openUserProfile';
 
 function webOrigin() {
   return (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
@@ -22,7 +23,7 @@ function ogShareOrigin() {
   return apiOrigin();
 }
 
-/** SPA page for humans */
+/** SPA page for humans / external share */
 export function getProfileCvPublicUrl(userId) {
   return `${webOrigin()}/cv/${userId}`;
 }
@@ -67,8 +68,14 @@ async function copyLink(url, tip) {
   if (tip) Alert.alert('Gati', tip);
 }
 
-export async function previewProfileCv(profile) {
-  const url = getProfileCvPublicUrl(profile.id || profile.userId);
+/** In-app CV preview when navigation is available; otherwise open web. */
+export async function previewProfileCv(profile, options = {}) {
+  const userId = profile?.id || profile?.userId;
+  if (options.navigation && userId != null) {
+    openPublicCv(options.navigation, userId);
+    return;
+  }
+  const url = getProfileCvPublicUrl(userId);
   await openShareUrl(url, 'CV');
 }
 
@@ -100,11 +107,19 @@ function showSharePlatforms(profile) {
   ]);
 }
 
-/** Owner flow: preview CV first, then optionally share. */
-export function promptShareProfileCv(profile) {
+/**
+ * Owner flow: preview CV in-app, then optionally share externally.
+ * @param {object} profile
+ * @param {{ navigation?: object, shareOnly?: boolean }} [options]
+ */
+export function promptShareProfileCv(profile, options = {}) {
   if (!profile?.id && !profile?.userId) return;
+  if (options.shareOnly) {
+    showSharePlatforms(profile);
+    return;
+  }
   Alert.alert('CV dixhitale', 'Shiko CV-në para se ta ndash.', [
-    { text: 'Shiko CV', onPress: () => previewProfileCv(profile) },
+    { text: 'Shiko CV', onPress: () => previewProfileCv(profile, options) },
     { text: 'Ndaj…', onPress: () => showSharePlatforms(profile) },
     { text: 'Anulo', style: 'cancel' },
   ]);

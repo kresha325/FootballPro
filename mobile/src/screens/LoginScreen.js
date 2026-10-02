@@ -25,13 +25,15 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { APP_BRAND_WORDMARK } from '../config/branding';
-import { WEB_APP_URL } from '../config/constants';
+import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import { isOrgProfileRole } from '../utils/orgProfile';
+import { oauthProvidersRequest } from '../api/client';
 
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 const PRIVACY_URL = `${WEB_BASE}/privacy`;
 const TERMS_URL = `${WEB_BASE}/terms`;
 const HELP_URL = `${WEB_BASE}/help`;
+const API_ROOT = String(BACKEND_URL || '').replace(/\/$/, '').replace(/\/api$/i, '');
 
 function RolePickerModal({ visible, selectedValue, onSelect, onClose, colors }) {
   return (
@@ -112,6 +114,33 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [inlineError, setInlineError] = useState('');
+  const [oauthProviders, setOauthProviders] = useState({ google: false, facebook: false, apple: false });
+
+  useEffect(() => {
+    let cancelled = false;
+    oauthProvidersRequest()
+      .then((res) => {
+        if (cancelled) return;
+        setOauthProviders({
+          google: !!res?.data?.google,
+          facebook: !!res?.data?.facebook,
+          apple: !!res?.data?.apple,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setOauthProviders({ google: false, facebook: false, apple: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const startOAuth = (provider) => {
+    const url = `${API_ROOT}/api/auth/${provider}?app=1`;
+    Linking.openURL(url).catch(() => {
+      setInlineError('Nuk u hap hyrja sociale. Provo përsëri.');
+    });
+  };
 
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
@@ -455,6 +484,46 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
+        {mode !== 'forgot' && (oauthProviders.google || oauthProviders.facebook || oauthProviders.apple) ? (
+          <View style={styles.oauthWrap}>
+            <View style={styles.oauthDividerRow}>
+              <View style={[styles.oauthLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.oauthOr, { color: colors.muted }]}>ose</Text>
+              <View style={[styles.oauthLine, { backgroundColor: colors.border }]} />
+            </View>
+            {oauthProviders.apple ? (
+              <TouchableOpacity
+                style={[styles.oauthBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={() => startOAuth('apple')}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="logo-apple" size={18} color={colors.text} />
+                <Text style={[styles.oauthBtnText, { color: colors.text }]}>Vazhdo me Apple</Text>
+              </TouchableOpacity>
+            ) : null}
+            {oauthProviders.google ? (
+              <TouchableOpacity
+                style={[styles.oauthBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={() => startOAuth('google')}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="logo-google" size={18} color={colors.text} />
+                <Text style={[styles.oauthBtnText, { color: colors.text }]}>Vazhdo me Google</Text>
+              </TouchableOpacity>
+            ) : null}
+            {oauthProviders.facebook ? (
+              <TouchableOpacity
+                style={[styles.oauthBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={() => startOAuth('facebook')}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+                <Text style={[styles.oauthBtnText, { color: colors.text }]}>Vazhdo me Facebook</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
         <TouchableOpacity onPress={() => Linking.openURL(HELP_URL)} style={styles.helpLink}>
           <Text style={[styles.helpLinkText, themed.helpLinkText]}>Ndihmë & FAQ</Text>
         </TouchableOpacity>
@@ -535,6 +604,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  oauthWrap: { marginTop: 16, gap: 10 },
+  oauthDividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  oauthLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  oauthOr: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  oauthBtn: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  oauthBtnText: { fontWeight: '700', fontSize: 15 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'flex-end' },
   modalCard: {
     borderTopLeftRadius: 16,

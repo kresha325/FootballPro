@@ -5,7 +5,7 @@ import { useLocation, Link } from 'react-router-dom';
 import api from '../services/api';
 import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
-import VideoCallRoom from './VideoCallRoom';
+import GroupLiveKitCall from './GroupLiveKitCall';
 import ForwardButton from './ForwardButton';
 import VerifiedBadge from './VerifiedBadge';
 
@@ -729,10 +729,6 @@ function Messaging() {
 
   // --- WebRTC/Call logic ---
   function startCall(isVideo) {
-    if (selectedConversation?.isGroup && !isVideo) {
-      alert('Group audio call nuk është aktiv ende. Përdor Group Video Call.');
-      return;
-    }
     setCallType(isVideo ? 'video' : 'audio');
     setShowCall(true);
   }
@@ -804,26 +800,12 @@ function Messaging() {
       {modalImage && <MediaModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
       {showCall && selectedConversation && (
         selectedConversation.isGroup ? (
-          <div className="fixed inset-0 z-50 bg-black/85 p-2 sm:p-4">
-            <div className="xt-card h-full w-full overflow-auto p-3 sm:p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold">Group Video Call: {selectedConversation.name || 'Group'}</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowCall(false)}
-                  className="btn btn-quiet min-h-10 px-3 text-sm"
-                >
-                  Close
-                </button>
-              </div>
-              <VideoCallRoom
-                roomId={`group-${selectedConversation.id}`}
-                userId={user?.id}
-                autoJoin
-                onClose={() => setShowCall(false)}
-              />
-            </div>
-          </div>
+          <GroupLiveKitCall
+            conversationId={selectedConversation.id}
+            title={selectedConversation.name || 'Grup'}
+            audioOnly={callType === 'audio'}
+            onClose={() => setShowCall(false)}
+          />
         ) : (
           <VideoCallSimple
             targetUser={{

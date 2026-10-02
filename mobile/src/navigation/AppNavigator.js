@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import LandingScreen from '../screens/LandingScreen';
 import LoginScreen from '../screens/LoginScreen';
+import AuthCallbackScreen from '../screens/AuthCallbackScreen';
 import WelcomeOnboardingScreen, { WELCOME_ONBOARDING_KEY } from '../screens/WelcomeOnboardingScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import FeedScreen from '../screens/FeedScreen';
@@ -28,6 +29,7 @@ import MoreScreen from '../screens/MoreScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import BrowseProfilesScreen from '../screens/BrowseProfilesScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
+import PublicCvScreen from '../screens/PublicCvScreen';
 import OutgoingCallScreen from '../screens/OutgoingCallScreen';
 import IncomingCallScreen from '../screens/IncomingCallScreen';
 import IncomingCallListener from '../components/IncomingCallListener';
@@ -49,6 +51,8 @@ import ClubRosterScreen from '../screens/ClubRosterScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import LiveViewerScreen from '../screens/LiveViewerScreen';
+import LegalScreen from '../screens/LegalScreen';
+import StreamsScreen from '../screens/StreamsScreen';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -76,6 +80,23 @@ const linking = {
       Landing: '',
       ResetPassword: 'reset-password/:token',
       Login: 'login',
+      AuthCallback: {
+        path: 'auth/callback',
+        parse: {
+          token: (token) => token,
+          error: (error) => error,
+        },
+      },
+      Main: {
+        screens: {
+          Profile: {
+            screens: {
+              PublicCv: 'cv/:userId',
+              PublicProfile: 'profile/:userId',
+            },
+          },
+        },
+      },
     },
   },
 };
@@ -243,6 +264,8 @@ function FeedNavigator() {
         component={GalleryScreen}
         options={{ title: APP_BRAND_NAME, headerRight: () => <NotificationHeaderButton /> }}
       />
+      <FeedStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
+      <FeedStack.Screen name="PublicCv" component={PublicCvScreen} options={{ title: 'CV dixhitale' }} />
     </FeedStack.Navigator>
   );
 }
@@ -288,6 +311,7 @@ function ProfileNavigator() {
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: APP_BRAND_NAME }} />
       <ProfileStack.Screen name="BrowseProfiles" component={BrowseProfilesScreen} options={{ title: APP_BRAND_NAME }} />
       <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
+      <ProfileStack.Screen name="PublicCv" component={PublicCvScreen} options={{ title: 'CV dixhitale' }} />
       <ProfileStack.Screen
         name="OutgoingCall"
         component={OutgoingCallScreen}
@@ -309,6 +333,7 @@ function ProfileNavigator() {
         options={{ title: 'LIVE', headerBackTitleVisible: true }}
       />
       <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
+      <ProfileStack.Screen name="Legal" component={LegalScreen} options={{ title: 'Info & ligjore' }} />
     </ProfileStack.Navigator>
   );
 }
@@ -336,6 +361,7 @@ function MoreNavigator() {
         options={{ title: 'Njoftimet', headerBackTitle: 'Menu' }}
       />
       <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Streams" component={StreamsScreen} options={{ title: 'Streams' }} />
       <MoreStack.Screen
         name="GoLiveBroadcast"
         component={GoLiveBroadcastScreen}
@@ -347,10 +373,13 @@ function MoreNavigator() {
       <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
+      <MoreStack.Screen name="Legal" component={LegalScreen} options={{ title: 'Info & ligjore' }} />
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="LiveViewer" component={LiveViewerScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="PublicCv" component={PublicCvScreen} options={{ title: 'CV dixhitale' }} />
     </MoreStack.Navigator>
   );
 }
@@ -531,6 +560,7 @@ export default function AppNavigator() {
               <>
                 <Stack.Screen name="Landing" component={LandingScreen} />
                 <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="AuthCallback" component={AuthCallbackScreen} />
                 <Stack.Screen
                   name="ResetPassword"
                   component={ResetPasswordScreen}

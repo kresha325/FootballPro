@@ -126,26 +126,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('No token returned by server');
       }
 
-      setAuthToken(nextToken);
-
-      let me = loginUser;
-      try {
-        const meResponse = await meRequest();
-        me = meResponse.data;
-      } catch (meErr) {
-        console.warn('Login: /me failed, using login payload user:', meErr?.message);
-        if (!me) {
-          throw meErr;
-        }
-      }
-
-      await SecureStore.setItemAsync('token', nextToken);
-      await SecureStore.setItemAsync('user', JSON.stringify(me));
-
-      setToken(nextToken);
-      setUser(me);
-      connectSocket(nextToken, me);
-      return { ok: true };
+      return await establishSession(nextToken, loginUser);
     } catch (error) {
       const status = error?.response?.status;
       const msg = extractErrorMessage(error, 'Login failed');
@@ -160,6 +141,42 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const loginWithToken = async (rawToken) => {
+    const nextToken = String(rawToken || '').trim();
+    if (!nextToken) return { ok: false, message: 'Token mungon' };
+    setIsSubmitting(true);
+    try {
+      return await establishSession(nextToken, null);
+    } catch (error) {
+      return { ok: false, message: extractErrorMessage(error, 'Hyrja OAuth dështoi') };
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const establishSession = async (nextToken, loginUser) => {
+    setAuthToken(nextToken);
+
+    let me = loginUser;
+    try {
+      const meResponse = await meRequest();
+      me = meResponse.data;
+    } catch (meErr) {
+      console.warn('Login: /me failed, using login payload user:', meErr?.message);
+      if (!me) {
+        throw meErr;
+      }
+    }
+
+    await SecureStore.setItemAsync('token', nextToken);
+    await SecureStore.setItemAsync('user', JSON.stringify(me));
+
+    setToken(nextToken);
+    setUser(me);
+    connectSocket(nextToken, me);
+    return { ok: true };
   };
 
   const register = async ({ firstName, lastName, email, password, role, dateOfBirth, city, country }) => {
@@ -310,6 +327,7 @@ export const AuthProvider = ({ children }) => {
       isBootstrapping,
       isSubmitting,
       login,
+      loginWithToken,
       register,
       forgotPassword,
       logout,

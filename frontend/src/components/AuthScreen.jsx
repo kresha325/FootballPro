@@ -6,8 +6,97 @@ import { APP_BRAND_WORDMARK } from '../config/branding';
 import { setOnboardingPending } from './RegisterOnboarding';
 import { safeNextPath } from '../utils/safeNextPath';
 import { isOrgProfileRole } from '../utils/orgProfile';
+import { BACKEND_URL } from '../config/api';
 
 const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
+
+function OAuthButtons({ disabled }) {
+  const [providers, setProviders] = useState({ google: false, facebook: false, apple: false });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    authAPI
+      .oauthProviders()
+      .then((res) => {
+        if (!cancelled) {
+          setProviders({
+            google: !!res?.data?.google,
+            facebook: !!res?.data?.facebook,
+            apple: !!res?.data?.apple,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setProviders({ google: false, facebook: false, apple: false });
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!loaded || (!providers.google && !providers.facebook && !providers.apple)) return null;
+
+  const start = (provider) => {
+    const base = String(BACKEND_URL || '').replace(/\/$/, '');
+    window.location.href = `${base}/api/auth/${provider}`;
+  };
+
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-[var(--xt-color-text-muted)]">
+        <span className="h-px flex-1 bg-[var(--xt-color-border)]" />
+        ose
+        <span className="h-px flex-1 bg-[var(--xt-color-border)]" />
+      </div>
+      {providers.apple ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => start('apple')}
+          className="btn btn-outline flex w-full min-h-11 items-center justify-center gap-2 font-semibold"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path d="M16.365 1.43c0 1.14-.42 2.23-1.17 3.06-.8.9-2.12 1.6-3.3 1.5-.14-1.1.4-2.26 1.14-3.06.8-.9 2.2-1.58 3.33-1.5zM20.9 17.3c-.55 1.26-.82 1.82-1.53 2.94-.99 1.55-2.39 3.48-4.13 3.5-1.54.02-1.94-.99-4.03-.98-2.1.01-2.54 1-4.08.98-1.74-.02-3.07-1.76-4.06-3.3C1.4 17.08.3 13.3 1.96 10.6c1.05-1.7 2.72-2.77 4.3-2.77 1.6 0 2.6.99 3.92.99 1.28 0 2.06-.99 3.93-.99 1.4 0 2.88.76 3.93 2.08-3.46 1.9-2.9 6.84.86 7.4z" />
+          </svg>
+          Vazhdo me Apple
+        </button>
+      ) : null}
+      {providers.google ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => start('google')}
+          className="btn btn-outline flex w-full min-h-11 items-center justify-center gap-2 font-semibold"
+        >
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.5-.4-3.5z" />
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z" />
+            <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.3 35.5 26.8 36.5 24 36.5c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l.1.1 6.3 5.2C39.2 36.9 44 32 44 24c0-1.3-.1-2.5-.4-3.5z" />
+          </svg>
+          Vazhdo me Google
+        </button>
+      ) : null}
+      {providers.facebook ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => start('facebook')}
+          className="btn btn-outline flex w-full min-h-11 items-center justify-center gap-2 font-semibold"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="#1877F2">
+            <path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.98h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.35l-.54 3.49h-2.81V24C19.61 23.09 24 18.1 24 12.07z" />
+          </svg>
+          Vazhdo me Facebook
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export const REGISTER_ROLE_OPTIONS = [
   { label: 'Lojtar', value: 'athlete', hint: 'Statistika, video, turne' },
@@ -72,9 +161,14 @@ export default function AuthScreen({ initialMode }) {
   useEffect(() => {
     const fromPath = modeFromPath(location.pathname);
     setMode(initialMode || fromPath);
-    setInlineError('');
     setSuccessMsg('');
-  }, [location.pathname, initialMode]);
+    const oauthErr = searchParams.get('error');
+    if (oauthErr === 'oauth_failed') {
+      setInlineError('Hyrja me Google/Apple/Facebook dështoi. Provo përsëri ose përdor email.');
+    } else {
+      setInlineError('');
+    }
+  }, [location.pathname, initialMode, searchParams]);
 
   useEffect(() => {
     if (searchParams.get('next')) {
@@ -408,6 +502,8 @@ export default function AuthScreen({ initialMode }) {
                   : 'Dërgo linkun'}
           </button>
         </form>
+
+        {mode !== 'forgot' ? <OAuthButtons disabled={loading} /> : null}
       </div>
 
       {rolePickerOpen ? (

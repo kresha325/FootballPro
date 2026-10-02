@@ -175,7 +175,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
               <NotificationHeaderButton />
               <TouchableOpacity
-                onPress={() => promptShareProfileCv(profile)}
+                onPress={() => promptShareProfileCv(profile, { navigation })}
                 style={{ paddingHorizontal: 8 }}
                 accessibilityLabel="CV dixhitale"
               >

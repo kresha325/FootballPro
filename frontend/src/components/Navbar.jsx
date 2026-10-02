@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
-import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon, HomeIcon, ShoppingBagIcon, BellIcon, ChatBubbleLeftRightIcon, UsersIcon, BuildingOffice2Icon, LockClosedIcon, SparklesIcon, MegaphoneIcon, ArrowRightOnRectangleIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon, HomeIcon, ShoppingBagIcon, BellIcon, ChatBubbleLeftRightIcon, UsersIcon, BuildingOffice2Icon, LockClosedIcon, SparklesIcon, MegaphoneIcon, ArrowRightOnRectangleIcon, CalendarDaysIcon, GiftIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
 import { liveStreamAPI, messagingAPI, notificationsAPI, profileAPI, streamsAPI } from '../services/api';
@@ -490,24 +490,14 @@ function Navbar() {
               <span className="font-medium">Shfleto Profilet</span>
             </Link>
 
-            {/* Analytics */}
+            {/* Insights (Analitika + Gamifikim) */}
             <Link 
-              to="/analytics" 
+              to="/insights" 
               onClick={() => setIsMenuOpen(false)}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
-              <span className="font-medium">Analitika</span>
-            </Link>
-
-            {/* Gamification */}
-            <Link 
-              to="/gamification" 
-              onClick={() => setIsMenuOpen(false)}
-              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
-            >
-              <TrophyIcon className="h-6 w-6" />
-              <span className="font-medium">Gamifikimi</span>
+              <span className="font-medium">Insights</span>
             </Link>
 
             {/* Videos */}
@@ -577,17 +567,25 @@ function Navbar() {
               <span className="font-medium">Kalo në Premium</span>
             </Link>
 
-            {/* Shto Reklamë */}
-            <button
-              onClick={() => {
-                // Dërgo event custom për të hapur modalin në AdSlider
-                window.dispatchEvent(new CustomEvent('open-ad-modal'));
-              }}
-              className="btn btn-outline mt-2 w-full justify-start"
+            {/* Sponsorë */}
+            <Link
+              to="/sponsors"
+              onClick={() => setIsMenuOpen(false)}
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
+            >
+              <GiftIcon className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">Sponsorë</span>
+            </Link>
+
+            {/* Reklama */}
+            <Link
+              to="/ads"
+              onClick={() => setIsMenuOpen(false)}
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <MegaphoneIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Shto reklamë</span>
-            </button>
+              <span className="font-medium">Reklama</span>
+            </Link>
 
             {/* Settings */}
             <Link 

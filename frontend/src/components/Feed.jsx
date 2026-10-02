@@ -13,6 +13,7 @@ import SponsorBanner from './SponsorBanner.jsx';
 import UserCardsSection from './UserCardsSection';
 import FeedLiveNow from './FeedLiveNow';
 import FeedScoutingReport from './FeedScoutingReport';
+import FeedPostPager from './FeedPostPager';
 import AiSuggestCaptionButton from './ai/AiSuggestCaptionButton';
 import StadiumStrip from './StadiumStrip';
 import VerifiedBadge from './VerifiedBadge';
@@ -107,6 +108,7 @@ const Feed = () => {
   const [editFilePreview, setEditFilePreview] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [feedSearch, setFeedSearch] = useState('');
+  const [pagerIndex, setPagerIndex] = useState(null);
   // feed filter is controlled from Navbar (reads/writes localStorage)
 
   // Sponsor state per post
@@ -520,6 +522,11 @@ const Feed = () => {
     [allPosts, feedSearch]
   );
 
+  const openPostPager = (postId) => {
+    const idx = displayPosts.findIndex((p) => String(p.id) === String(postId));
+    setPagerIndex(idx >= 0 ? idx : 0);
+  };
+
   const role = String(user?.role || '').toLowerCase();
   useEffect(() => {
     if (!user?.id || !['athlete', 'player', 'coach'].includes(role)) return undefined;
@@ -585,6 +592,7 @@ const Feed = () => {
   }
 
   return (
+    <>
     <div className={`mx-auto max-w-7xl px-4 py-5 sm:py-7 ${denseFeed ? 'xt-feed-dense' : ''}`}>
 
       <header className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_top_right,rgba(217,164,65,.14),transparent_45%),linear-gradient(145deg,#121c2a,#0b111a)] p-5 sm:p-7">
@@ -994,30 +1002,53 @@ const Feed = () => {
                 </div>
               )}
               {post.imageUrl && !post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
-                <img 
-                  src={getCloudinarySafeUrl(getFullUrl(post.imageUrl))}
-                  alt="Post content" 
-                  className="w-full h-auto max-h-[min(80vh,48rem)] rounded-lg mb-4 object-contain bg-slate-100 dark:bg-slate-800/60"
-                  loading="lazy"
-                  decoding="async"
-                  onError={(e) => {
-                    console.error('Post image failed to load:', post.imageUrl);
-                    e.target.style.display = 'none';
-                  }}
-                />
+                <button
+                  type="button"
+                  className="mb-4 block w-full cursor-zoom-in text-left"
+                  onClick={() => openPostPager(post.id)}
+                  aria-label="Hap postimin në ekran të plotë"
+                >
+                  <img 
+                    src={getCloudinarySafeUrl(getFullUrl(post.imageUrl))}
+                    alt="Post content" 
+                    className="w-full h-auto max-h-[min(80vh,48rem)] rounded-lg object-contain bg-slate-100 dark:bg-slate-800/60"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      console.error('Post image failed to load:', post.imageUrl);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </button>
               )}
               {(post.videoUrl || (post.imageUrl && post.imageUrl.match(/\.(mp4|mov|avi|webm)$/i))) && (
-                <video 
-                  src={getCloudinarySafeUrl(getFullUrl(post.videoUrl || post.imageUrl))}
-                  controls 
-                  preload="metadata"
-                  className="w-full h-auto max-h-[min(80vh,48rem)] rounded-lg mb-4 object-contain bg-black"
-                  onError={(e) => {
-                    console.error('Post video failed to load:', post.videoUrl || post.imageUrl);
-                    e.target.style.display = 'none';
-                  }}
-                />
+                <button
+                  type="button"
+                  className="mb-4 block w-full cursor-zoom-in text-left"
+                  onClick={() => openPostPager(post.id)}
+                  aria-label="Hap postimin në ekran të plotë"
+                >
+                  <video 
+                    src={getCloudinarySafeUrl(getFullUrl(post.videoUrl || post.imageUrl))}
+                    controls 
+                    preload="metadata"
+                    className="pointer-events-none w-full h-auto max-h-[min(80vh,48rem)] rounded-lg object-contain bg-black"
+                    onError={(e) => {
+                      console.error('Post video failed to load:', post.videoUrl || post.imageUrl);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </button>
               )}
+              {!post.imageUrl && !post.videoUrl && post.content ? (
+                <button
+                  type="button"
+                  className="mb-3 block w-full text-left text-sm text-[var(--xt-color-text-muted)] underline-offset-2 hover:underline"
+                  onClick={() => openPostPager(post.id)}
+                >
+                  Hap në pamje të plotë
+                </button>
+              ) : null}
               <div className="flex items-center justify-between">
                   <div className="flex flex-wrap items-center gap-2">
                   <div className="relative inline-block">
@@ -1345,6 +1376,16 @@ const Feed = () => {
     </aside>
   </div>
 </div>
+      {pagerIndex != null ? (
+        <FeedPostPager
+          posts={displayPosts}
+          initialIndex={pagerIndex}
+          onClose={() => setPagerIndex(null)}
+          getFullUrl={getFullUrl}
+          getCloudinarySafeUrl={getCloudinarySafeUrl}
+        />
+      ) : null}
+    </>
   );
 };
 
