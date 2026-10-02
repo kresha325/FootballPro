@@ -51,6 +51,7 @@ const EmbedGoLive = lazyWithReload(() => import('./components/EmbedGoLive'));
 import XPNotificationManager from './components/XPNotificationManager';
 import VideoCallManager from './components/VideoCallManager';
 import AuthCallback from './components/AuthCallback';
+import OAuthCodeRelay from './components/OAuthCodeRelay';
 import { APP_BRAND_NAME } from './config/branding';
 
 // Hiq importin e applyBackgroundStyle
@@ -109,6 +110,8 @@ function App() {
             <Route path="/forgot-password" element={user ? <Navigate to="/feed" /> : <ForgotPassword />} />
             <Route path="/reset-password/:token" element={user ? <Navigate to="/feed" /> : <ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/auth/facebook/callback" element={<OAuthCodeRelay provider="facebook" />} />
+            <Route path="/auth/google/callback" element={<OAuthCodeRelay provider="google" />} />
             <Route path="/onboarding" element={user ? <RegisterOnboarding /> : <Navigate to="/login" />} />
             <Route path="/parent-verification" element={user ? <ParentVerification /> : <Navigate to="/login" />} />
             <Route path="/parent-verified" element={<ParentVerified />} />

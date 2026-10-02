@@ -27,14 +27,22 @@ function backendPublicOrigin() {
   return 'https://footballpro.onrender.com';
 }
 
+function frontendPublicOrigin() {
+  return (process.env.FRONTEND_URL || process.env.WEB_APP_URL || 'https://xtalenti.com')
+    .replace(/\/$/, '')
+    .replace(/\/api$/i, '');
+}
+
 function googleCallbackURL() {
   if (process.env.GOOGLE_CALLBACK_URL) return String(process.env.GOOGLE_CALLBACK_URL).trim();
-  return `${backendPublicOrigin()}/api/auth/google/callback`;
+  // Relay via SPA domain so Meta App Domains (xtalenti.com) match redirect_uri
+  return `${frontendPublicOrigin()}/auth/google/callback`;
 }
 
 function facebookCallbackURL() {
   if (process.env.FACEBOOK_CALLBACK_URL) return String(process.env.FACEBOOK_CALLBACK_URL).trim();
-  return `${backendPublicOrigin()}/api/auth/facebook/callback`;
+  // Relay via SPA — Facebook rejects footballpro.onrender.com unless owned/verified
+  return `${frontendPublicOrigin()}/auth/facebook/callback`;
 }
 
 /**
