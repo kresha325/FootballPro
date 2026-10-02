@@ -153,13 +153,14 @@ function oauthState(req) {
   return String(req.query?.state || req.body?.state || '');
 }
 
-function oauthFailureRedirect(req) {
+function oauthFailureRedirect(req, reason) {
   const isMobile = oauthState(req) === 'mobile';
+  const detail = reason ? `&reason=${encodeURIComponent(String(reason).slice(0, 180))}` : '';
   if (isMobile) {
-    return 'xtalenti://auth/callback?error=oauth_failed';
+    return `xtalenti://auth/callback?error=oauth_failed${detail}`;
   }
   const front = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
-  return `${front}/login?error=oauth_failed`;
+  return `${front}/login?error=oauth_failed${detail}`;
 }
 
 function oauthSuccessRedirect(req, token) {
@@ -180,6 +181,32 @@ function issueOAuthJwtRedirect(req, res) {
   res.redirect(oauthSuccessRedirect(req, token));
 }
 
+function authenticateOAuth(provider) {
+  return (req, res, next) => {
+    passport.authenticate(provider, { session: false }, (err, user, info) => {
+      if (err) {
+        console.error(`[oauth:${provider}] error:`, err?.message || err);
+        return res.redirect(oauthFailureRedirect(req, err.message || 'auth_error'));
+      }
+      if (!user) {
+        const msg = info?.message || info?.toString?.() || 'no_user';
+        console.error(`[oauth:${provider}] failed:`, msg, {
+          query: req.query,
+          callbackHint:
+            provider === 'facebook'
+              ? require('../config/passport').facebookCallbackURL?.()
+              : provider === 'google'
+                ? require('../config/passport').googleCallbackURL?.()
+                : undefined,
+        });
+        return res.redirect(oauthFailureRedirect(req, msg));
+      }
+      req.user = user;
+      return next();
+    })(req, res, next);
+  };
+}
+
 /**
  * ============================
  * GOOGLE OAUTH
@@ -198,11 +225,7 @@ router.get('/google', (req, res, next) => {
 
 router.get(
   '/google/callback',
-  (req, res, next) => {
-    passport.authenticate('google', {
-      failureRedirect: oauthFailureRedirect(req),
-    })(req, res, next);
-  },
+  authenticateOAuth('google'),
   issueOAuthJwtRedirect
 );
 
@@ -216,19 +239,20 @@ router.get('/facebook', (req, res, next) => {
     return res.status(503).json({ msg: 'Facebook OAuth nuk është konfiguruar' });
   }
   const isMobile = req.query.app === '1' || req.query.mobile === '1';
+  const { facebookCallbackURL } = require('../config/passport');
+  console.log('[oauth:facebook] start', {
+    callbackURL: typeof facebookCallbackURL === 'function' ? facebookCallbackURL() : null,
+    mobile: isMobile,
+  });
   passport.authenticate('facebook', {
-    scope: ['email'],
+    scope: ['email', 'public_profile'],
     state: isMobile ? 'mobile' : 'web',
   })(req, res, next);
 });
 
 router.get(
   '/facebook/callback',
-  (req, res, next) => {
-    passport.authenticate('facebook', {
-      failureRedirect: oauthFailureRedirect(req),
-    })(req, res, next);
-  },
+  authenticateOAuth('facebook'),
   issueOAuthJwtRedirect
 );
 

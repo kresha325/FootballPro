@@ -164,7 +164,12 @@ export default function AuthScreen({ initialMode }) {
     setSuccessMsg('');
     const oauthErr = searchParams.get('error');
     if (oauthErr === 'oauth_failed') {
-      setInlineError('Hyrja me Google/Apple/Facebook dështoi. Provo përsëri ose përdor email.');
+      const reason = searchParams.get('reason');
+      setInlineError(
+        reason
+          ? `Hyrja sociale dështoi: ${reason}`
+          : 'Hyrja me Google/Apple/Facebook dështoi. Provo përsëri ose përdor email.'
+      );
     } else {
       setInlineError('');
     }

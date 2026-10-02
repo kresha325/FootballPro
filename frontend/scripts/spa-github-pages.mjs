@@ -23,6 +23,8 @@ const STATIC_ROUTES = [
   'register',
   'forgot-password',
   'auth/callback',
+  'auth/facebook/callback',
+  'auth/google/callback',
   'onboarding',
   'parent-verification',
   'parent-verified',
