@@ -122,7 +122,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
         callbackURL: facebookCallbackURL(),
         profileFields: ['id', 'emails', 'name', 'displayName'],
         enableProof: true,
-        graphAPIVersion: 'v21.0',
+        graphAPIVersion: 'v26.0',
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
