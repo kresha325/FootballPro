@@ -1,12 +1,12 @@
 const db = require('../models');
 const Match = db.Match;
 const Tournament = db.Tournament;
-const { TournamentParticipant } = require('../models/Tournament');
 const User = db.User;
 const MatchScorer = db.MatchScorer;
 const { saveMatchGoalEvents } = require('../utils/matchGoalEvents');
 const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
 const { notifyMatchParticipants } = require('../utils/matchNotifications');
+const competitionService = require('../services/competitionService');
 
 // Update match details (edit)
 exports.updateMatch = async (req, res) => {
@@ -40,6 +40,20 @@ exports.updateMatch = async (req, res) => {
 
     const stadium = await db.Stadium.findByPk(stadiumId);
     if (!stadium) return res.status(400).json({ msg: 'Stadiumi nuk ekziston.', field: 'stadiumId' });
+
+    try {
+      await competitionService.assertManualFixture({
+        tournament,
+        homeUserId,
+        awayUserId,
+        round,
+        groupName: req.body.groupName,
+        matchDate,
+        excludeMatchId: match.id,
+      });
+    } catch (guardErr) {
+      return res.status(guardErr.status || 400).json({ msg: guardErr.message });
+    }
 
     match.tournamentId = tournamentId;
     match.homeUserId = homeUserId;
@@ -153,6 +167,19 @@ exports.createMatch = async (req, res) => {
     const stadium = await db.Stadium.findByPk(stadiumId);
     if (!stadium) return res.status(400).json({ msg: 'Stadiumi nuk ekziston.', field: 'stadiumId' });
 
+    try {
+      await competitionService.assertManualFixture({
+        tournament,
+        homeUserId,
+        awayUserId,
+        round,
+        groupName: req.body.groupName,
+        matchDate,
+      });
+    } catch (guardErr) {
+      return res.status(guardErr.status || 400).json({ msg: guardErr.message });
+    }
+
     const match = await Match.create({
       tournamentId,
       homeUserId,
@@ -161,7 +188,12 @@ exports.createMatch = async (req, res) => {
       round,
       stadiumId,
       status: 'scheduled',
+      stage: req.body.stage || (req.body.groupName ? 'group' : null),
+      groupName: req.body.groupName || null,
+      venue: req.body.venue || stadium.name,
     });
+    match.publicSlug = `m-${match.id}`;
+    await match.save();
 
     try {
       await notifyMatchParticipants(match, tournament, { kind: 'created' });
@@ -214,90 +246,37 @@ exports.getMatches = async (req, res) => {
 
 exports.updateMatchScore = async (req, res) => {
   try {
-    const { scoreHome, scoreAway } = req.body;
-    const match = await Match.findByPk(req.params.id, { include: [{ model: Tournament }] });
-    if (!match) return res.status(404).json({ msg: 'Match not found' });
-
-    const authz = canFillMatchStats(match.Tournament, req.user, match);
-    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
-
-    match.scoreHome = scoreHome;
-    match.scoreAway = scoreAway;
-    match.status = 'finished';
-    await match.save();
-
-    // Rebuild standings from finished matches (do not increment again)
-    if (match.tournamentId) {
-      const participants = await TournamentParticipant.findAll({
-        where: { tournamentId: match.tournamentId },
-      });
-      const stats = {};
-      for (const p of participants) {
-        stats[p.userId] = {
-          wins: 0,
-          draws: 0,
-          losses: 0,
-          goalsFor: 0,
-          goalsAgainst: 0,
-          points: 0,
-        };
-      }
-      const finished = await Match.findAll({
-        where: { tournamentId: match.tournamentId, status: 'finished' },
-        attributes: ['homeUserId', 'awayUserId', 'scoreHome', 'scoreAway'],
-      });
-      for (const m of finished) {
-        const h = m.homeUserId;
-        const a = m.awayUserId;
-        if (!stats[h] || !stats[a]) continue;
-        const sh = Number(m.scoreHome) || 0;
-        const sa = Number(m.scoreAway) || 0;
-        stats[h].goalsFor += sh;
-        stats[h].goalsAgainst += sa;
-        stats[a].goalsFor += sa;
-        stats[a].goalsAgainst += sh;
-        if (sh > sa) {
-          stats[h].wins += 1;
-          stats[h].points += 3;
-          stats[a].losses += 1;
-        } else if (sa > sh) {
-          stats[a].wins += 1;
-          stats[a].points += 3;
-          stats[h].losses += 1;
-        } else {
-          stats[h].draws += 1;
-          stats[a].draws += 1;
-          stats[h].points += 1;
-          stats[a].points += 1;
-        }
-      }
-      for (const p of participants) {
-        const s = stats[p.userId] || {
-          wins: 0,
-          draws: 0,
-          losses: 0,
-          goalsFor: 0,
-          goalsAgainst: 0,
-          points: 0,
-        };
-        p.wins = s.wins;
-        p.draws = s.draws;
-        p.losses = s.losses;
-        p.goalsFor = s.goalsFor;
-        p.goalsAgainst = s.goalsAgainst;
-        p.points = s.points;
-        await p.save();
-      }
-    }
-
+    const result = await competitionService.recordOfficialResult({
+      matchId: req.params.id,
+      user: req.user,
+      payload: { ...req.body, status: 'finished' },
+    });
     try {
-      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+      await notifyMatchParticipants(result.match, result.tournament, { kind: 'stats' });
     } catch (notifyErr) {
       console.warn('updateMatchScore notify:', notifyErr?.message || notifyErr);
     }
-
-    res.json(match);
+    res.json(result.match);
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.getMatchCenter = async (req, res) => {
+  try {
+    const payload = await competitionService.publicMatchPayload(req.params.id);
+    if (!payload) return res.status(404).json({ msg: 'Match not found' });
+    res.json(payload);
+  } catch (err) {
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.getCalendar = async (req, res) => {
+  try {
+    const payload = await competitionService.calendarMatches(req.query || {});
+    res.json(payload);
+  } catch (err) {
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };

@@ -44,6 +44,8 @@ import SponsorsScreen from '../screens/SponsorsScreen';
 import AdsScreen from '../screens/AdsScreen';
 import SearchScreen from '../screens/SearchScreen';
 import MatchesScreen from '../screens/MatchesScreen';
+import CalendarScreen from '../screens/CalendarScreen';
+import MatchDetailScreen from '../screens/MatchDetailScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import RegisterOnboardingScreen from '../screens/RegisterOnboardingScreen';
@@ -371,6 +373,8 @@ function MoreNavigator() {
       <MoreStack.Screen name="Ads" component={AdsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Search" component={SearchScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Calendar" component={CalendarScreen} options={{ title: 'Calendar' }} />
+      <MoreStack.Screen name="MatchDetail" component={MatchDetailScreen} options={{ title: 'Match' }} />
       <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
       <MoreStack.Screen name="Legal" component={LegalScreen} options={{ title: 'Info & ligjore' }} />

@@ -26,14 +26,18 @@ const {
   removeParticipant,
   setTournamentSquad,
   getTournamentSquad,
+  getCompetitionPlayerStats,
+  addTournamentMatchEvent,
+  setTournamentMatchLineup,
+  saveTournamentPlayerStats,
+  transitionCompetition,
 } = require('../controllers/tournaments');
 
 // Tournament CRUD
 router.post('/', auth, createTournament);
 router.put('/:id', auth, updateTournament);
-router.get('/', auth, getTournaments);
-// Trending (auth required)
-router.get('/trending', auth, getTrendingTournaments);
+router.get('/', auth.optionalAuth, getTournaments);
+router.get('/trending', auth.optionalAuth, getTrendingTournaments);
 
 router.delete('/:id', auth, async (req, res) => {
   try {
@@ -76,26 +80,31 @@ router.put('/:id/participants/:userId/reject', auth, rejectParticipant);
 router.delete('/:id/participants/:userId', auth, removeParticipant);
 
 // Leaderboard & standings (tabela sipas rregullave të turneut)
-router.get('/:id/leaderboard', auth, getLeaderboard);
-router.get('/:id/standings', auth, getStandings);
+router.get('/:id/leaderboard', auth.optionalAuth, getLeaderboard);
+router.get('/:id/standings', auth.optionalAuth, getStandings);
+router.get('/:id/player-stats', auth.optionalAuth, getCompetitionPlayerStats);
+router.post('/:id/lifecycle', auth, transitionCompetition);
 
-router.get('/:id', auth, getTournament);
+router.get('/:id', auth.optionalAuth, getTournament);
 
 // Bracket (knockout/cup)
 router.post('/:id/bracket/generate', auth, generateBracket);
-router.get('/:id/bracket', auth, getBracket);
+router.get('/:id/bracket', auth.optionalAuth, getBracket);
 
 // Matches (detail para listës që të mos përplaset me segmente të tjera)
-router.get('/:id/matches/:matchId', auth, getTournamentMatchDetail);
-router.get('/:id/matches', auth, getMatches);
+router.get('/:id/matches/:matchId', auth.optionalAuth, getTournamentMatchDetail);
+router.get('/:id/matches', auth.optionalAuth, getMatches);
 router.put('/matches/:matchId/score', auth, updateMatchScore);
 router.put('/matches/:matchId/result', auth, updateMatchResultForTournament);
 router.put('/matches/:matchId/schedule', auth, scheduleMatch);
+router.post('/matches/:matchId/events', auth, addTournamentMatchEvent);
+router.put('/matches/:matchId/lineup', auth, setTournamentMatchLineup);
+router.put('/matches/:matchId/player-stats', auth, saveTournamentPlayerStats);
 
 // Start tournament and generate matches automatically
 router.post('/:id/start', auth, startTournamentAndGenerateMatches);
 
 // Statistics
-router.get('/:id/stats', auth, getTournamentStats);
+router.get('/:id/stats', auth.optionalAuth, getTournamentStats);
 
 module.exports = router;

@@ -30,6 +30,9 @@ const WalletPage = lazyWithReload(() => import('./components/WalletPage'));
 const Notifications = lazyWithReload(() => import('./components/Notifications'));
 const Scouting = lazyWithReload(() => import('./components/Scouting'));
 const Tournaments = lazyWithReload(() => import('./components/TournamentSimple'));
+const CompetitionCenter = lazyWithReload(() => import('./components/competitions/CompetitionCenter'));
+const MatchCenterPage = lazyWithReload(() => import('./components/competitions/MatchCenterPage'));
+const CalendarPage = lazyWithReload(() => import('./components/competitions/CalendarPage'));
 const Gamification = lazyWithReload(() => import('./components/Gamification'));
 const Analytics = lazyWithReload(() => import('./components/Analytics'));
 const Premium = lazyWithReload(() => import('./components/Premium'));
@@ -158,6 +161,12 @@ function App() {
             <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/tournaments/:tournamentId" element={user ? <Tournaments /> : <Navigate to="/login" />} />
+            <Route path="/competitions" element={<CompetitionCenter />} />
+            <Route path="/competitions/:id" element={<CompetitionCenter section="overview" />} />
+            <Route path="/competitions/:id/standings" element={<CompetitionCenter section="standings" />} />
+            <Route path="/competitions/:id/fixtures" element={<CompetitionCenter section="fixtures" />} />
+            <Route path="/competitions/:id/bracket" element={<CompetitionCenter section="bracket" />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/analytics" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/gamification/:userId" element={user ? <Gamification /> : <Navigate to="/login" />} />
@@ -166,6 +175,7 @@ function App() {
             <Route path="/sponsors" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
             <Route path="/ads" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
             <Route path="/matches" element={user ? <Matches /> : <Navigate to="/login" />} />
+            <Route path="/matches/:id" element={<MatchCenterPage />} />
             <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/feed" />} />
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />

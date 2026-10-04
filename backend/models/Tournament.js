@@ -14,7 +14,7 @@ const Tournament = sequelize.define('Tournament', {
   },
   description: DataTypes.TEXT,
   type: {
-    type: DataTypes.ENUM('league', 'cup', 'knockout'),
+    type: DataTypes.STRING(32),
     allowNull: false,
   },
   /** Liga: sezon FIFA YYYY/(Y+1); kupë/knockout: viti i edicionit */
@@ -22,11 +22,23 @@ const Tournament = sequelize.define('Tournament', {
     type: DataTypes.STRING(16),
     allowNull: true,
   },
+  slug: { type: DataTypes.STRING(80), allowNull: true },
+  logo: { type: DataTypes.STRING(500), allowNull: true },
+  organizer: { type: DataTypes.STRING(160), allowNull: true },
+  country: { type: DataTypes.STRING(80), allowNull: true },
+  city: { type: DataTypes.STRING(80), allowNull: true },
+  gender: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'open' },
+  registrationDeadline: { type: DataTypes.DATE, allowNull: true },
+  /** Canonical lifecycle. `status` stays compatible with existing clients. */
+  lifecycle: { type: DataTypes.STRING(32), allowNull: true },
+  qualifyPerGroup: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 2 },
+  homeAndAway: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  groupsCount: { type: DataTypes.INTEGER, allowNull: true },
   startDate: DataTypes.DATE,
   endDate: DataTypes.DATE,
   maxParticipants: DataTypes.INTEGER,
   status: {
-    type: DataTypes.ENUM('open', 'ongoing', 'finished'),
+    type: DataTypes.STRING(32),
     defaultValue: 'open',
   },
   /** `individual` = jo-klub; `club` = vetëm klube; `mixed` = klube + athletë në të njëjtin turne. */
@@ -121,6 +133,8 @@ const TournamentParticipant = sequelize.define('TournamentParticipant', {
     type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
     defaultValue: 'pending',
   },
+  groupName: { type: DataTypes.STRING(8), allowNull: true },
+  seed: { type: DataTypes.INTEGER, allowNull: true },
 });
 
 Tournament.belongsToMany(User, { through: TournamentParticipant, foreignKey: 'tournamentId', as: 'participants' });

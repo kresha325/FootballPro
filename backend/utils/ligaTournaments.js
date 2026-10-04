@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const Liga = require('../models/Liga');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
 const { resolveTournamentSeason } = require('./footballSeason');
+const { resolveLifecycle } = require('./competitionLifecycle');
 
 const ALLOWED_CREATOR_ROLES = new Set(['liga', 'club', 'scout']);
 
@@ -206,7 +207,7 @@ async function syncClubMemberToLigaTournaments(membership) {
 
     // Directly add athlete only for non-club tournaments the club already joined.
     for (const t of clubTournaments) {
-      if (!['open', 'ongoing'].includes(String(t.status || ''))) continue;
+      if (!['registration', 'active', 'in_progress'].includes(resolveLifecycle(t))) continue;
       if (!categoriesMatch(memberCategory, t.category)) continue;
       const full = await Tournament.findByPk(t.id, { attributes: ['id', 'participantType', 'status', 'category'] });
       if ((full?.participantType || 'individual') === 'club') {
@@ -225,7 +226,7 @@ async function syncClubMemberToLigaTournaments(membership) {
   for (const liga of relevantLigas) {
     const target = await ensureLigaTournament(liga, { category: memberCategory });
     if (!target) continue;
-    if (!['open', 'ongoing'].includes(String(target.status || ''))) continue;
+    if (!['registration', 'active', 'in_progress'].includes(resolveLifecycle(target))) continue;
 
     // New liga editions are club standings — do not place athletes on the table.
     if ((target.participantType || 'individual') === 'club') {

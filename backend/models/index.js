@@ -21,6 +21,8 @@ const TournamentParticipant = TournamentModule.TournamentParticipant;
 const TournamentSquadMember = require('./TournamentSquadMember');
 const Match = require('./Match');
 const MatchScorer = require('./MatchScorer');
+const MatchEvent = require('./MatchEvent');
+const PlayerMatchStat = require('./PlayerMatchStat');
 const Stadium = require('./Stadium');
 // Lidhjet kryesore për Match
 if (Match && Tournament && User) {
@@ -38,6 +40,17 @@ if (Match && MatchScorer && User) {
   MatchScorer.belongsTo(Match, { foreignKey: 'matchId' });
   MatchScorer.belongsTo(User, { foreignKey: 'userId' });
   User.hasMany(MatchScorer, { foreignKey: 'userId' });
+}
+if (Match && MatchEvent && User) {
+  Match.hasMany(MatchEvent, { foreignKey: 'matchId', as: 'events' });
+  MatchEvent.belongsTo(Match, { foreignKey: 'matchId' });
+  MatchEvent.belongsTo(User, { foreignKey: 'userId', as: 'player' });
+  MatchEvent.belongsTo(User, { foreignKey: 'relatedUserId', as: 'relatedPlayer' });
+}
+if (Match && PlayerMatchStat && User) {
+  Match.hasMany(PlayerMatchStat, { foreignKey: 'matchId', as: 'playerStats' });
+  PlayerMatchStat.belongsTo(Match, { foreignKey: 'matchId' });
+  PlayerMatchStat.belongsTo(User, { foreignKey: 'userId', as: 'player' });
 }
 const Sponsor = require('./Sponsor');
 const Ad = require('./Ad');
@@ -161,6 +174,8 @@ module.exports = {
   ProfileView,
   EngagementMetrics,
   MatchScorer,
+  MatchEvent,
+  PlayerMatchStat,
   VideoCallHistory,
   Stream,
   JonCoinTransaction,

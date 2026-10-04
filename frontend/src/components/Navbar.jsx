@@ -519,6 +519,22 @@ function Navbar() {
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
               <span className="font-medium">Ndeshjet</span>
             </Link>
+            <Link
+              to="/competitions"
+              onClick={() => setIsMenuOpen(false)}
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
+            >
+              <TrophyIcon className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">Garat</span>
+            </Link>
+            <Link
+              to="/calendar"
+              onClick={() => setIsMenuOpen(false)}
+              className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
+            >
+              <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">Kalendari</span>
+            </Link>
 
             {/* Scouting (scout + club) */}
             {(user?.role === 'scout' || user?.role === 'club') && (

@@ -293,6 +293,9 @@ export default function MatchesScreen() {
           <Text style={styles.meta}>Round: {item?.round || '-'}</Text>
           <Text style={styles.meta}>Date: {new Date(item?.scheduledAt || item?.matchDate || Date.now()).toLocaleString()}</Text>
           <Text style={styles.meta}>Status: {item?.status || 'scheduled'}</Text>
+          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('MatchDetail', { matchId: item?.id })}>
+            <Text style={styles.editBtnText}>Match center</Text>
+          </TouchableOpacity>
           {canCreate ? (
             <TouchableOpacity
               style={styles.editBtn}

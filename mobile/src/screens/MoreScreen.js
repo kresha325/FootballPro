@@ -148,6 +148,7 @@ export default function MoreScreen({ navigation }) {
         : null}
       {btn({ title: 'Search', subtitle: 'Users, posts and discovery', onPress: () => navigation.navigate('Search') })}
       {btn({ title: 'Matches', subtitle: 'View and schedule matches', onPress: () => navigation.navigate('Matches') })}
+      {btn({ title: 'Calendar', subtitle: 'Upcoming, today, and results', onPress: () => navigation.navigate('Calendar') })}
       {btn({
         title: 'Streams',
         subtitle: 'Live now, regjistrime, Go Live',

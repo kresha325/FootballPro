@@ -94,29 +94,33 @@ async function syncProfileGoalAssistStats(userIds) {
  * Replace goal events for a match and sync player Profile.stats.
  * Changing/removing a scorer or assister recalculates their totals.
  */
-async function saveMatchGoalEvents(matchId, rawEvents, match) {
+async function saveMatchGoalEvents(matchId, rawEvents, match, options = {}) {
+  const transaction = options.transaction;
   const previous = await MatchScorer.findAll({
     where: { matchId },
     attributes: ['userId', 'assistUserId', 'goals'],
+    transaction,
   });
   const affected = new Set(collectAffectedUserIds(previous));
 
-  await MatchScorer.destroy({ where: { matchId } });
+  await MatchScorer.destroy({ where: { matchId }, transaction });
   const rows = normalizeGoalEvents(rawEvents, match).map((row) => ({ ...row, matchId }));
 
   let created = [];
   if (rows.length) {
-    created = await MatchScorer.bulkCreate(rows);
+    created = await MatchScorer.bulkCreate(rows, { transaction });
   }
 
   for (const id of collectAffectedUserIds(rows)) {
     affected.add(id);
   }
 
-  try {
-    await syncProfileGoalAssistStats([...affected]);
-  } catch (syncErr) {
-    console.error('syncProfileGoalAssistStats:', syncErr);
+  if (!transaction) {
+    try {
+      await syncProfileGoalAssistStats([...affected]);
+    } catch (syncErr) {
+      console.error('syncProfileGoalAssistStats:', syncErr);
+    }
   }
 
   return created;

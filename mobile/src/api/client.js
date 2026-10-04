@@ -432,6 +432,10 @@ export const browseUsersRequest = (params = {}) =>
   api.get('/api/search/recommended', { params });
 
 export const matchesRequest = () => api.get('/api/matches');
+export const matchByIdRequest = (matchId) => api.get(`/api/matches/${matchId}`);
+export const calendarRequest = (params) => api.get('/api/calendar', { params });
+export const competitionPlayerStatsRequest = (tournamentId) =>
+  api.get(`/api/tournaments/${tournamentId}/player-stats`);
 export const createMatchRequest = (payload) => api.post('/api/matches', payload);
 export const updateMatchRequest = (matchId, payload) => api.put(`/api/matches/${matchId}`, payload);
 export const updateMatchScoreRequest = (matchId, payload) => api.put(`/api/matches/${matchId}/score`, payload);

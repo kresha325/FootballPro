@@ -991,6 +991,28 @@ export default function TournamentSimple() {
                     )}
                   </div>
                 )}
+                {isCreator && tournament.status === 'open' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await API.post(`/tournaments/${tournament.id}/start`, {});
+                        alert('Ndeshjet u gjeneruan dhe gara nisi.');
+                        fetchTournaments();
+                      } catch (error) {
+                        alert(error.response?.data?.msg || 'Gara nuk nisi.');
+                      }
+                    }}
+                    className="btn btn-primary min-h-11 w-full"
+                  >
+                    Gjenero ndeshjet dhe nise
+                  </button>
+                )}
+                {isCreator && (
+                  <Link to={`/competitions/${tournament.id}`} className="btn btn-quiet min-h-10 w-full text-sm">
+                    Qendra e garës
+                  </Link>
+                )}
                 {isCreator && (
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -1133,6 +1155,8 @@ export default function TournamentSimple() {
                   <option value="knockout">Knockout (⚔️)</option>
                   <option value="league">Ligë — tabelë me pikë (🏆)</option>
                   <option value="cup">Kupë (🏅)</option>
+                  <option value="group_knockout">Grupe + nokaut</option>
+                  <option value="tournament">Turne</option>
                 </select>
               </div>
 

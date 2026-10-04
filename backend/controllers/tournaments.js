@@ -13,7 +13,17 @@ const {
   ALLOWED_CREATOR_ROLES,
   normalizeCategory,
 } = require('../utils/ligaTournaments');
-const { canManageTournamentMatches, canFillMatchStats } = require('../utils/matchPermissions');
+const { canManageTournamentMatches } = require('../utils/matchPermissions');
+const {
+  resolveLifecycle,
+  canTransition,
+  isRegistrationOpen,
+  validateCompetitionInput,
+  assertRegistration,
+  slugifyCompetitionName,
+  COMPETITION_TYPES,
+} = require('../utils/competitionLifecycle');
+const competitionService = require('../services/competitionService');
 const {
   attachSquadToSerializedTournament,
   setClubTournamentSquad,
@@ -54,6 +64,8 @@ function serializeTournament(tournament) {
   const j = tournament && typeof tournament.toJSON === 'function' ? tournament.toJSON() : { ...tournament };
   return {
     ...j,
+    lifecycle: resolveLifecycle(j),
+    publicPath: j.id ? `/competitions/${j.id}` : null,
     participants: serializeTournamentParticipants(j.participants),
   };
 }
@@ -70,6 +82,9 @@ exports.createTournament = async (req, res) => {
     const { description, type, startDate, endDate, maxParticipants, participantType, season } = req.body;
     let name = String(req.body.name || '').trim();
     const category = normalizeCategory(req.body.category);
+    if (type && !COMPETITION_TYPES.includes(type)) {
+      return res.status(400).json({ msg: 'Invalid competition type.' });
+    }
     let ligaId = null;
     let pt = 'individual';
     if (participantType === 'club') pt = 'club';
@@ -105,6 +120,18 @@ exports.createTournament = async (req, res) => {
       return res.status(400).json({ msg: seasonErr.message });
     }
 
+    const inputCheck = validateCompetitionInput({
+      name,
+      type,
+      startDate,
+      endDate,
+      maxParticipants: maxN,
+      gender: req.body.gender,
+      registrationDeadline: req.body.registrationDeadline,
+    });
+    if (!inputCheck.ok) return res.status(inputCheck.status).json({ msg: inputCheck.msg });
+
+    const wantsDraft = req.body.lifecycle === 'draft' || req.body.status === 'draft';
     const tournament = await Tournament.create({
       name,
       description,
@@ -118,8 +145,21 @@ exports.createTournament = async (req, res) => {
       ligaId,
       sourceRole: role,
       category,
+      logo: req.body.logo || null,
+      organizer: req.body.organizer || null,
+      country: req.body.country || null,
+      city: req.body.city || null,
+      gender: req.body.gender || 'open',
+      registrationDeadline: req.body.registrationDeadline || null,
+      homeAndAway: !!req.body.homeAndAway,
+      groupsCount: req.body.groupsCount || null,
+      qualifyPerGroup: req.body.qualifyPerGroup || 2,
+      lifecycle: wantsDraft ? 'draft' : 'registration',
+      status: wantsDraft ? 'draft' : 'open',
     });
-    res.status(201).json(tournament);
+    tournament.slug = slugifyCompetitionName(tournament.name, tournament.id);
+    await tournament.save();
+    res.status(201).json(serializeTournament(tournament));
   } catch (err) {
     console.error('createTournament:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -165,8 +205,27 @@ exports.updateTournament = async (req, res) => {
       }
       tournament.maxParticipants = maxN;
     }
-    if (status && ['open', 'ongoing', 'finished'].includes(status)) tournament.status = status;
     if (category !== undefined) tournament.category = normalizeCategory(category);
+    if (req.body.logo !== undefined) tournament.logo = req.body.logo || null;
+    if (req.body.organizer !== undefined) tournament.organizer = req.body.organizer || null;
+    if (req.body.country !== undefined) tournament.country = req.body.country || null;
+    if (req.body.city !== undefined) tournament.city = req.body.city || null;
+    if (req.body.gender) tournament.gender = req.body.gender;
+    if (req.body.registrationDeadline !== undefined) tournament.registrationDeadline = req.body.registrationDeadline || null;
+    if (req.body.homeAndAway !== undefined) tournament.homeAndAway = !!req.body.homeAndAway;
+    if (req.body.groupsCount !== undefined) tournament.groupsCount = req.body.groupsCount || null;
+    if (req.body.qualifyPerGroup !== undefined) tournament.qualifyPerGroup = parseInt(req.body.qualifyPerGroup, 10) || 2;
+
+    const requestedLifecycle = req.body.lifecycle || status;
+    if (requestedLifecycle && requestedLifecycle !== tournament.status && requestedLifecycle !== tournament.lifecycle) {
+      const next = canTransition(resolveLifecycle(tournament), requestedLifecycle);
+      if (!next.ok) return res.status(next.status).json({ msg: next.msg });
+      if (next.lifecycle === 'active' || next.lifecycle === 'in_progress' || next.lifecycle === 'completed') {
+        return res.status(400).json({ msg: 'Use start, results, and completion actions instead of setting this status directly.' });
+      }
+      tournament.lifecycle = next.lifecycle;
+      tournament.status = next.status;
+    }
 
     if (participantType && ['individual', 'club', 'mixed'].includes(participantType)) {
       tournament.participantType = participantType;
@@ -184,8 +243,19 @@ exports.updateTournament = async (req, res) => {
       }
     }
 
+    const inputDates = validateCompetitionInput({
+      name: tournament.name,
+      type: tournament.type,
+      startDate: tournament.startDate,
+      endDate: tournament.endDate,
+      registrationDeadline: tournament.registrationDeadline,
+      gender: tournament.gender,
+      maxParticipants: tournament.maxParticipants,
+    });
+    if (!inputDates.ok) return res.status(inputDates.status).json({ msg: inputDates.msg });
+
     await tournament.save();
-    res.json(tournament);
+    res.json(serializeTournament(tournament));
   } catch (err) {
     console.error('updateTournament:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -194,13 +264,33 @@ exports.updateTournament = async (req, res) => {
 
 exports.getTournaments = async (req, res) => {
   try {
+    const where = {};
+    if (req.query.status) where.status = req.query.status;
+    if (req.query.lifecycle) where.lifecycle = req.query.lifecycle;
+    if (req.query.type) where.type = req.query.type;
+    if (req.query.season) where.season = req.query.season;
+    if (req.query.country) where.country = req.query.country;
     const tournaments = await Tournament.findAll({
+      where,
       include: [
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] },
         { model: User, as: 'participants', attributes: ['id', 'firstName', 'lastName', 'role'], through: { attributes: [] } },
       ],
+      order: [['createdAt', 'DESC']],
     });
-    res.json(tournaments.map(serializeTournament));
+    const serialized = tournaments.map(serializeTournament);
+    const page = parseInt(req.query.page, 10);
+    if (Number.isFinite(page) && page > 0) {
+      const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 20, 1), 100);
+      const start = (page - 1) * pageSize;
+      return res.json({
+        rows: serialized.slice(start, start + pageSize),
+        total: serialized.length,
+        page,
+        pageSize,
+      });
+    }
+    res.json(serialized);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
@@ -288,7 +378,7 @@ exports.joinTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
-    if (tournament.status !== 'open') return res.status(400).json({ msg: 'Tournament not open for joining' });
+    if (!isRegistrationOpen(tournament)) return res.status(400).json({ msg: 'Tournament not open for joining' });
 
     const participantType = tournament.participantType || 'individual';
     const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
@@ -327,8 +417,13 @@ exports.joinTournament = async (req, res) => {
     }
     if (standingCount >= tournament.maxParticipants) return res.status(400).json({ msg: 'Tournament full' });
 
-    const already = participants.some((p) => p.userId === req.user.id);
-    if (already) return res.status(400).json({ msg: 'Already joined this tournament' });
+    const registration = assertRegistration({
+      existingUserIds: participants.map((p) => p.userId),
+      userId: req.user.id,
+      maxParticipants: standingCount < tournament.maxParticipants ? participants.length + 1 : participants.length,
+      tournament,
+    });
+    if (!registration.ok) return res.status(registration.status).json({ msg: registration.msg });
 
     await TournamentParticipant.create({
       tournamentId: req.params.id,
@@ -355,6 +450,9 @@ exports.joinTournament = async (req, res) => {
     });
   } catch (err) {
     console.error('joinTournament:', err);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ msg: 'Already joined this tournament' });
+    }
     if (err.status === 400) return res.status(400).json({ msg: err.message, invalid: err.invalid });
     res.status(500).json({ msg: 'Server error' });
   }
@@ -413,160 +511,22 @@ exports.getTournamentSquad = async (req, res) => {
   }
 };
 
-/** Renditje: ligë = pikë + diferencë gola (FIFA); cup/knockout = nga ndeshjet e përfunduara (përmbledhje), bracket për eliminim. */
-function sortStandingsRows(rows) {
-  return [...rows].sort((a, b) => {
-    const pa = a.points ?? 0;
-    const pb = b.points ?? 0;
-    if (pb !== pa) return pb - pa;
-    const gda = (a.goalsFor ?? 0) - (a.goalsAgainst ?? 0);
-    const gdb = (b.goalsFor ?? 0) - (b.goalsAgainst ?? 0);
-    if (gdb !== gda) return gdb - gda;
-    const gfa = a.goalsFor ?? 0;
-    const gfb = b.goalsFor ?? 0;
-    if (gfb !== gfa) return gfb - gfa;
-    return (b.wins ?? 0) - (a.wins ?? 0);
-  });
-}
-
-async function standingsFromFinishedMatches(tournamentId, participantUserIds) {
-  const ids = [...new Set(participantUserIds.map(Number))].filter((id) => Number.isFinite(id));
-  const stats = {};
-  for (const uid of ids) {
-    stats[uid] = {
-      userId: uid,
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      points: 0,
-    };
-  }
-  const matches = await Match.findAll({
-    where: { tournamentId, status: 'finished' },
-    attributes: ['homeUserId', 'awayUserId', 'scoreHome', 'scoreAway'],
-  });
-  for (const m of matches) {
-    const h = m.homeUserId;
-    const a = m.awayUserId;
-    if (h == null || a == null || !stats[h] || !stats[a]) continue;
-    if (m.scoreHome == null || m.scoreAway == null) continue;
-    const sh = Number(m.scoreHome) || 0;
-    const sa = Number(m.scoreAway) || 0;
-    stats[h].played += 1;
-    stats[a].played += 1;
-    stats[h].goalsFor += sh;
-    stats[h].goalsAgainst += sa;
-    stats[a].goalsFor += sa;
-    stats[a].goalsAgainst += sh;
-    if (sh > sa) {
-      stats[h].wins += 1;
-      stats[h].points += 3;
-      stats[a].losses += 1;
-    } else if (sa > sh) {
-      stats[a].wins += 1;
-      stats[a].points += 3;
-      stats[h].losses += 1;
-    } else {
-      stats[h].draws += 1;
-      stats[a].draws += 1;
-      stats[h].points += 1;
-      stats[a].points += 1;
-    }
-  }
-  return Object.values(stats).map((r) => ({
-    ...r,
-    goalDifference: r.goalsFor - r.goalsAgainst,
-  }));
-}
-
 exports.getStandings = async (req, res) => {
   try {
-    const tournament = await Tournament.findByPk(req.params.id);
-    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
-
-    const participantType = tournament.participantType || 'individual';
-    if (participantType === 'club') {
-      await demoteAthleteParticipantsOnClubTournament(tournament.id);
-    }
-
-    const participants = await TournamentParticipant.findAll({
-      where: { tournamentId: req.params.id },
-      include: [
-        {
-          model: User,
-          attributes: ['id', 'firstName', 'lastName', 'role'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
-        },
-      ],
-    });
-
-    // Club tournaments: only club accounts appear in the points table.
-    const standingParticipants =
-      participantType === 'club'
-        ? participants.filter((p) => String(p.User?.role || '').toLowerCase() === 'club')
-        : participants;
-
-    // Always derive from finished matches (source of truth). Stored W/D/L inflated
-    // when older code incremented on every score edit — heal by recomputing.
-    await recomputeTournamentStandings(tournament.id);
-
-    const ids = standingParticipants.map((p) => p.userId);
-    const derived = sortStandingsRows(await standingsFromFinishedMatches(tournament.id, ids));
-    const userById = Object.fromEntries(standingParticipants.map((p) => [p.userId, p.User]));
-    const statusById = Object.fromEntries(standingParticipants.map((p) => [p.userId, p.status]));
-
-    const rankingMode = tournament.type === 'league' ? 'points_table' : 'matches_derived';
-    const rows = derived.map((r, i) => ({
-      rank: i + 1,
-      userId: r.userId,
-      played: r.played,
-      points: r.points,
-      wins: r.wins,
-      draws: r.draws,
-      losses: r.losses,
-      goalsFor: r.goalsFor,
-      goalsAgainst: r.goalsAgainst,
-      goalDifference: r.goalDifference,
-      participantStatus: statusById[r.userId],
-      User: userById[r.userId] || null,
-    }));
-
-    res.json({
-      tournamentId: tournament.id,
-      tournamentType: tournament.type,
-      participantType,
-      rankingMode,
-      caption:
-        tournament.type === 'league'
-          ? participantType === 'club'
-            ? 'Tabela e klubeve sipas pikëve (3-1-0). Lojtarët e caktuar nga klubi shfaqen te Pjesëmarrësit, jo në këtë tabelë.'
-            : 'Tabela sipas pikëve (3 për fitore, 1 për barazim, 0 për humbje), pastaj diferenca e golave, gola të shënuar, fitore. Llogaritet vetëm nga ndeshjet e përfunduara.'
-          : 'Për cup/knockout, kjo tabelë përmbledh statistikat nga ndeshjet e përfunduara; kalimi në raund tjetër varet nga bracket-i / rezultatet.',
-      rows,
-    });
+    const payload = await competitionService.getStandings(req.params.id);
+    if (!payload) return res.status(404).json({ msg: 'Tournament not found' });
+    return res.json(payload);
   } catch (err) {
     console.error('getStandings:', err);
-    res.status(500).json({ msg: 'Server error' });
+    return res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const participants = await TournamentParticipant.findAll({
-      where: { tournamentId: req.params.id },
-      include: [
-        {
-          model: User,
-          attributes: ['id', 'firstName', 'lastName', 'role'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club'] }],
-        },
-      ],
-      order: [['points', 'DESC'], ['wins', 'DESC'], ['goalsFor', 'DESC']],
-    });
-    res.json(participants);
+    const payload = await competitionService.getStandings(req.params.id);
+    if (!payload) return res.status(404).json({ msg: 'Tournament not found' });
+    res.json(payload.rows || []);
   } catch (err) {
     console.error('Get leaderboard error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -576,57 +536,15 @@ exports.getLeaderboard = async (req, res) => {
 // Generate bracket for knockout tournament
 exports.generateBracket = async (req, res) => {
   try {
-    const tournament = await Tournament.findByPk(req.params.id);
-    if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
-    if (tournament.creatorId !== req.user.id) {
-      return res.status(403).json({ msg: 'Only creator can generate bracket' });
-    }
-    if (tournament.type !== 'knockout' && tournament.type !== 'cup') {
-      return res.status(400).json({ msg: 'Only knockout/cup tournaments have brackets' });
-    }
-
-    // Get all participants
-    const participants = await TournamentParticipant.findAll({
-      where: { tournamentId: req.params.id },
-      include: [{ model: User }],
+    const result = await competitionService.startCompetition({
+      tournamentId: req.params.id,
+      user: req.user,
+      options: req.body || {},
     });
-
-    if (participants.length < 2) {
-      return res.status(400).json({ msg: 'Need at least 2 participants' });
-    }
-
-    // Shuffle and pair participants
-    const shuffled = participants.sort(() => 0.5 - Math.random());
-    const round = 1;
-    const matches = [];
-
-    for (let i = 0; i < shuffled.length; i += 2) {
-      if (i + 1 < shuffled.length) {
-        const match = await Match.create({
-          tournamentId: req.params.id,
-          homeUserId: shuffled[i].userId,
-          awayUserId: shuffled[i + 1].userId,
-          round,
-          status: 'scheduled',
-          matchDate: new Date(Date.now() + Math.floor(i / 2) * 86400000),
-        });
-
-        await Bracket.create({
-          tournamentId: req.params.id,
-          round,
-          position: Math.floor(i / 2),
-          matchId: match.id,
-        });
-
-        matches.push(match);
-      }
-    }
-
-    await tournament.update({ status: 'ongoing' });
-    res.json({ msg: 'Bracket generated', matches });
+    res.json({ msg: 'Bracket generated', ...result });
   } catch (err) {
     console.error('Generate bracket error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
 
@@ -677,170 +595,25 @@ exports.getBracket = async (req, res) => {
 exports.updateMatchScore = async (req, res) => {
   try {
     const { matchId } = req.params;
-    const { scoreHome, scoreAway, status, goalEvents, scorers } = req.body;
-
-    const match = await Match.findByPk(matchId, {
-      include: [{ model: Tournament }],
-    });
-
-    if (!match) return res.status(404).json({ msg: 'Match not found' });
-
-    const authz = canFillMatchStats(match.Tournament, req.user, match);
-    if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
-
-    const previousStatus = match.status;
-
-    await match.update({ scoreHome, scoreAway, status });
-
-    if (Array.isArray(goalEvents) || Array.isArray(scorers)) {
-      await saveMatchGoalEvents(match.id, goalEvents || scorers, match);
-    }
-
-    // Recompute standings from finished matches (idempotent — no double-counting on re-save)
-    if (status === 'finished' || previousStatus === 'finished') {
-      await recomputeTournamentStandings(match.tournamentId);
-
-      if (
-        status === 'finished' &&
-        (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup')
-      ) {
-        await tryAdvanceKnockoutRound(match);
-      }
-    }
-
+    const finishing = req.body?.status === 'finished' || (req.body?.status == null && req.body?.scoreHome != null && req.body?.scoreAway != null && req.body?.live !== true);
+    const result = finishing
+      ? await competitionService.recordOfficialResult({ matchId, user: req.user, payload: req.body || {} })
+      : await competitionService.updateLiveMatch({ matchId, user: req.user, payload: req.body || {} });
     try {
       const { notifyMatchParticipants } = require('../utils/matchNotifications');
-      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+      await notifyMatchParticipants(result.match, result.tournament, { kind: 'stats' });
     } catch (notifyErr) {
       console.warn('tournament updateMatchScore notify:', notifyErr?.message || notifyErr);
     }
-
-    res.json(match);
+    res.json(result.match);
   } catch (err) {
     console.error('Update match score error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
 
-/**
- * Rebuild participant W/D/L/GF/GA/points from finished matches only.
- * Prevents double-counting when a result is edited and saved again.
- */
 async function recomputeTournamentStandings(tournamentId) {
-  const participants = await TournamentParticipant.findAll({ where: { tournamentId } });
-  if (!participants.length) return;
-
-  const computed = await standingsFromFinishedMatches(
-    tournamentId,
-    participants.map((p) => p.userId)
-  );
-  const byUser = Object.fromEntries(computed.map((r) => [Number(r.userId), r]));
-
-  for (const p of participants) {
-    const s = byUser[Number(p.userId)] || {
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      points: 0,
-    };
-    p.wins = s.wins || 0;
-    p.draws = s.draws || 0;
-    p.losses = s.losses || 0;
-    p.goalsFor = s.goalsFor || 0;
-    p.goalsAgainst = s.goalsAgainst || 0;
-    p.points = s.points || 0;
-    await p.save();
-  }
-}
-
-/** @deprecated Prefer recomputeTournamentStandings — kept for any legacy callers */
-async function updateStandings(match) {
-  if (!match?.tournamentId) return;
-  await recomputeTournamentStandings(match.tournamentId);
-}
-
-/** When an entire knockout round is finished, pair winners into the next round (or end the tournament). */
-async function tryAdvanceKnockoutRound(match) {
-  const tournament =
-    match.Tournament || (await Tournament.findByPk(match.tournamentId));
-  if (!tournament || (tournament.type !== 'knockout' && tournament.type !== 'cup')) {
-    return;
-  }
-
-  const { tournamentId, round } = match;
-  const currentRoundMatches = await Match.findAll({
-    where: { tournamentId, round },
-  });
-
-  if (!currentRoundMatches.length) return;
-
-  const allFinished = currentRoundMatches.every((m) => m.status === 'finished');
-  if (!allFinished) return;
-
-  const sh = Number(match.scoreHome);
-  const sa = Number(match.scoreAway);
-  if (!Number.isFinite(sh) || !Number.isFinite(sa) || sh === sa) return;
-
-  const nextRound = round + 1;
-  const nextRoundExists = await Match.count({ where: { tournamentId, round: nextRound } });
-  if (nextRoundExists > 0) return;
-
-  const winners = currentRoundMatches.map((m) => {
-    const h = Number(m.scoreHome) || 0;
-    const a = Number(m.scoreAway) || 0;
-    return h > a ? m.homeUserId : m.awayUserId;
-  });
-
-  if (winners.length === 1) {
-    tournament.status = 'finished';
-    await tournament.save();
-    await notifyTournament(
-      winners[0],
-      tournamentId,
-      'Tournament Winner! 🏆',
-      `Congratulations! You won ${tournament.name}!`
-    );
-    return;
-  }
-
-  const nextRoundMatches = [];
-  for (let i = 0; i < winners.length; i += 2) {
-    if (i + 1 < winners.length) {
-      nextRoundMatches.push({
-        tournamentId,
-        homeUserId: winners[i],
-        awayUserId: winners[i + 1],
-        status: 'scheduled',
-        round: nextRound,
-        matchDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      });
-    }
-  }
-
-  if (winners.length % 2 === 1) {
-    nextRoundMatches.push({
-      tournamentId,
-      homeUserId: winners[winners.length - 1],
-      awayUserId: null,
-      status: 'scheduled',
-      round: nextRound,
-      matchDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-    });
-  }
-
-  if (!nextRoundMatches.length) return;
-
-  const created = await Match.bulkCreate(nextRoundMatches);
-  for (let i = 0; i < created.length; i += 1) {
-    await Bracket.create({
-      tournamentId,
-      round: nextRound,
-      position: i,
-      matchId: created[i].id,
-    });
-  }
+  return competitionService.recomputeTournamentStandings(tournamentId);
 }
 
 // Get tournament matches
@@ -969,6 +742,12 @@ exports.scheduleMatch = async (req, res) => {
     const authz = canManageTournamentMatches(match.Tournament, req.user);
     if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
+    try {
+      competitionService.assertScheduledDate(match.Tournament, matchDate);
+    } catch (guardErr) {
+      return res.status(guardErr.status || 400).json({ msg: guardErr.message });
+    }
+
     await match.update({ matchDate });
 
     try {
@@ -1089,7 +868,7 @@ exports.leaveTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
-    if (tournament.status !== 'open') {
+    if (!isRegistrationOpen(tournament)) {
       return res.status(400).json({ msg: 'Cannot leave ongoing tournament' });
     }
 
@@ -1110,163 +889,36 @@ exports.leaveTournament = async (req, res) => {
 // Start tournament and generate matches
 exports.startTournamentAndGenerateMatches = async (req, res) => {
   try {
-    const tournamentId = req.params.id;
-    const tournament = await Tournament.findByPk(tournamentId);
-    
-    if (!tournament) {
-      return res.status(404).json({ msg: 'Tournament not found' });
-    }
-
-    if (tournament.creatorId !== req.user.id) {
-      return res.status(403).json({ msg: 'Only tournament creator can start it' });
-    }
-
-    const startAuth = canManageTournamentMatches(tournament, req.user);
-    if (!startAuth.ok) return res.status(startAuth.status).json({ msg: startAuth.msg });
-
-    if (tournament.status !== 'open') {
-      return res.status(400).json({ msg: 'Tournament already started or finished' });
-    }
-
-    // Get participants
-    const participants = await TournamentParticipant.findAll({
-      where: { tournamentId },
-      include: [{ model: User, attributes: ['id', 'firstName', 'lastName'] }]
+    const result = await competitionService.startCompetition({
+      tournamentId: req.params.id,
+      user: req.user,
+      options: req.body || {},
     });
-
-    if (participants.length < 2) {
-      return res.status(400).json({ msg: 'Need at least 2 participants' });
-    }
-
-    // Change tournament status
-    tournament.status = 'ongoing';
-    await tournament.save();
-
-    const matches = [];
-    const participantIds = participants.map(p => p.userId);
-
-    if (tournament.type === 'league') {
-      // League: Everyone plays everyone
-      for (let i = 0; i < participantIds.length; i++) {
-        for (let j = i + 1; j < participantIds.length; j++) {
-          matches.push({
-            tournamentId,
-            homeUserId: participantIds[i],
-            awayUserId: participantIds[j],
-            status: 'scheduled',
-            round: 1,
-            matchDate: new Date(Date.now() + (matches.length * 24 * 60 * 60 * 1000)) // Space out by days
-          });
-        }
-      }
-    } else if (tournament.type === 'knockout' || tournament.type === 'cup') {
-      // Knockout: Bracket style (Round of 16, Quarters, Semis, Final)
-      // Shuffle participants for random bracket
-      const shuffled = [...participantIds].sort(() => Math.random() - 0.5);
-      
-      // Round 1: Pair up all participants
-      for (let i = 0; i < shuffled.length; i += 2) {
-        if (i + 1 < shuffled.length) {
-          matches.push({
-            tournamentId,
-            homeUserId: shuffled[i],
-            awayUserId: shuffled[i + 1],
-            status: 'scheduled',
-            round: 1,
-            matchDate: new Date(Date.now() + (Math.floor(i / 2) * 24 * 60 * 60 * 1000))
-          });
-        }
-      }
-
-      // If odd number, one team gets a bye (advances automatically)
-      if (shuffled.length % 2 !== 0) {
-        // The last team gets a bye - we'll create a "placeholder" match
-        console.log(`Team ${shuffled[shuffled.length - 1]} gets a bye to round 2`);
-      }
-    }
-
-    const createdMatches = await Match.bulkCreate(matches);
-
-    if (tournament.type === 'knockout' || tournament.type === 'cup') {
-      for (let i = 0; i < createdMatches.length; i += 1) {
-        await Bracket.create({
-          tournamentId,
-          round: createdMatches[i].round || 1,
-          position: i,
-          matchId: createdMatches[i].id,
-        });
-      }
-    }
-
-    // Notify all participants
-    for (const participant of participants) {
-      await notifyTournament(
-        participant.userId,
-        tournamentId,
-        'Tournament Started!',
-        `${tournament.name} has started! Check your match schedule.`
-      );
-    }
-
-    res.json({
-      msg: 'Tournament started successfully',
-      tournament,
-      matchesCreated: createdMatches.length,
-      matches: createdMatches
-    });
+    res.json(result);
   } catch (err) {
     console.error('Start tournament error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
 
 // Update match result (affects tournament standings)
 exports.updateMatchResultForTournament = async (req, res) => {
   try {
-    const { matchId } = req.params;
-    const { scoreHome, scoreAway } = req.body;
-
-    const match = await Match.findByPk(matchId, {
-      include: [{ model: Tournament }]
+    const result = await competitionService.recordOfficialResult({
+      matchId: req.params.matchId,
+      user: req.user,
+      payload: req.body || {},
     });
-
-    if (!match) {
-      return res.status(404).json({ msg: 'Match not found' });
-    }
-
-    if (!match.Tournament) {
-      return res.status(400).json({ msg: 'Match not part of a tournament' });
-    }
-
-    const resultAuth = canFillMatchStats(match.Tournament, req.user, match);
-    if (!resultAuth.ok) return res.status(resultAuth.status).json({ msg: resultAuth.msg });
-
-    // Update match scores and status
-    match.scoreHome = scoreHome;
-    match.scoreAway = scoreAway;
-    match.status = 'finished';
-    await match.save();
-
-    await recomputeTournamentStandings(match.tournamentId);
-
-    if (match.Tournament.type === 'knockout' || match.Tournament.type === 'cup') {
-      await tryAdvanceKnockoutRound(match);
-    }
-
     try {
       const { notifyMatchParticipants } = require('../utils/matchNotifications');
-      await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });
+      await notifyMatchParticipants(result.match, result.tournament, { kind: 'stats' });
     } catch (notifyErr) {
       console.warn('updateMatchResultForTournament notify:', notifyErr?.message || notifyErr);
     }
-
-    res.json({
-      msg: 'Match result updated',
-      match
-    });
+    res.json({ msg: 'Match result updated', match: result.match, advancement: result.advancement });
   } catch (err) {
     console.error('Update match result error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
 
@@ -1324,5 +976,72 @@ exports.removeParticipant = async (req, res) => {
     res.json({ msg: 'Participant removed' });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.getCompetitionPlayerStats = async (req, res) => {
+  try {
+    const payload = await competitionService.playerStatsForCompetition(req.params.id);
+    if (!payload) return res.status(404).json({ msg: 'Tournament not found' });
+    res.json(payload);
+  } catch (err) {
+    console.error('getCompetitionPlayerStats:', err);
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.setTournamentMatchLineup = async (req, res) => {
+  try {
+    const match = await competitionService.setMatchLineup({
+      matchId: req.params.matchId,
+      user: req.user,
+      lineup: req.body || {},
+    });
+    res.json({ lineup: match.lineup });
+  } catch (err) {
+    console.error('setTournamentMatchLineup:', err);
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.addTournamentMatchEvent = async (req, res) => {
+  try {
+    const event = await competitionService.addMatchEvent({
+      matchId: req.params.matchId,
+      user: req.user,
+      event: req.body || {},
+    });
+    res.status(201).json(event);
+  } catch (err) {
+    console.error('addTournamentMatchEvent:', err);
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.saveTournamentPlayerStats = async (req, res) => {
+  try {
+    const rows = await competitionService.savePlayerStats({
+      matchId: req.params.matchId,
+      user: req.user,
+      players: req.body?.players || req.body,
+    });
+    res.json({ players: rows });
+  } catch (err) {
+    console.error('saveTournamentPlayerStats:', err);
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
+  }
+};
+
+exports.transitionCompetition = async (req, res) => {
+  try {
+    const tournament = await competitionService.applyLifecycle({
+      tournamentId: req.params.id,
+      user: req.user,
+      lifecycle: req.body?.lifecycle || req.body?.status,
+    });
+    res.json(serializeTournament(tournament));
+  } catch (err) {
+    console.error('transitionCompetition:', err);
+    res.status(err.status || 500).json({ msg: err.message || 'Server error' });
   }
 };
