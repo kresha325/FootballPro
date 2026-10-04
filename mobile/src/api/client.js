@@ -236,6 +236,22 @@ export const markConversationReadRequest = (conversationId) =>
 export const editMessageRequest = (messageId, content) =>
   api.put(`/api/messaging/messages/${messageId}`, { content });
 export const deleteMessageRequest = (messageId) => api.delete(`/api/messaging/messages/${messageId}`);
+export const searchConversationMessagesRequest = (conversationId, params = {}) =>
+  api.get(`/api/messaging/conversations/${conversationId}/messages/search`, { params });
+export const toggleMessageReactionRequest = (messageId, emoji) =>
+  api.post(`/api/messaging/messages/${messageId}/reactions`, { emoji });
+export const forwardMessageRequest = (messageId, conversationId) =>
+  api.post(`/api/messaging/messages/${messageId}/forward`, { conversationId });
+export const ackMessageDeliveredRequest = (messageId) =>
+  api.post(`/api/messaging/messages/${messageId}/delivered`);
+export const updateGroupRequest = (conversationId, payload) =>
+  api.put(`/api/messaging/conversations/${conversationId}`, payload);
+export const removeGroupMemberRequest = (conversationId, userId) =>
+  api.delete(`/api/messaging/conversations/${conversationId}/members/${userId}`);
+export const setGroupMemberRoleRequest = (conversationId, userId, role) =>
+  api.put(`/api/messaging/conversations/${conversationId}/members/${userId}/role`, { role });
+export const transferGroupOwnerRequest = (conversationId, userId) =>
+  api.post(`/api/messaging/conversations/${conversationId}/transfer`, { userId });
 export const userOnlineStatusRequest = (userId) => api.get(`/api/users/${userId}/online`);
 
 export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });

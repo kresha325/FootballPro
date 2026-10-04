@@ -57,6 +57,15 @@ const Message = sequelize.define('Message', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  deliveredAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  forwarded: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 }, {
   timestamps: true,
 });
@@ -64,5 +73,10 @@ const Message = sequelize.define('Message', {
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiverId' });
 Message.belongsTo(Message, { as: 'replyTo', foreignKey: 'replyToId' });
+
+const MessageReaction = require('./MessageReaction');
+Message.hasMany(MessageReaction, { foreignKey: 'messageId', as: 'reactions' });
+MessageReaction.belongsTo(Message, { foreignKey: 'messageId' });
+MessageReaction.belongsTo(User, { foreignKey: 'userId', as: 'reactor' });
 
 module.exports = Message;

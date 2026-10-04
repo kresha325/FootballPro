@@ -264,7 +264,7 @@ exports.sendNotification = async (userId, title, body, data = {}) => {
     if (!user) return;
 
     const type = String(data?.type || '').toLowerCase();
-    const safeBody = type === 'message' ? 'Ke një mesazh të ri' : body;
+    const safeBody = body || (type === 'message' ? 'Ke një mesazh të ri' : '');
 
     // App icon badge = unread bell notifications + unread chat messages
     let badge = 0;

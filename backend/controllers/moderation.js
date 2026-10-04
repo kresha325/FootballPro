@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const Message = require('../models/Message');
+const { ConversationMember } = require('../models/Conversation');
 const Stream = require('../models/Stream');
 
 const ALLOWED_TYPES = new Set(['post', 'comment', 'profile', 'message', 'live', 'user']);
@@ -16,6 +17,7 @@ const ALLOWED_REASONS = new Set([
   'sexual',
   'impersonation',
   'scam',
+  'inappropriate',
   'other',
 ]);
 
@@ -47,6 +49,21 @@ exports.createReport = async (req, res) => {
 
     const exists = await assertTargetExists(targetType, targetId);
     if (!exists) return res.status(404).json({ msg: 'Objekti i raportuar nuk u gjet' });
+
+    if (targetType === 'message') {
+      const message = await Message.findByPk(targetId, { attributes: ['id', 'conversationId', 'senderId'] });
+      if (!message?.conversationId) {
+        return res.status(404).json({ msg: 'Mesazhi nuk u gjet' });
+      }
+      if (Number(message.senderId) === Number(req.user.id)) {
+        return res.status(400).json({ msg: 'Nuk mund të raportosh mesazhin tënd' });
+      }
+      const member = await ConversationMember.findOne({
+        where: { conversationId: message.conversationId, userId: req.user.id },
+        attributes: ['id'],
+      });
+      if (!member) return res.status(403).json({ msg: 'Nuk ke qasje në këtë mesazh' });
+    }
 
     if ((targetType === 'profile' || targetType === 'user') && targetId === req.user.id) {
       return res.status(400).json({ msg: 'Nuk mund të raportosh veten' });

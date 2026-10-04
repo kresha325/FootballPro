@@ -10,8 +10,44 @@ import ForwardButton from './ForwardButton';
 import VerifiedBadge from './VerifiedBadge';
 
 import { API_URL, BACKEND_URL } from '../config/api';
+import { outboundChatStatus, replyUnavailable } from '../utils/messagePresentation';
 
 const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
+const REACTION_EMOJIS = ['❤️', '👍', '😂', '🔥', '👏', '😮', '😢'];
+const REPORT_REASONS = [
+  ['spam', 'Spam'],
+  ['harassment', 'Ngacmim'],
+  ['inappropriate', 'Përmbajtje e papërshtatshme'],
+  ['scam', 'Mashtrim'],
+  ['other', 'Tjetër'],
+];
+
+function ChatMedia({ src, kind, alt, onOpen }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return <span className="text-xs italic opacity-80">Media nuk u ngarkua</span>;
+  }
+  if (kind === 'video') {
+    return (
+      <video
+        src={src}
+        controls
+        className="max-w-xs rounded mb-2"
+        onError={() => setBroken(true)}
+        onClick={() => onOpen?.(src)}
+      />
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt || 'Shared'}
+      className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
+      onError={() => setBroken(true)}
+      onClick={() => onOpen?.(src)}
+    />
+  );
+}
 
 function Linkify({ text, className, linkClassName }) {
   const parts = String(text).split(/(https?:\/\/[^\s]+)/g);
@@ -115,12 +151,20 @@ function Messaging() {
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [othersRead, setOthersRead] = useState([]);
+  const [actionError, setActionError] = useState('');
+  const [searchHits, setSearchHits] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
+  const [groupRename, setGroupRename] = useState('');
   const messagesEndRef = useRef(null);
   const messagesListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const loadingOlderRef = useRef(false);
+  const typingClearRef = useRef({});
+  const lastTypingEmitRef = useRef(0);
 
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -222,15 +266,13 @@ function Messaging() {
   }, [conversations, conversationSearch, user?.id]);
 
   const displayedMessages = useMemo(() => {
-    const q = threadSearch.trim().toLowerCase();
-    if (!q) return messages;
-    return messages.filter(m => {
-      if (m.deleted) return false;
-      const c = (m.content || '').toLowerCase();
-      const f = (m.fileName || '').toLowerCase();
-      return c.includes(q) || f.includes(q);
-    });
-  }, [messages, threadSearch]);
+    if (threadSearch.trim()) return searchHits || [];
+    return messages;
+  }, [messages, threadSearch, searchHits]);
+
+  const myGroupRole = selectedConversation?.memberships?.[0]?.role || selectedConversation?.myRole || null;
+  const isGroupOwner = Number(selectedConversation?.ownerId) === Number(user?.id);
+  const canManageGroup = !!(selectedConversation?.isGroup && (isGroupOwner || myGroupRole === 'admin'));
 
   // Ngarko bisedat sapo hapet komponenti
   useEffect(() => {
@@ -369,6 +411,11 @@ function Messaging() {
       socket.on('messageDeleted', handleMessageDeleted);
       socket.on('userTyping', handleUserTyping);
       socket.on('userStoppedTyping', handleUserStoppedTyping);
+      socket.on('conversationRead', handleConversationRead);
+      socket.on('messageRead', handleConversationRead);
+      socket.on('messageDelivered', handleMessageDelivered);
+      socket.on('messageReactionUpdated', handleReactionUpdated);
+      socket.on('conversationUpdated', handleConversationUpdated);
 
       return () => {
         socket.off('newMessage', handleNewMessage);
@@ -376,9 +423,65 @@ function Messaging() {
         socket.off('messageDeleted', handleMessageDeleted);
         socket.off('userTyping', handleUserTyping);
         socket.off('userStoppedTyping', handleUserStoppedTyping);
+        socket.off('conversationRead', handleConversationRead);
+        socket.off('messageRead', handleConversationRead);
+        socket.off('messageDelivered', handleMessageDelivered);
+        socket.off('messageReactionUpdated', handleReactionUpdated);
+        socket.off('conversationUpdated', handleConversationUpdated);
       };
     }
   }, [socket, selectedConversation]);
+
+  useEffect(() => {
+    if (!socket || !selectedConversation?.id) return undefined;
+    const sync = () => {
+      socket.emit('joinConversation', selectedConversation.id);
+      api.get(`/messaging/conversations/${selectedConversation.id}/messages`, {
+        params: { page: 1, limit: 50 },
+      }).then((response) => {
+        const rows = response.data?.messages || [];
+        setMessages((prev) => {
+          const map = new Map(prev.map((m) => [String(m.id), m]));
+          rows.forEach((row) => {
+            map.set(String(row.id), { ...(map.get(String(row.id)) || {}), ...row });
+          });
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        });
+        if (Array.isArray(response.data?.othersRead)) setOthersRead(response.data.othersRead);
+        api.put(`/messaging/conversations/${selectedConversation.id}/read`).catch(() => {});
+      }).catch(() => {
+        setActionError('Lidhja u rikthye, por mesazhet nuk u sinkronizuan. Provo përsëri.');
+      });
+      fetchConversations();
+    };
+    const manager = socket.io;
+    if (manager?.on) manager.on('reconnect', sync);
+    return () => {
+      if (manager?.off) manager.off('reconnect', sync);
+    };
+  }, [socket, selectedConversation?.id]);
+
+  useEffect(() => {
+    if (!selectedConversation?.id) return undefined;
+    const q = threadSearch.trim();
+    if (!q) {
+      setSearchHits(null);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      api.get(`/messaging/conversations/${selectedConversation.id}/messages/search`, {
+        params: { q, page: 1, limit: 30 },
+      }).then((response) => {
+        setSearchHits(response.data?.messages || []);
+      }).catch(() => {
+        setSearchHits([]);
+        setActionError('Kërkimi dështoi. Provo përsëri.');
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [threadSearch, selectedConversation?.id]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -417,8 +520,9 @@ function Messaging() {
       const response = await api.get(`/messaging/conversations/${cid}/messages`, {
         params: { page: 1, limit: 50 },
       });
-      const { messages: rows, page, pages, total } = response.data;
+      const { messages: rows, page, pages, total, othersRead: readRows } = response.data;
       setMessages(rows || []);
+      setOthersRead(Array.isArray(readRows) ? readRows : []);
       setMessagePagination({ page: page || 1, pages: pages || 1, total: total || 0 });
       await api.put(`/messaging/conversations/${cid}/read`);
       setConversations(prev =>
@@ -438,6 +542,7 @@ function Messaging() {
     if (page >= pages) return;
     const el = messagesListRef.current;
     const prevScrollHeight = el?.scrollHeight ?? 0;
+    const prevScrollTop = el?.scrollTop ?? 0;
     const nextPage = page + 1;
     loadingOlderRef.current = true;
     setLoadingOlder(true);
@@ -449,13 +554,13 @@ function Messaging() {
       const { messages: rows, page: newPage, pages: newPages, total } = response.data;
       setMessages(prev => [...(rows || []), ...prev]);
       setMessagePagination({ page: newPage, pages: newPages, total: total || 0 });
-      setTimeout(() => {
-        if (messagesListRef.current) {
-          const newH = messagesListRef.current.scrollHeight;
-          messagesListRef.current.scrollTop = newH - prevScrollHeight;
+      requestAnimationFrame(() => {
+        const node = messagesListRef.current;
+        if (node) {
+          node.scrollTop = prevScrollTop + (node.scrollHeight - prevScrollHeight);
         }
         loadingOlderRef.current = false;
-      }, 0);
+      });
     } catch (err) {
       console.error('Load older messages error:', err);
       loadingOlderRef.current = false;
@@ -464,7 +569,31 @@ function Messaging() {
     }
   };
 
+  const placeConversationFirst = (message, unreadDelta) => {
+    if (message?.conversationId == null) return;
+    setConversations((prev) => {
+      const cid = String(message.conversationId);
+      const idx = prev.findIndex((conv) => String(conv.id) === cid);
+      if (idx < 0) {
+        fetchConversations();
+        return prev;
+      }
+      const current = prev[idx];
+      const preview = message.deleted
+        ? 'Mesazh i fshirë'
+        : (message.content || message.fileName || (message.type === 'image' ? 'Foto' : 'Media'));
+      const updated = {
+        ...current,
+        lastMessage: preview,
+        lastMessageAt: message.createdAt || new Date().toISOString(),
+        unreadCount: Math.max(0, (current.unreadCount || 0) + unreadDelta),
+      };
+      return [updated, ...prev.filter((_, i) => i !== idx)];
+    });
+  };
+
   const handleNewMessage = (message) => {
+    const mine = Number(message?.senderId || message?.sender?.id) === Number(user?.id);
     if (
       selectedConversation &&
       message &&
@@ -474,20 +603,18 @@ function Messaging() {
         if (prev.some(m => m.id === message.id)) return prev;
         return [...prev, message];
       });
-      api.put(`/messaging/conversations/${selectedConversation.id}/read`);
+      if (!mine) {
+        api.put(`/messaging/conversations/${selectedConversation.id}/read`).catch(() => {});
+      }
+      placeConversationFirst(message, 0);
       if (!loadingOlderRef.current) {
         requestAnimationFrame(() => scrollToBottom(false));
       }
     } else if (message?.conversationId != null) {
-      // Update unread count
-      const cid = String(message.conversationId);
-      setConversations(prev =>
-        prev.map(conv =>
-          String(conv.id) === cid
-            ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
-            : conv
-        )
-      );
+      placeConversationFirst(message, mine ? 0 : 1);
+      if (!mine && message.id) {
+        socket?.emit('messageDeliveredAck', { messageId: message.id, conversationId: message.conversationId });
+      }
     }
   };
 
@@ -509,25 +636,82 @@ function Messaging() {
     }
   };
 
-  const handleUserTyping = ({ userId, userName }) => {
-    setTypingUsers(prev => ({ ...prev, [userId]: userName }));
+  const handleUserTyping = ({ userId: typingUserId, userName, conversationId: cid }) => {
+    if (cid != null && selectedConversation && String(cid) !== String(selectedConversation.id)) return;
+    if (Number(typingUserId) === Number(user?.id)) return;
+    setTypingUsers(prev => ({ ...prev, [typingUserId]: userName || 'Dikush' }));
+    if (typingClearRef.current[typingUserId]) clearTimeout(typingClearRef.current[typingUserId]);
+    typingClearRef.current[typingUserId] = setTimeout(() => {
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        delete next[typingUserId];
+        return next;
+      });
+    }, 4000);
   };
 
-  const handleUserStoppedTyping = ({ userId }) => {
+  const handleUserStoppedTyping = ({ userId: typingUserId, conversationId: cid }) => {
+    if (cid != null && selectedConversation && String(cid) !== String(selectedConversation.id)) return;
+    if (typingClearRef.current[typingUserId]) clearTimeout(typingClearRef.current[typingUserId]);
     setTypingUsers(prev => {
       const newTyping = { ...prev };
-      delete newTyping[userId];
+      delete newTyping[typingUserId];
       return newTyping;
     });
   };
 
+  const handleConversationRead = (payload) => {
+    if (!payload || Number(payload.userId) === Number(user?.id)) return;
+    if (selectedConversation && String(payload.conversationId) !== String(selectedConversation.id)) return;
+    setOthersRead((prev) => {
+      const list = Array.isArray(prev) ? [...prev] : [];
+      const idx = list.findIndex((row) => Number(row.userId) === Number(payload.userId));
+      const next = { userId: payload.userId, lastReadAt: payload.readAt };
+      if (idx >= 0) list[idx] = next;
+      else list.push(next);
+      return list;
+    });
+  };
+
+  const handleMessageDelivered = (payload) => {
+    if (!payload?.messageId) return;
+    if (selectedConversation && String(payload.conversationId) !== String(selectedConversation.id)) return;
+    setMessages((prev) => prev.map((m) => (
+      m.id === payload.messageId ? { ...m, deliveredAt: payload.deliveredAt || m.deliveredAt } : m
+    )));
+  };
+
+  const handleReactionUpdated = (payload) => {
+    if (!payload?.messageId) return;
+    if (selectedConversation && String(payload.conversationId) !== String(selectedConversation.id)) return;
+    setMessages((prev) => prev.map((m) => (
+      m.id === payload.messageId ? { ...m, reactions: payload.reactions || [] } : m
+    )));
+  };
+
+  const handleConversationUpdated = (payload) => {
+    if (!payload?.id) return;
+    if (payload.removedUserId != null && Number(payload.removedUserId) === Number(user?.id)) {
+      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(payload.id)));
+      setSelectedConversation((current) => (Number(current?.id) === Number(payload.id) ? null : current));
+      return;
+    }
+    setConversations((prev) => prev.map((c) => (Number(c.id) === Number(payload.id) ? { ...c, ...payload } : c)));
+    setSelectedConversation((current) => (
+      current && Number(current.id) === Number(payload.id) ? { ...current, ...payload } : current
+    ));
+  };
+
   const handleTyping = () => {
     if (socket && selectedConversation) {
-      socket.emit('typing', {
-        conversationId: selectedConversation.id,
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-      });
+      const now = Date.now();
+      if (now - lastTypingEmitRef.current > 1500) {
+        lastTypingEmitRef.current = now;
+        socket.emit('typing', {
+          conversationId: selectedConversation.id,
+          userName: `${user.firstName} ${user.lastName}`,
+        });
+      }
 
       // Clear previous timeout
       if (typingTimeoutRef.current) {
@@ -580,13 +764,8 @@ function Messaging() {
         if (prev.some(m => m.id === response.data.id)) return prev;
         return [...prev, response.data];
       });
-      if (socket) {
-        try {
-          socket.emit('sendMessage', { conversationId: selectedConversation.id, message: response.data });
-        } catch (e) {
-          console.warn('[Messaging] socket emit sendMessage failed', e.message || e);
-        }
-      }
+      placeConversationFirst(response.data, 0);
+      setActionError('');
       requestAnimationFrame(() => scrollToBottom(false));
       setMessageContent('');
       setFile(null);
@@ -603,7 +782,7 @@ function Messaging() {
         });
       }
     } catch (err) {
-      console.error('Send message error:', err);
+      setActionError(err?.response?.data?.msg || 'Mesazhi nuk u dërgua. Provo përsëri.');
     } finally {
       setSending(false);
     }
@@ -622,7 +801,7 @@ function Messaging() {
       );
       setEditingMessage(null);
     } catch (err) {
-      console.error('Edit message error:', err);
+      setActionError(err?.response?.data?.msg || 'Ndryshimi nuk u ruajt');
     } finally {
       setSending(false);
     }
@@ -634,7 +813,111 @@ function Messaging() {
       await api.delete(`/messaging/messages/${messageId}`);
       setMessages(prev => prev.filter(m => m.id !== messageId));
     } catch (err) {
-      console.error('Delete message error:', err);
+      setActionError(err?.response?.data?.msg || 'Mesazhi nuk u fshi');
+    }
+  };
+
+  const toggleReaction = async (messageId, emoji) => {
+    try {
+      const { data } = await api.post(`/messaging/messages/${messageId}/reactions`, { emoji });
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions: data.reactions || [] } : m)));
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Reagimi nuk u ruajt');
+    }
+  };
+
+  const scrollToOriginal = (id) => {
+    const el = document.getElementById(`msg-${id}`);
+    if (!el) {
+      setActionError('Mesazhi origjinal nuk është në këtë faqe. Ngarko mesazhe më të vjetra.');
+      return;
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightId(id);
+    setTimeout(() => setHighlightId((current) => (current === id ? null : current)), 1600);
+  };
+
+  const submitReport = async (reason) => {
+    if (!reportTarget?.id) return;
+    try {
+      await api.post('/moderation/reports', { targetType: 'message', targetId: reportTarget.id, reason });
+      setReportTarget(null);
+      setActionError('');
+      window.alert('Raportimi u dërgua.');
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Raportimi nuk u dërgua');
+    }
+  };
+
+  const blockPeer = async (peerId) => {
+    if (!peerId || !window.confirm('Blloko këtë përdorues? Nuk do të mund të shkruani ose telefononi.')) return;
+    try {
+      await api.post(`/moderation/blocks/${peerId}`);
+      setActionError('');
+      window.alert('Përdoruesi u bllokua.');
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Bllokimi dështoi');
+    }
+  };
+
+  const applyGroupPayload = (data) => {
+    if (!data?.id) return;
+    setSelectedConversation((current) => (current ? { ...current, ...data } : data));
+    setConversations((prev) => prev.map((c) => (Number(c.id) === Number(data.id) ? { ...c, ...data } : c)));
+  };
+
+  const renameSelectedGroup = async () => {
+    const name = groupRename.trim();
+    if (!selectedConversation?.id || !name) return;
+    try {
+      const { data } = await api.put(`/messaging/conversations/${selectedConversation.id}`, { name });
+      applyGroupPayload(data);
+      setGroupRename('');
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Emri nuk u ndryshua');
+    }
+  };
+
+  const changeGroupAvatar = async (file) => {
+    if (!file || !selectedConversation?.id) return;
+    const form = new FormData();
+    form.append('avatar', file);
+    try {
+      const { data } = await api.post(`/messaging/conversations/${selectedConversation.id}/avatar`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      applyGroupPayload(data);
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Fotoja e grupit nuk u ndryshua');
+    }
+  };
+
+  const removeGroupMember = async (memberId) => {
+    if (!selectedConversation?.id || !window.confirm('Hiq këtë anëtar nga grupi?')) return;
+    try {
+      const { data } = await api.delete(`/messaging/conversations/${selectedConversation.id}/members/${memberId}`);
+      applyGroupPayload(data);
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Anëtari nuk u hoq');
+    }
+  };
+
+  const setMemberRole = async (memberId, role) => {
+    try {
+      const { data } = await api.put(`/messaging/conversations/${selectedConversation.id}/members/${memberId}/role`, { role });
+      applyGroupPayload(data);
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Roli nuk u ndryshua');
+    }
+  };
+
+  const transferOwnership = async (memberId) => {
+    if (!window.confirm('Transfero pronësinë e grupit te ky anëtar?')) return;
+    try {
+      const { data } = await api.post(`/messaging/conversations/${selectedConversation.id}/transfer`, { userId: memberId });
+      applyGroupPayload(data);
+    } catch (err) {
+      setActionError(err?.response?.data?.msg || 'Pronësia nuk u transferua');
     }
   };
 
@@ -654,41 +937,41 @@ function Messaging() {
     return (
       <>
         {message.replyTo && (
-          <div className="mb-1 flex items-center gap-2 border-l-2 border-[var(--xt-color-gold-deep)] pl-2 text-sm text-[var(--xt-color-text-subtle)]">
-            {message.replyTo.sender && message.replyTo.sender.profilePhoto ? (
-              <img
-                src={getFullUrl(message.replyTo.sender.profilePhoto)}
-                alt={message.replyTo.sender.firstName}
-                className="w-6 h-6 rounded-full object-cover"
-                onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
-              />
+          <button
+            type="button"
+            className="mb-1 flex w-full items-center gap-2 border-l-2 border-[var(--xt-color-gold-deep)] pl-2 text-left text-sm text-[var(--xt-color-text-subtle)]"
+            onClick={() => scrollToOriginal(message.replyTo.id)}
+          >
+            {replyUnavailable(message.replyTo) ? (
+              <p className="italic">Mesazhi origjinal nuk është i disponueshëm</p>
             ) : (
-              <div className="grid h-6 w-6 place-items-center rounded-full bg-[var(--xt-color-surface-hover)] text-xs font-bold text-[var(--xt-color-gold-bright)]">
-                {`${message.replyTo.sender?.firstName?.charAt(0)?.toUpperCase() || ''}${message.replyTo.sender?.lastName?.charAt(0)?.toUpperCase() || ''}`}
-              </div>
+              <>
+                <p className="font-medium">
+                  {message.replyTo.sender?.firstName || 'Unknown'}
+                </p>
+                <p className="truncate">
+                  {message.replyTo.content || message.replyTo.fileName || (message.replyTo.type === 'image' ? 'Foto' : 'Media')}
+                </p>
+              </>
             )}
-            <p className="font-medium">
-              {message.replyTo.sender && message.replyTo.sender.firstName
-                ? message.replyTo.sender.firstName
-                : 'Unknown'}
-            </p>
-            <p className="truncate">{message.replyTo.content}</p>
-          </div>
+          </button>
         )}
+        {message.forwarded && !message.deleted ? (
+          <p className="mb-1 text-[11px] italic opacity-80">E përcjellë</p>
+        ) : null}
         {message.fileUrl && message.type === 'image' && (
-          <img
+          <ChatMedia
             src={getFullUrl(message.fileUrl)}
+            kind="image"
             alt={message.fileName || 'Shared'}
-            className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
-            onClick={() => setModalImage(getFullUrl(message.fileUrl))}
+            onOpen={setModalImage}
           />
         )}
         {message.fileUrl && message.type === 'video' && (
-          <video
+          <ChatMedia
             src={getFullUrl(message.fileUrl)}
-            controls
-            className="max-w-xs rounded mb-2 cursor-pointer"
-            onClick={() => setModalImage(getFullUrl(message.fileUrl))}
+            kind="video"
+            onOpen={setModalImage}
           />
         )}
         {message.type === 'file' && message.fileUrl && (
@@ -756,7 +1039,7 @@ function Messaging() {
       )
     );
     return directContacts.filter((c) => !existing.has(Number(c.id)));
-  }, [directContacts, selectedConversation?.members]);
+  }, [directContacts, selectedConversation]);
 
   async function createGroupConversation() {
     if (!groupName.trim()) {
@@ -1004,6 +1287,30 @@ function Messaging() {
                 Mbyll
               </button>
             </div>
+            {canManageGroup ? (
+              <div className="flex flex-col gap-2 border-b border-[var(--xt-color-border)] px-4 py-3">
+                <div className="flex gap-2">
+                  <input
+                    value={groupRename}
+                    onChange={(e) => setGroupRename(e.target.value)}
+                    placeholder="Emër i ri i grupit"
+                    className="input min-h-10 flex-1 text-sm"
+                  />
+                  <button type="button" className="btn btn-outline min-h-10 px-3 text-sm" onClick={renameSelectedGroup}>
+                    Ruaj
+                  </button>
+                </div>
+                <label className="text-xs font-semibold text-[var(--xt-color-text-muted)]">
+                  Ndrysho foton
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="mt-1 block w-full text-xs"
+                    onChange={(e) => changeGroupAvatar(e.target.files?.[0])}
+                  />
+                </label>
+              </div>
+            ) : null}
             <div className="flex gap-2 border-b border-[var(--xt-color-border)] px-4 py-3">
               <button
                 type="button"
@@ -1034,12 +1341,11 @@ function Messaging() {
                   const isMe = Number(m.id) === Number(user?.id);
                   const photo = m.profilePhoto || m.Profile?.profilePhoto || '';
                   const memberRole = m.memberRole || null;
+                  const memberIsOwner = Number(selectedConversation.ownerId) === Number(m.id);
                   return (
-                    <Link
+                    <div
                       key={m.id}
-                      to={`/profile/${m.id}`}
-                      onClick={() => setShowGroupMembersPanel(false)}
-                      className="flex items-center gap-3 border-b border-[var(--xt-color-border)] px-4 py-3 hover:bg-[var(--xt-color-surface-hover)]"
+                      className="flex items-center gap-3 border-b border-[var(--xt-color-border)] px-4 py-3"
                     >
                       {photo ? (
                         <img
@@ -1053,13 +1359,13 @@ function Messaging() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold text-[var(--xt-color-text)]">
+                        <Link to={`/profile/${m.id}`} onClick={() => setShowGroupMembersPanel(false)} className="truncate font-semibold text-[var(--xt-color-text)]">
                           {name}
                           {isMe ? ' (ti)' : ''}
-                        </div>
+                        </Link>
                         {memberRole ? (
                           <div className="truncate text-xs text-[var(--xt-color-text-muted)]">
-                            {memberRole === 'admin' ? 'Admin' : 'Anëtar'}
+                            {memberIsOwner ? 'Pronar' : memberRole === 'admin' ? 'Admin' : 'Anëtar'}
                           </div>
                         ) : m.role ? (
                           <div className="truncate text-xs capitalize text-[var(--xt-color-text-muted)]">
@@ -1067,7 +1373,20 @@ function Messaging() {
                           </div>
                         ) : null}
                       </div>
-                    </Link>
+                      {canManageGroup && !isMe && !memberIsOwner ? (
+                        <div className="flex flex-col items-end gap-1 text-[11px]">
+                          {memberRole === 'admin' ? (
+                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'member')}>Hiq admin</button>
+                          ) : (
+                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'admin')}>Bëj admin</button>
+                          )}
+                          {(isGroupOwner || !selectedConversation.ownerId) && (
+                            <button type="button" className="hover:underline" onClick={() => transferOwnership(m.id)}>Pronar</button>
+                          )}
+                          <button type="button" className="text-red-600 hover:underline" onClick={() => removeGroupMember(m.id)}>Hiq</button>
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })
               )}
@@ -1202,6 +1521,16 @@ function Messaging() {
                 })()}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {!selectedConversation.isGroup && getOtherMember(selectedConversation).id ? (
+                  <button
+                    type="button"
+                    title="Blloko"
+                    className="p-2 rounded-full hover:bg-red-100 text-xs font-semibold text-red-600"
+                    onClick={() => blockPeer(getOtherMember(selectedConversation).id)}
+                  >
+                    Blloko
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   title="Thirrje zanore"
@@ -1239,6 +1568,14 @@ function Messaging() {
               const t = e.currentTarget;
               const dist = t.scrollHeight - t.scrollTop - t.clientHeight;
               setShowScrollDown(dist > 280);
+              if (
+                t.scrollTop < 72
+                && !threadSearch.trim()
+                && !loadingOlderRef.current
+                && messagePagination.page < messagePagination.pages
+              ) {
+                loadOlderMessages();
+              }
             }}
             className="flex-1 overflow-y-auto px-4 pb-36 min-h-0 relative"
           >
@@ -1284,7 +1621,10 @@ function Messaging() {
                       </div>
                     )}
                     <div
+                      id={`msg-${message.id}`}
                       className={`max-w-[min(85%,28rem)] rounded-2xl px-3 py-2 shadow-md ${
+                        highlightId === message.id ? 'ring-2 ring-amber-400' : ''
+                      } ${
                         isMine
                           ? 'bg-[var(--xt-color-gold)] text-slate-950 rounded-br-md'
                           : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)] border border-[var(--xt-color-border)] rounded-bl-md'
@@ -1302,9 +1642,30 @@ function Messaging() {
                           isMine ? 'border-white/20' : 'border-gray-100 dark:border-gray-700'
                         }`}
                       >
-                        <span className={`text-[11px] tabular-nums ${isMine ? 'text-blue-100' : 'text-[var(--xt-color-text-subtle)]'}`}>
+                        <span className={`text-[11px] tabular-nums ${isMine ? 'text-slate-700' : 'text-[var(--xt-color-text-subtle)]'}`}>
                           {formatTime(message.createdAt)}
+                          {isMine ? ` · ${{
+                            sending: 'duke dërguar',
+                            sent: 'dërguar',
+                            delivered: 'dorëzuar',
+                            read: 'lexuar',
+                            failed: 'dështoi',
+                          }[outboundChatStatus(message, othersRead, user?.id)] || ''}` : ''}
                         </span>
+                        {!message.deleted && Array.isArray(message.reactions) && message.reactions.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {message.reactions.map((reaction) => (
+                              <button
+                                key={reaction.emoji}
+                                type="button"
+                                className={`rounded-full px-1.5 text-[11px] ${reaction.mine ? 'bg-black/10' : ''}`}
+                                onClick={() => toggleReaction(message.id, reaction.emoji)}
+                              >
+                                {reaction.emoji} {reaction.count}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {!message.deleted && (
                           <div className={`flex flex-wrap gap-2 text-[11px] ${isMine ? 'text-blue-100' : 'text-[var(--xt-color-text-subtle)]'}`}>
                             <button type="button" className="hover:underline" onClick={() => setReplyTo(message)}>
@@ -1327,6 +1688,16 @@ function Messaging() {
                             {isMine && (
                               <button type="button" className="hover:underline" onClick={() => deleteMessage(message.id)}>
                                 Fshi
+                              </button>
+                            )}
+                            {REACTION_EMOJIS.map((emoji) => (
+                              <button key={emoji} type="button" className="hover:scale-110" onClick={() => toggleReaction(message.id, emoji)}>
+                                {emoji}
+                              </button>
+                            ))}
+                            {!isMine && (
+                              <button type="button" className="hover:underline" onClick={() => setReportTarget(message)}>
+                                Raporto
                               </button>
                             )}
                           </div>
@@ -1355,6 +1726,12 @@ function Messaging() {
           )}
 
           {/* Input */}
+          {actionError ? (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <span>{actionError}</span>
+              <button type="button" className="font-semibold" onClick={() => setActionError('')}>Mbyll</button>
+            </div>
+          ) : null}
           <form
             onSubmit={sendMessage}
             className="p-4 bg-[var(--xt-color-surface)] border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto flex-shrink-0"
@@ -1504,6 +1881,20 @@ function Messaging() {
           </div>
         </div>
       )}
+      {reportTarget ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setReportTarget(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 font-bold text-slate-900">Raporto mesazhin</h3>
+            <div className="flex flex-col gap-2">
+              {REPORT_REASONS.map(([key, label]) => (
+                <button key={key} type="button" className="rounded-lg border px-3 py-2 text-left text-sm text-slate-800 hover:bg-gray-50" onClick={() => submitReport(key)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

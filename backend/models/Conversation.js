@@ -24,6 +24,10 @@ const Conversation = sequelize.define('Conversation', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 const ConversationMember = sequelize.define('ConversationMember', {

@@ -15,14 +15,14 @@ export function outboundMessageStatus(message, othersRead, currentUserId) {
     return null;
   }
   if (message._sendFailed) return 'failed';
-  // Spinner vetëm gjatë ngarkimit të medias; teksti merr ✓ menjëherë.
-  if (message._pending) return 'sending';
+  if (message._pending || String(message?.id || '').startsWith('pending')) return 'sending';
   const msgTime = new Date(message.createdAt).getTime();
   const floor = othersReadFloor(othersRead);
-  if (!Number.isNaN(msgTime) && floor != null && floor >= msgTime) {
+  if (!Number.isNaN(msgTime) && floor != null && floor > 0 && floor >= msgTime) {
     return 'seen';
   }
-  if (message?.id != null) return 'delivered';
+  if (message?.deliveredAt) return 'delivered';
+  if (message?.id != null) return 'sent';
   return 'sending';
 }
 

@@ -54,22 +54,12 @@ function ForwardButton({ message }) {
     setForwardingId(convId);
     setSuccess(false);
     try {
-      const formData = new FormData();
-      if ((message.type === 'image' || message.type === 'video' || message.type === 'file') && message.fileUrl) {
-        const response = await fetch(getFullUrl(message.fileUrl));
-        const blob = await response.blob();
-        formData.append('file', blob, message.fileName || 'media');
-      }
-      if (message.content) {
-        formData.append('content', message.content);
-      }
-      await api.post(`/messaging/conversations/${convId}/messages`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/messaging/messages/${message.id}/forward`, { conversationId: convId });
       setSuccess(true);
       setTimeout(() => setShowList(false), 1000);
     } catch (err) {
-      // optional error handling
+      setSuccess(false);
+      window.alert(err?.response?.data?.msg || 'Mesazhi nuk u përcoll');
     }
     setForwardingId(null);
   };
@@ -146,7 +136,7 @@ function ForwardButton({ message }) {
                     <div className="mt-2 text-xs font-semibold text-gray-700">Forward to:</div>
                   </div>
                   <ul>
-                    {conversations.slice(0, 5).map((conv, idx) => {
+                    {conversations.map((conv, idx) => {
                       const other = getOtherMember(conv);
                       return (
                         <li
@@ -156,7 +146,7 @@ function ForwardButton({ message }) {
                               ? 'bg-blue-100 opacity-70' : 'hover:bg-blue-50'
                           }`}
                           style={{
-                            borderBottom: idx !== Math.min(conversations.length, 5) - 1 ? '1px solid #f0f0f0' : 'none',
+                            borderBottom: idx !== conversations.length - 1 ? '1px solid #f0f0f0' : 'none',
                           }}
                           onClick={() => forwardingId ? null : handleForward(conv.id)}
                         >

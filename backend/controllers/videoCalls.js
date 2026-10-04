@@ -127,6 +127,15 @@ exports.createVideoCall = async (req, res) => {
   try {
     const { participantId, scheduledCallId } = req.body;
 
+    try {
+      const { isEitherBlocked } = require('./moderation');
+      if (await isEitherBlocked(req.user.id, participantId)) {
+        return res.status(403).json({ msg: 'Nuk mund ta telefonosh këtë përdorues (bllokuar)' });
+      }
+    } catch (_blockErr) {
+      /* non-fatal before migrate */
+    }
+
     // If there's already an active call between these users, return it instead of creating duplicate
     const existing = await VideoCall.findOne({
       where: {
@@ -173,6 +182,14 @@ exports.createVideoCall = async (req, res) => {
 exports.startCall = async (req, res) => {
   const { receiverId } = req.body;
   try {
+    try {
+      const { isEitherBlocked } = require('./moderation');
+      if (await isEitherBlocked(req.user.id, receiverId)) {
+        return res.status(403).json({ msg: 'Nuk mund ta telefonosh këtë përdorues (bllokuar)' });
+      }
+    } catch (_blockErr) {
+      /* non-fatal before migrate */
+    }
     // Avoid duplicate calls
     const existing = await VideoCall.findOne({
       where: {

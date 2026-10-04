@@ -707,11 +707,8 @@ io.on('connection', (socket) => {
     socket.broadcast.to(socket.userId).emit('notificationRead', notificationId);
   });
 
-  // Handle new message
-  socket.on('sendMessage', (data) => {
-    const { conversationId, message } = data;
-    io.to(`conversation-${conversationId}`).emit('newMessage', message);
-  });
+  // Messages are persisted and broadcast by the HTTP API. Ignore client-supplied payloads.
+  socket.on('sendMessage', () => {});
 
   // Join conversation room (membership required)
   socket.on('joinConversation', async (conversationId) => {
@@ -740,22 +737,53 @@ io.on('connection', (socket) => {
     socket.leave(`conversation-${conversationId}`);
   });
 
-  // Typing indicator — always attribute to authenticated user
+  // Typing indicator — only for rooms this socket actually joined (membership checked on join)
   socket.on('typing', (data) => {
     const { conversationId, userName } = data || {};
     if (!conversationId || !authenticatedUserId) return;
-    socket.to(`conversation-${conversationId}`).emit('userTyping', {
+    const room = `conversation-${conversationId}`;
+    if (!socket.rooms.has(room)) return;
+    socket.to(room).emit('userTyping', {
+      conversationId: Number(conversationId) || conversationId,
       userId: authenticatedUserId,
-      userName,
+      userName: typeof userName === 'string' ? userName.slice(0, 80) : '',
     });
   });
 
   socket.on('stopTyping', (data) => {
     const { conversationId } = data || {};
     if (!conversationId || !authenticatedUserId) return;
-    socket.to(`conversation-${conversationId}`).emit('userStoppedTyping', {
+    const room = `conversation-${conversationId}`;
+    if (!socket.rooms.has(room)) return;
+    socket.to(room).emit('userStoppedTyping', {
+      conversationId: Number(conversationId) || conversationId,
       userId: authenticatedUserId,
     });
+  });
+
+  socket.on('messageDeliveredAck', async (data) => {
+    const messageId = Number(data?.messageId);
+    if (!authenticatedUserId || !Number.isFinite(messageId)) return;
+    try {
+      const message = await Message.findByPk(messageId);
+      if (!message) return;
+      const member = await ConversationMember.findOne({
+        where: { conversationId: message.conversationId, userId: Number(authenticatedUserId) },
+        attributes: ['id'],
+      });
+      if (!member || Number(message.senderId) === Number(authenticatedUserId)) return;
+      if (!message.deliveredAt) {
+        message.deliveredAt = new Date();
+        await message.save();
+      }
+      io.to(`conversation-${message.conversationId}`).emit('messageDelivered', {
+        conversationId: message.conversationId,
+        messageId: message.id,
+        deliveredAt: new Date(message.deliveredAt).toISOString(),
+      });
+    } catch (err) {
+      console.warn('messageDeliveredAck failed:', err.message);
+    }
   });
 
   // WebRTC signaling for video calls
@@ -770,6 +798,15 @@ io.on('connection', (socket) => {
     (async () => {
       let usedCallId = callId;
       try {
+        try {
+          const { isEitherBlocked } = require('./controllers/moderation');
+          if (await isEitherBlocked(from, to)) {
+            socket.emit('call:failed', { reason: 'User not available' });
+            return;
+          }
+        } catch (_blockErr) {
+          /* Blocks table may be missing before migrate */
+        }
         // If no callId provided, create a VideoCall fallback so server-side records exist
         if (!usedCallId) {
           try {
@@ -784,7 +821,8 @@ io.on('connection', (socket) => {
 
             // Try to persist a message into conversation (best-effort)
             try {
-              const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
+              const { DIRECT_PAIR_SQL } = require('./utils/directConversation');
+              const sql = DIRECT_PAIR_SQL;
               const convoMatches = await sequelize.query(sql, {
                 replacements: { a: from, b: to },
                 type: QueryTypes.SELECT,

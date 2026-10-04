@@ -12,10 +12,9 @@ import {
 import {
   conversationsRequest,
   extractErrorMessage,
-  sendConversationMessageRequest,
+  forwardMessageRequest,
 } from '../../api/client';
 import { BACKEND_URL } from '../../config/constants';
-import { buildForwardSendOptions } from '../../utils/messageActions';
 import ReplyPreview from './ReplyPreview';
 
 function mediaBaseUrl() {
@@ -85,8 +84,7 @@ export default function ForwardMessageModal({ visible, message, currentUserId, o
     setForwardingId(convId);
     setError('');
     try {
-      const opts = await buildForwardSendOptions(message, mediaBaseUrl());
-      await sendConversationMessageRequest(convId, opts);
+      await forwardMessageRequest(message.id, convId);
       setSuccess(true);
       setTimeout(() => {
         onClose?.();

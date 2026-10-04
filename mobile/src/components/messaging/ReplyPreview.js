@@ -14,6 +14,13 @@ function mediaBaseUrl() {
  */
 export default function ReplyPreview({ message, mine = false, compact = false }) {
   if (!message) return null;
+  if (message.deleted || message.unavailable) {
+    return (
+      <Text style={[styles.text, mine && styles.textMine]}>
+        Mesazhi origjinal nuk është i disponueshëm
+      </Text>
+    );
+  }
 
   const uri = resolveMessageFileUrl(message, mediaBaseUrl());
   const isVideo =

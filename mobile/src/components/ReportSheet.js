@@ -19,6 +19,7 @@ const REASONS = [
   { key: 'sexual', label: 'Përmbajtje seksuale' },
   { key: 'impersonation', label: 'Identitet i rremë' },
   { key: 'scam', label: 'Mashtrim' },
+  { key: 'inappropriate', label: 'Përmbajtje e papërshtatshme' },
   { key: 'other', label: 'Tjetër' },
 ];
 

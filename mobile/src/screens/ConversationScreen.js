@@ -32,9 +32,17 @@ import {
   editMessageRequest,
   extractErrorMessage,
   markConversationReadRequest,
+  searchConversationMessagesRequest,
   sendConversationMessageRequest,
+  toggleMessageReactionRequest,
+  blockUserRequest,
+  removeGroupMemberRequest,
+  setGroupMemberRoleRequest,
+  transferGroupOwnerRequest,
+  updateGroupRequest,
   userOnlineStatusRequest,
 } from '../api/client';
+import ReportSheet from '../components/ReportSheet';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
@@ -51,6 +59,7 @@ import * as Clipboard from 'expo-clipboard';
 import { replyPreviewText } from '../utils/messageActions';
 
 const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
+const REACTION_EMOJIS = ['❤️', '👍', '😂', '🔥', '👏', '😮', '😢'];
 
 /** Kur ngarkohen mesazhe më të vjetra në krye, mos e lëviz pamjen e leximit. */
 const MAINTAIN_VISIBLE = {
@@ -118,13 +127,16 @@ function MessageStatusTicks({ status, mine }) {
   if (status === 'failed') {
     return <Ionicons name="alert-circle" size={13} color="#fecaca" style={styles.statusIcon} />;
   }
-  if (status === 'seen') {
+  if (status === 'seen' || status === 'read') {
     return <Ionicons name="checkmark-done" size={15} color="#93c5fd" style={styles.statusIcon} />;
+  }
+  if (status === 'delivered') {
+    return <Ionicons name="checkmark-done" size={15} color="rgba(255,255,255,0.75)" style={styles.statusIcon} />;
   }
   return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" style={styles.statusIcon} />;
 }
 
-function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStatus, onOpenSenderProfile, isDark }) {
+function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStatus, onOpenSenderProfile, isDark, onReact, onOpenReply, highlighted }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
@@ -133,6 +145,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
   const fileUri = messageFileUrl(message);
   const hasText = !!(message?.content && String(message.content).trim());
   const openActions = !deleted ? onOpenActions : undefined;
+  const [mediaBroken, setMediaBroken] = useState(false);
 
   const openFileLink = () => {
     if (fileUri) Linking.openURL(fileUri).catch(() => {});
@@ -165,12 +178,18 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
               styles.bubble,
               mine ? styles.bubbleMine : styles.bubbleOther,
               !mine && isDark && styles.bubbleOtherDark,
+              highlighted && { borderWidth: 2, borderColor: '#f59e0b' },
             ]}
           >
             {!deleted && message.replyTo ? (
-              <View style={[styles.replyQuote, mine && styles.replyQuoteMine]}>
-                <ReplyPreview message={message.replyTo} mine={mine} />
-              </View>
+              <TouchableOpacity onPress={() => onOpenReply?.(message.replyTo)} activeOpacity={0.8}>
+                <View style={[styles.replyQuote, mine && styles.replyQuoteMine]}>
+                  <ReplyPreview message={message.replyTo} mine={mine} />
+                </View>
+              </TouchableOpacity>
+            ) : null}
+            {!deleted && message.forwarded ? (
+              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>E përcjellë</Text>
             ) : null}
             {deleted ? (
               <Text style={[styles.bubbleText, mine && styles.bubbleTextMine, styles.deletedText]}>
@@ -181,12 +200,16 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
                 {fileUri && message.type === 'image' ? (
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => onOpenImage?.(fileUri)}
+                    onPress={() => !mediaBroken && onOpenImage?.(fileUri)}
                     onLongPress={openActions}
                     delayLongPress={350}
                     style={styles.mediaWrap}
                   >
-                    <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
+                    {mediaBroken ? (
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
+                    ) : (
+                      <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" onError={() => setMediaBroken(true)} />
+                    )}
                   </TouchableOpacity>
                 ) : null}
                 {fileUri && message.type === 'video' ? (
@@ -215,12 +238,16 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
                 {fileUri && !message.type ? (
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => onOpenImage?.(fileUri)}
+                    onPress={() => !mediaBroken && onOpenImage?.(fileUri)}
                     onLongPress={openActions}
                     delayLongPress={350}
                     style={styles.mediaWrap}
                   >
-                    <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" />
+                    {mediaBroken ? (
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
+                    ) : (
+                      <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" onError={() => setMediaBroken(true)} />
+                    )}
                   </TouchableOpacity>
                 ) : null}
                 {hasText && message.type !== 'call' ? (
@@ -244,6 +271,15 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
             )}
             {!deleted && message?.edited ? (
               <Text style={[styles.editedHint, mine && styles.editedHintMine]}>(ndryshuar)</Text>
+            ) : null}
+            {!deleted && Array.isArray(message.reactions) && message.reactions.length > 0 ? (
+              <View style={styles.reactionRow}>
+                {message.reactions.map((reaction) => (
+                  <TouchableOpacity key={reaction.emoji} onPress={() => onReact?.(reaction.emoji)}>
+                    <Text style={styles.reactionChip}>{reaction.emoji} {reaction.count}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             ) : null}
             <View style={styles.msgMetaRow}>
               {timeLabel ? (
@@ -314,6 +350,12 @@ export default function ConversationScreen({ route, navigation }) {
   const [replyTo, setReplyTo] = useState(null);
   const [forwardMessage, setForwardMessage] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
+  const [reportMessage, setReportMessage] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  const [threadQuery, setThreadQuery] = useState('');
+  const [searchHits, setSearchHits] = useState(null);
+  const [groupOwnerId, setGroupOwnerId] = useState(null);
+  const [myGroupRole, setMyGroupRole] = useState(null);
   const [othersRead, setOthersRead] = useState([]);
   const [groupMembers, setGroupMembers] = useState([]);
   const [showGroupMembers, setShowGroupMembers] = useState(false);
@@ -344,6 +386,8 @@ export default function ConversationScreen({ route, navigation }) {
           const name = data?.name || paramTitle || 'Grup';
           setPeerTitle(name);
           setGroupMembers(members);
+          setGroupOwnerId(data?.ownerId ?? null);
+          setMyGroupRole(data?.myRole || members.find((m) => Number(m.id) === Number(user?.id))?.memberRole || null);
           return;
         }
         setGroupMembers([]);
@@ -548,6 +592,24 @@ export default function ConversationScreen({ route, navigation }) {
         <View style={styles.headerActions}>
           {(isGroup && conversationId) || (!isGroup && otherUserId) ? (
             <>
+              {!isGroup && otherUserId ? (
+                <TouchableOpacity
+                  style={styles.headerIconBtn}
+                  onPress={() => {
+                    Alert.alert('Blloko', 'Ky përdorues nuk do të mund të të shkruajë ose të të telefonojë.', [
+                      { text: 'Anulo', style: 'cancel' },
+                      {
+                        text: 'Blloko',
+                        style: 'destructive',
+                        onPress: () => blockUserRequest(otherUserId).catch((err) => Alert.alert('Gabim', extractErrorMessage(err, 'Bllokimi dështoi'))),
+                      },
+                    ]);
+                  }}
+                  accessibilityLabel="Blloko"
+                >
+                  <Ionicons name="ban-outline" size={22} color="#dc2626" />
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
                 style={styles.headerIconBtn}
                 onPress={() => openCall(true)}
@@ -582,7 +644,8 @@ export default function ConversationScreen({ route, navigation }) {
 
   /** Rend kronologjik: më të vjetrit lart, më të rinjtë poshtë (pa `inverted` / pa scaleY). */
   const listData = useMemo(() => {
-    const list = Array.isArray(messages) ? [...messages] : [];
+    const source = threadQuery.trim() ? (searchHits || []) : messages;
+    const list = Array.isArray(source) ? [...source] : [];
     return list.sort((a, b) => {
       const ta = new Date(a.createdAt).getTime();
       const tb = new Date(b.createdAt).getTime();
@@ -590,7 +653,7 @@ export default function ConversationScreen({ route, navigation }) {
       const nb = Number.isNaN(tb) ? 0 : tb;
       return na - nb;
     });
-  }, [messages]);
+  }, [messages, threadQuery, searchHits]);
 
   const scrollToBottom = useCallback((animated = true) => {
     requestAnimationFrame(() => {
@@ -799,9 +862,6 @@ export default function ConversationScreen({ route, navigation }) {
     rejoinConversationRoom();
     socket.on('connect', rejoinConversationRoom);
     const ioMgr = socket.io;
-    if (ioMgr && typeof ioMgr.on === 'function') {
-      ioMgr.on('reconnect', rejoinConversationRoom);
-    }
 
     const onNewMessage = (raw) => {
       const message = normalizeMessagePayload(raw, conversationId);
@@ -830,12 +890,25 @@ export default function ConversationScreen({ route, navigation }) {
       );
     };
 
-    const onUserTyping = ({ userId, userName }) => {
+    const typingTimers = {};
+    const onUserTyping = ({ userId, userName, conversationId: typingConversationId }) => {
+      if (typingConversationId != null && String(typingConversationId) !== String(conversationId)) return;
       if (userId == null || Number(userId) === Number(user?.id)) return;
-      setTypingByUserId((prev) => ({ ...prev, [String(userId)]: userName || '…' }));
+      const key = String(userId);
+      setTypingByUserId((prev) => ({ ...prev, [key]: userName || '…' }));
+      if (typingTimers[key]) clearTimeout(typingTimers[key]);
+      typingTimers[key] = setTimeout(() => {
+        setTypingByUserId((prev) => {
+          if (!prev[key]) return prev;
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }, 4000);
     };
 
-    const onUserStoppedTyping = ({ userId }) => {
+    const onUserStoppedTyping = ({ userId, conversationId: typingConversationId }) => {
+      if (typingConversationId != null && String(typingConversationId) !== String(conversationId)) return;
       if (userId == null) return;
       setTypingByUserId((prev) => {
         const next = { ...prev };
@@ -859,9 +932,42 @@ export default function ConversationScreen({ route, navigation }) {
       else if (payload.online) setPeerLastSeen(null);
     };
 
+    const onReaction = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId) || payload?.messageId == null) return;
+      setMessages((prev) => prev.map((m) => (
+        m.id === payload.messageId ? { ...m, reactions: payload.reactions || [] } : m
+      )));
+    };
+    const onDelivered = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId) || payload?.messageId == null) return;
+      setMessages((prev) => prev.map((m) => (
+        m.id === payload.messageId ? { ...m, deliveredAt: payload.deliveredAt || m.deliveredAt } : m
+      )));
+    };
+    const syncAfterReconnect = () => {
+      rejoinConversationRoom();
+      conversationMessagesRequest(conversationId, { limit: 50, page: 1 })
+        .then((response) => {
+          const list = Array.isArray(response?.data?.messages) ? response.data.messages : [];
+          setMessages((prev) => {
+            const map = new Map(prev.map((m) => [String(m.id), m]));
+            list.forEach((row) => map.set(String(row.id), { ...(map.get(String(row.id)) || {}), ...row }));
+            return Array.from(map.values());
+          });
+          if (Array.isArray(response?.data?.othersRead)) setOthersRead(response.data.othersRead);
+          markConversationReadRequest(conversationId).catch(() => {});
+        })
+        .catch(() => {});
+    };
+    if (ioMgr && typeof ioMgr.on === 'function') {
+      ioMgr.on('reconnect', syncAfterReconnect);
+    }
+
     socket.on('newMessage', onNewMessage);
     socket.on('messageUpdated', onMessageUpdated);
     socket.on('messageDeleted', onMessageDeleted);
+    socket.on('messageReactionUpdated', onReaction);
+    socket.on('messageDelivered', onDelivered);
     socket.on('userTyping', onUserTyping);
     socket.on('userStoppedTyping', onUserStoppedTyping);
     socket.on('conversationRead', onConversationRead);
@@ -870,11 +976,13 @@ export default function ConversationScreen({ route, navigation }) {
     return () => {
       socket.off('connect', rejoinConversationRoom);
       if (ioMgr && typeof ioMgr.off === 'function') {
-        ioMgr.off('reconnect', rejoinConversationRoom);
+        ioMgr.off('reconnect', syncAfterReconnect);
       }
       socket.off('newMessage', onNewMessage);
       socket.off('messageUpdated', onMessageUpdated);
       socket.off('messageDeleted', onMessageDeleted);
+      socket.off('messageReactionUpdated', onReaction);
+      socket.off('messageDelivered', onDelivered);
       socket.off('userTyping', onUserTyping);
       socket.off('userStoppedTyping', onUserStoppedTyping);
       socket.off('conversationRead', onConversationRead);
@@ -973,14 +1081,6 @@ export default function ConversationScreen({ route, navigation }) {
             const withoutPending = prev.filter((m) => m.id !== tempId);
             return upsertMessage(withoutPending, saved);
           });
-          const socket = getSocket?.();
-          if (socket) {
-            try {
-              socket.emit('sendMessage', { conversationId, message: saved });
-            } catch (_) {
-              /* ignore */
-            }
-          }
           requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
         } else {
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -1059,6 +1159,74 @@ export default function ConversationScreen({ route, navigation }) {
     setActionMessage(message);
   }, []);
 
+  const toggleReaction = useCallback(async (message, emoji) => {
+    if (!message?.id || String(message.id).startsWith('pending')) return;
+    try {
+      const { data } = await toggleMessageReactionRequest(message.id, emoji);
+      setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, reactions: data?.reactions || [] } : m)));
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Reagimi nuk u ruajt'));
+    }
+  }, []);
+
+  const openReplyTarget = useCallback((reply) => {
+    if (!reply?.id || reply.deleted || reply.unavailable) {
+      setError('Mesazhi origjinal nuk është i disponueshëm');
+      return;
+    }
+    const index = listData.findIndex((m) => String(m.id) === String(reply.id));
+    if (index < 0) {
+      setError('Mesazhi origjinal nuk është në këtë faqe. Ngarko mesazhe më të vjetra.');
+      return;
+    }
+    listRef.current?.scrollToIndex({ index, viewPosition: 0.4 });
+    setHighlightId(reply.id);
+    setTimeout(() => setHighlightId((current) => (current === reply.id ? null : current)), 1600);
+  }, [listData]);
+
+  useEffect(() => {
+    const q = threadQuery.trim();
+    if (!conversationId || !q) {
+      setSearchHits(null);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      searchConversationMessagesRequest(conversationId, { q, page: 1, limit: 30 })
+        .then((response) => setSearchHits(response?.data?.messages || []))
+        .catch(() => {
+          setSearchHits([]);
+          setError('Kërkimi dështoi');
+        });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [threadQuery, conversationId]);
+
+  const canManageGroup = isGroup && (Number(groupOwnerId) === Number(user?.id) || myGroupRole === 'admin');
+
+  const manageMember = (member) => {
+    if (!canManageGroup || Number(member?.id) === Number(user?.id)) return;
+    if (groupOwnerId != null && Number(member.id) === Number(groupOwnerId)) return;
+    const buttons = [
+      member.memberRole === 'admin'
+        ? { text: 'Hiq admin', onPress: () => setGroupMemberRoleRequest(conversationId, member.id, 'member').then((res) => setGroupMembers(res.data?.members || groupMembers)).catch((err) => setError(extractErrorMessage(err, 'Roli nuk u ndryshua'))) }
+        : { text: 'Bëj admin', onPress: () => setGroupMemberRoleRequest(conversationId, member.id, 'admin').then((res) => setGroupMembers(res.data?.members || groupMembers)).catch((err) => setError(extractErrorMessage(err, 'Roli nuk u ndryshua'))) },
+      { text: 'Hiq nga grupi', style: 'destructive', onPress: () => removeGroupMemberRequest(conversationId, member.id).then((res) => setGroupMembers(res.data?.members || [])).catch((err) => setError(extractErrorMessage(err, 'Anëtari nuk u hoq'))) },
+    ];
+    if (Number(groupOwnerId) === Number(user?.id) || groupOwnerId == null) {
+      buttons.unshift({
+        text: 'Transfero pronësinë',
+        onPress: () => transferGroupOwnerRequest(conversationId, member.id)
+          .then((res) => {
+            setGroupOwnerId(res.data?.ownerId ?? member.id);
+            setGroupMembers(res.data?.members || groupMembers);
+          })
+          .catch((err) => setError(extractErrorMessage(err, 'Pronësia nuk u transferua'))),
+      });
+    }
+    buttons.push({ text: 'Anulo', style: 'cancel' });
+    Alert.alert(member.firstName || 'Anëtar', 'Zgjidh veprimin', buttons);
+  };
+
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bgElevated }]}>
@@ -1080,6 +1248,13 @@ export default function ConversationScreen({ route, navigation }) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      <TextInput
+        value={threadQuery}
+        onChangeText={setThreadQuery}
+        placeholder="Kërko në bisedë"
+        placeholderTextColor={colors.muted}
+        style={[styles.threadSearch, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+      />
       {editing ? (
         <View style={styles.editBanner}>
           <Text style={styles.editBannerText}>Po ndryshon mesazhin</Text>
@@ -1113,6 +1288,17 @@ export default function ConversationScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : null
         }
+        onScroll={(event) => {
+          if (threadQuery.trim()) return;
+          if (event.nativeEvent.contentOffset.y < 48) loadOlder();
+        }}
+        scrollEventThrottle={80}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({
+            offset: Math.max(0, info.averageItemLength * info.index),
+            animated: true,
+          });
+        }}
         renderItem={({ item }) => (
           <MessageBubble
             message={item}
@@ -1121,6 +1307,9 @@ export default function ConversationScreen({ route, navigation }) {
             onOpenActions={() => openMessageActions(item)}
             onOpenImage={setPreviewImageUri}
             onOpenSenderProfile={(uid) => openUserProfile(navigation, uid)}
+            onReact={(emoji) => toggleReaction(item, emoji)}
+            onOpenReply={openReplyTarget}
+            highlighted={highlightId != null && String(highlightId) === String(item.id)}
             isDark={isDark}
           />
         )}
@@ -1250,6 +1439,12 @@ export default function ConversationScreen({ route, navigation }) {
         currentUserId={user?.id}
         onClose={() => setForwardMessage(null)}
       />
+      <ReportSheet
+        visible={!!reportMessage}
+        onClose={() => setReportMessage(null)}
+        targetType="message"
+        targetId={reportMessage?.id}
+      />
       <MessageActionsSheet
         visible={!!actionMessage}
         message={actionMessage}
@@ -1274,6 +1469,9 @@ export default function ConversationScreen({ route, navigation }) {
           setReplyTo(null);
           setEditing({ id: msg.id, text: msg.content || '' });
           requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        onReport={(msg) => {
+          if (msg) setReportMessage(msg);
         }}
         onDelete={(msg) => {
           if (msg?.id != null) confirmDelete(msg.id);
@@ -1307,6 +1505,25 @@ export default function ConversationScreen({ route, navigation }) {
                 <Ionicons name="close" size={24} color={colors.muted} />
               </TouchableOpacity>
             </View>
+            {canManageGroup ? (
+              <View style={[styles.membersActions, { paddingBottom: 0 }]}>
+                <TextInput
+                  placeholder="Emër i ri i grupit"
+                  placeholderTextColor={colors.muted}
+                  style={[styles.threadSearch, { flex: 1, marginHorizontal: 0, color: colors.text, borderColor: colors.border }]}
+                  onSubmitEditing={(event) => {
+                    const name = event.nativeEvent.text?.trim();
+                    if (!name) return;
+                    updateGroupRequest(conversationId, { name })
+                      .then((res) => {
+                        setPeerTitle(res.data?.name || name);
+                        setGroupOwnerId(res.data?.ownerId ?? groupOwnerId);
+                      })
+                      .catch((err) => setError(extractErrorMessage(err, 'Emri nuk u ndryshua')));
+                  }}
+                />
+              </View>
+            ) : null}
             <View style={styles.membersActions}>
               <TouchableOpacity
                 style={[styles.membersActionBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder }]}
@@ -1356,6 +1573,7 @@ export default function ConversationScreen({ route, navigation }) {
                       setShowGroupMembers(false);
                       openUserProfile(navigation, item.id);
                     }}
+                    onLongPress={() => manageMember(item)}
                     disabled={item?.id == null}
                   >
                     <UserAvatar
@@ -1558,6 +1776,8 @@ const styles = StyleSheet.create({
   typingText: { fontSize: 13, color: '#64748b', fontStyle: 'italic' },
   mediaWrap: { marginBottom: 6, borderRadius: 10, overflow: 'hidden' },
   msgImage: { width: 200, height: 200, maxWidth: '100%', backgroundColor: '#e2e8f0' },
+  reactionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  reactionChip: { fontSize: 12 },
   msgVideo: { width: 220, height: 160, marginBottom: 6, backgroundColor: '#000' },
   fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, maxWidth: 220 },
   fileName: { flex: 1, color: '#9A6B12', fontWeight: '600', fontSize: 14 },
@@ -1669,6 +1889,7 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.45 },
   empty: { color: '#64748b', textAlign: 'center', marginTop: 28 },
   error: { color: '#b91c1c', textAlign: 'center', marginTop: 8, paddingHorizontal: 12 },
+  threadSearch: { marginHorizontal: 12, marginTop: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
   loadOlder: { alignSelf: 'center', marginVertical: 10, paddingVertical: 8, paddingHorizontal: 14 },
   loadOlderText: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },
   editBanner: {

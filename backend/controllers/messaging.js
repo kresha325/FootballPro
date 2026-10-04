@@ -1,13 +1,28 @@
 const Message = require('../models/Message');
+const MessageReaction = require('../models/MessageReaction');
 const { Conversation, ConversationMember } = require('../models/Conversation');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { sendEmail } = require('../services/emailService');
+const { sendNotification } = require('./notifications');
 const { Op, QueryTypes } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 const { requireConversationMember } = require('../utils/conversationAcl');
+const { validateMessageText, escapeLike, safeDisplayFileName } = require('../utils/messageContent');
+const { inspectUploadedFile, discardUpload } = require('../utils/messageUpload');
+const { DIRECT_PAIR_SQL, pairKey, conversationIdFromRow } = require('../utils/directConversation');
+const {
+  normalizeReactionEmoji,
+  reactionToggleDecision,
+  summarizeReactions,
+  redactReply,
+} = require('../utils/messageReactions');
+const { authorizeGroupAction } = require('../utils/groupPermissions');
+const { unreadCountsByConversation } = require('../utils/messagingUnread');
+const { userIsViewingConversation } = require('../utils/conversationPresence');
+const { isUserOnline } = require('../utils/socket');
 
 /** Sender + Profile për avatar në chat */
 const SENDER_WITH_PROFILE = {
@@ -55,14 +70,98 @@ function shapeMessage(message, req) {
   if (!message) return message;
   const plain = typeof message.get === 'function' ? message.get({ plain: true }) : { ...message };
   if (plain.sender) plain.sender = shapeSender(plain.sender, req);
+  if (plain.deleted) {
+    plain.content = null;
+    plain.fileUrl = null;
+    plain.fileName = null;
+  }
   if (plain.replyTo) {
     const r = { ...plain.replyTo };
     if (r.sender) r.sender = shapeSender(r.sender, req);
-    if (r.fileUrl) r.fileUrl = toAbsoluteUploadsUrl(req, r.fileUrl);
-    plain.replyTo = r;
+    if (r.fileUrl && !r.deleted) r.fileUrl = toAbsoluteUploadsUrl(req, r.fileUrl);
+    plain.replyTo = redactReply(r);
   }
   if (plain.fileUrl) plain.fileUrl = toAbsoluteUploadsUrl(req, plain.fileUrl);
+  if (plain.reactions) {
+    plain.reactions = summarizeReactions(plain.reactions, req?.user?.id);
+  }
   return plain;
+}
+
+function memberRoleOf(member) {
+  return member?.ConversationMember?.role || member?.conversation_members?.role || member?.memberRole || null;
+}
+
+function withMemberRoles(members, req) {
+  if (!Array.isArray(members)) return members;
+  return members.map((m) => {
+    const shaped = shapeMemberRow(m, req);
+    return { ...shaped, memberRole: memberRoleOf(m) };
+  });
+}
+
+async function attachReactions(messages, userId) {
+  const list = Array.isArray(messages) ? messages : [];
+  if (!list.length) return list;
+  const ids = list.map((m) => m.id).filter((id) => id != null);
+  if (!ids.length) return list;
+  let rows = [];
+  try {
+    rows = await MessageReaction.findAll({
+      where: { messageId: { [Op.in]: ids } },
+      attributes: ['messageId', 'userId', 'emoji'],
+    });
+  } catch (err) {
+    console.error('Reaction lookup failed:', err.message);
+    return list;
+  }
+  const grouped = new Map();
+  for (const row of rows) {
+    const key = Number(row.messageId);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  }
+  return list.map((message) => {
+    const plain = message;
+    plain.reactions = summarizeReactions(grouped.get(Number(plain.id)) || [], userId);
+    return plain;
+  });
+}
+
+function previewText(message) {
+  if (!message) return null;
+  if (message.deleted) return 'Mesazh i fshirë';
+  const text = typeof message.content === 'string' ? message.content.trim() : '';
+  if (text) return text;
+  if (message.fileName) return message.fileName;
+  if (message.type === 'image') return 'Foto';
+  if (message.type === 'video') return 'Video';
+  if (message.type === 'audio') return 'Audio';
+  if (message.type === 'file') return 'Skedar';
+  if (message.type === 'call') return 'Thirrje';
+  return null;
+}
+
+async function blockedWith(userId, otherId) {
+  if (!otherId || Number(otherId) === Number(userId)) return false;
+  try {
+    const { isEitherBlocked } = require('./moderation');
+    return await isEitherBlocked(userId, otherId);
+  } catch (_err) {
+    return false;
+  }
+}
+
+function emitConversation(event, conversationId, payload, userIds = []) {
+  try {
+    const io = require('../socket').getIo();
+    if (!io || conversationId == null) return;
+    io.to(`conversation-${conversationId}`).emit(event, payload);
+    const ids = new Set((userIds || []).filter((id) => id != null).map((id) => String(id)));
+    ids.forEach((id) => io.to(id).emit(event, payload));
+  } catch (err) {
+    console.warn(`Emit ${event} failed:`, err.message);
+  }
 }
 
 // Multer setup for file uploads
@@ -86,8 +185,6 @@ exports.upload = upload;
 // Get all conversations for current user
 exports.getConversations = async (req, res) => {
   try {
-    console.log('🔵 getConversations called for user:', req.user.id);
-
     // Two-step load so filtered memberships don't collapse belongsToMany `members`
     // (Sequelize often returns only the current user when both are joined together).
     const myMemberships = await ConversationMember.findAll({
@@ -111,7 +208,7 @@ exports.getConversations = async (req, res) => {
           as: 'members',
           attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
           include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
-          through: { attributes: [] },
+          through: { attributes: ['role'] },
         },
         {
           model: Message,
@@ -125,159 +222,126 @@ exports.getConversations = async (req, res) => {
       order: [['lastMessageAt', 'DESC']],
     });
 
-    console.log('🔵 Found conversations:', conversations.length);
+    const sequelize = require('../config/database');
+    const unreadMap = await unreadCountsByConversation(sequelize, req.user.id, conversationIds);
 
-    const conversationsWithUnread = await Promise.all(
-      conversations.map(async (conv) => {
-        const membership = membershipByConvId.get(Number(conv.id));
-        const unreadCount = await Message.count({
-          where: {
-            conversationId: conv.id,
-            senderId: { [Op.ne]: req.user.id },
-            deleted: false,
-            createdAt: {
-              [Op.gt]: membership?.lastReadAt || new Date(0),
-            },
-          },
-        });
+    const conversationsWithUnread = conversations.map((conv) => {
+      const membership = membershipByConvId.get(Number(conv.id));
+      const convData = conv.toJSON();
+      if (Array.isArray(convData.members)) {
+        convData.members = withMemberRoles(convData.members, req);
+      }
+      const lastRow = convData.messages && convData.messages[0];
+      return {
+        ...convData,
+        memberships: membership
+          ? [{ lastReadAt: membership.lastReadAt, role: membership.role }]
+          : [],
+        lastMessage: previewText(lastRow),
+        unreadCount: unreadMap.get(Number(conv.id)) || 0,
+      };
+    });
 
-        const convData = conv.toJSON();
-        if (Array.isArray(convData.members)) {
-          convData.members = convData.members.map((m) => shapeMemberRow(m, req));
-        }
-        const lastMessage = convData.messages && convData.messages[0]
-          ? convData.messages[0].content
-          : null;
-
-        return {
-          ...convData,
-          memberships: membership
-            ? [{ lastReadAt: membership.lastReadAt, role: membership.role }]
-            : [],
-          lastMessage,
-          unreadCount,
-        };
-      })
-    );
-
-    console.log('✅ Sending conversations:', conversationsWithUnread.length);
     res.json(conversationsWithUnread);
   } catch (err) {
-    console.error('❌ Get conversations error:', err);
-    console.error('❌ Error stack:', err.stack);
-    res.status(500).json({ msg: 'Gabim në server', error: err.message });
+    console.error('Get conversations error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
 // Get or create conversation with user
+async function loadDirectConversation(conversationId, req) {
+  const existingConversation = await Conversation.findByPk(conversationId, {
+    include: [
+      { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
+      {
+        model: User,
+        as: 'members',
+        attributes: ['id', 'firstName', 'lastName', 'verified'],
+        include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
+        through: { attributes: [] },
+      },
+    ],
+  });
+  if (!existingConversation || existingConversation.isGroup) return null;
+  const data = existingConversation.toJSON();
+  if (Array.isArray(data.members)) {
+    data.members = data.members.map((m) => shapeMemberRow(m, req));
+  }
+  return data;
+}
+
 exports.getOrCreateConversation = async (req, res) => {
   try {
-    console.log('🔵 getOrCreateConversation called');
-    console.log('🔵 req.user:', req.user);
-    console.log('🔵 req.params.userId:', req.params.userId);
-    
-    const { userId } = req.params;
-    const targetUserId = parseInt(userId);
-    
-    console.log('🔵 Current user ID:', req.user.id);
-    console.log('🔵 Target user ID:', targetUserId);
+    const targetUserId = parseInt(req.params.userId, 10);
+    if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+      return res.status(400).json({ msg: 'Përdoruesi nuk është i vlefshëm' });
+    }
+    if (Number(targetUserId) === Number(req.user.id)) {
+      return res.status(400).json({ msg: 'Nuk mund të hapësh bisedë me veten' });
+    }
 
-    try {
-      const { isEitherBlocked } = require('./moderation');
-      if (await isEitherBlocked(req.user.id, targetUserId)) {
-        return res.status(403).json({ msg: 'Nuk mund të hapësh bisedë me këtë përdorues (bllokuar)' });
-      }
-    } catch (_e) {
-      /* Blocks table may be missing before migrate */
+    if (await blockedWith(req.user.id, targetUserId)) {
+      return res.status(403).json({ msg: 'Nuk mund të hapësh bisedë me këtë përdorues (bllokuar)' });
     }
-    
-    // Verify target user exists
-    const targetUser = await User.findByPk(targetUserId);
+
+    const targetUser = await User.findByPk(targetUserId, { attributes: ['id'] });
     if (!targetUser) {
-      console.log('❌ Target user not found:', targetUserId);
-      return res.status(404).json({ msg: 'User not found' });
+      return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     }
-    console.log('✅ Target user exists:', targetUser.firstName, targetUser.lastName);
-    
-    // Find conversation where both users are members (efficient, avoids loading all conversations)
+
     const sequelize = require('../config/database');
-    // Use a raw, parameterized SQL query to avoid Sequelize HAVING/name-qualification issues
-    const sql = `SELECT "conversationId" FROM "ConversationMembers" WHERE "userId" IN (:a,:b) GROUP BY "conversationId" HAVING COUNT("userId") = 2 LIMIT 1`;
-    const convoMatches = await sequelize.query(sql, {
+    const existingRows = await sequelize.query(DIRECT_PAIR_SQL, {
       replacements: { a: req.user.id, b: targetUserId },
       type: QueryTypes.SELECT,
     });
-
-    if (convoMatches && convoMatches.length > 0) {
-      const conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
-      const existingConversation = await Conversation.findByPk(conversationId, {
-        include: [
-          { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
-          {
-            model: User,
-            as: 'members',
-            attributes: ['id', 'firstName', 'lastName', 'verified'],
-            include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
-            through: { attributes: [] },
-          },
-        ],
-      });
-      if (existingConversation && !existingConversation.isGroup) {
-        const data = existingConversation.toJSON();
-        if (Array.isArray(data.members)) {
-          data.members = data.members.map((m) => shapeMemberRow(m, req));
-        }
-        return res.json(data);
-      }
+    const existingId = conversationIdFromRow(existingRows && existingRows[0]);
+    if (existingId) {
+      const data = await loadDirectConversation(existingId, req);
+      if (data) return res.json(data);
     }
 
-    // Create new conversation inside a transaction to avoid race conditions
-    let newConversation = null;
     const t = await sequelize.transaction();
+    let newConversation = null;
     try {
-      newConversation = await Conversation.create({ isGroup: false }, { transaction: t });
+      await sequelize.query('SELECT pg_advisory_xact_lock(hashtext(:pair))', {
+        replacements: { pair: pairKey(req.user.id, targetUserId) },
+        transaction: t,
+      });
+      const lockedRows = await sequelize.query(DIRECT_PAIR_SQL, {
+        replacements: { a: req.user.id, b: targetUserId },
+        type: QueryTypes.SELECT,
+        transaction: t,
+      });
+      const lockedId = conversationIdFromRow(lockedRows && lockedRows[0]);
+      if (lockedId) {
+        await t.commit();
+        const data = await loadDirectConversation(lockedId, req);
+        if (data) return res.json(data);
+      }
 
+      newConversation = await Conversation.create({ isGroup: false }, { transaction: t });
       await ConversationMember.bulkCreate([
         { conversationId: newConversation.id, userId: req.user.id },
         { conversationId: newConversation.id, userId: targetUserId },
       ], { transaction: t });
-
       await t.commit();
-
-      const fullConversation = await Conversation.findByPk(newConversation.id, {
-        include: [
-          { model: ConversationMember, as: 'memberships', attributes: ['userId'] },
-          {
-            model: User,
-            as: 'members',
-            attributes: ['id', 'firstName', 'lastName', 'verified'],
-            include: [{ model: Profile, attributes: ['profilePhoto'], required: false }],
-            through: { attributes: [] },
-          },
-        ],
-      });
-
-      const data = fullConversation.toJSON();
-      if (Array.isArray(data.members)) {
-        data.members = data.members.map((m) => shapeMemberRow(m, req));
-      }
+      const data = await loadDirectConversation(newConversation.id, req);
       return res.json(data);
     } catch (txErr) {
       await t.rollback();
-      // cleanup if partially created
       try {
-        if (newConversation && newConversation.id) {
+        if (newConversation?.id) {
           await Conversation.destroy({ where: { id: newConversation.id } });
         }
       } catch (cleanupErr) {
-        console.error('Cleanup after failed conversation create failed:', cleanupErr);
+        console.error('Cleanup after failed conversation create failed:', cleanupErr.message);
       }
       throw txErr;
     }
   } catch (err) {
-    console.error('Get or create conversation error:', err);
-    console.error(err.stack);
-    res.status(500).json({ msg: 'Gabim në server', error: err.message });
+    console.error('Get or create conversation error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -319,12 +383,10 @@ exports.getConversationById = async (req, res) => {
 
     const data = conversation.toJSON();
     if (Array.isArray(data.members)) {
-      data.members = data.members.map((m) => {
-        const shaped = shapeMemberRow(m, req);
-        const memberRole = m.ConversationMember?.role || m.conversation_members?.role || null;
-        return { ...shaped, memberRole };
-      });
+      data.members = withMemberRoles(data.members, req);
     }
+    const mine = (data.memberships || []).find((m) => Number(m.userId) === Number(req.user.id));
+    data.myRole = mine?.role || null;
     res.json(data);
   } catch (err) {
     console.error('Get conversation by id error:', err);
@@ -336,7 +398,8 @@ exports.getConversationById = async (req, res) => {
 exports.getMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const offset = (page - 1) * limit;
 
     // Verify user is member of conversation
@@ -349,17 +412,17 @@ exports.getMessages = async (req, res) => {
     }
 
     const messages = await Message.findAndCountAll({
-      where: {
-        conversationId,
-        deleted: false,
-      },
+      where: { conversationId },
       include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit,
+      offset,
     });
 
-    const shaped = messages.rows.map((m) => shapeMessage(m, req)).reverse();
+    const shaped = await attachReactions(
+      messages.rows.map((m) => shapeMessage(m, req)).reverse(),
+      req.user.id
+    );
 
     const othersRead = await ConversationMember.findAll({
       where: {
@@ -372,8 +435,8 @@ exports.getMessages = async (req, res) => {
     res.json({
       messages: shaped,
       total: messages.count,
-      page: parseInt(page),
-      pages: Math.ceil(messages.count / limit),
+      page,
+      pages: Math.ceil(messages.count / limit) || 1,
       othersRead: othersRead.map((row) => ({
         userId: row.userId,
         lastReadAt: row.lastReadAt ? row.lastReadAt.toISOString() : null,
@@ -388,66 +451,77 @@ exports.getMessages = async (req, res) => {
 // Send message
 exports.sendMessage = async (req, res) => {
   try {
-    console.log('🔵 sendMessage called for conversation:', req.params.conversationId);
     const { conversationId } = req.params;
     const { content, replyToId } = req.body;
 
-    // Verify user is member of conversation
     const access = await requireConversationMember(ConversationMember, {
       conversationId,
       userId: req.user.id,
     });
     if (!access.ok) {
+      discardUpload(req.file);
       return res.status(access.status).json({ msg: access.msg });
     }
 
-    // Block check between conversation members (DM)
-    try {
-      const { isEitherBlocked } = require('./moderation');
-      const members = await ConversationMember.findAll({
-        where: { conversationId },
-        attributes: ['userId'],
-      });
+    const conversation = await Conversation.findByPk(conversationId, { attributes: ['id', 'isGroup'] });
+    if (!conversation) {
+      discardUpload(req.file);
+      return res.status(404).json({ msg: 'Biseda nuk u gjet' });
+    }
+
+    const members = await ConversationMember.findAll({
+      where: { conversationId },
+      attributes: ['userId'],
+    });
+    if (!conversation.isGroup) {
       const other = members.map((m) => m.userId).find((id) => Number(id) !== Number(req.user.id));
-      if (other && (await isEitherBlocked(req.user.id, other))) {
+      if (await blockedWith(req.user.id, other)) {
+        discardUpload(req.file);
         return res.status(403).json({ msg: 'Mesazhet nuk lejohen me këtë përdorues (bllokuar)' });
       }
-    } catch (_e) {
-      /* non-fatal if Blocks table missing before migrate */
+    }
+
+    const textCheck = validateMessageText(content, { allowEmpty: !!req.file });
+    if (!textCheck.ok) {
+      discardUpload(req.file);
+      return res.status(textCheck.status).json({ msg: textCheck.msg });
     }
 
     let messageData = {
       conversationId,
       senderId: req.user.id,
-      content: content || '',
+      content: textCheck.text.trim() ? textCheck.text : '',
       type: 'text',
     };
 
     if (replyToId) {
-      messageData.replyToId = replyToId;
+      const parent = await Message.findOne({
+        where: { id: replyToId, conversationId },
+        attributes: ['id', 'deleted'],
+      });
+      if (!parent || parent.deleted) {
+        discardUpload(req.file);
+        return res.status(400).json({ msg: 'Mesazhi origjinal nuk është i disponueshëm' });
+      }
+      messageData.replyToId = parent.id;
     }
 
-    // Handle file upload
     if (req.file) {
-      messageData.fileUrl = '/uploads/messages/' + req.file.filename;
-      messageData.fileName = req.file.originalname;
-      
-      const ext = req.file.originalname.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
-        messageData.type = 'image';
-      } else if (['mp4', 'mov', 'avi'].includes(ext)) {
-        messageData.type = 'video';
-      } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
-        messageData.type = 'audio';
-      } else {
-        messageData.type = 'file';
+      const inspected = inspectUploadedFile(req.file);
+      if (!inspected.ok) {
+        discardUpload(req.file);
+        return res.status(400).json({ msg: inspected.msg });
       }
+      messageData.fileUrl = `/uploads/messages/${req.file.filename}`;
+      messageData.fileName = safeDisplayFileName(req.file.originalname);
+      messageData.type = inspected.type;
     }
+
+    const recipients = members.filter((m) => Number(m.userId) !== Number(req.user.id));
+    const someoneOnline = recipients.some((m) => isUserOnline(m.userId));
+    if (someoneOnline) messageData.deliveredAt = new Date();
 
     const message = await Message.create(messageData);
-    console.log('✅ Message created:', message.id);
-
-    // Update conversation last message time
     await Conversation.update(
       { lastMessageAt: new Date() },
       { where: { id: conversationId } }
@@ -456,57 +530,56 @@ exports.sendMessage = async (req, res) => {
     const fullMessage = await Message.findByPk(message.id, {
       include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
     });
-
     const payload = shapeMessage(fullMessage, req);
+    payload.reactions = [];
 
-    // Send notifications to other members
-    const members = await ConversationMember.findAll({
-      where: {
-        conversationId,
-        userId: { [Op.ne]: req.user.id },
-      },
-    });
-
-    const sender = await User.findByPk(req.user.id);
-    const senderName = `${sender.firstName} ${sender.lastName}`;
-    
-    for (const member of members) {
-      try {
-        const recipient = await User.findByPk(member.userId);
-        const safeContent = typeof content === 'string' ? content : '';
-        const previewBase = safeContent || messageData.fileName || 'Media message';
-        const preview = previewBase.substring(0, 100) + (previewBase.length > 100 ? '...' : '');
-        await sendEmail(recipient.email, 'newMessage', senderName, preview, conversationId);
-      } catch (emailError) {
-        console.error('Email notification failed:', emailError);
-      }
+    const recipientIds = recipients.map((m) => m.userId);
+    emitConversation('newMessage', conversationId, payload, [req.user.id, ...recipientIds]);
+    if (payload.deliveredAt) {
+      emitConversation('messageDelivered', conversationId, {
+        conversationId: Number(conversationId),
+        messageId: payload.id,
+        deliveredAt: new Date(payload.deliveredAt).toISOString(),
+      }, [req.user.id, ...recipientIds]);
     }
 
-    // Socket: biseda + dhoma e userId (klientët join me `emit('join', userId)`), që badge-i i Chats të rifreskohet edhe jashtë ekranit të bisedës.
+    const sender = await User.findByPk(req.user.id, { attributes: ['firstName', 'lastName'] });
+    const senderName = `${sender?.firstName || ''} ${sender?.lastName || ''}`.trim() || 'Mesazh i ri';
+    const previewBase = (messageData.content || messageData.fileName || 'Media').trim();
+    const preview = previewBase.length > 100 ? `${previewBase.slice(0, 100)}…` : previewBase;
+    let io = null;
     try {
-      const socketHelper = require('../socket');
-      const io = socketHelper.getIo();
-      if (io) {
-        io.to(`conversation-${conversationId}`).emit('newMessage', payload);
-        if (req.user?.id != null) {
-          io.to(String(req.user.id)).emit('newMessage', payload);
-        }
-        members.forEach((m) => {
-          if (m.userId != null) {
-            io.to(String(m.userId)).emit('newMessage', payload);
-          }
-        });
-      }
-    } catch (emitErr) {
-      console.warn('Emit newMessage failed in messaging controller', emitErr && emitErr.message);
+      io = require('../socket').getIo();
+    } catch (_err) {
+      io = null;
     }
 
-    console.log('✅ Message sent successfully');
+    for (const member of recipients) {
+      if (userIsViewingConversation(io, member.userId, conversationId)) continue;
+      try {
+        const recipient = await User.findByPk(member.userId, { attributes: ['id', 'email'] });
+        if (recipient?.email) {
+          await sendEmail(recipient.email, 'newMessage', senderName, preview, conversationId);
+        }
+      } catch (emailError) {
+        console.error('Email notification failed:', emailError.message);
+      }
+      try {
+        await sendNotification(member.userId, senderName, preview, {
+          type: 'message',
+          conversationId: Number(conversationId),
+          link: `/messaging?conversationId=${conversationId}`,
+        });
+      } catch (pushError) {
+        console.error('Push notification failed:', pushError.message);
+      }
+    }
+
     res.json(payload);
   } catch (err) {
-    console.error('❌ Send message error:', err);
-    console.error('❌ Error stack:', err.stack);
-    res.status(500).json({ msg: 'Gabim në server', error: err.message });
+    discardUpload(req.file);
+    console.error('Send message error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -514,37 +587,47 @@ exports.sendMessage = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { conversationId } = req.params;
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId,
+      userId: req.user.id,
+    });
+    if (!access.ok) {
+      return res.status(access.status).json({ msg: access.msg });
+    }
 
     const readAt = new Date();
     await ConversationMember.update(
       { lastReadAt: readAt },
+      { where: { conversationId, userId: req.user.id } }
+    );
+
+    await Message.update(
+      { isRead: true },
       {
         where: {
           conversationId,
-          userId: req.user.id,
+          senderId: { [Op.ne]: req.user.id },
+          deleted: false,
+          createdAt: { [Op.lte]: readAt },
         },
       }
     );
 
-    try {
-      const socketHelper = require('../socket');
-      const io = socketHelper.getIo();
-      if (io) {
-        const payload = {
-          conversationId: Number(conversationId) || conversationId,
-          userId: req.user.id,
-          readAt: readAt.toISOString(),
-        };
-        io.to(`conversation-${conversationId}`).emit('conversationRead', payload);
-        io.to(String(req.user.id)).emit('conversationRead', payload);
-      }
-    } catch (emitErr) {
-      console.warn('Emit conversationRead failed', emitErr && emitErr.message);
-    }
+    const memberIds = await ConversationMember.findAll({
+      where: { conversationId },
+      attributes: ['userId'],
+    });
+    const payload = {
+      conversationId: Number(conversationId) || conversationId,
+      userId: req.user.id,
+      readAt: readAt.toISOString(),
+    };
+    emitConversation('conversationRead', conversationId, payload, memberIds.map((m) => m.userId));
+    emitConversation('messageRead', conversationId, payload, memberIds.map((m) => m.userId));
 
     res.json({ msg: 'Marked as read', readAt: readAt.toISOString() });
   } catch (err) {
-    console.error('Mark as read error:', err);
+    console.error('Mark as read error:', err.message);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };
@@ -552,29 +635,45 @@ exports.markAsRead = async (req, res) => {
 // Create group conversation
 exports.createGroup = async (req, res) => {
   try {
-    const { name, memberIds } = req.body;
+    const name = String(req.body?.name || '').trim();
+    const rawIds = Array.isArray(req.body?.memberIds) ? req.body.memberIds : [];
+    if (!name || name.length > 80) {
+      return res.status(400).json({ msg: 'Shkruaj një emër grupi (maksimumi 80 karaktere)' });
+    }
+    const memberIds = [...new Set(
+      rawIds.map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id) && id > 0 && id !== Number(req.user.id))
+    )];
+    if (memberIds.length < 2) {
+      return res.status(400).json({ msg: 'Duhen të paktën 2 anëtarë të tjerë' });
+    }
 
-    if (!memberIds || memberIds.length < 2) {
-      return res.status(400).json({ msg: 'At least 2 members required' });
+    const users = await User.findAll({ where: { id: { [Op.in]: memberIds } }, attributes: ['id'] });
+    const validIds = users.map((u) => Number(u.id));
+    if (validIds.length < 2) {
+      return res.status(400).json({ msg: 'Duhen të paktën 2 anëtarë të vlefshëm' });
+    }
+    for (const id of validIds) {
+      if (await blockedWith(req.user.id, id)) {
+        return res.status(403).json({ msg: 'Nuk mund të krijosh grup me një përdorues të bllokuar' });
+      }
     }
 
     const conversation = await Conversation.create({
       isGroup: true,
       name,
+      ownerId: req.user.id,
     });
 
-    // Add creator as admin
     await ConversationMember.create({
       conversationId: conversation.id,
       userId: req.user.id,
       role: 'admin',
     });
 
-    // Add other members
     await ConversationMember.bulkCreate(
-      memberIds.map(userId => ({
+      validIds.map((userId) => ({
         conversationId: conversation.id,
-        userId: parseInt(userId),
+        userId,
         role: 'member',
       }))
     );
@@ -593,11 +692,15 @@ exports.createGroup = async (req, res) => {
 
     const data = fullConversation.toJSON();
     if (Array.isArray(data.members)) {
-      data.members = data.members.map((m) => shapeMemberRow(m, req));
+      data.members = withMemberRoles(data.members, req);
     }
+    data.memberships = [{ lastReadAt: null, role: 'admin', userId: req.user.id }];
+    data.myRole = 'admin';
+    const memberUserIds = (data.members || []).map((m) => m.id);
+    emitConversation('conversationUpdated', conversation.id, data, memberUserIds);
     res.json(data);
   } catch (err) {
-    console.error('Create group error:', err);
+    console.error('Create group error:', err.message);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };
@@ -617,12 +720,11 @@ async function fetchGroupConversationPayload(conversationId, req) {
   if (!fullConversation) return null;
   const data = fullConversation.toJSON();
   if (Array.isArray(data.members)) {
-    data.members = data.members.map((m) => {
-      const shaped = shapeMemberRow(m, req);
-      const memberRole = m.ConversationMember?.role || m.conversation_members?.role || null;
-      return { ...shaped, memberRole };
-    });
+    data.members = withMemberRoles(data.members, req);
   }
+  const mine = (data.members || []).find((m) => Number(m.id) === Number(req?.user?.id));
+  data.myRole = mine?.memberRole || null;
+  if (data.avatar) data.avatar = toAbsoluteUploadsUrl(req, data.avatar);
   return data;
 }
 
@@ -672,7 +774,12 @@ exports.addGroupMembers = async (req, res) => {
       where: { id: { [Op.in]: toAdd } },
       attributes: ['id'],
     });
-    const validIds = users.map((u) => Number(u.id));
+    const validIds = [];
+    for (const user of users) {
+      const id = Number(user.id);
+      if (await blockedWith(req.user.id, id)) continue;
+      validIds.push(id);
+    }
     if (!validIds.length) {
       return res.status(400).json({ msg: 'Nuk u gjetën përdorues për ftesë' });
     }
@@ -686,9 +793,11 @@ exports.addGroupMembers = async (req, res) => {
     );
 
     const data = await fetchGroupConversationPayload(conversationId, req);
+    const memberUserIds = (data?.members || []).map((m) => m.id);
+    emitConversation('conversationUpdated', conversationId, data, memberUserIds);
     res.json(data);
   } catch (err) {
-    console.error('Add group members error:', err);
+    console.error('Add group members error:', err.message);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };
@@ -721,10 +830,15 @@ exports.leaveGroup = async (req, res) => {
       order: [['joinedAt', 'ASC']],
     });
 
-    if (myMembership.role === 'admin' && remaining.length > 0) {
-      const hasOtherAdmin = remaining.some((m) => m.role === 'admin');
+    const leavingIsOwner = conversation.ownerId != null && Number(conversation.ownerId) === Number(req.user.id);
+    if ((myMembership.role === 'admin' || leavingIsOwner) && remaining.length > 0) {
+      const hasOtherAdmin = remaining.some((m) => m.role === 'admin' && Number(m.userId) !== Number(req.user.id));
       if (!hasOtherAdmin) {
         await remaining[0].update({ role: 'admin' });
+      }
+      if (leavingIsOwner) {
+        const nextOwner = remaining.find((m) => m.role === 'admin') || remaining[0];
+        await conversation.update({ ownerId: nextOwner.userId });
       }
     }
 
@@ -743,88 +857,386 @@ exports.leaveGroup = async (req, res) => {
   }
 };
 
+async function loadOwnedMessage(messageId, userId) {
+  const message = await Message.findOne({
+    where: { id: messageId, senderId: userId },
+  });
+  if (!message) return { error: { status: 404, msg: 'Mesazhi nuk u gjet' } };
+  const access = await requireConversationMember(ConversationMember, {
+    conversationId: message.conversationId,
+    userId,
+  });
+  if (!access.ok) return { error: access };
+  if (message.deleted) return { error: { status: 400, msg: 'Mesazhi i fshirë nuk mund të ndryshohet' } };
+  return { message };
+}
+
 // Edit message
 exports.editMessage = async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const { content } = req.body;
-
-    const message = await Message.findOne({
-      where: {
-        id: messageId,
-        senderId: req.user.id,
-      },
-    });
-
-    if (!message) {
-      return res.status(404).json({ msg: 'Message not found' });
+    const owned = await loadOwnedMessage(req.params.messageId, req.user.id);
+    if (owned.error) return res.status(owned.error.status).json({ msg: owned.error.msg });
+    if (owned.message.type !== 'text' || owned.message.fileUrl) {
+      return res.status(400).json({ msg: 'Vetëm mesazhet me tekst mund të ndryshohen' });
     }
+    const textCheck = validateMessageText(req.body?.content, { allowEmpty: false });
+    if (!textCheck.ok) return res.status(textCheck.status).json({ msg: textCheck.msg });
 
-    await message.update({
-      content,
-      edited: true,
+    await owned.message.update({ content: textCheck.text, edited: true });
+    await owned.message.reload({ include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER] });
+    const payload = shapeMessage(owned.message, req);
+    const [withReactions] = await attachReactions([payload], req.user.id);
+    const memberIds = await ConversationMember.findAll({
+      where: { conversationId: payload.conversationId },
+      attributes: ['userId'],
     });
-
-    await message.reload({
-      include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
-    });
-
-    const payload = shapeMessage(message, req);
-    try {
-      const socketHelper = require('../socket');
-      const io = socketHelper.getIo();
-      if (io && payload.conversationId) {
-        io.to(`conversation-${payload.conversationId}`).emit('messageUpdated', {
-          conversationId: payload.conversationId,
-          message: payload,
-        });
-      }
-    } catch (emitErr) {
-      console.warn('Emit messageUpdated failed', emitErr && emitErr.message);
-    }
-
-    res.json(payload);
+    emitConversation('messageUpdated', payload.conversationId, {
+      conversationId: payload.conversationId,
+      message: withReactions,
+    }, memberIds.map((m) => m.userId));
+    res.json(withReactions);
   } catch (err) {
-    console.error('Edit message error:', err);
+    console.error('Edit message error:', err.message);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
-// Delete message
+// Delete message (soft delete for everyone; sender only)
 exports.deleteMessage = async (req, res) => {
   try {
-    const { messageId } = req.params;
+    const owned = await loadOwnedMessage(req.params.messageId, req.user.id);
+    if (owned.error) return res.status(owned.error.status).json({ msg: owned.error.msg });
 
-    const message = await Message.findOne({
-      where: {
-        id: messageId,
-        senderId: req.user.id,
-      },
+    const convId = owned.message.conversationId;
+    await owned.message.update({ deleted: true, content: '' });
+    const memberIds = await ConversationMember.findAll({
+      where: { conversationId: convId },
+      attributes: ['userId'],
     });
-
-    if (!message) {
-      return res.status(404).json({ msg: 'Message not found' });
-    }
-
-    const convId = message.conversationId;
-    await message.update({ deleted: true });
-
-    try {
-      const socketHelper = require('../socket');
-      const io = socketHelper.getIo();
-      if (io && convId) {
-        io.to(`conversation-${convId}`).emit('messageDeleted', {
-          conversationId: convId,
-          messageId: message.id,
-        });
-      }
-    } catch (emitErr) {
-      console.warn('Emit messageDeleted failed', emitErr && emitErr.message);
-    }
-
+    emitConversation('messageDeleted', convId, {
+      conversationId: convId,
+      messageId: owned.message.id,
+    }, memberIds.map((m) => m.userId));
     res.json({ msg: 'Message deleted' });
   } catch (err) {
-    console.error('Delete message error:', err);
+    console.error('Delete message error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.searchMessages = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId,
+      userId: req.user.id,
+    });
+    if (!access.ok) return res.status(access.status).json({ msg: access.msg });
+
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.status(400).json({ msg: 'Shkruaj një kërkim' });
+    if (q.length > 120) return res.status(400).json({ msg: 'Kërkimi është shumë i gjatë' });
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 30));
+    const pattern = `%${escapeLike(q)}%`;
+    const messages = await Message.findAndCountAll({
+      where: {
+        conversationId,
+        deleted: false,
+        [Op.or]: [
+          { content: { [Op.iLike]: pattern } },
+          { fileName: { [Op.iLike]: pattern } },
+        ],
+      },
+      include: [SENDER_WITH_PROFILE, REPLY_TO_WITH_SENDER],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
+    });
+    const shaped = await attachReactions(
+      messages.rows.map((m) => shapeMessage(m, req)),
+      req.user.id
+    );
+    res.json({
+      messages: shaped,
+      total: messages.count,
+      page,
+      pages: Math.ceil(messages.count / limit) || 1,
+    });
+  } catch (err) {
+    console.error('Search messages error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.toggleReaction = async (req, res) => {
+  try {
+    const emoji = normalizeReactionEmoji(req.body?.emoji);
+    if (!emoji) return res.status(400).json({ msg: 'Reagimi nuk lejohet' });
+
+    const message = await Message.findByPk(req.params.messageId);
+    if (!message || message.deleted) {
+      return res.status(404).json({ msg: 'Mesazhi nuk u gjet' });
+    }
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId: message.conversationId,
+      userId: req.user.id,
+    });
+    if (!access.ok) return res.status(access.status).json({ msg: access.msg });
+
+    const existing = await MessageReaction.findOne({
+      where: { messageId: message.id, userId: req.user.id, emoji },
+    });
+    if (reactionToggleDecision(existing) === 'remove') {
+      await existing.destroy();
+    } else {
+      try {
+        await MessageReaction.create({ messageId: message.id, userId: req.user.id, emoji });
+      } catch (createErr) {
+        if (createErr?.name !== 'SequelizeUniqueConstraintError') throw createErr;
+      }
+    }
+
+    const rows = await MessageReaction.findAll({
+      where: { messageId: message.id },
+      attributes: ['messageId', 'userId', 'emoji'],
+    });
+    const reactions = summarizeReactions(rows, req.user.id);
+    const memberIds = await ConversationMember.findAll({
+      where: { conversationId: message.conversationId },
+      attributes: ['userId'],
+    });
+    const payload = {
+      conversationId: message.conversationId,
+      messageId: message.id,
+      reactions,
+    };
+    emitConversation('messageReactionUpdated', message.conversationId, payload, memberIds.map((m) => m.userId));
+    res.json(payload);
+  } catch (err) {
+    console.error('Toggle reaction error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.forwardMessage = async (req, res) => {
+  try {
+    const targetConversationId = parseInt(req.body?.conversationId, 10);
+    if (!Number.isFinite(targetConversationId)) {
+      return res.status(400).json({ msg: 'Biseda e destinacionit mungon' });
+    }
+    const source = await Message.findByPk(req.params.messageId);
+    if (!source || source.deleted) return res.status(404).json({ msg: 'Mesazhi nuk u gjet' });
+
+    const sourceAccess = await requireConversationMember(ConversationMember, {
+      conversationId: source.conversationId,
+      userId: req.user.id,
+    });
+    if (!sourceAccess.ok) return res.status(sourceAccess.status).json({ msg: sourceAccess.msg });
+    const targetAccess = await requireConversationMember(ConversationMember, {
+      conversationId: targetConversationId,
+      userId: req.user.id,
+    });
+    if (!targetAccess.ok) return res.status(targetAccess.status).json({ msg: targetAccess.msg });
+
+    const targetConversation = await Conversation.findByPk(targetConversationId, { attributes: ['id', 'isGroup'] });
+    if (!targetConversation) return res.status(404).json({ msg: 'Biseda nuk u gjet' });
+    if (!targetConversation.isGroup) {
+      const members = await ConversationMember.findAll({
+        where: { conversationId: targetConversationId },
+        attributes: ['userId'],
+      });
+      const other = members.map((m) => m.userId).find((id) => Number(id) !== Number(req.user.id));
+      if (await blockedWith(req.user.id, other)) {
+        return res.status(403).json({ msg: 'Mesazhet nuk lejohen me këtë përdorues (bllokuar)' });
+      }
+    }
+
+    const textCheck = validateMessageText(source.content || '', { allowEmpty: !!source.fileUrl });
+    if (!textCheck.ok) return res.status(textCheck.status).json({ msg: textCheck.msg });
+
+    const copy = await Message.create({
+      conversationId: targetConversationId,
+      senderId: req.user.id,
+      content: textCheck.text.trim() ? textCheck.text : '',
+      type: source.type || 'text',
+      fileUrl: source.fileUrl,
+      fileName: source.fileName,
+      forwarded: true,
+    });
+    await Conversation.update({ lastMessageAt: new Date() }, { where: { id: targetConversationId } });
+    const fullMessage = await Message.findByPk(copy.id, { include: [SENDER_WITH_PROFILE] });
+    const payload = shapeMessage(fullMessage, req);
+    payload.reactions = [];
+    const members = await ConversationMember.findAll({
+      where: { conversationId: targetConversationId },
+      attributes: ['userId'],
+    });
+    emitConversation('newMessage', targetConversationId, payload, members.map((m) => m.userId));
+    res.status(201).json(payload);
+  } catch (err) {
+    console.error('Forward message error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+async function loadManagedGroup(conversationId, userId, action, targetId = null) {
+  const conversation = await Conversation.findByPk(conversationId);
+  if (!conversation || !conversation.isGroup) {
+    return { error: { status: 404, msg: 'Grupi nuk u gjet' } };
+  }
+  const actor = await ConversationMember.findOne({ where: { conversationId, userId } });
+  let target = null;
+  if (targetId != null) {
+    target = await ConversationMember.findOne({ where: { conversationId, userId: targetId } });
+  }
+  const adminCount = await ConversationMember.count({ where: { conversationId, role: 'admin' } });
+  const gate = authorizeGroupAction({
+    action,
+    actorId: userId,
+    actorRole: actor?.role || null,
+    targetId,
+    targetRole: target?.role || null,
+    ownerId: conversation.ownerId,
+    isGroup: true,
+    adminCount,
+  });
+  if (!gate.ok) return { error: gate };
+  return { conversation, actor, target };
+}
+
+exports.updateGroup = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const loaded = await loadManagedGroup(conversationId, req.user.id, 'rename');
+    if (loaded.error) return res.status(loaded.error.status).json({ msg: loaded.error.msg });
+    const name = String(req.body?.name || '').trim();
+    if (!name || name.length > 80) {
+      return res.status(400).json({ msg: 'Shkruaj një emër grupi (maksimumi 80 karaktere)' });
+    }
+    await loaded.conversation.update({ name });
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    emitConversation('conversationUpdated', conversationId, data, (data?.members || []).map((m) => m.id));
+    res.json(data);
+  } catch (err) {
+    console.error('Update group error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.updateGroupAvatar = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const loaded = await loadManagedGroup(conversationId, req.user.id, 'avatar');
+    if (loaded.error) {
+      discardUpload(req.file);
+      return res.status(loaded.error.status).json({ msg: loaded.error.msg });
+    }
+    if (!req.file) return res.status(400).json({ msg: 'Zgjidh një foto' });
+    const inspected = inspectUploadedFile(req.file);
+    if (!inspected.ok || inspected.type !== 'image') {
+      discardUpload(req.file);
+      return res.status(400).json({ msg: inspected.ok ? 'Avatari duhet të jetë foto' : inspected.msg });
+    }
+    await loaded.conversation.update({ avatar: `/uploads/messages/${req.file.filename}` });
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    if (data?.avatar) data.avatar = toAbsoluteUploadsUrl(req, data.avatar);
+    emitConversation('conversationUpdated', conversationId, data, (data?.members || []).map((m) => m.id));
+    res.json(data);
+  } catch (err) {
+    discardUpload(req.file);
+    console.error('Update group avatar error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.removeGroupMember = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const targetId = parseInt(req.params.userId, 10);
+    const loaded = await loadManagedGroup(conversationId, req.user.id, 'remove', targetId);
+    if (loaded.error) return res.status(loaded.error.status).json({ msg: loaded.error.msg });
+    await loaded.target.destroy();
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    emitConversation('conversationUpdated', conversationId, { ...data, removedUserId: targetId }, [
+      targetId,
+      ...(data?.members || []).map((m) => m.id),
+    ]);
+    res.json(data);
+  } catch (err) {
+    console.error('Remove group member error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.setGroupMemberRole = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const targetId = parseInt(req.params.userId, 10);
+    const role = String(req.body?.role || '');
+    if (role !== 'admin' && role !== 'member') {
+      return res.status(400).json({ msg: 'Roli nuk është i vlefshëm' });
+    }
+    const action = role === 'admin' ? 'promote' : 'demote';
+    const loaded = await loadManagedGroup(conversationId, req.user.id, action, targetId);
+    if (loaded.error) return res.status(loaded.error.status).json({ msg: loaded.error.msg });
+    await loaded.target.update({ role });
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    emitConversation('conversationUpdated', conversationId, data, (data?.members || []).map((m) => m.id));
+    res.json(data);
+  } catch (err) {
+    console.error('Set group role error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.transferGroupOwnership = async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId, 10);
+    const targetId = parseInt(req.body?.userId, 10);
+    const loaded = await loadManagedGroup(conversationId, req.user.id, 'transfer', targetId);
+    if (loaded.error) return res.status(loaded.error.status).json({ msg: loaded.error.msg });
+    await loaded.conversation.update({ ownerId: targetId });
+    if (loaded.target.role !== 'admin') await loaded.target.update({ role: 'admin' });
+    const data = await fetchGroupConversationPayload(conversationId, req);
+    emitConversation('conversationUpdated', conversationId, data, (data?.members || []).map((m) => m.id));
+    res.json(data);
+  } catch (err) {
+    console.error('Transfer ownership error:', err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
+  }
+};
+
+exports.ackDelivered = async (req, res) => {
+  try {
+    const message = await Message.findByPk(req.params.messageId);
+    if (!message) return res.status(404).json({ msg: 'Mesazhi nuk u gjet' });
+    const access = await requireConversationMember(ConversationMember, {
+      conversationId: message.conversationId,
+      userId: req.user.id,
+    });
+    if (!access.ok) return res.status(access.status).json({ msg: access.msg });
+    if (Number(message.senderId) === Number(req.user.id)) {
+      return res.json({ deliveredAt: message.deliveredAt });
+    }
+    if (!message.deliveredAt) {
+      message.deliveredAt = new Date();
+      await message.save();
+    }
+    const memberIds = await ConversationMember.findAll({
+      where: { conversationId: message.conversationId },
+      attributes: ['userId'],
+    });
+    const payload = {
+      conversationId: message.conversationId,
+      messageId: message.id,
+      deliveredAt: message.deliveredAt.toISOString(),
+    };
+    emitConversation('messageDelivered', message.conversationId, payload, memberIds.map((m) => m.userId));
+    res.json(payload);
+  } catch (err) {
+    console.error('Ack delivered error:', err.message);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };

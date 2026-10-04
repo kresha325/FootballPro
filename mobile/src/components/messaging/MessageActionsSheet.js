@@ -24,6 +24,7 @@ export default function MessageActionsSheet({
   onCopy,
   onEdit,
   onDelete,
+  onReport,
 }) {
   const insets = useSafeAreaInsets();
   if (!message) return null;
@@ -73,6 +74,14 @@ export default function MessageActionsSheet({
       icon: 'trash-outline',
       onPress: onDelete,
       show: !!mine,
+      destructive: true,
+    },
+    {
+      key: 'report',
+      label: 'Raporto',
+      icon: 'flag-outline',
+      onPress: onReport,
+      show: !mine && !!onReport,
       destructive: true,
     },
   ].filter((r) => r.show);
