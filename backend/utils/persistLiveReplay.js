@@ -39,6 +39,9 @@ async function persistLiveReplay({
     stream.videoUrl = videoUrl;
     stream.isLive = false;
     stream.type = 'recording';
+    stream.status = 'available';
+    stream.endedAt = stream.endedAt || new Date();
+    if (thumbnailUrl) stream.thumbnailUrl = thumbnailUrl;
     if (title) stream.title = title;
     if (description) stream.description = description;
     await stream.save();
@@ -50,8 +53,12 @@ async function persistLiveReplay({
       isPremium: false,
       isLive: false,
       type: 'recording',
+      status: 'available',
+      provider: 'upload',
       streamKey: null,
       videoUrl,
+      thumbnailUrl: thumbnailUrl || null,
+      endedAt: new Date(),
     });
   }
 
@@ -106,6 +113,13 @@ async function persistLiveReplay({
       isPremium: false,
       isProcessing: false,
       processingStatus: 'completed',
+      provider: 'upload',
+      providerId: publicId || `stream-replay:${stream.id}`,
+      visibility: 'public',
+      playerId: stream.playerId || userId,
+      matchId: stream.matchId || null,
+      tournamentId: stream.tournamentId || null,
+      featured: false,
     });
   }
 
@@ -137,6 +151,13 @@ async function persistLiveReplay({
     if (changed) {
       await replayPost.save();
     }
+  }
+
+  try {
+    const { notifyStreamFollowers } = require('./streamNotifications');
+    await notifyStreamFollowers(userId, 'replay_available', stream);
+  } catch (_notifyErr) {
+    /* notifications must not fail replay persistence */
   }
 
   return { stream, liveVideos, video: videoRecord };

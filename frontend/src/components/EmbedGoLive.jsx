@@ -538,12 +538,12 @@ export default function EmbedGoLive() {
             </div>
           )}
 
-          {stream?.streamKey ? (
-            <div className="mt-4 rounded bg-gray-800 p-3 text-xs font-mono break-all">
-              <p className="text-gray-400 mb-1">Stream key (OBS):</p>
-              {stream.streamKey}
-            </div>
-          ) : null}
+          <div className="mt-4 rounded bg-gray-800 p-3 text-xs text-gray-300 space-y-1">
+            <p className="text-gray-400">Provider aktiv: {stream?.provider || (stream?.youtubeChannelId ? 'youtube' : 'livekit')}</p>
+            <p>
+              OBS/RTMP ingest nuk ofrohet nga ky server. Transmeto me LiveKit nga kjo faqe, ose nis live në YouTube Studio për kanalin e lidhur.
+            </p>
+          </div>
 
           {phase === 'youtube' && !stream?.youtubeChannelId ? (
             <button

@@ -380,18 +380,6 @@ function FeedSkeleton({ isDark }) {
 export default function FeedScreen({ navigation }) {
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const navigateToGoLive = useCallback(
-    (params) => {
-      const parent = navigation.getParent?.();
-      if (parent?.navigate) {
-        parent.navigate('More', { screen: 'GoLive', params: params || undefined });
-      } else {
-        navigation.navigate('GoLive', params);
-      }
-    },
-    [navigation]
-  );
-
   const navigateToMoreScreen = useCallback(
     (screen, params) => {
       const parent = navigation.getParent?.();
@@ -845,7 +833,7 @@ export default function FeedScreen({ navigation }) {
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
               <View style={styles.liveHeaderRow}>
                 <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
-                <TouchableOpacity onPress={() => navigateToGoLive()}>
+                <TouchableOpacity onPress={() => navigateToMoreScreen('Streams')}>
                   <Text style={styles.liveSeeAll}>See all</Text>
                 </TouchableOpacity>
               </View>
@@ -859,7 +847,7 @@ export default function FeedScreen({ navigation }) {
                     <TouchableOpacity
                       key={`live-user-${stream.id}`}
                       style={styles.liveUserChip}
-                      onPress={() => navigateToGoLive({ streamId: stream.id })}
+                      onPress={() => navigateToMoreScreen('LiveViewer', { streamId: stream.id })}
                     >
                       {photo ? (
                         <Image source={{ uri: photo }} style={styles.liveAvatar} />

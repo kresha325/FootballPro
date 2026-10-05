@@ -1,5 +1,6 @@
+const crypto = require('crypto');
 const { AccessToken } = require('livekit-server-sdk');
-const { authorizeLiveKitRoom } = require('../utils/livekitAcl');
+const { authorizeLiveKitRoom, authorizeAnonymousStreamViewer } = require('../utils/livekitAcl');
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 2;
 
@@ -29,9 +30,20 @@ exports.createToken = async (req, res) => {
     }
 
     const userId = req.user?.id || req.user?.userId;
-    const access = await authorizeLiveKitRoom(userId, roomName, {
-      canPublish: !!canPublish,
-    });
+    let access;
+    let identity;
+    if (!userId) {
+      if (canPublish) {
+        return res.status(401).json({ msg: 'Autentikimi është i detyrueshëm' });
+      }
+      access = await authorizeAnonymousStreamViewer(roomName);
+      identity = `anon-${crypto.randomBytes(8).toString('hex')}`;
+    } else {
+      access = await authorizeLiveKitRoom(userId, roomName, {
+        canPublish: !!canPublish,
+      });
+      identity = String(userId);
+    }
     if (!access.ok) {
       return res.status(access.status).json({ msg: access.msg });
     }
@@ -39,8 +51,6 @@ exports.createToken = async (req, res) => {
     // Viewers must not publish; owners/call participants keep requested publish flag.
     const publishAllowed =
       access.role === 'viewer' ? false : !!canPublish;
-
-    const identity = String(userId);
     const displayName =
       participantName ||
       `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() ||

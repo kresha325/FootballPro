@@ -44,38 +44,79 @@ exports.upload = upload;
 
 // Upload video
 exports.uploadVideo = async (req, res) => {
-  const cloudinary = require('../utils/cloudinary');
-  try {
-    // Accept Cloudinary URL from middleware if present
-    let videoUrl = req.body.video || req.body.videoFile;
+      const cloudinary = require('../utils/cloudinary');
+    const { assertVideoFile, assertDuration, rollbackUpload } = require('../utils/videoUpload');
     let publicId = null;
+    let localPath = req.file?.path || null;
+    try {
+    if (req.file) assertVideoFile(req.file);
+    let videoUrl = req.body.video || req.body.videoFile;
+    const cloudinaryEnabled = !!(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
     if (!videoUrl && req.file) {
-      // Fallback: upload to Cloudinary here if not handled by middleware
-      const cloudRes = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: 'video',
-        folder: 'videos',
-      });
-      videoUrl = cloudRes.secure_url;
-      publicId = cloudRes.public_id;
-      // Fshi file lokal pas upload
-      const fs = require('fs');
-      fs.unlink(req.file.path, () => {});
+      if (cloudinaryEnabled) {
+        const cloudRes = await cloudinary.uploader.upload(req.file.path, {
+          resource_type: 'video',
+          folder: 'videos',
+        });
+        videoUrl = cloudRes.secure_url;
+        publicId = cloudRes.public_id;
+        fs.unlink(req.file.path, () => {});
+        localPath = null;
+      } else {
+        videoUrl = `/uploads/videos/${path.basename(req.file.path)}`;
+      }
     }
     if (!videoUrl) {
       return res.status(400).json({ error: 'No video file provided' });
     }
     const { title, description, category, tags, isPremium } = req.body;
+    const cleanTitle = String(title || '').trim();
+    if (!cleanTitle) {
+      await rollbackUpload({ localPath, publicId, cloudinary });
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    if (req.body.playerId && Number(req.body.playerId) !== Number(req.user.id) && req.user.role !== 'admin') {
+      await rollbackUpload({ localPath, publicId, cloudinary });
+      return res.status(403).json({ error: 'You can only attach your own player profile' });
+    }
+    const duration = assertDuration(req.body.duration);
+    const visibility = ['public', 'unlisted', 'private'].includes(req.body.visibility)
+      ? req.body.visibility
+      : 'public';
+    const providerId = publicId || null;
+    if (providerId) {
+      const existing = await Video.findOne({ where: { provider: 'upload', providerId } });
+      if (existing) {
+        return res.status(409).json({ error: 'This video was already saved', video: existing });
+      }
+    }
     const video = await Video.create({
       userId: req.user.id,
-      title,
+      title: cleanTitle.slice(0, 255),
       description,
       videoUrl,
       publicId,
+      thumbnailUrl: req.body.thumbnailUrl || null,
+      duration: duration || 0,
       category,
-      tags: tags ? tags.split(',').map(t => t.trim()) : [],
-      isPremium: isPremium === 'true',
+      tags: tags ? String(tags).split(',').map((t) => t.trim()).filter(Boolean) : [],
+      isPremium: isPremium === 'true' || isPremium === true,
       isProcessing: false,
       processingStatus: 'completed',
+      visibility,
+      playerId: req.body.playerId
+        ? parseInt(req.body.playerId, 10)
+        : (req.user.role === 'athlete' ? req.user.id : null),
+      matchId: req.body.matchId ? parseInt(req.body.matchId, 10) : null,
+      tournamentId: req.body.tournamentId ? parseInt(req.body.tournamentId, 10) : null,
+      season: req.body.season ? String(req.body.season).slice(0, 64) : null,
+      featured: req.body.featured === 'true' || req.body.featured === true,
+      provider: 'upload',
+      providerId,
     });
 
     // Also publish to feed so Videos upload appears in Lajmet / Feed
@@ -106,34 +147,47 @@ exports.uploadVideo = async (req, res) => {
     }
 
     res.status(201).json({ ...video.toJSON(), postId: feedPost?.id || null });
-  } catch (error) {
-    console.error('Upload video error:', error);
-    res.status(500).json({ error: error.message });
-  }
+    } catch (error) {
+      await rollbackUpload({ localPath, publicId, cloudinary });
+      console.error('Upload video error:', error);
+      const status = error.statusCode || (error?.name === 'SequelizeUniqueConstraintError' ? 409 : 500);
+      if (res.headersSent) return;
+      res.status(status).json({
+        error: error.statusCode ? error.message : (status === 409 ? 'This video was already saved' : error.message),
+      });
+    }
 };
 
 // Get all videos
 exports.getVideos = async (req, res) => {
   try {
     const { category, search, limit = 20, offset = 0 } = req.query;
-    const whereClause = { processingStatus: 'completed' };
+    const visibilityOr = [{ visibility: 'public' }, { visibility: null }];
+    if (req.user?.id) visibilityOr.push({ userId: req.user.id });
+    const whereClause = {
+      processingStatus: 'completed',
+      [Op.and]: [{ [Op.or]: visibilityOr }],
+    };
 
     if (category) {
       whereClause.category = category;
     } else {
-      whereClause[Op.or] = [
-        { category: { [Op.ne]: 'live' } },
-        { category: null },
-        { category: '' },
-      ];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { category: { [Op.ne]: 'live' } },
+          { category: null },
+          { category: '' },
+        ],
+      });
     }
 
     if (search) {
-      whereClause[Op.or] = [
-        { title: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
-        { tags: { [Op.contains]: [search] } },
-      ];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+        ],
+      });
     }
 
     const videos = await Video.findAll({
@@ -146,8 +200,8 @@ exports.getVideos = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 20)),
+      offset: Math.max(0, parseInt(offset, 10) || 0),
     });
 
     res.json(videos);
@@ -174,9 +228,13 @@ exports.getVideo = async (req, res) => {
     if (!video) {
       return res.status(404).json({ error: 'Video not found' });
     }
+    const visibility = video.visibility || 'public';
+    const isOwner = req.user?.id && Number(video.userId) === Number(req.user.id);
+    if (visibility === 'private' && !isOwner && req.user?.role !== 'admin') {
+      return res.status(404).json({ error: 'Video not found' });
+    }
 
-    // Check premium access
-    if (video.isPremium && !req.user.premium) {
+    if (video.isPremium && !req.user?.premium && !isOwner) {
       return res.status(403).json({ error: 'Premium content requires subscription' });
     }
 
@@ -244,17 +302,26 @@ exports.likeVideo = async (req, res) => {
 exports.deleteVideo = async (req, res) => {
   try {
     const { id } = req.params;
-    const video = await Video.findOne({
-      where: { id, userId: req.user.id },
-    });
+    const video = await Video.findByPk(id);
 
     if (!video) {
-      return res.status(404).json({ error: 'Video not found or unauthorized' });
+      return res.status(404).json({ error: 'Video not found' });
+    }
+    if (Number(video.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'You cannot delete this video' });
     }
 
-    // Delete file from filesystem
-    if (video.videoUrl && fs.existsSync(video.videoUrl.substring(1))) {
-      fs.unlinkSync(video.videoUrl.substring(1));
+    if (video.publicId) {
+      try {
+        const cloudinary = require('../utils/cloudinary');
+        await cloudinary.uploader.destroy(video.publicId, { resource_type: 'video' });
+      } catch (_err) {
+        /* remote cleanup is best-effort */
+      }
+    }
+    if (video.videoUrl && video.videoUrl.startsWith('/uploads/')) {
+      const local = path.join(__dirname, '..', video.videoUrl.replace(/^\//, ''));
+      if (fs.existsSync(local)) fs.unlinkSync(local);
     }
 
     await video.destroy();
@@ -306,12 +373,10 @@ exports.updateVideo = async (req, res) => {
     const { id } = req.params;
     const { title, description, category, tags } = req.body;
 
-    const video = await Video.findOne({
-      where: { id, userId: req.user.id },
-    });
-
-    if (!video) {
-      return res.status(404).json({ error: 'Video not found or unauthorized' });
+    const video = await Video.findByPk(id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    if (Number(video.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'You cannot update this video' });
     }
 
     if (title) video.title = title;

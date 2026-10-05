@@ -8,6 +8,7 @@ const {
 } = require('../models');
 const ClubMember = require('../models/ClubMember');
 const { parseYouTubeUrl, youtubeThumbnailUrl } = require('../utils/youtubeVideo');
+const { normalizeHighlightTag, normalizeTags, categoryForHighlightTag } = require('../utils/highlightTags');
 const { canManageTournamentMatches } = require('../utils/matchPermissions');
 
 const MAX_LIMIT = 50;
@@ -223,11 +224,13 @@ exports.createMedia = async (req, res) => {
       return res.status(400).json({ msg: parsed.error });
     }
 
-    const cat = normalizeCategory(category || 'other');
+    const highlightTag = normalizeHighlightTag(req.body?.highlightTag);
+    const mappedCategory = categoryForHighlightTag(highlightTag);
+    const cat = normalizeCategory(mappedCategory || category || 'other');
     if (!cat) return res.status(400).json({ msg: 'Kategori e pavlefshme' });
 
     const { hasTier, HIGHLIGHT_LIMIT_BASIC, getEffectiveTier } = require('../utils/subscriptionAccess');
-    const highlightCats = new Set(['match_highlight', 'goal', 'skills']);
+    const highlightCats = new Set(['match_highlight', 'goal', 'skills', 'assist', 'save', 'tackle']);
     if (highlightCats.has(cat)) {
       if (!hasTier(req.user, 'basic')) {
         return res.status(403).json({
@@ -311,9 +314,20 @@ exports.createMedia = async (req, res) => {
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
       featured: req.body?.featured === true || req.body?.featured === 'true',
       sortOrder: Number.isFinite(Number(req.body?.sortOrder)) ? Number(req.body.sortOrder) : 0,
+      tags: normalizeTags(req.body?.tags),
+      timestampSeconds: toInt(req.body?.timestampSeconds),
+      highlightTag,
     });
 
     const full = await MediaItem.findByPk(item.id, { include: listInclude });
+    if (highlightCats.has(cat)) {
+      const { notifyStreamFollowers } = require('../utils/streamNotifications');
+      notifyStreamFollowers(pId || req.user.id, 'highlight_uploaded', {
+        id: item.id,
+        title: item.title,
+        message: `${item.title} was added.`,
+      }).catch(() => {});
+    }
     return res.status(201).json(full);
   } catch (err) {
     if (err?.name === 'SequelizeUniqueConstraintError') {
@@ -507,6 +521,14 @@ exports.updateMedia = async (req, res) => {
     if (durationSeconds !== undefined) item.durationSeconds = toInt(durationSeconds);
     if (publishedAt !== undefined) item.publishedAt = publishedAt ? new Date(publishedAt) : null;
     if (req.body?.featured != null) item.featured = req.body.featured === true || req.body.featured === 'true';
+    if (req.body?.tags !== undefined) item.tags = normalizeTags(req.body.tags);
+    if (req.body?.timestampSeconds !== undefined) item.timestampSeconds = toInt(req.body.timestampSeconds);
+    if (req.body?.highlightTag !== undefined) {
+      const tag = normalizeHighlightTag(req.body.highlightTag);
+      item.highlightTag = tag;
+      const mapped = categoryForHighlightTag(tag);
+      if (mapped) item.category = mapped;
+    }
     if (req.body?.sortOrder != null && Number.isFinite(Number(req.body.sortOrder))) {
       item.sortOrder = Number(req.body.sortOrder);
     }

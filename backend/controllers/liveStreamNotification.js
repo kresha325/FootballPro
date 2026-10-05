@@ -1,26 +1,18 @@
-const Notification = require('../models/Notification');
-const User = require('../models/User');
+const Stream = require('../models/Stream');
+const { notifyStreamFollowers } = require('../utils/streamNotifications');
 
 exports.sendLiveNotification = async (req, res) => {
   try {
-    const { userId, streamId } = req.body;
-    const user = await User.findByPk(userId, { include: ['Followers'] });
-    if (!user || !user.Followers) {
-      return res.status(404).json({ msg: 'Përdoruesi ose ndjekësit nuk u gjetën' });
+    const streamId = req.body?.streamId;
+    const stream = await Stream.findByPk(streamId);
+    if (!stream || Number(stream.streamerId) !== Number(req.user.id)) {
+      return res.status(403).json({ msg: 'Nuk je i autorizuar' });
     }
-    const followers = user.Followers;
-    const notifications = await Promise.all(
-      followers.map(follower =>
-        Notification.create({
-          userId: follower.id,
-          type: 'live',
-          message: `Useri që ndjek shkon live! Kliko për të parë streamin.`,
-          link: `/live/${streamId}`,
-          read: false
-        })
-      )
-    );
-    res.status(201).json({ success: true, notifications });
+    const event = ['stream_started', 'stream_ended', 'replay_available', 'stream_starting_soon'].includes(req.body?.event)
+      ? req.body.event
+      : 'stream_started';
+    const sent = await notifyStreamFollowers(req.user.id, event, stream);
+    res.status(201).json({ success: true, sent });
   } catch (error) {
     res.status(500).json({ msg: 'Dërgimi i njoftimeve live dështoi' });
   }

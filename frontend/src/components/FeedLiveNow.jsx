@@ -94,7 +94,7 @@ export default function FeedLiveNow() {
         </div>
         <button
           type="button"
-          onClick={() => navigate('/streams')}
+          onClick={() => navigate('/live')}
           className="rounded-lg bg-white/10 px-3 py-1 text-xs font-bold text-emerald-300 ring-1 ring-white/10 transition hover:bg-white/15"
         >
           See all

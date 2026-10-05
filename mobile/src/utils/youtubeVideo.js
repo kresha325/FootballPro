@@ -96,6 +96,10 @@ export const MEDIA_CATEGORIES = [
   { value: 'skills', label: 'Skills' },
   { value: 'training', label: 'Trajnim' },
   { value: 'interview', label: 'Intervistë' },
+  { value: 'assist', label: 'Asist' },
+  { value: 'save', label: 'Pritje' },
+  { value: 'tackle', label: 'Tackle' },
+  { value: 'introduction', label: 'Prezantim' },
   { value: 'other', label: 'Tjetër' },
 ];
 

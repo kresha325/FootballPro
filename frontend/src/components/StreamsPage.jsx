@@ -108,7 +108,12 @@ export default function StreamsPage() {
 
   return (
     <div className="max-w-3xl mx-auto py-6 sm:py-8 px-3 sm:px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Streams</h1>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Streams</h1>
+        <button type="button" className="text-sm font-semibold text-teal-700" onClick={() => navigate('/live')}>
+          Live discovery
+        </button>
+      </div>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         Live aktive hapen me të njëjtin player si në Feed (YouTube ose LiveKit). Ngarko regjistrime më poshtë.
       </p>

@@ -1,16 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { optionalAuth } = require('../middleware/auth');
 const uploadLocal = require('../middleware/uploadLocal');
 const streamsCtrl = require('../controllers/streams');
 
-router.get('/', streamsCtrl.getStreams);
+router.get('/', optionalAuth, streamsCtrl.getStreams);
+router.get('/discovery', optionalAuth, streamsCtrl.getDiscovery);
 router.get('/my/stream-info', auth, streamsCtrl.getMyStreamInfo);
-router.get('/:id', streamsCtrl.getStream);
+router.get('/:id', optionalAuth, streamsCtrl.getStream);
 router.post('/', auth, streamsCtrl.createStream);
 router.put('/:id/start', auth, streamsCtrl.startStream);
 router.put('/:id/heartbeat', auth, streamsCtrl.heartbeatStream);
 router.put('/:id/end', auth, streamsCtrl.endStream);
+router.put('/:id/cancel', auth, streamsCtrl.cancelStream);
+router.put('/:id/fail', auth, streamsCtrl.failStream);
 router.post('/:id/save-replay', auth, streamsCtrl.saveLiveReplay);
 router.put('/:id/viewers', streamsCtrl.updateViewersInternal);
 router.put('/:id/end-internal', streamsCtrl.endStreamInternal);

@@ -43,6 +43,7 @@ const Videos = lazyWithReload(() => import('./components/Videos'));
 const VideoPlayer = lazyWithReload(() => import('./components/VideoPlayer'));
 const LiveStreamViewer = lazyWithReload(() => import('./components/LiveStreamViewer'));
 const StreamsPage = lazyWithReload(() => import('./components/StreamsPage'));
+const LiveDiscovery = lazyWithReload(() => import('./components/LiveDiscovery'));
 const EmbedOutboundCall = lazyWithReload(() => import('./components/EmbedOutboundCall'));
 const LegalPage = lazyWithReload(() => import('./components/LegalPage'));
 const PublicCvPage = lazyWithReload(() => import('./components/PublicCvPage'));
@@ -161,6 +162,7 @@ function App() {
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
             <Route path="/scouting/*" element={user ? <Scouting /> : <Navigate to="/login" />} />
+            <Route path="/live" element={<LiveDiscovery />} />
             <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/tournaments/:tournamentId" element={user ? <Tournaments /> : <Navigate to="/login" />} />
@@ -183,7 +185,7 @@ function App() {
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
-            <Route path="/live/:streamId" element={user ? <LiveStreamViewer /> : <Navigate to="/login" />} />
+            <Route path="/live/:streamId" element={<LiveStreamViewer />} />
 
             {/* WALLET PAGE */}
             <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />

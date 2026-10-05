@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from '../theme/nativeComponents';
-import { matchByIdRequest, extractErrorMessage } from '../api/client';
+import { useNavigation } from '@react-navigation/native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { matchByIdRequest, matchMediaRequest, streamsRequest, extractErrorMessage } from '../api/client';
 
 function sideName(match, side) {
   const user = side === 'home' ? match?.homeUser : match?.awayUser;
@@ -10,8 +11,11 @@ function sideName(match, side) {
 }
 
 export default function MatchDetailScreen({ route }) {
+  const navigation = useNavigation();
   const matchId = route?.params?.matchId;
   const [match, setMatch] = useState(null);
+  const [streams, setStreams] = useState([]);
+  const [highlights, setHighlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -24,8 +28,14 @@ export default function MatchDetailScreen({ route }) {
     setLoading(true);
     setError('');
     try {
-      const res = await matchByIdRequest(matchId);
+      const [res, streamRes, mediaRes] = await Promise.all([
+        matchByIdRequest(matchId),
+        streamsRequest({ matchId, limit: 8 }).catch(() => ({ data: [] })),
+        matchMediaRequest(matchId, { limit: 8 }).catch(() => ({ data: { items: [] } })),
+      ]);
       setMatch(res?.data || null);
+      setStreams(Array.isArray(streamRes?.data) ? streamRes.data : []);
+      setHighlights(Array.isArray(mediaRes?.data?.items) ? mediaRes.data.items : []);
     } catch (err) {
       setError(extractErrorMessage(err, 'Match failed to load'));
     } finally {
@@ -52,6 +62,21 @@ export default function MatchDetailScreen({ route }) {
       <Text style={styles.meta}>{match.matchDate ? new Date(match.matchDate).toLocaleString() : 'No kickoff'}</Text>
       <Text style={styles.meta}>{match.venue || 'Venue not set'}{match.refereeName ? ` · Ref ${match.refereeName}` : ''}</Text>
       {match.clockMinute != null ? <Text style={styles.meta}>{match.clockPhase || match.status} · {match.clockMinute}'</Text> : null}
+      <Text style={styles.section}>Video</Text>
+      {streams.length === 0 && highlights.length === 0 ? (
+        <Text style={styles.meta}>No live stream, replay, or highlights. Match statistics stay available without video.</Text>
+      ) : null}
+      {streams.map((stream) => {
+        const label = stream.isLive ? 'LIVE NOW' : stream.videoUrl ? 'WATCH REPLAY' : 'UPCOMING';
+        return (
+          <TouchableOpacity key={stream.id} onPress={() => navigation.navigate('LiveViewer', { streamId: stream.id, videoUrl: stream.videoUrl })}>
+            <Text style={styles.line}>{label} · {stream.title}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {highlights.map((item) => (
+        <Text key={item.id} style={styles.line}>HIGHLIGHTS · {item.title}</Text>
+      ))}
       <Text style={styles.section}>Events</Text>
       {scorers.length === 0 && events.length === 0 ? <Text style={styles.meta}>No goals, cards, or substitutions yet.</Text> : null}
       {scorers.map((row) => (

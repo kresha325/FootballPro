@@ -9,6 +9,10 @@ const MEDIA_CATEGORIES = [
   'skills',
   'training',
   'interview',
+  'assist',
+  'save',
+  'tackle',
+  'introduction',
   'other',
 ];
 
@@ -108,6 +112,18 @@ const MediaItem = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    timestampSeconds: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    highlightTag: {
+      type: DataTypes.STRING(32),
+      allowNull: true,
     },
   },
   {

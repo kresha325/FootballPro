@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import API, { extractApiMessage } from '../../services/api';
+import CompetitionStreams from './CompetitionStreams';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SECTIONS = [
@@ -217,6 +218,7 @@ export default function CompetitionCenter({ section = 'overview' }) {
         </div>
         {error && <p className="mt-3 text-sm text-[var(--xt-color-danger)]">{error}</p>}
       </div>
+      {id ? <CompetitionStreams tournamentId={id} /> : null}
 
       <nav className="flex gap-2 overflow-x-auto">
         {SECTIONS.map((item) => (

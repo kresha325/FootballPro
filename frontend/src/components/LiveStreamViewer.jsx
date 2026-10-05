@@ -312,14 +312,24 @@ export default function LiveStreamViewer() {
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 {stream.streamer.firstName || ''} {stream.streamer.lastName || ''} · Shikues:{' '}
                 {stream.viewers || 0}
+                {stream.status ? ` · ${stream.status}` : ''}
+                {stream.provider ? ` · ${stream.provider}` : ''}
               </p>
             ) : null}
+            {stream?.description ? (
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">{stream.description}</p>
+            ) : null}
+            <div className="mt-1 flex flex-wrap gap-3 text-xs">
+              {stream?.matchId ? <Link to={`/matches/${stream.matchId}`}>Ndeshja</Link> : null}
+              {stream?.tournamentId ? <Link to={`/competitions/${stream.tournamentId}`}>Gara</Link> : null}
+              {stream?.playerId ? <Link to={`/players/${stream.playerId}`}>Lojtari</Link> : null}
+            </div>
           </div>
           <Link
-            to="/streams"
+            to="/live"
             className="text-xs sm:text-sm text-teal-700 dark:text-teal-300 font-semibold shrink-0 py-1"
           >
-            ← Streams
+            ← Live
           </Link>
         </div>
 

@@ -10,9 +10,10 @@ router.post('/:streamId/end', auth, liveStreamController.endLiveStream);
 // Get all active live streams
 router.get('/active', liveStreamController.getActiveLiveStreams);
 // Get stream details
-router.get('/:streamId', liveStreamController.getLiveStreamDetails);
+const { optionalAuth } = require('../middleware/auth');
+router.get('/:streamId', optionalAuth, liveStreamController.getLiveStreamDetails);
 // Update viewers count
-router.put('/:streamId/viewers', liveStreamController.updateViewersCount);
+router.put('/:streamId/viewers', auth, liveStreamController.updateViewersCount);
 // Save live video after stream ends
 router.post('/:streamId/save-video', auth, liveStreamController.saveLiveVideo);
 

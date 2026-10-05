@@ -13,6 +13,9 @@ import { youtubeThumbnailUrl } from '../../utils/youtubeVideo';
 import YouTubeWebPlayer from '../media/YouTubeWebPlayer';
 import AddMediaSheet from '../media/AddMediaSheet';
 import { mediaEventRequest } from '../../api/client';
+import { absoluteBackendUrl } from '../../config/constants';
+
+const HIGHLIGHT_CATEGORIES = new Set(['match_highlight', 'goal', 'assist', 'save', 'skills', 'tackle']);
 
 function LiveVideoCard({ item, theme }) {
   const uri = item?.url;
@@ -80,6 +83,7 @@ export default function PublicProfileVideosTab({
 }) {
   const [watching, setWatching] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [highlightsOnly, setHighlightsOnly] = useState(false);
   const hasLive = Array.isArray(liveVideos) && liveVideos.length > 0;
   const hasUploads = Array.isArray(videos) && videos.length > 0;
   const hasYt = Array.isArray(youtubeMedia) && youtubeMedia.length > 0;
@@ -109,7 +113,14 @@ export default function PublicProfileVideosTab({
       {hasYt ? (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>YouTube</Text>
-          {youtubeMedia.map((v) => (
+          <TouchableOpacity onPress={() => setHighlightsOnly((value) => !value)}>
+            <Text style={[styles.sectionTitle, { color: theme.muted }]}>
+              {highlightsOnly ? 'Show all videos' : 'Highlights only'}
+            </Text>
+          </TouchableOpacity>
+          {youtubeMedia
+            .filter((item) => !highlightsOnly || HIGHLIGHT_CATEGORIES.has(item.category) || item.featured)
+            .map((v) => (
             <YoutubeCard key={`yt-${v.id}`} item={v} theme={theme} onOpen={openYt} />
           ))}
         </View>
@@ -140,7 +151,7 @@ export default function PublicProfileVideosTab({
             >
               <View style={styles.videoWrap}>
                 <Video
-                  source={{ uri: v.videoUrl }}
+                  source={{ uri: absoluteBackendUrl(v.videoUrl) || v.videoUrl }}
                   style={StyleSheet.absoluteFillObject}
                   resizeMode={ResizeMode.CONTAIN}
                   useNativeControls

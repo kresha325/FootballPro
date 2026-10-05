@@ -2,6 +2,7 @@
 // Pranon video të regjistruar nga frontend dhe e ruan në uploads/streams
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const socketUtil = require('../utils/socket');
 const cloudinary = require('../utils/cloudinary');
 const Gallery = require('../models/Gallery');
@@ -252,34 +253,176 @@ exports.goLiveWebRTC = async (req, res) => {
 // Jep stream key dhe URL për përdoruesin aktual
 exports.getMyStreamInfo = async (req, res) => {
   try {
-    const streamerId = req.user.id;
-    let stream = await Stream.findOne({ where: { streamerId } });
-    if (!stream) {
-      // Krijo stream nëse nuk ekziston
-      stream = await Stream.create({
-        title: 'My Stream',
-        description: '',
-        streamerId,
-        isPremium: false,
-        streamKey: generateStreamKey(),
+    const { ingestEnabled } = require('../utils/streamPublic');
+    const stream = await Stream.findOne({
+      where: { streamerId: req.user.id },
+      order: [['updatedAt', 'DESC']],
+    });
+    const enabled = ingestEnabled();
+    if (!enabled) {
+      return res.json({
+        ingestSupported: false,
+        provider: 'livekit',
+        streamKey: null,
+        rtmpUrl: null,
+        hlsUrl: null,
+        message:
+          'Native RTMP/OBS ingest is not available on this host. Go live with LiveKit in the app, or link a YouTube channel and broadcast from YouTube Studio.',
       });
     }
-    // Konfiguro këtu IP ose domain të serverit tënd RTMP/HLS
-    const serverIp = process.env.RTMP_SERVER_IP || 'localhost';
-    const rtmpUrl = `rtmp://${serverIp}:1935/live`;
-    const hlsUrl = `https://${serverIp}:5098/hls/${stream.streamKey}.m3u8`;
+    if (!stream) {
+      return res.status(404).json({
+        ingestSupported: true,
+        error: 'Create a stream before requesting an ingest key.',
+      });
+    }
+    const serverIp = process.env.RTMP_SERVER_IP;
     res.json({
+      ingestSupported: true,
+      provider: 'rtmp',
       streamKey: stream.streamKey,
-      rtmpUrl,
-      hlsUrl,
+      rtmpUrl: `rtmp://${serverIp}:1935/live`,
+      hlsUrl: null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-const { Stream, User, Profile } = require('../models');
+const { Stream, User, Profile, Match, Tournament } = require('../models');
 const { Op } = require('sequelize');
 const { normalizeYoutubeChannelId, youtubeLiveEmbedUrl } = require('../utils/youtubeChannel');
+const { applyStreamStatus, deriveInitialStatus, currentStatus, STATUSES } = require('../utils/streamLifecycle');
+const { serializeStream, canViewStream } = require('../utils/streamPublic');
+const { notifyStreamFollowers } = require('../utils/streamNotifications');
+const ClubMember = require('../models/ClubMember');
+
+const STREAM_LIST_ATTRS = [
+  'id',
+  'title',
+  'description',
+  'streamerId',
+  'isLive',
+  'viewers',
+  'isPremium',
+  'type',
+  'videoUrl',
+  'youtubeChannelId',
+  'status',
+  'visibility',
+  'provider',
+  'providerId',
+  'thumbnailUrl',
+  'scheduledAt',
+  'startedAt',
+  'endedAt',
+  'matchId',
+  'tournamentId',
+  'playerId',
+  'clubId',
+  'featured',
+  'createdAt',
+  'updatedAt',
+];
+
+function toInt(value) {
+  if (value == null || value === '') return null;
+  const n = parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function streamerInclude() {
+  return {
+    model: User,
+    as: 'streamer',
+    attributes: ['id', 'firstName', 'lastName', 'verified'],
+    include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
+  };
+}
+
+function decorateStreamer(s) {
+  if (!s.streamer) {
+    s.streamer = { firstName: 'I panjohur', lastName: '', photoUrl: null };
+    return s;
+  }
+  if (s.streamer.Profile && s.streamer.Profile.profilePhoto) {
+    const photo = s.streamer.Profile.profilePhoto;
+    s.streamer.photoUrl = photo.startsWith('/uploads/') ? photo : photo;
+  } else {
+    s.streamer.photoUrl = null;
+  }
+  return s;
+}
+
+function presentStream(stream, viewerId) {
+  const s = serializeStream(stream, { viewerId });
+  if (isStreamStale(s)) s.isLive = false;
+  if (s.youtubeChannelId) s.youtubeEmbedUrl = youtubeLiveEmbedUrl(s.youtubeChannelId);
+  return decorateStreamer(s);
+}
+
+async function assertAssociation(user, { matchId, tournamentId, playerId, clubId }) {
+  if (matchId) {
+    const match = await Match.findByPk(matchId);
+    if (!match) return { ok: false, status: 400, error: 'Match not found' };
+  }
+  if (tournamentId) {
+    const tournament = await Tournament.findByPk(tournamentId);
+    if (!tournament) return { ok: false, status: 400, error: 'Competition not found' };
+  }
+  if (playerId && Number(playerId) !== Number(user.id) && user.role !== 'admin') {
+    if (user.role === 'club') {
+      const member = await ClubMember.findOne({
+        where: { clubId: user.id, athleteId: playerId, status: 'approved' },
+      });
+      if (!member) return { ok: false, status: 403, error: 'You cannot attach this player' };
+    } else {
+      return { ok: false, status: 403, error: 'You cannot attach this player' };
+    }
+  }
+  if (clubId && Number(clubId) !== Number(user.id) && user.role !== 'admin') {
+    const member = await ClubMember.findOne({
+      where: { clubId, athleteId: user.id, status: 'approved' },
+    });
+    if (!member) return { ok: false, status: 403, error: 'You cannot attach this club' };
+  }
+  return { ok: true };
+}
+
+function listWhere(query, viewer) {
+  const where = {};
+  const and = [];
+  const section = String(query.section || '').toLowerCase();
+  if (query.isLive === 'true' || section === 'live') where.isLive = true;
+  if (section === 'upcoming') {
+    where.status = { [Op.in]: ['scheduled', 'ready'] };
+  } else if (section === 'ended') {
+    where.status = { [Op.in]: ['ended', 'processing', 'available'] };
+  } else if (query.status && STATUSES.includes(String(query.status))) {
+    where.status = String(query.status);
+  }
+  if (section === 'featured' || query.featured === 'true') where.featured = true;
+  const userId = toInt(query.userId);
+  const matchId = toInt(query.matchId);
+  const tournamentId = toInt(query.tournamentId);
+  const clubId = toInt(query.clubId);
+  const playerId = toInt(query.playerId);
+  if (userId) where.streamerId = userId;
+  if (matchId) where.matchId = matchId;
+  if (tournamentId) where.tournamentId = tournamentId;
+  if (clubId) where.clubId = clubId;
+  if (playerId) where.playerId = playerId;
+
+  const from = query.from ? new Date(query.from) : null;
+  const to = query.to ? new Date(query.to) : null;
+  if (from && !Number.isNaN(from.getTime())) and.push({ createdAt: { [Op.gte]: from } });
+  if (to && !Number.isNaN(to.getTime())) and.push({ createdAt: { [Op.lte]: to } });
+
+  const visibilityOr = [{ visibility: 'public' }, { visibility: null }];
+  if (viewer?.id) visibilityOr.push({ streamerId: viewer.id });
+  and.push({ [Op.or]: visibilityOr });
+  if (and.length) where[Op.and] = and;
+  return where;
+}
 
 function isMediasoupInternalAuthorized(req) {
   const configuredToken = process.env.MEDIASOUP_ADMIN_TOKEN;
@@ -296,9 +439,10 @@ exports.createStream = async (req, res) => {
   try {
     const { title, description, isPremium, youtubeChannelId: bodyChannel } = req.body;
     const streamerId = req.user.id;
+    const cleanTitle = String(title || '').trim();
+    if (!cleanTitle) return res.status(400).json({ error: 'Title is required' });
 
     const { hasTier } = require('../utils/subscriptionAccess');
-    // Live streaming (including unlimited) is a Pro feature per pricing matrix
     if (!hasTier(req.user, 'pro')) {
       return res.status(403).json({
         error: 'Live streaming kërkon planin Pro.',
@@ -325,16 +469,49 @@ exports.createStream = async (req, res) => {
       youtubeChannelId = normalizeYoutubeChannelId(prof?.youtubeChannelId);
     }
 
-    const streamKey = generateStreamKey();
+    const visibility = ['public', 'unlisted', 'private'].includes(req.body.visibility)
+      ? req.body.visibility
+      : (req.body.isPublic === false ? 'private' : 'public');
+    const scheduledAt = req.body.scheduledAt ? new Date(req.body.scheduledAt) : null;
+    if (req.body.scheduledAt && Number.isNaN(scheduledAt.getTime())) {
+      return res.status(400).json({ error: 'scheduledAt is invalid' });
+    }
+    const status = deriveInitialStatus({ scheduledAt });
+    if (!status) return res.status(400).json({ error: 'scheduledAt is invalid' });
+
+    const matchId = toInt(req.body.matchId);
+    const tournamentId = toInt(req.body.tournamentId);
+    const playerId = toInt(req.body.playerId);
+    const clubId = toInt(req.body.clubId);
+    const association = await assertAssociation(req.user, { matchId, tournamentId, playerId, clubId });
+    if (!association.ok) return res.status(association.status).json({ error: association.error });
+
+    const provider = playbackSource === 'youtube' || (youtubeChannelId && playbackSource !== 'livekit')
+      ? 'youtube'
+      : 'livekit';
 
     const stream = await Stream.create({
-      title,
-      description,
+      title: cleanTitle.slice(0, 255),
+      description: description ? String(description).slice(0, 5000) : '',
       streamerId,
-      isPremium: isPremium || false,
-      streamKey,
+      isPremium: !!isPremium,
+      isLive: false,
+      streamKey: generateStreamKey(),
       youtubeChannelId,
+      status,
+      visibility,
+      provider,
+      providerId: null,
+      thumbnailUrl: req.body.thumbnailUrl ? String(req.body.thumbnailUrl).slice(0, 512) : null,
+      scheduledAt,
+      matchId,
+      tournamentId,
+      playerId,
+      clubId,
+      featured: req.body.featured === true || req.body.featured === 'true',
     });
+    stream.providerId = provider === 'livekit' ? `stream-${stream.id}` : (req.body.youtubeVideoId ? String(req.body.youtubeVideoId).slice(0, 32) : null);
+    await stream.save();
 
     try {
       const io = socketUtil.getIo();
@@ -343,12 +520,11 @@ exports.createStream = async (req, res) => {
         io.to('streams').emit('stream:created', { id: stream.id });
       }
     } catch (e) {}
-    const json = stream.toJSON ? stream.toJSON() : stream;
-    if (json.youtubeChannelId) {
-      json.youtubeEmbedUrl = youtubeLiveEmbedUrl(json.youtubeChannelId);
-    }
-    res.status(201).json(json);
+    res.status(201).json(presentStream(stream, req.user.id));
   } catch (error) {
+    if (error?.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'A stream for this provider resource already exists' });
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -357,74 +533,66 @@ exports.getStreams = async (req, res) => {
   try {
     await expireStaleLiveStreams();
 
-    const { isLive, limit = 20, userId } = req.query;
-    const whereClause = {};
-    if (isLive === 'true') {
-      whereClause.isLive = true;
-    }
-    if (userId) {
-      whereClause.streamerId = userId;
-    }
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    const whereClause = listWhere(req.query, req.user);
     const streams = await Stream.findAll({
       where: whereClause,
-      attributes: [
-        'id',
-        'title',
-        'description',
-        'streamerId',
-        'isLive',
-        'viewers',
-        'isPremium',
-        'type',
-        'streamKey',
-        'videoUrl',
-        'youtubeChannelId',
-        'createdAt',
-        'updatedAt',
-      ],
-      include: [
-        {
-          model: User,
-          as: 'streamer',
-          attributes: ['id', 'firstName', 'lastName', 'verified'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
-        },
-      ],
+      attributes: STREAM_LIST_ATTRS,
+      include: [streamerInclude()],
       order: [
         ['isLive', 'DESC'],
+        ['featured', 'DESC'],
         ['viewers', 'DESC'],
         ['createdAt', 'DESC'],
       ],
-      limit: parseInt(limit),
+      limit,
+      offset,
     });
-    // Shto hlsUrl për çdo stream live
-    const streamsWithHls = streams.map(stream => {
-      const s = stream.toJSON ? stream.toJSON() : stream;
-      if (isStreamStale(s)) {
-        s.isLive = false;
-      }
-      if (s.isLive && s.streamKey) {
-        s.hlsUrl = `/live/${s.streamKey}/index.m3u8`;
-      }
-      if (s.youtubeChannelId) {
-        s.youtubeEmbedUrl = youtubeLiveEmbedUrl(s.youtubeChannelId);
-      }
-      // Siguro që gjithmonë të kthehet një objekt streamer me photoUrl
-      if (!s.streamer) {
-        s.streamer = { firstName: 'I panjohur', lastName: '', photoUrl: null };
-      } else if (s.streamer.Profile && s.streamer.Profile.profilePhoto) {
-        s.streamer.photoUrl = s.streamer.Profile.profilePhoto.startsWith('/uploads/')
-          ? `https://localhost:5098${s.streamer.Profile.profilePhoto}`
-          : s.streamer.Profile.profilePhoto;
-      } else {
-        s.streamer.photoUrl = null;
-      }
-      return s;
-    })
-      .filter((s) => (isLive === 'true' ? s.isLive : true));
-    res.json(streamsWithHls);
+    const liveOnly = req.query.isLive === 'true' || String(req.query.section || '') === 'live';
+    const rows = streams
+      .map((stream) => presentStream(stream, req.user?.id))
+      .filter((s) => (liveOnly ? s.isLive : true));
+    res.json(rows);
   } catch (error) {
     console.error('Get streams error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDiscovery = async (req, res) => {
+  try {
+    await expireStaleLiveStreams();
+    const base = {
+      matchId: req.query.matchId,
+      tournamentId: req.query.tournamentId,
+      clubId: req.query.clubId,
+      from: req.query.from,
+      to: req.query.to,
+    };
+    const load = async (section, limit) => {
+      const rows = await Stream.findAll({
+        where: listWhere({ ...base, section }, req.user),
+        attributes: STREAM_LIST_ATTRS,
+        include: [streamerInclude()],
+        order: section === 'upcoming'
+          ? [['scheduledAt', 'ASC'], ['createdAt', 'DESC']]
+          : [['isLive', 'DESC'], ['featured', 'DESC'], ['endedAt', 'DESC'], ['createdAt', 'DESC']],
+        limit,
+      });
+      return rows.map((row) => presentStream(row, req.user?.id)).filter((row) => (
+        section === 'live' ? row.isLive : true
+      ));
+    };
+    const [live, upcoming, ended, featured] = await Promise.all([
+      load('live', 12),
+      load('upcoming', 12),
+      load('ended', 12),
+      load('featured', 12),
+    ]);
+    res.json({ live, upcoming, ended, featured });
+  } catch (error) {
+    console.error('Discovery error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -435,49 +603,26 @@ exports.getStream = async (req, res) => {
 
     const { id } = req.params;
     const stream = await Stream.findByPk(id, {
-      attributes: [
-        'id',
-        'title',
-        'description',
-        'streamerId',
-        'isLive',
-        'viewers',
-        'isPremium',
-        'type',
-        'streamKey',
-        'videoUrl',
-        'youtubeChannelId',
-        'createdAt',
-        'updatedAt',
-      ],
-      include: [
-        {
-          model: User,
-          as: 'streamer',
-          attributes: ['id', 'firstName', 'lastName', 'verified'],
-          include: [{ model: Profile, attributes: ['profilePhoto', 'position', 'club', 'youtubeChannelId'] }],
-        },
-      ],
+      attributes: STREAM_LIST_ATTRS,
+      include: [streamerInclude()],
     });
     if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
+    if (!canViewStream(stream, req.user?.id)) {
+      return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
+    }
 
-    // Check if premium stream and user is not premium
-    if (stream.isPremium && !req.user?.premium) {
+    if (stream.isPremium && !req.user?.premium && Number(stream.streamerId) !== Number(req.user?.id)) {
       return res.status(403).json({ error: 'Transmetimi premium kërkon abonim' });
     }
 
-    const out = stream.toJSON ? stream.toJSON() : stream;
-    if (isStreamStale(out)) {
+    if (isStreamStale(stream)) {
       stream.isLive = false;
       stream.viewers = 0;
+      stream.status = stream.status === 'live' ? 'ended' : stream.status;
+      stream.endedAt = stream.endedAt || new Date();
       await stream.save();
-      out.isLive = false;
-      out.viewers = 0;
     }
-    if (out.youtubeChannelId) {
-      out.youtubeEmbedUrl = youtubeLiveEmbedUrl(out.youtubeChannelId);
-    }
-    res.json(out);
+    res.json(presentStream(stream, req.user?.id));
   } catch (error) {
     console.error('Get stream error:', error);
     res.status(500).json({ error: error.message });
@@ -492,10 +637,15 @@ exports.startStream = async (req, res) => {
       return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
 
-    stream.isLive = true;
+    try {
+      applyStreamStatus(stream, 'live');
+    } catch (err) {
+      return res.status(err.statusCode || 409).json({ error: err.message });
+    }
     await stream.save();
 
     await endOtherLiveStreamsForStreamer(stream.streamerId, stream.id);
+    notifyStreamFollowers(stream.streamerId, 'stream_started', stream).catch(() => {});
 
     try {
       const io = socketUtil.getIo();
@@ -504,7 +654,7 @@ exports.startStream = async (req, res) => {
         io.to('streams').emit('stream:updated', { id: stream.id });
       }
     } catch (e) {}
-    res.json({ message: 'Stream started', stream });
+    res.json({ message: 'Stream started', stream: presentStream(stream, req.user.id) });
   } catch (error) {
     console.error('Start stream error:', error);
     res.status(500).json({ error: error.message });
@@ -601,9 +751,21 @@ exports.endStream = async (req, res) => {
     if (!stream || stream.streamerId !== req.user.id) {
       return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
+    if (['ended', 'processing', 'available', 'cancelled'].includes(currentStatus(stream))) {
+      return res.json({ message: 'Stream ended', stream: presentStream(stream, req.user.id) });
+    }
 
-    stream.isLive = false;
+    try {
+      applyStreamStatus(stream, 'ended');
+      if (stream.videoUrl) {
+        applyStreamStatus(stream, 'processing');
+        applyStreamStatus(stream, 'available');
+      }
+    } catch (err) {
+      return res.status(err.statusCode || 409).json({ error: err.message });
+    }
     await stream.save();
+    notifyStreamFollowers(stream.streamerId, 'stream_ended', stream).catch(() => {});
     try {
       const io = socketUtil.getIo();
       if (io) {
@@ -612,7 +774,7 @@ exports.endStream = async (req, res) => {
         io.to(`stream:${stream.id}`).emit('stream:ended', { id: stream.id });
       }
     } catch (e) {}
-    res.json({ message: 'Stream ended' });
+    res.json({ message: 'Stream ended', stream: presentStream(stream, req.user.id) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -692,9 +854,11 @@ exports.joinStream = async (req, res) => {
   try {
     const { id } = req.params;
     const stream = await Stream.findByPk(id);
-    if (!stream) return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
+    if (!stream || !canViewStream(stream, req.user?.id)) {
+      return res.status(404).json({ error: 'Transmetimi nuk u gjet' });
+    }
 
-    if (stream.isPremium && !req.user.premium) {
+    if (stream.isPremium && !req.user.premium && Number(stream.streamerId) !== Number(req.user.id)) {
       return res.status(403).json({ error: 'Transmetimi premium kërkon abonim' });
     }
 
@@ -739,6 +903,34 @@ exports.leaveStream = async (req, res) => {
   }
 };
 
+exports.cancelStream = async (req, res) => {
+  try {
+    const stream = await Stream.findByPk(req.params.id);
+    if (!stream || stream.streamerId !== req.user.id) {
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
+    }
+    applyStreamStatus(stream, 'cancelled');
+    await stream.save();
+    res.json({ message: 'Stream cancelled', stream: presentStream(stream, req.user.id) });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
+
+exports.failStream = async (req, res) => {
+  try {
+    const stream = await Stream.findByPk(req.params.id);
+    if (!stream || stream.streamerId !== req.user.id) {
+      return res.status(403).json({ error: 'Nuk je i autorizuar' });
+    }
+    applyStreamStatus(stream, 'failed');
+    await stream.save();
+    res.json({ message: 'Stream marked failed', stream: presentStream(stream, req.user.id) });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
+
 function generateStreamKey() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return crypto.randomBytes(24).toString('hex');
 }

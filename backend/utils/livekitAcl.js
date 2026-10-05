@@ -80,8 +80,33 @@ async function authorizeLiveKitRoom(userId, roomName, { canPublish = false } = {
   };
 }
 
+/**
+ * Anonymous viewers may subscribe to a public or unlisted live stream.
+ * They cannot publish, and private or premium rooms stay closed.
+ */
+async function authorizeAnonymousStreamViewer(roomName) {
+  const streamMatch = STREAM_ROOM.exec(String(roomName || '').trim());
+  if (!streamMatch) {
+    return { ok: false, status: 401, msg: 'Autentikimi është i detyrueshëm' };
+  }
+  const stream = await Stream.findByPk(streamMatch[1]);
+  if (!stream) return { ok: false, status: 404, msg: 'Transmetimi nuk u gjet' };
+  const visibility = stream.visibility || 'public';
+  if (visibility === 'private') {
+    return { ok: false, status: 401, msg: 'Autentikimi është i detyrueshëm' };
+  }
+  if (!stream.isLive) {
+    return { ok: false, status: 403, msg: 'Transmetimi nuk është live' };
+  }
+  if (stream.isPremium) {
+    return { ok: false, status: 403, msg: 'Transmetimi premium kërkon abonim' };
+  }
+  return { ok: true, role: 'viewer' };
+}
+
 module.exports = {
   authorizeLiveKitRoom,
+  authorizeAnonymousStreamViewer,
   CALL_ROOM,
   STREAM_ROOM,
   GROUP_ROOM,

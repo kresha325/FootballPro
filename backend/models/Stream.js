@@ -59,6 +59,67 @@ const Stream = sequelize.define('Stream', {
     allowNull: true,
     comment: 'Path or URL to uploaded recording when not live',
   },
+  status: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    defaultValue: 'ready',
+  },
+  visibility: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    defaultValue: 'public',
+  },
+  provider: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    defaultValue: 'livekit',
+  },
+  providerId: {
+    type: DataTypes.STRING(128),
+    allowNull: true,
+  },
+  thumbnailUrl: {
+    type: DataTypes.STRING(512),
+    allowNull: true,
+  },
+  scheduledAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  startedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  endedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  matchId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  tournamentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  playerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  clubId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  featured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  notifiedStartingSoon: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
@@ -71,5 +132,12 @@ const Stream = sequelize.define('Stream', {
 
 Stream.belongsTo(User, { as: 'streamer', foreignKey: 'streamerId' });
 User.hasMany(Stream, { as: 'streams', foreignKey: 'streamerId' });
+
+const Match = require('./Match');
+const { Tournament } = require('./Tournament');
+Stream.belongsTo(Match, { foreignKey: 'matchId' });
+Stream.belongsTo(Tournament, { foreignKey: 'tournamentId' });
+Stream.belongsTo(User, { as: 'player', foreignKey: 'playerId' });
+Stream.belongsTo(User, { as: 'club', foreignKey: 'clubId' });
 
 module.exports = Stream;

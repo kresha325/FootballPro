@@ -60,10 +60,18 @@ async function expireStaleLiveStreams() {
   const staleIds = live.filter(isStreamStale).map((s) => s.id);
   if (!staleIds.length) return 0;
 
-  await Stream.update(
-    { isLive: false, viewers: 0 },
-    { where: { id: { [Op.in]: staleIds } } }
-  );
+  const endedAt = new Date();
+  try {
+    await Stream.update(
+      { isLive: false, viewers: 0, status: 'ended', endedAt },
+      { where: { id: { [Op.in]: staleIds } } }
+    );
+  } catch (_err) {
+    await Stream.update(
+      { isLive: false, viewers: 0 },
+      { where: { id: { [Op.in]: staleIds } } }
+    );
+  }
 
   for (const id of staleIds) {
     emitStreamEnded(id);
@@ -85,16 +93,56 @@ async function endOtherLiveStreamsForStreamer(streamerId, exceptStreamId = null)
   if (!others.length) return 0;
 
   const ids = others.map((s) => s.id);
-  await Stream.update({ isLive: false, viewers: 0 }, { where: { id: { [Op.in]: ids } } });
+  const endedAt = new Date();
+  try {
+    await Stream.update(
+      { isLive: false, viewers: 0, status: 'ended', endedAt },
+      { where: { id: { [Op.in]: ids } } }
+    );
+  } catch (_err) {
+    await Stream.update({ isLive: false, viewers: 0 }, { where: { id: { [Op.in]: ids } } });
+  }
   for (const id of ids) {
     emitStreamEnded(id);
   }
   return ids.length;
 }
 
+async function notifyStreamsStartingSoon() {
+  let rows = [];
+  try {
+    rows = await Stream.findAll({
+      where: {
+        status: 'scheduled',
+        notifiedStartingSoon: false,
+        scheduledAt: {
+          [Op.lte]: new Date(Date.now() + 15 * 60 * 1000),
+          [Op.gte]: new Date(Date.now() - 2 * 60 * 1000),
+        },
+      },
+      limit: 40,
+    });
+  } catch (_err) {
+    return 0;
+  }
+  if (!rows.length) return 0;
+  const { notifyStreamFollowers } = require('./streamNotifications');
+  for (const stream of rows) {
+    try {
+      await notifyStreamFollowers(stream.streamerId, 'stream_starting_soon', stream);
+      stream.notifiedStartingSoon = true;
+      await stream.save();
+    } catch (_err) {
+      /* keep the scheduler moving */
+    }
+  }
+  return rows.length;
+}
+
 module.exports = {
   expireStaleLiveStreams,
   endOtherLiveStreamsForStreamer,
+  notifyStreamsStartingSoon,
   isStreamStale,
   getMaxLiveMs,
   getHeartbeatMs,

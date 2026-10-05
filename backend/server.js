@@ -74,7 +74,7 @@ setInterval(() => {
     console.warn('purgeExpiredOutOfStockProducts:', err?.message || err)
   );
 }, 60 * 60 * 1000);
-const { expireStaleLiveStreams } = require('./utils/streamLive');
+const { expireStaleLiveStreams, notifyStreamsStartingSoon } = require('./utils/streamLive');
 expireStaleLiveStreams()
   .then((n) => {
     if (n > 0) console.log(`Expired ${n} stale live stream(s) on startup`);
@@ -82,6 +82,7 @@ expireStaleLiveStreams()
   .catch((err) => console.warn('expireStaleLiveStreams startup:', err?.message || err));
 setInterval(() => {
   expireStaleLiveStreams().catch((err) => console.warn('expireStaleLiveStreams:', err?.message || err));
+  notifyStreamsStartingSoon().catch((err) => console.warn('notifyStreamsStartingSoon:', err?.message || err));
 }, 5 * 60 * 1000);
 // Import models
 const User = require('./models/User');

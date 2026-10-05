@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import API, { extractApiMessage } from '../../services/api';
+import MatchMediaPanel from './MatchMediaPanel';
 
 function StateBlock({ title, body, action }) {
   return (
@@ -105,6 +106,8 @@ export default function MatchCenterPage() {
           {match.highlightsUrl && <a className="btn btn-primary" href={match.highlightsUrl}>Highlights</a>}
         </div>
       </div>
+
+      <MatchMediaPanel matchId={match.id} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <section className="xt-card p-4">

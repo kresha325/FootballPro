@@ -65,6 +65,41 @@ const Video = sequelize.define('Video', {
     type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed'),
     defaultValue: 'pending',
   },
+  visibility: {
+    type: DataTypes.STRING(16),
+    allowNull: false,
+    defaultValue: 'public',
+  },
+  playerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  matchId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  tournamentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  season: {
+    type: DataTypes.STRING(64),
+    allowNull: true,
+  },
+  featured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  provider: {
+    type: DataTypes.STRING(32),
+    allowNull: false,
+    defaultValue: 'upload',
+  },
+  providerId: {
+    type: DataTypes.STRING(191),
+    allowNull: true,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

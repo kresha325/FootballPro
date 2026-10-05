@@ -259,11 +259,13 @@ export const notificationsAPI = {
 ========================= */
 export const streamsAPI = {
   getStreams: (params) => API.get('/streams', { params: params || {} }),
+  discovery: (params) => API.get('/streams/discovery', { params: params || {} }),
   getStream: (streamId) => API.get(`/streams/${streamId}`),
   createStream: (data) => API.post('/streams', data),
   startStream: (streamId) => API.put(`/streams/${streamId}/start`),
   heartbeatStream: (streamId, data = {}) => API.put(`/streams/${streamId}/heartbeat`, data),
   endStream: (streamId) => API.put(`/streams/${streamId}/end`),
+  cancelStream: (streamId) => API.put(`/streams/${streamId}/cancel`),
   joinStream: (streamId) => API.post(`/streams/${streamId}/join`),
   leaveStream: (streamId) => API.post(`/streams/${streamId}/leave`),
   uploadTemp: (formData) => API.post('/streams/upload-temp', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
