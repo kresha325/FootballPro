@@ -1,145 +1,121 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  addCartItemRequest,
+  cartRequest,
+  clearCartRequest,
+  removeCartItemRequest,
+  updateCartItemRequest,
+} from '../api/client';
 
 const STORAGE_KEY = 'footballpro_marketplace_cart_v1';
-
 const CartContext = createContext(null);
 
-function clampQty(q, maxStock) {
-  const n = Math.max(1, parseInt(String(q), 10) || 1);
-  const cap = Math.max(0, parseInt(String(maxStock), 10) || 0);
-  if (cap < 1) return 0;
-  return Math.min(n, cap);
+function mapServer(data) {
+  const items = Array.isArray(data?.items) ? data.items.map((item) => ({
+    productId: Number(item.productId),
+    quantity: Number(item.quantity) || 1,
+    name: item.name || 'Produkt',
+    price: Number(item.price) || 0,
+    imageUrl: item.imageUrl || '',
+    sellerId: item.sellerId != null ? Number(item.sellerId) : null,
+    maxStock: Number(item.maxStock) || 0,
+  })) : [];
+  return { items, total: data?.total };
 }
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [serverTotal, setServerTotal] = useState(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (cancelled) return;
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) setItems(parsed);
-        }
-      } catch (_e) {
-        /* ignore */
-      } finally {
-        if (!cancelled) setReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const persist = useCallback(async (next) => {
-    setItems(next);
+  const apply = useCallback(async (data) => {
+    const mapped = mapServer(data);
+    setItems(mapped.items);
+    setServerTotal(mapped.total);
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mapped.items));
     } catch (_e) {
       /* ignore */
     }
   }, []);
 
-  const addItem = useCallback(
-    (product, quantity) => {
-      if (!product?.id) return;
-      const stock = Math.max(0, parseInt(String(product.stock ?? 0), 10) || 0);
-      if (stock < 1) return;
-      const pid = Number(product.id);
-      const add = clampQty(quantity, stock);
-      if (add < 1) return;
-
-      setItems((prev) => {
-        const next = [...prev];
-        const idx = next.findIndex((x) => Number(x.productId) === pid);
-        const line = {
-          productId: pid,
-          quantity: add,
-          name: product.name || 'Produkt',
-          price: Number(product.price) || 0,
-          imageUrl: product.imageUrl || '',
-          sellerId: product.sellerId != null ? Number(product.sellerId) : null,
-          maxStock: stock,
-        };
-        if (idx >= 0) {
-          const merged = clampQty(next[idx].quantity + add, stock);
-          next[idx] = { ...next[idx], quantity: merged, maxStock: stock, price: line.price, name: line.name, imageUrl: line.imageUrl };
-        } else {
-          next.push(line);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await cartRequest();
+        if (!cancelled) await apply(res.data);
+      } catch (_e) {
+        try {
+          const raw = await AsyncStorage.getItem(STORAGE_KEY);
+          if (!cancelled && raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setItems(parsed);
+          }
+        } catch (_err) {
+          /* ignore */
         }
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-        return next;
-      });
-    },
-    []
-  );
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [apply]);
 
-  const setLineQuantity = useCallback((productId, quantity) => {
-    const pid = Number(productId);
-    setItems((prev) => {
-      const next = prev
-        .map((x) => {
-          if (Number(x.productId) !== pid) return x;
-          const cap = Math.max(0, parseInt(String(x.maxStock ?? 0), 10) || 0);
-          const q = Math.max(0, parseInt(String(quantity), 10) || 0);
-          if (q < 1 || cap < 1) return null;
-          return { ...x, quantity: Math.min(q, cap) };
-        })
-        .filter(Boolean);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
+  const addItem = useCallback(async (product, quantity) => {
+    if (!product?.id) return;
+    try {
+      const res = await addCartItemRequest(Number(product.id), Math.max(1, parseInt(quantity, 10) || 1));
+      await apply(res.data);
+    } catch (_e) {
+      /* server remains source of truth when it is reachable */
+    }
+  }, [apply]);
 
-  const removeItem = useCallback((productId) => {
-    const pid = Number(productId);
-    setItems((prev) => {
-      const next = prev.filter((x) => Number(x.productId) !== pid);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
+  const setLineQuantity = useCallback(async (productId, quantity) => {
+    const q = parseInt(quantity, 10) || 0;
+    try {
+      const res = q < 1 ? await removeCartItemRequest(productId) : await updateCartItemRequest(productId, q);
+      await apply(res.data);
+    } catch (_e) {
+      /* ignore */
+    }
+  }, [apply]);
 
-  const clearCart = useCallback(() => {
-    setItems([]);
-    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
-  }, []);
+  const removeItem = useCallback(async (productId) => {
+    try {
+      const res = await removeCartItemRequest(productId);
+      await apply(res.data);
+    } catch (_e) {
+      /* ignore */
+    }
+  }, [apply]);
 
-  const totalPieces = useMemo(() => items.reduce((s, x) => s + (parseInt(x.quantity, 10) || 0), 0), [items]);
+  const clearCart = useCallback(async () => {
+    try {
+      const res = await clearCartRequest();
+      await apply(res.data);
+    } catch (_e) {
+      setItems([]);
+      setServerTotal(null);
+      AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    }
+  }, [apply]);
 
+  const totalPieces = useMemo(() => items.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0), [items]);
   const orderPayload = useMemo(
-    () => items.map((x) => ({ productId: Number(x.productId), quantity: parseInt(x.quantity, 10) || 1 })),
+    () => items.map((item) => ({ productId: Number(item.productId), quantity: parseInt(item.quantity, 10) || 1 })),
     [items]
   );
-
   const subtotalJonCoin = useMemo(() => {
-    let t = 0;
-    for (const x of items) {
-      t += (Number(x.price) || 0) * (parseInt(x.quantity, 10) || 0);
-    }
-    return Math.round(t * 100) / 100;
-  }, [items]);
+    if (serverTotal != null) return Number(serverTotal) || 0;
+    return items.reduce((sum, item) => sum + (Number(item.price) || 0) * (parseInt(item.quantity, 10) || 0), 0);
+  }, [items, serverTotal]);
 
-  const value = useMemo(
-    () => ({
-      items,
-      ready,
-      addItem,
-      setLineQuantity,
-      removeItem,
-      clearCart,
-      totalPieces,
-      orderPayload,
-      subtotalJonCoin,
-    }),
-    [items, ready, addItem, setLineQuantity, removeItem, clearCart, totalPieces, orderPayload, subtotalJonCoin]
-  );
+  const value = useMemo(() => ({
+    items, ready, addItem, setLineQuantity, removeItem, clearCart, totalPieces, orderPayload, subtotalJonCoin,
+  }), [items, ready, addItem, setLineQuantity, removeItem, clearCart, totalPieces, orderPayload, subtotalJonCoin]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

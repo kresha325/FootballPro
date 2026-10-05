@@ -11,6 +11,7 @@ router.use(auth);
 router.get('/balance', joncoin.getBalance);
 router.get('/transactions', joncoin.getTransactions);
 router.post('/purchase', joncoin.purchase);
+router.post('/deposit-checkout', joncoin.createDepositCheckout);
 router.post('/spend', joncoin.spend);
 router.post('/reward', admin, joncoin.reward); // admin only — never mint for any authed user
 router.post('/withdraw', joncoin.withdraw);

@@ -74,10 +74,10 @@ async function purgeExpiredOutOfStockProducts() {
     },
   });
   for (const product of expired) {
-    await product.destroy();
+    await product.update({ status: 'archived' });
   }
   if (expired.length > 0) {
-    console.log(`Deleted ${expired.length} out-of-stock product(s) older than ${OUT_OF_STOCK_TTL_HOURS}h.`);
+    console.log(`Archived ${expired.length} out-of-stock product(s) older than ${OUT_OF_STOCK_TTL_HOURS}h.`);
   }
   return expired.length;
 }

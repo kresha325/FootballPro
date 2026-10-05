@@ -55,12 +55,12 @@ export default function CartScreen({ navigation }) {
       return;
     }
     Alert.alert(
-      'Dërgo porosinë',
-      `${subtotalJonCoin} XCoin për ${totalPieces} copë. Coinat transferohen vetëm kur shitësi e pranon.`,
+      'Paguaj me XCoin',
+      `${subtotalJonCoin} XCoin për ${totalPieces} copë. Pagesa dhe stoku përdoren menjëherë. Çmimi llogaritet në server.`,
       [
         { text: 'Anulo', style: 'cancel' },
         {
-          text: 'Dërgo',
+          text: 'Paguaj',
           onPress: async () => {
             setPaying(true);
             try {
@@ -70,12 +70,12 @@ export default function CartScreen({ navigation }) {
                 buyerContact: String(buyerContact).trim(),
                 deliveryAddress: String(deliveryAddress).trim() || undefined,
                 deliveryNotes: String(deliveryNotes).trim() || undefined,
-              });
+              }, `checkout-${Date.now()}`);
               clearCart();
               Alert.alert(
-                'Pending',
-                'Porosia u dërgua. Shitësi e pranon te Wallet → Shitjet. XCoin ende nuk u transferuan.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
+                'Paguar',
+                'Porosia u pagua me XCoin.',
+                [{ text: 'OK', onPress: () => navigation.navigate('Orders') }]
               );
             } catch (err) {
               Alert.alert('Porosia dështoi', extractErrorMessage(err, 'Could not create order'));
@@ -199,7 +199,7 @@ export default function CartScreen({ navigation }) {
         <Text style={styles.totalVal}>{subtotalJonCoin} XCoin</Text>
         <Text style={styles.pendingHint}>Pending derisa shitësi të pranojë — pastaj kalojnë coinat.</Text>
         <TouchableOpacity style={[styles.payBtn, paying && styles.payBtnDisabled]} onPress={pay} disabled={paying}>
-          {paying ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Dërgo porosinë</Text>}
+          {paying ? <ActivityIndicator color="#fff" /> : <Text style={styles.payBtnText}>Paguaj me XCoin</Text>}
         </TouchableOpacity>
       </View>
     </View>

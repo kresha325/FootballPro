@@ -353,7 +353,12 @@ function buildMatchNotice({ match, tournament, userId, kind }) {
 function orderEventForStatus(status) {
   switch (String(status || '').toLowerCase()) {
     case 'pending':
+    case 'payment_pending':
       return 'ORDER_CREATED';
+    case 'processing':
+      return 'PAYMENT_STATUS';
+    case 'failed':
+      return 'ORDER_CANCELLED';
     case 'paid':
     case 'accepted':
       return 'ORDER_ACCEPTED';
@@ -377,8 +382,8 @@ function walletEventFor(tx) {
   const status = String(tx?.status || '').toLowerCase();
   if (type === 'withdrawal') return 'WALLET_WITHDRAWAL';
   if (type === 'refund') return 'WALLET_REFUND';
-  if (type === 'reward' || type === 'purchase') return 'WALLET_RECEIVED';
-  if (type === 'spend' || type === 'commission') return 'WALLET_SPENT';
+  if (type === 'sale' || type === 'reward' || type === 'purchase' || type === 'refund') return 'WALLET_RECEIVED';
+  if (type === 'spend' || type === 'commission' || type === 'fee' || type === 'subscription' || type === 'reversal') return 'WALLET_SPENT';
   if (status === 'rejected') return 'WALLET_TRANSACTION';
   return 'WALLET_TRANSACTION';
 }

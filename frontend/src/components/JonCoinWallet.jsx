@@ -17,9 +17,33 @@ function orderLinesText(o) {
   return lines.map((l) => `${l.name || 'Produkt'} × ${l.quantity}`).join(', ') || '—';
 }
 
+function matchesFilter(tx, filter) {
+  const type = String(tx?.type || '');
+  const ref = String(tx?.referenceType || tx?.relatedEntityType || '');
+  if (filter === 'all') return true;
+  if (filter === 'deposits') return type === 'purchase';
+  if (filter === 'purchases') return type === 'spend' && ref !== 'transfer';
+  if (filter === 'refunds') return type === 'refund';
+  if (filter === 'bonuses') return type === 'reward' && ref !== 'transfer';
+  if (filter === 'subscriptions') return type === 'subscription';
+  if (filter === 'transfers') return ref === 'transfer';
+  return true;
+}
+
+const FILTERS = [
+  ['all', 'Të gjitha'],
+  ['deposits', 'Depozita'],
+  ['purchases', 'Blerje'],
+  ['refunds', 'Rimbursime'],
+  ['bonuses', 'Bonuse'],
+  ['subscriptions', 'Abonime'],
+  ['transfers', 'Transfere'],
+];
+
 function transactionFlow(type) {
-  if (['purchase', 'reward'].includes(String(type || '').toLowerCase())) return 'incoming';
-  if (['spend', 'withdrawal'].includes(String(type || '').toLowerCase())) return 'outgoing';
+  const value = String(type || '').toLowerCase();
+  if (['purchase', 'reward', 'refund', 'sale'].includes(value)) return 'incoming';
+  if (['spend', 'withdrawal', 'commission', 'fee', 'subscription', 'reversal'].includes(value)) return 'outgoing';
   return 'activity';
 }
 
@@ -31,6 +55,8 @@ const JonCoinWallet = () => {
   const [buyAmount, setBuyAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
+  const [txFilter, setTxFilter] = useState('all');
+  const [rate, setRate] = useState(1);
   const [orders, setOrders] = useState([]);
   const [sellerOrders, setSellerOrders] = useState([]);
   const [orderBusyId, setOrderBusyId] = useState(null);
@@ -66,9 +92,10 @@ const JonCoinWallet = () => {
   }, []);
 
   const fetchBalance = useCallback(async () => {
-    const { balance: b, withdrawCommissionPercent } = await getJonCoinBalance();
+    const { balance: b, withdrawCommissionPercent, joncoinPerEur } = await getJonCoinBalance();
     setBalance(b);
     setWithdrawFeePct(withdrawCommissionPercent);
+    setRate(joncoinPerEur || 1);
   }, []);
 
   useEffect(() => {
@@ -197,11 +224,12 @@ const JonCoinWallet = () => {
             <span className="font-mono text-4xl font-black tabular-nums text-[var(--xt-color-gold-bright)]">{balance}</span>
             <span className="font-semibold text-[var(--xt-color-text-muted)]">XCoin</span>
           </div>
+          <p className="mb-4 text-xs text-[var(--xt-color-text-subtle)]">1 XCoin = {rate} EUR. Balanca vjen nga libri i transaksioneve.</p>
 
           <form onSubmit={handleBuy} className="space-y-3 mb-6">
             <div className="font-semibold text-[var(--xt-color-text)]">Bli XCoin</div>
             <p className="text-xs text-[var(--xt-color-text-subtle)]">
-              Në prodhim, blerjet mund të jenë në pritje derisa admin t’i konfirmojë, përveç nëse përdoret auto-approve në server.
+              Kërkesa nuk shton XCoin. Kreditohet vetëm pasi pagesa verifikohet ose admini e konfirmon.
             </p>
             <input
               type="number"
@@ -266,7 +294,7 @@ const JonCoinWallet = () => {
           <div>
             <div className="font-semibold text-[var(--xt-color-text)] mb-1">Shitjet e mia (prano / refuzo)</div>
             <p className="text-xs text-[var(--xt-color-text-subtle)] mb-3">
-              Kur pranon, XCoin transferohen. Deri atëherë porosia është pending.
+              Porositë e reja paguhen në checkout. Këtu pranon vetëm porosi të vjetra që kanë mbetur pending.
             </p>
             <div className="space-y-3 max-h-72 overflow-y-auto text-xs">
               {sellerOrders.length === 0 && (
@@ -368,6 +396,13 @@ const JonCoinWallet = () => {
 
       <div className="xt-card mt-5 p-4 sm:p-6">
         <div className="font-semibold text-[var(--xt-color-text)] mb-2">Historiku i transaksioneve</div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {FILTERS.map(([id, label]) => (
+            <button key={id} type="button" className={`xt-badge ${txFilter === id ? 'xt-badge-gold' : ''}`} onClick={() => setTxFilter(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="xt-table-wrap overflow-x-auto">
           <table className="xt-table min-w-[640px] text-xs">
             <thead>
@@ -377,17 +412,18 @@ const JonCoinWallet = () => {
                 <th className="px-2 py-1 text-left">Shuma</th>
                 <th className="px-2 py-1 text-left">Status</th>
                 <th className="px-2 py-1 text-left">Përshkrim</th>
+                <th className="px-2 py-1 text-left">Referenca</th>
               </tr>
             </thead>
             <tbody>
-              {transactions.length === 0 && (
+              {transactions.filter((tx) => matchesFilter(tx, txFilter)).length === 0 && (
                 <tr>
-                  <td colSpan="5" className="text-center py-2 text-gray-500">
+                  <td colSpan="6" className="text-center py-2 text-gray-500">
                     Nuk ka transaksione
                   </td>
                 </tr>
               )}
-              {transactions.map((tx) => (
+              {transactions.filter((tx) => matchesFilter(tx, txFilter)).map((tx) => (
                 <tr key={tx.id} className="border-b border-gray-100 dark:border-gray-700">
                   <td className="px-2 py-1">{new Date(tx.createdAt).toLocaleString()}</td>
                   <td className="px-2 py-1"><span className={`xt-badge ${transactionFlow(tx.type) === 'incoming' ? 'xt-badge-gold' : ''}`}>{transactionFlow(tx.type) === 'incoming' ? 'Hyrje' : transactionFlow(tx.type) === 'outgoing' ? 'Dalje' : 'Aktivitet'}</span><span className="ml-2 text-[var(--xt-color-text-subtle)]">{tx.type}</span></td>
@@ -396,6 +432,7 @@ const JonCoinWallet = () => {
                   <td className="px-2 py-1 max-w-[180px] truncate" title={tx.description}>
                     {tx.description || '—'}
                   </td>
+                  <td className="px-2 py-1">{tx.referenceType || tx.relatedEntityType || '—'} {tx.referenceId || tx.relatedEntityId || ''}</td>
                 </tr>
               ))}
             </tbody>

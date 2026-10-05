@@ -1,6 +1,23 @@
 const sequelize = require('../config/database');
-const { User, JonCoinTransaction, WithdrawalRequest } = require('../models');
-const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
+const { JonCoinTransaction, WithdrawalRequest } = require('../models');
+const { Op } = require('sequelize');
+const {
+  getCompletedLedgerBalance,
+  getSpendableCents,
+  postLedgerEntry,
+  finalizePendingEntry,
+  lockUsers,
+  publicTransaction,
+} = require('../services/economy/ledger');
+const { TX_FILTERS } = require('../services/economy/rules');
+const {
+  economyPublicConfig,
+  getWithdrawCommissionPercent,
+  fromCents,
+  toCents,
+  joncoinCentsToEurCents,
+} = require('../config/economy');
+const { stripeLiveReady } = require('../config/payments');
 
 async function safeWallet(tx) {
   if (!tx?.id) return;
@@ -12,294 +29,273 @@ async function safeWallet(tx) {
   }
 }
 
-const round2 = (n) => Math.round(parseFloat(n || 0) * 100) / 100;
-
-/** Komision në tërheqje (0–25%). Të gjithë përdoruesit që tërheqin paguajnë këtë përqindje nga shuma e kërkuar. */
-function getWithdrawCommissionPercent() {
-  const raw = parseFloat(process.env.JONCOIN_WITHDRAW_COMMISSION_PERCENT ?? '5');
-  if (!Number.isFinite(raw)) return 5;
-  return Math.min(25, Math.max(0, raw));
+function sendError(res, err) {
+  const status = err.status || 500;
+  if (status === 500) console.error('joncoin:', err);
+  return res.status(status).json({ error: err.message || 'Gabim në server' });
 }
 
-/** Shuma e tërheqjeve në pritje (rezervohet nga balanca e disponueshme për withdraw të ri). */
-async function getPendingWithdrawTotal(userId, { transaction } = {}) {
-  const sum = await JonCoinTransaction.sum('amount', {
-    where: { userId, type: 'withdrawal', status: 'pending' },
-    transaction,
-  });
-  return round2(sum || 0);
-}
-
-/** Sa XCoin mund të tërhiqesh / transferohet (ledger minus tërheqje pending). */
-async function getSpendableLedgerBalance(userId, opts) {
-  const ledger = await getCompletedLedgerBalance(userId, opts);
-  const pendingWd = await getPendingWithdrawTotal(userId, opts);
-  return round2(ledger - pendingWd);
-}
-
-// Transfer XCoin mes userave (atomic + row locks)
 exports.transfer = async (req, res) => {
   try {
     const toUserId = Number(req.body?.toUserId);
-    const amount = round2(Number(req.body?.amount));
+    const amountCents = toCents(req.body?.amount);
     const description = req.body?.description;
-
-    if (!Number.isFinite(toUserId) || toUserId <= 0 || !Number.isFinite(amount) || amount <= 0) {
+    const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
+    if (!Number.isInteger(toUserId) || toUserId <= 0 || amountCents == null || amountCents <= 0) {
       return res.status(400).json({ error: 'Të dhëna të pavlefshme' });
     }
-    if (toUserId === req.user.id) {
-      return res.status(400).json({ error: 'Nuk mund t’i dërgosh vetes' });
-    }
+    if (toUserId === req.user.id) return res.status(400).json({ error: 'Nuk mund t’i dërgosh vetes' });
+    const key = idempotencyKey;
+    if (!key) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
 
     const result = await sequelize.transaction(async (transaction) => {
-      const fromUser = await User.findByPk(req.user.id, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      const toUser = await User.findByPk(toUserId, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      if (!toUser) {
-        return { code: 404, error: 'Marrësi nuk ekziston' };
-      }
-
-      const spendable = await getSpendableLedgerBalance(req.user.id, { transaction });
-      if (spendable < amount) {
-        return {
-          code: 400,
-          error: 'Nuk ke mjaftueshëm XCoin të disponueshëm (përfshi tërheqjet në pritje)',
-        };
-      }
-
-      fromUser.joncoinBalance = round2(parseFloat(fromUser.joncoinBalance || 0) - amount);
-      toUser.joncoinBalance = round2(parseFloat(toUser.joncoinBalance || 0) + amount);
-      await fromUser.save({ transaction });
-      await toUser.save({ transaction });
-
-      const spent = await JonCoinTransaction.create(
+      await lockUsers([req.user.id, toUserId], transaction);
+      const spent = await postLedgerEntry(
         {
           userId: req.user.id,
           type: 'spend',
-          amount,
+          amountCents,
           status: 'completed',
+          idempotencyKey: key ? `transfer:${key}:from` : null,
           relatedEntityType: 'transfer',
           relatedEntityId: toUserId,
           description: description || `Transfer te userId ${toUserId}`,
         },
-        { transaction }
+        transaction
       );
-      const received = await JonCoinTransaction.create(
+      const received = await postLedgerEntry(
         {
           userId: toUserId,
           type: 'reward',
-          amount,
+          amountCents,
           status: 'completed',
+          idempotencyKey: key ? `transfer:${key}:to` : null,
           relatedEntityType: 'transfer',
           relatedEntityId: req.user.id,
           description: description || `Marrë nga userId ${req.user.id}`,
         },
-        { transaction }
+        transaction
       );
-
-      return { success: true, spent, received };
+      return { spent: spent.entry, received: received.entry, duplicate: spent.duplicate };
     });
 
-    if (result.code) return res.status(result.code).json({ error: result.error });
     await safeWallet(result.spent);
     await safeWallet(result.received);
-    return res.json({ success: true });
+    return res.json({ success: true, duplicate: result.duplicate });
   } catch (err) {
-    console.error('XCoin transfer error:', err);
-    res.status(500).json({ error: 'Gabim në server' });
+    return sendError(res, err);
   }
 };
 
 exports.getBalance = async (req, res) => {
   try {
     const balance = await getCompletedLedgerBalance(req.user.id);
+    const spendableCents = await sequelize.transaction((t) => getSpendableCents(req.user.id, t));
     return res.json({
       balance,
+      spendable: Number(fromCents(spendableCents)),
+      ...economyPublicConfig(),
       withdrawCommissionPercent: getWithdrawCommissionPercent(),
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 };
 
 exports.getTransactions = async (req, res) => {
   try {
-    const transactions = await JonCoinTransaction.findAll({
-      where: { userId: req.user.id },
+    const filter = String(req.query.filter || 'all');
+    const where = { userId: req.user.id };
+    if (filter === 'transfers') where.relatedEntityType = 'transfer';
+    else if (TX_FILTERS[filter]) where.type = { [Op.in]: TX_FILTERS[filter] };
+    else if (filter !== 'all') return res.status(400).json({ error: 'Filtri është i pavlefshëm' });
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || (req.query.page ? 50 : 200)));
+    const result = await JonCoinTransaction.findAndCountAll({
+      where,
       order: [['createdAt', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
     });
+    const transactions = result.rows.map(publicTransaction);
+    if (req.query.page) {
+      return res.json({ transactions, page, limit, total: result.count, filter });
+    }
     return res.json(transactions);
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 };
 
 /**
- * Kërkesë për “blerje” XCoin (mbushje wallet).
- * Nëse `JONCOIN_AUTO_COMPLETE_PURCHASE=true`, kredito menjëherë (dev / test pa admin).
+ * Deposit request. Coins are credited only by an admin finalizing the hold,
+ * or by a verified Stripe webhook. The request body never credits a balance.
  */
 exports.purchase = async (req, res) => {
   try {
-    const { amount } = req.body;
-    if (!amount || amount <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
-
-    const auto =
-      String(process.env.JONCOIN_AUTO_COMPLETE_PURCHASE || '').toLowerCase() === 'true' ||
-      String(process.env.JONCOIN_AUTO_COMPLETE_PURCHASE || '') === '1';
-
-    if (auto) {
-      const tx = await JonCoinTransaction.create({
+    const amountCents = toCents(req.body?.amount);
+    if (amountCents == null || amountCents <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
+    const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
+    if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
+    const result = await sequelize.transaction(async (transaction) => postLedgerEntry(
+      {
         userId: req.user.id,
         type: 'purchase',
-        amount,
-        status: 'completed',
-        description: 'Blerje XCoin (auto-approved)',
-      });
-      const user = await User.findByPk(req.user.id);
-      if (user) {
-        user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + parseFloat(amount));
-        await user.save();
-      }
-      try {
-        const { createInvoiceIfNeeded } = require('../utils/invoices');
-        await createInvoiceIfNeeded({
-          userId: req.user.id,
-          kind: 'joncoin',
-          source: 'auto',
-          amount: parseFloat(amount),
-          currency: 'JC',
-          description: 'Blerje XCoin (auto-approved)',
-          joncoinAmount: parseFloat(amount),
-          externalId: `joncoin-tx:${tx.id}`,
-          joncoinTransactionId: tx.id,
-        });
-      } catch (invErr) {
-        console.warn('XCoin auto invoice skipped:', invErr?.message || invErr);
-      }
-      await safeWallet(tx);
-      return res.json({ success: true, transaction: tx, autoCompleted: true });
-    }
-
-    const tx = await JonCoinTransaction.create({
-      userId: req.user.id,
-      type: 'purchase',
-      amount,
-      status: 'pending',
-      description: 'Blerje XCoin (në pritje të konfirmimit nga admin)',
-    });
-    await safeWallet(tx);
-    return res.json({ success: true, transaction: tx, autoCompleted: false });
+        amountCents,
+        status: 'pending',
+        idempotencyKey: idempotencyKey ? `deposit:${req.user.id}:${idempotencyKey}` : null,
+        description: 'Blerje XCoin (në pritje të pagesës së verifikuar)',
+        relatedEntityType: 'deposit',
+      },
+      transaction
+    ));
+    await safeWallet(result.entry);
+    return res.json({ success: true, transaction: publicTransaction(result.entry), autoCompleted: false, duplicate: result.duplicate });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
+  }
+};
+
+exports.createDepositCheckout = async (req, res) => {
+  try {
+    if (!stripeLiveReady()) {
+      return res.status(503).json({ error: 'Pagesa me kartë nuk është aktive. Kërkesa mbetet për konfirmim.' });
+    }
+    const amountCents = toCents(req.body?.amount);
+    if (amountCents == null || amountCents < 100 || amountCents > 100_000_00) {
+      return res.status(400).json({ error: 'Shuma duhet të jetë nga 1.00 deri në 1000.00' });
+    }
+    const eurCents = joncoinCentsToEurCents(amountCents);
+    if (eurCents == null || eurCents < 50) return res.status(400).json({ error: 'Shuma e pavlefshme' });
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const base = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `${fromCents(amountCents)} XCoin` },
+          unit_amount: eurCents,
+        },
+        quantity: 1,
+      }],
+      metadata: {
+        type: 'joncoin_deposit',
+        userId: String(req.user.id),
+        joncoinCents: String(amountCents),
+      },
+      success_url: `${base}/wallet?deposit=1&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/wallet?deposit=0`,
+    });
+    return res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    return sendError(res, err);
   }
 };
 
 exports.spend = async (req, res) => {
   try {
-    const { amount, relatedEntityType, relatedEntityId, description } = req.body;
-    if (!amount || amount <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
-
-    const spendable = await getSpendableLedgerBalance(req.user.id);
-    if (spendable < amount) {
-      return res.status(400).json({ error: 'Nuk ke mjaftueshëm XCoin të disponueshëm' });
-    }
-
-    const tx = await JonCoinTransaction.create({
-      userId: req.user.id,
-      type: 'spend',
-      amount,
-      status: 'pending',
-      relatedEntityType,
-      relatedEntityId,
-      description,
-    });
-    await safeWallet(tx);
-    return res.json({ success: true, transaction: tx });
+    const amountCents = toCents(req.body?.amount);
+    if (amountCents == null || amountCents <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
+    const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
+    if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
+    const result = await sequelize.transaction(async (transaction) => postLedgerEntry(
+      {
+        userId: req.user.id,
+        type: 'spend',
+        amountCents,
+        status: 'completed',
+        idempotencyKey: `spend:${req.user.id}:${idempotencyKey}`,
+        relatedEntityType: req.body?.relatedEntityType ? String(req.body.relatedEntityType).slice(0, 64) : null,
+        relatedEntityId: Number(req.body?.relatedEntityId) || null,
+        description: req.body?.description ? String(req.body.description).slice(0, 255) : 'XCoin spend',
+      },
+      transaction
+    ));
+    await safeWallet(result.entry);
+    return res.json({ success: true, duplicate: result.duplicate, transaction: publicTransaction(result.entry) });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 };
 
 exports.reward = async (req, res) => {
   try {
-    const { userId, amount, description, relatedEntityType, relatedEntityId } = req.body;
-    if (!userId || !amount || amount <= 0) return res.status(400).json({ error: 'Të dhëna të pavlefshme' });
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: 'User nuk u gjet' });
-    user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + parseFloat(amount));
-    await user.save();
-    const tx = await JonCoinTransaction.create({
-      userId,
-      type: 'reward',
-      amount,
-      status: 'completed',
-      relatedEntityType,
-      relatedEntityId,
-      description,
-    });
-    await safeWallet(tx);
-    return res.json({ success: true, transaction: tx });
+    const userId = Number(req.body?.userId);
+    const amountCents = toCents(req.body?.amount);
+    if (!Number.isInteger(userId) || userId <= 0 || amountCents == null || amountCents <= 0) {
+      return res.status(400).json({ error: 'Të dhëna të pavlefshme' });
+    }
+    const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
+    const result = await sequelize.transaction(async (transaction) => postLedgerEntry(
+      {
+        userId,
+        type: 'reward',
+        amountCents,
+        status: 'completed',
+        idempotencyKey: idempotencyKey ? `reward:${idempotencyKey}` : null,
+        relatedEntityType: req.body?.relatedEntityType || null,
+        relatedEntityId: Number(req.body?.relatedEntityId) || null,
+        description: req.body?.description || 'XCoin reward',
+      },
+      transaction
+    ));
+    await safeWallet(result.entry);
+    return res.json({ success: true, duplicate: result.duplicate, transaction: publicTransaction(result.entry) });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 };
 
 exports.withdraw = async (req, res) => {
   try {
-    const { amount } = req.body;
-    const gross = round2(Number(amount));
-    if (!Number.isFinite(gross) || gross <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
-
-    const spendable = await getSpendableLedgerBalance(req.user.id);
-    if (spendable < gross) {
-      return res.status(400).json({
-        error: 'Nuk ke mjaftueshëm XCoin të disponueshëm (përfshi tërheqjet në pritje)',
-      });
-    }
-
+    const gross = toCents(req.body?.amount);
+    if (gross == null || gross <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
     const feePct = getWithdrawCommissionPercent();
-    const feeRate = feePct / 100;
-    const feeAmount = round2(gross * feeRate);
-    const netPayout = round2(gross - feeAmount);
-    if (netPayout <= 0) {
-      return res.status(400).json({
-        error: 'Shuma është shumë e vogël pas komisionit të tërheqjes; rrit shumën ose ul komisionin në server.',
-      });
-    }
+    const { percentOfCents } = require('../utils/money');
+    const feeAmount = percentOfCents(gross, feePct) || 0;
+    const net = gross - feeAmount;
+    if (net <= 0) return res.status(400).json({ error: 'Shuma është shumë e vogël pas komisionit të tërheqjes' });
+    const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
+    if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
 
-    const withdrawal = await WithdrawalRequest.create({
-      userId: req.user.id,
-      amount: netPayout.toFixed(2),
-      status: 'pending',
+    const result = await sequelize.transaction(async (transaction) => {
+      const withdrawal = await WithdrawalRequest.create({
+        userId: req.user.id,
+        amount: fromCents(net),
+        status: 'pending',
+      }, { transaction });
+      const posted = await postLedgerEntry(
+        {
+          userId: req.user.id,
+          type: 'withdrawal',
+          amountCents: gross,
+          status: 'pending',
+          idempotencyKey: idempotencyKey ? `withdraw:${req.user.id}:${idempotencyKey}` : null,
+          relatedEntityType: 'withdrawal',
+          relatedEntityId: withdrawal.id,
+          description: feeAmount > 0
+            ? `Tërheqje XCoin (bruto ${fromCents(gross)}, komision ${feePct}%: ${fromCents(feeAmount)}, net ${fromCents(net)})`
+            : 'Kërkesë për tërheqje XCoin',
+        },
+        transaction
+      );
+      return { withdrawal, tx: posted.entry, duplicate: posted.duplicate };
     });
-    const withdrawalTx = await JonCoinTransaction.create({
-      userId: req.user.id,
-      type: 'withdrawal',
-      amount: gross,
-      status: 'pending',
-      relatedEntityType: 'withdrawal',
-      relatedEntityId: withdrawal.id,
-      description:
-        feeAmount > 0
-          ? `Tërheqje XCoin (bruto ${gross}, komision ${feePct}%: ${feeAmount}, net ${netPayout})`
-          : 'Kërkesë për tërheqje XCoin',
-    });
-    await safeWallet(withdrawalTx);
+
+    await safeWallet(result.tx);
     return res.json({
       success: true,
-      withdrawal,
+      duplicate: result.duplicate,
+      withdrawal: result.withdrawal,
       commissionPercent: feePct,
-      grossAmount: gross,
-      feeAmount,
-      netPayout,
+      grossAmount: fromCents(gross),
+      feeAmount: fromCents(feeAmount),
+      netPayout: fromCents(net),
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 };
 
@@ -309,71 +305,53 @@ exports.updateTransactionStatus = async (req, res) => {
     const { status } = req.body;
     if (!['completed', 'rejected'].includes(status)) return res.status(400).json({ error: 'Status i pavlefshëm' });
 
-    const out = await sequelize.transaction(async (transaction) => {
-      const tx = await JonCoinTransaction.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
-      if (!tx) return { code: 404, error: 'Transaksioni nuk u gjet' };
-      if (tx.status !== 'pending') {
-        return { code: 400, error: 'Transaksioni është procesuar tashmë' };
-      }
-
-      tx.status = status;
-      await tx.save({ transaction });
-
-      if (status === 'rejected') {
-        if (tx.type === 'withdrawal' && tx.relatedEntityType === 'withdrawal' && tx.relatedEntityId) {
-          await WithdrawalRequest.update(
-            { status: 'rejected' },
-            { where: { id: tx.relatedEntityId }, transaction }
-          );
-        }
-        return { tx };
-      }
-
-      const user = await User.findByPk(tx.userId, { transaction, lock: transaction.LOCK.UPDATE });
-      if (user) {
-        if (tx.type === 'purchase') {
-          user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + parseFloat(tx.amount));
-        } else if (tx.type === 'spend' || tx.type === 'withdrawal') {
-          user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) - parseFloat(tx.amount));
-        }
-        await user.save({ transaction });
-      }
-
-      if (tx.type === 'withdrawal' && tx.relatedEntityType === 'withdrawal' && tx.relatedEntityId) {
+    const tx = await sequelize.transaction(async (transaction) => {
+      const finalized = await finalizePendingEntry(id, status, transaction);
+      if (finalized.type === 'withdrawal' && finalized.relatedEntityType === 'withdrawal' && finalized.relatedEntityId) {
         await WithdrawalRequest.update(
-          { status: 'completed' },
-          { where: { id: tx.relatedEntityId }, transaction }
+          { status: status === 'completed' ? 'completed' : 'rejected' },
+          { where: { id: finalized.relatedEntityId }, transaction }
         );
       }
-
-      return { tx };
+      return finalized;
     });
 
-    if (out.code) return res.status(out.code).json({ error: out.error });
-    await safeWallet(out.tx);
-
-    if (status === 'completed' && out.tx?.type === 'purchase') {
+    await safeWallet(tx);
+    if (status === 'completed' && tx.type === 'purchase') {
       try {
         const { createInvoiceIfNeeded } = require('../utils/invoices');
         await createInvoiceIfNeeded({
-          userId: out.tx.userId,
+          userId: tx.userId,
           kind: 'joncoin',
           source: 'admin',
-          amount: parseFloat(out.tx.amount),
-          currency: 'JC',
-          description: out.tx.description || 'Blerje XCoin (admin approved)',
-          joncoinAmount: parseFloat(out.tx.amount),
-          externalId: `joncoin-tx:${out.tx.id}`,
-          joncoinTransactionId: out.tx.id,
+          amount: tx.amount,
+          currency: 'EUR',
+          description: tx.description || 'Blerje XCoin (admin approved)',
+          joncoinAmount: tx.amount,
+          externalId: `joncoin-tx:${tx.id}`,
+          joncoinTransactionId: tx.id,
         });
       } catch (invErr) {
         console.warn('XCoin admin invoice skipped:', invErr?.message || invErr);
       }
     }
-
-    return res.json({ success: true, transaction: out.tx });
+    return res.json({ success: true, transaction: publicTransaction(tx) });
   } catch (err) {
-    console.error('updateTransactionStatus:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
+};
+
+exports.creditVerifiedDeposit = async function creditVerifiedDeposit({ userId, amountCents, idempotencyKey, description }) {
+  return sequelize.transaction(async (transaction) => postLedgerEntry(
+    {
+      userId,
+      type: 'purchase',
+      amountCents,
+      status: 'completed',
+      idempotencyKey,
+      description: description || 'XCoin deposit',
+      relatedEntityType: 'stripe_checkout',
+    },
+    transaction
+  ));
 };

@@ -37,8 +37,33 @@ function frontendBase() {
  */
 async function activatePremiumForUser(userId, plan, sessionId = null, opts = {}) {
   const config = PLANS[plan] || PLANS.monthly;
-  const user = await User.findByPk(userId);
+  const transaction = opts.transaction;
+  const user = await User.findByPk(userId, { transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
   if (!user) return null;
+
+  const marker = sessionId ? String(sessionId).slice(0, 255) : null;
+  if (marker) {
+    const existing = await Payment.findOne({
+      where: { stripePaymentIntentId: marker, status: 'completed' },
+      transaction,
+    });
+    if (existing) {
+      return {
+        premium: Boolean(user.premium),
+        plan,
+        alreadyProcessed: true,
+        expiresAt: user.premiumExpiresAt ? new Date(user.premiumExpiresAt).toISOString() : null,
+        user: {
+          id: user.id,
+          premium: user.premium,
+          premiumExpiresAt: user.premiumExpiresAt,
+          subscriptionPlan: user.subscriptionPlan,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+      };
+    }
+  }
 
   user.premium = true;
   user.subscriptionPlan = 'premium';
@@ -55,7 +80,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   const { syncOverallVerified } = require('../utils/userVerification');
   syncOverallVerified(user);
   try {
-    await user.save();
+    await user.save({ transaction });
   } catch (saveErr) {
     console.warn('Premium save with expiry failed, retrying flag only:', saveErr?.message || saveErr);
     await User.update({ premium: true }, { where: { id: userId } });
@@ -78,7 +103,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
     try {
       const payment = await Payment.create({
         userId,
-        amount: source === 'sponsor' ? 0 : config.amountCents / 100,
+        amount: source === 'sponsor' ? '0.00' : require('../utils/money').fromCents(config.amountCents),
         currency: 'eur',
         status: 'completed',
         stripePaymentIntentId: String(externalId).slice(0, 255),
@@ -86,7 +111,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
           source === 'sponsor'
             ? `Premium ${config.label} (sponsor)`
             : `Premium ${config.label}${source === 'demo' ? ' (demo)' : ''}`,
-      });
+      }, { transaction });
       paymentId = payment.id;
     } catch (payErr) {
       console.warn('Premium payment record skipped:', payErr?.message);
@@ -100,7 +125,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
         userId,
         kind: 'premium',
         source,
-        amount: config.amountCents / 100,
+        amount: require('../utils/money').fromCents(config.amountCents),
         currency: 'EUR',
         description: config.name,
         plan,
@@ -148,20 +173,59 @@ async function activatePremiumFromStripeSession(session) {
 exports.PLANS = PLANS;
 exports.activatePremiumForUser = activatePremiumForUser;
 
+function demoPremiumAllowed() {
+  const flag = String(process.env.PREMIUM_DEMO_MODE || '').trim().toLowerCase();
+  if (flag === 'true' || flag === '1') return true;
+  if (process.env.NODE_ENV === 'production') return false;
+  return !stripeConfigured();
+}
+
 exports.createPremiumCheckout = async (req, res) => {
   try {
     const plan = req.body?.plan === 'yearly' ? 'yearly' : 'monthly';
     const config = PLANS[plan];
     const userId = req.user.id;
+    const method = String(req.body?.paymentMethod || '').toLowerCase();
+
+    if (method === 'joncoin' || method === 'xcoin') {
+      const { eurCentsToJoncoinCents, fromCents } = require('../config/economy');
+      const { postLedgerEntry } = require('../services/economy/ledger');
+      const sequelize = require('../config/database');
+      const coinCents = eurCentsToJoncoinCents(config.amountCents);
+      const idem = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || `${userId}:${plan}:${Math.floor(Date.now() / 60000)}`).slice(0, 80);
+      const marker = `joncoin:premium:${idem}`.slice(0, 255);
+      const result = await sequelize.transaction(async (transaction) => {
+        const posted = await postLedgerEntry({
+          userId,
+          type: 'subscription',
+          amountCents: coinCents,
+          status: 'completed',
+          idempotencyKey: marker,
+          description: `Premium ${config.label}`,
+          relatedEntityType: 'premium',
+        }, transaction);
+        if (posted.duplicate) {
+          const current = await User.findByPk(userId, { transaction });
+          return { duplicate: true, user: current };
+        }
+        return activatePremiumForUser(userId, plan, marker, { source: 'joncoin', transaction });
+      });
+      if (result?.duplicate) {
+        return res.json({ success: true, duplicate: true, mode: 'joncoin', amount: fromCents(coinCents), ...result });
+      }
+      return res.json({ mode: 'joncoin', success: true, amount: fromCents(coinCents), currency: 'JON', ...result });
+    }
 
     if (!stripeConfigured()) {
+      if (!demoPremiumAllowed()) {
+        return res.status(503).json({ msg: 'Pagesat premium me kartë nuk janë aktive. Përdor XCoin ose aktivizo Stripe.' });
+      }
       const result = await activatePremiumForUser(userId, plan, null, { source: 'demo' });
       if (!result) return res.status(404).json({ msg: 'User not found' });
       return res.json({
         mode: 'demo',
         success: true,
-        message:
-          'Premium aktiv (demo). Pagesat me kartë nuk janë aktive — vendos PAYMENTS_ENABLED=true vetëm kur të jesh gati për Stripe.',
+        message: 'Premium aktiv (demo). Pagesat me kartë nuk janë aktive.',
         ...result,
       });
     }

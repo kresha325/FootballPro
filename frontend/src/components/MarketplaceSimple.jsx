@@ -194,7 +194,7 @@ export default function MarketplaceSimple() {
     }
   };
 
-  const addToCart = (product, e) => {
+  const addToCart = async (product, e) => {
     if (e?.stopPropagation) e.stopPropagation();
     if (!product?.id) return;
     if (user?.id != null && Number(product.sellerId) === Number(user.id)) {
@@ -207,7 +207,10 @@ export default function MarketplaceSimple() {
     }
     const raw = orderQty[product.id];
     const q = Math.max(1, Math.min(stock, parseInt(String(raw != null && raw !== '' ? raw : 1), 10) || 1));
-    addItem(product, q);
+    const added = await addItem(product, q);
+    if (added === false) {
+      alert('Nuk u shtua në shportë. Kontrollo stokun ose provo përsëri.');
+    }
   };
 
   const checkoutCart = async () => {
@@ -230,7 +233,7 @@ export default function MarketplaceSimple() {
     }
     if (
       !window.confirm(
-        `Dërgo porosinë (${total} XCoin)? Coinat transferohen vetëm kur shitësi e pranon.`
+        `Paguaj ${total} XCoin tani? Stoku rezervohet dhe shitësi kreditohet menjëherë.`
       )
     ) {
       return;
@@ -244,8 +247,10 @@ export default function MarketplaceSimple() {
         deliveryAddress: checkoutForm.deliveryAddress,
         buyerContact: checkoutForm.buyerContact,
         deliveryNotes: checkoutForm.deliveryNotes,
+      }, {
+        headers: { 'Idempotency-Key': `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` },
       });
-      alert('✅ Porosia u dërgua (pending). Shitësi e sheh te Wallet → Shitjet e mia. XCoin transferohen kur e pranon.');
+      alert('Porosia u pagua me XCoin.');
       clearCart();
       setShowCartDrawer(false);
       setCheckoutForm({
@@ -367,7 +372,7 @@ export default function MarketplaceSimple() {
           return (
             <div
               key={product.id}
-              onClick={() => setSelectedProduct(product)}
+              onClick={() => navigate(`/marketplace/${product.id}`)}
               className="xt-card cursor-pointer overflow-hidden transition hover:border-[var(--xt-color-gold)]/50"
             >
               {/* Image */}
@@ -887,7 +892,7 @@ export default function MarketplaceSimple() {
                 <span>{subtotalJonCoin} XCoin</span>
               </div>
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                Porosia mbetet pending. XCoin transferohen vetëm kur shitësi e pranon.
+                Çmimi dhe stoku kontrollohen në server. XCoin transferohen menjëherë.
               </p>
               <button
                 type="button"
@@ -895,7 +900,7 @@ export default function MarketplaceSimple() {
                 disabled={cartChecking || items.length === 0}
                 className="w-full py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
               >
-                {cartChecking ? '…' : 'Dërgo porosinë'}
+                {cartChecking ? '…' : 'Paguaj me XCoin'}
               </button>
             </div>
           </div>

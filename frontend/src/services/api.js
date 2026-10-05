@@ -293,19 +293,33 @@ export const livekitAPI = {
    MARKETPLACE
 ========================= */
 export const marketplaceAPI = {
-  getProducts: () => API.get('/products'),
+  getProducts: (params) => API.get('/products', { params }),
   getProduct: (id) => API.get(`/products/${id}`),
+  getMine: () => API.get('/products/mine'),
+};
+
+export const cartAPI = {
+  get: () => API.get('/cart'),
+  add: (productId, quantity) => API.post('/cart/items', { productId, quantity }),
+  update: (productId, quantity) => API.patch(`/cart/items/${productId}`, { quantity }),
+  remove: (productId) => API.delete(`/cart/items/${productId}`),
+  clear: () => API.delete('/cart'),
+  quote: (products) => API.post('/cart/quote', { products }),
 };
 
 /* =========================
    ORDERS
 ========================= */
 export const ordersAPI = {
-  createOrder: (data) => API.post('/orders', data),
+  createOrder: (data, idempotencyKey) => API.post('/orders', data, idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined),
   getMyOrders: () => API.get('/orders'),
   getSellerOrders: () => API.get('/orders/selling'),
+  getSellerSummary: () => API.get('/orders/selling/summary'),
+  getOrder: (id) => API.get(`/orders/${id}`),
   acceptOrder: (id) => API.post(`/orders/${id}/accept`),
   rejectOrder: (id) => API.post(`/orders/${id}/reject`),
+  refundOrder: (id) => API.post(`/orders/${id}/refund`),
+  updateStatus: (id, status) => API.put(`/orders/${id}/status`, { status }),
   cancelOrder: (id) => API.put(`/orders/${id}/status`, { status: 'cancelled' }),
 };
 

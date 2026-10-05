@@ -330,6 +330,7 @@ app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/matches', require('./routes/matchScorers'));
 app.use('/api/user-matches', require('./routes/matchesUser'));
 app.use('/api/products', require('./routes/products'));
+app.use('/api/cart', require('./routes/cart'));
 app.use('/api/orders', require('./routes/orders'));
 
 app.use('/api/football', require('./routes/football'));

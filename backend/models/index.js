@@ -6,6 +6,12 @@ const WithdrawalRequest = require('./WithdrawalRequest')(sequelize, DataTypes);
 const Product = require('./Product');
 const Payment = require('./Payment');
 const Order = require('./Order');
+const CartItem = require('./CartItem');
+const PaymentEvent = require('./PaymentEvent');
+CartItem.belongsTo(User, { foreignKey: 'userId' });
+CartItem.belongsTo(Product, { foreignKey: 'productId' });
+User.hasMany(CartItem, { foreignKey: 'userId' });
+Product.hasMany(CartItem, { foreignKey: 'productId' });
 // Product/Seller association
 Product.belongsTo(User, { as: 'Seller', foreignKey: 'sellerId' });
 User.hasMany(Product, { as: 'Products', foreignKey: 'sellerId' });
@@ -158,6 +164,8 @@ module.exports = {
   Product,
   Payment,
   Order,
+  CartItem,
+  PaymentEvent,
   Match,
   Sponsor,
   Ad,

@@ -1,8 +1,13 @@
 const Payment = require('../models/Payment');
+const { toCents } = require('../utils/money');
 
 exports.getPayments = async (req, res) => {
   try {
-    const payments = await Payment.findAll({ where: { userId: req.user.id } });
+    const payments = await Payment.findAll({
+      where: { userId: req.user.id },
+      attributes: { exclude: ['stripeClientSecret'] },
+      order: [['createdAt', 'DESC']],
+    });
     res.json(payments);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
@@ -10,28 +15,19 @@ exports.getPayments = async (req, res) => {
 };
 
 exports.createPayment = async (req, res) => {
-  const { amount, currency, description } = req.body;
+  const amountCents = toCents(req.body?.amount);
+  if (amountCents == null || amountCents <= 0) {
+    return res.status(400).json({ msg: 'Shuma e pavlefshme' });
+  }
   try {
     const payment = await Payment.create({
       userId: req.user.id,
-      amount,
-      currency,
-      description,
-      status: 'pending', // In real app, integrate with payment gateway
+      amount: require('../utils/money').fromCents(amountCents),
+      currency: String(req.body?.currency || 'eur').toLowerCase().slice(0, 8),
+      description: req.body?.description ? String(req.body.description).slice(0, 255) : null,
+      status: 'pending',
     });
-    res.json(payment);
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
-
-exports.updatePaymentStatus = async (req, res) => {
-  const { status } = req.body;
-  try {
-    const payment = await Payment.findOne({ where: { id: req.params.id, userId: req.user.id } });
-    if (!payment) return res.status(404).json({ msg: 'Payment not found' });
-    await payment.update({ status });
-    res.json(payment);
+    res.status(201).json(payment);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }

@@ -8,7 +8,7 @@ const JonCoinWallet = sequelize.define('JonCoinWallet', {
     unique: true,
   },
   balance: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
     defaultValue: 0,
   },

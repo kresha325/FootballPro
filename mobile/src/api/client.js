@@ -305,20 +305,34 @@ export const updateProductRequest = (productId, payload = {}) => {
 
 export const deleteProductRequest = (productId) => api.delete(`/api/products/${productId}`);
 
-export const createOrderRequest = (payload) =>
-  api.post('/api/orders', Array.isArray(payload) ? { products: payload } : payload);
+export const createOrderRequest = (payload, idempotencyKey) =>
+  api.post('/api/orders', Array.isArray(payload) ? { products: payload } : payload, idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined);
 export const myOrdersRequest = () => api.get('/api/orders');
+export const orderByIdRequest = (id) => api.get(`/api/orders/${id}`);
 export const sellerOrdersRequest = () => api.get('/api/orders/selling');
+export const sellerSummaryRequest = () => api.get('/api/orders/selling/summary');
 export const acceptOrderRequest = (id) => api.post(`/api/orders/${id}/accept`);
 export const rejectOrderRequest = (id) => api.post(`/api/orders/${id}/reject`);
+export const refundOrderRequest = (id) => api.post(`/api/orders/${id}/refund`);
+export const updateOrderStatusRequest = (id, status) => api.put(`/api/orders/${id}/status`, { status });
 export const cancelOrderRequest = (id) => api.put(`/api/orders/${id}/status`, { status: 'cancelled' });
 
+export const cartRequest = () => api.get('/api/cart');
+export const addCartItemRequest = (productId, quantity) => api.post('/api/cart/items', { productId, quantity });
+export const updateCartItemRequest = (productId, quantity) => api.patch(`/api/cart/items/${productId}`, { quantity });
+export const removeCartItemRequest = (productId) => api.delete(`/api/cart/items/${productId}`);
+export const clearCartRequest = () => api.delete('/api/cart');
+
+function idempotencyKey(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export const joncoinBalanceRequest = () => api.get('/api/joncoin/balance');
-export const joncoinTransactionsRequest = () => api.get('/api/joncoin/transactions');
-export const joncoinPurchaseRequest = (amount) => api.post('/api/joncoin/purchase', { amount });
-export const joncoinWithdrawRequest = (amount) => api.post('/api/joncoin/withdraw', { amount });
+export const joncoinTransactionsRequest = (params) => api.get('/api/joncoin/transactions', { params });
+export const joncoinPurchaseRequest = (amount) => api.post('/api/joncoin/purchase', { amount }, { headers: { 'Idempotency-Key': idempotencyKey('deposit') } });
+export const joncoinWithdrawRequest = (amount) => api.post('/api/joncoin/withdraw', { amount }, { headers: { 'Idempotency-Key': idempotencyKey('withdraw') } });
 export const joncoinTransferRequest = (toUserId, amount, description = '') =>
-  api.post('/api/joncoin/transfer', { toUserId, amount, description });
+  api.post('/api/joncoin/transfer', { toUserId, amount, description }, { headers: { 'Idempotency-Key': idempotencyKey('transfer') } });
 
 export const videosRequest = (params = {}) => api.get('/api/videos', { params });
 export const userVideosRequest = (userId) => api.get(`/api/videos/user/${userId}`);

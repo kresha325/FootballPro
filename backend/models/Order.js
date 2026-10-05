@@ -35,9 +35,54 @@ const Order = sequelize.define('Order', {
     allowNull: false,
   },
   status: {
-    type: DataTypes.ENUM('pending', 'paid', 'shipped', 'delivered', 'cancelled'),
+    type: DataTypes.ENUM(
+      'pending',
+      'payment_pending',
+      'paid',
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'refunded',
+      'failed'
+    ),
     defaultValue: 'pending',
   },
+  currency: {
+    type: DataTypes.STRING(8),
+    allowNull: false,
+    defaultValue: 'JON',
+  },
+  grossAmount: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+  },
+  platformFeeAmount: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+  },
+  sellerNetAmount: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+  },
+  paymentMethod: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+  },
+  idempotencyKey: {
+    type: DataTypes.STRING(120),
+    allowNull: true,
+  },
+  stockRestored: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  paidAt: { type: DataTypes.DATE, allowNull: true },
+  shippedAt: { type: DataTypes.DATE, allowNull: true },
+  deliveredAt: { type: DataTypes.DATE, allowNull: true },
+  refundedAt: { type: DataTypes.DATE, allowNull: true },
+  cancelledAt: { type: DataTypes.DATE, allowNull: true },
   paymentId: {
     type: DataTypes.INTEGER,
     references: {

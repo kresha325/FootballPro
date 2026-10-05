@@ -29,6 +29,7 @@ function WalletSkeleton() {
 export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
+  const [txFilter, setTxFilter] = useState('all');
   const [orders, setOrders] = useState([]);
   const [sellerOrders, setSellerOrders] = useState([]);
   const [orderBusyId, setOrderBusyId] = useState(null);
@@ -199,7 +200,16 @@ export default function WalletScreen() {
 
   return (
     <FlatList
-      data={transactions}
+      data={transactions.filter((tx) => {
+        if (txFilter === 'all') return true;
+        if (txFilter === 'deposits') return tx.type === 'purchase';
+        if (txFilter === 'purchases') return tx.type === 'spend';
+        if (txFilter === 'refunds') return tx.type === 'refund';
+        if (txFilter === 'bonuses') return tx.type === 'reward';
+        if (txFilter === 'subscriptions') return tx.type === 'subscription';
+        if (txFilter === 'transfers') return tx.referenceType === 'transfer' || tx.relatedEntityType === 'transfer';
+        return true;
+      })}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.listContent}
       refreshControl={
@@ -332,13 +342,29 @@ export default function WalletScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Transactions</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {[
+              ['all', 'All'],
+              ['deposits', 'Deposits'],
+              ['purchases', 'Purchases'],
+              ['refunds', 'Refunds'],
+              ['bonuses', 'Bonuses'],
+              ['subscriptions', 'Subscriptions'],
+              ['transfers', 'Transfers'],
+            ].map(([id, label]) => (
+              <TouchableOpacity key={id} onPress={() => setTxFilter(id)} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: txFilter === id ? '#9A6B12' : '#e2e8f0' }}>
+                <Text style={{ color: txFilter === id ? '#fff' : '#334155', fontSize: 12 }}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       }
       renderItem={({ item }) => (
         <View style={styles.txCard}>
           <Text style={styles.txType}>{item?.type || 'transaction'} ({item?.status || 'pending'})</Text>
-          <Text style={styles.txAmount}>{item?.amount} XCoin</Text>
+          <Text style={styles.txAmount}>{item?.amount} {item?.currency || 'XCoin'}</Text>
           <Text style={styles.txDesc}>{item?.description || 'No description'}</Text>
+          <Text style={styles.txDesc}>{item?.createdAt ? new Date(item.createdAt).toLocaleString() : ''} · {item?.referenceType || item?.relatedEntityType || '—'} {item?.referenceId || item?.relatedEntityId || ''}</Text>
         </View>
       )}
       ListEmptyComponent={<Text style={styles.empty}>No transactions yet.</Text>}

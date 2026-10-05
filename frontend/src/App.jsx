@@ -26,6 +26,10 @@ const Feed = lazyWithReload(() => import('./components/Feed'));
 const Search = lazyWithReload(() => import('./components/GlobalSearch'));
 const Messaging = lazyWithReload(() => import('./components/Messaging'));
 const Marketplace = lazyWithReload(() => import('./components/MarketplaceSimple'));
+const ProductPage = lazyWithReload(() => import('./components/marketplace/ProductPage'));
+const CartPage = lazyWithReload(() => import('./components/marketplace/CartPage'));
+const CheckoutPage = lazyWithReload(() => import('./components/marketplace/CheckoutPage'));
+const OrdersPage = lazyWithReload(() => import('./components/marketplace/OrdersPage'));
 const WalletPage = lazyWithReload(() => import('./components/WalletPage'));
 const Notifications = lazyWithReload(() => import('./components/Notifications'));
 const Scouting = lazyWithReload(() => import('./components/Scouting'));
@@ -158,6 +162,11 @@ function App() {
             <Route path="/embed-incoming-call" element={user ? <EmbedIncomingCall /> : <Navigate to="/login" />} />
             <Route path="/embed-go-live" element={user ? <EmbedGoLive /> : <Navigate to="/login" />} />
             <Route path="/marketplace" element={user ? <Marketplace /> : <Navigate to="/login" />} />
+            <Route path="/marketplace/:productId" element={user ? <ProductPage /> : <Navigate to="/login" />} />
+            <Route path="/cart" element={user ? <CartPage /> : <Navigate to="/login" />} />
+            <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
+            <Route path="/orders" element={user ? <OrdersPage /> : <Navigate to="/login" />} />
+            <Route path="/orders/:id" element={user ? <OrdersPage /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />

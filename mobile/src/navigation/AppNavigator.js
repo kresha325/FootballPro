@@ -17,6 +17,8 @@ import CreatePostScreen from '../screens/CreatePostScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import MarketplaceScreen from '../screens/MarketplaceScreen';
 import CartScreen from '../screens/CartScreen';
+import OrdersScreen from '../screens/OrdersScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
 import CreateProductScreen from '../screens/CreateProductScreen';
 import EditProductScreen from '../screens/EditProductScreen';
 import WalletScreen from '../screens/WalletScreen';
@@ -293,6 +295,8 @@ function MarketplaceNavigator() {
         options={{ title: 'Ndrysho produktin' }}
       />
       <MarketplaceStack.Screen name="Cart" component={CartScreen} options={{ title: 'Shporta' }} />
+      <MarketplaceStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'Porositë' }} />
+      <MarketplaceStack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Produkti' }} />
     </MarketplaceStack.Navigator>
   );
 }

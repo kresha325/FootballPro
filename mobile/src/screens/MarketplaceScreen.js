@@ -42,7 +42,9 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
   return (
     <View style={styles.card}>
       {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" /> : null}
-      <Text style={styles.name}>{item?.name || 'Product'}</Text>
+      <TouchableOpacity onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}>
+        <Text style={styles.name}>{item?.name || 'Product'}</Text>
+      </TouchableOpacity>
       <Text style={styles.description}>{item?.description || 'No description'}</Text>
       <View style={styles.rowBetween}>
         <Text style={styles.price}>
@@ -52,7 +54,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
       </View>
       {stock < 1 && hoursLeft != null ? (
         <Text style={styles.oosHint}>
-          Pa stok — listimi fshihet pas ~{hoursLeft}h nëse nuk e përditëson.
+          Pa stok. Listimi arkivohet pas ~{hoursLeft}h nëse nuk e rimbush.
         </Text>
       ) : null}
       {!isOwn && stock > 0 ? (
@@ -105,10 +107,12 @@ export default function MarketplaceScreen() {
   const [error, setError] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [listSearch, setListSearch] = useState('');
+  const [category, setCategory] = useState('all');
 
   const displayProducts = useMemo(
-    () => filterBySearch(products, listSearch, (p) => [p.name, p.description, p.category]),
-    [products, listSearch]
+    () => filterBySearch(products, listSearch, (p) => [p.name, p.description, p.category])
+      .filter((product) => category === 'all' || product.category === category),
+    [products, listSearch, category]
   );
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
@@ -136,6 +140,13 @@ export default function MarketplaceScreen() {
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 6 }}>
           <NotificationHeaderButton />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Orders')}
+            style={{ paddingRight: 8, paddingVertical: 4 }}
+            accessibilityLabel="Porositë"
+          >
+            <Ionicons name="receipt-outline" size={24} color="#9A6B12" />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Cart')}
             style={{ paddingRight: 8, paddingVertical: 4 }}
@@ -219,6 +230,13 @@ export default function MarketplaceScreen() {
               placeholder="Kërko produkte…"
               onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
             />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              {['all', 'gear', 'tickets', 'merchandise'].map((value) => (
+                <TouchableOpacity key={value} onPress={() => setCategory(value)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: category === value ? '#9A6B12' : '#fff' }}>
+                  <Text style={{ color: category === value ? '#fff' : '#334155', fontSize: 12 }}>{value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         }
         renderItem={({ item }) => (

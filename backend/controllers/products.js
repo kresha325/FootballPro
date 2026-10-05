@@ -1,6 +1,9 @@
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { fromCents, toCents } = require('../utils/money');
+const { priceToJoncoinCents, getJoncoinPerEur } = require('../config/economy');
+const { purchaseBlockReason, slugifyName, canManageProduct, PRODUCT_STATUSES } = require('../services/economy/rules');
 const {
   OUT_OF_STOCK_TTL_HOURS,
   parseStock,
@@ -25,6 +28,17 @@ function formatProductResponse(req, product) {
   o.outOfStockExpiresAt =
     stockN <= 0 && o.outOfStockAt ? expiresAtFrom(o.outOfStockAt)?.toISOString() || null : null;
   o.outOfStockTtlHours = OUT_OF_STOCK_TTL_HOURS;
+  o.currency = o.currency || 'EUR';
+  o.status = o.status || (stockN > 0 ? 'active' : 'out_of_stock');
+  o.condition = o.condition || 'new';
+  o.acceptsJoncoin = o.acceptsJoncoin !== false;
+  const coinCents = priceToJoncoinCents(o.price);
+  o.joncoinPrice = coinCents == null ? null : fromCents(coinCents);
+  o.joncoinPerEur = getJoncoinPerEur();
+  o.purchasable = !purchaseBlockReason({ ...o, stock: stockN }, 1);
+  if (!Array.isArray(o.images) || o.images.length === 0) {
+    o.images = o.imageUrl ? [o.imageUrl] : [];
+  }
   return o;
 }
 
@@ -41,10 +55,21 @@ function productIncludeSeller() {
 }
 
 /** Storefront: only products with available stock. OOS rows stay in DB (seller can edit/restock) until TTL purge. */
-function activeListingWhere() {
-  return {
+function activeListingWhere(query = {}) {
+  const where = {
     stock: { [Op.gt]: 0 },
+    status: 'active',
   };
+  if (query.category && query.category !== 'all') where.category = String(query.category);
+  if (query.q) where.name = { [Op.iLike]: `%${String(query.q).slice(0, 80)}%` };
+  return where;
+}
+
+function productOrder(sort) {
+  if (sort === 'price_asc') return [['price', 'ASC']];
+  if (sort === 'price_desc') return [['price', 'DESC']];
+  if (sort === 'name') return [['name', 'ASC']];
+  return [['createdAt', 'DESC']];
 }
 
 exports.getProducts = async (req, res) => {
@@ -56,11 +81,25 @@ exports.getProducts = async (req, res) => {
       /* best-effort */
     }
 
-    const products = await Product.findAll({
-      where: activeListingWhere(),
+    const page = Math.max(1, parseInt(req.query.page, 10) || 0);
+    const limit = Math.min(48, Math.max(1, parseInt(req.query.limit, 10) || 24));
+    const query = {
+      where: activeListingWhere(req.query),
       include: productIncludeSeller(),
-      order: [['createdAt', 'DESC']],
-    });
+      order: productOrder(req.query.sort),
+    };
+    if (page > 0) {
+      query.limit = limit;
+      query.offset = (page - 1) * limit;
+      const result = await Product.findAndCountAll(query);
+      return res.json({
+        products: result.rows.map((p) => formatProductResponse(req, p)),
+        page,
+        limit,
+        total: result.count,
+      });
+    }
+    const products = await Product.findAll(query);
     res.json((products || []).map((p) => formatProductResponse(req, p)));
   } catch (err) {
     console.error('getProducts:', err);
@@ -70,32 +109,33 @@ exports.getProducts = async (req, res) => {
 
 exports.getProduct = async (req, res) => {
   try {
-    const product = await Product.findByPk(req.params.id, {
-      include: productIncludeSeller(),
-    });
+    const key = String(req.params.id || '');
+    const product = /^\d+$/.test(key)
+      ? await Product.findByPk(key, { include: productIncludeSeller() })
+      : await Product.findOne({ where: { slug: key }, include: productIncludeSeller() });
     if (!product) return res.status(404).json({ msg: 'Product not found' });
 
     const stockN = parseStock(product.stock, 0) ?? 0;
     const isOwner = req.user?.id != null && Number(req.user.id) === Number(product.sellerId);
-    const expired =
-      stockN <= 0 &&
-      product.outOfStockAt &&
-      Date.now() - new Date(product.outOfStockAt).getTime() >
-        OUT_OF_STOCK_TTL_HOURS * 60 * 60 * 1000;
-
-    // Public catalog: hide out-of-stock. Owner can still open during the 48h restock window.
-    if (stockN <= 0 && (!isOwner || expired)) {
-      if (expired) {
-        try {
-          await product.destroy();
-        } catch (_) {
-          /* ignore */
-        }
-      }
+    const isAdmin = req.user?.role === 'admin';
+    const status = product.status || 'active';
+    if (!isOwner && !isAdmin && (status !== 'active' || stockN <= 0)) {
       return res.status(404).json({ msg: 'Product not found' });
     }
 
     res.json(formatProductResponse(req, product));
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.getMyProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      where: { sellerId: req.user.id },
+      order: [['updatedAt', 'DESC']],
+    });
+    res.json(products.map((p) => formatProductResponse(req, p)));
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
@@ -115,12 +155,20 @@ exports.createProduct = async (req, res) => {
   if (!name || !String(name).trim()) {
     return res.status(400).json({ msg: 'Emri i produktit është i detyrueshëm' });
   }
-  if (price === undefined || price === null || String(price).trim() === '') {
-    return res.status(400).json({ msg: 'Çmimi është i detyrueshëm' });
+  const priceCents = toCents(price);
+  if (priceCents == null || priceCents <= 0) {
+    return res.status(400).json({ msg: 'Çmimi duhet të jetë më i madh se 0' });
   }
-  if (!category || !String(category).trim()) {
-    return res.status(400).json({ msg: 'Kategoria është e detyrueshme' });
+  const categoryName = String(category).trim();
+  if (!['gear', 'tickets', 'merchandise'].includes(categoryName)) {
+    return res.status(400).json({ msg: 'Kategoria është e pavlefshme' });
   }
+  const condition = ['new', 'used', 'refurbished'].includes(String(req.body.condition || 'new'))
+    ? String(req.body.condition || 'new')
+    : null;
+  if (!condition) return res.status(400).json({ msg: 'Gjendja e produktit është e pavlefshme' });
+  let status = String(req.body.status || 'active');
+  if (!PRODUCT_STATUSES.includes(status) || status === 'out_of_stock') status = 'active';
 
   const stockParsed = parseStock(req.body.stock, 0);
   if (stockParsed === null) {
@@ -152,16 +200,26 @@ exports.createProduct = async (req, res) => {
 
   try {
     const stockFields = nextStockFields(null, null, stockParsed);
+    const listingStatus = stockFields.stock > 0 ? status : 'out_of_stock';
     const product = await Product.create({
       name: String(name).trim(),
       description,
-      price,
-      category: String(category).trim(),
+      price: fromCents(priceCents),
+      currency: 'EUR',
+      category: categoryName,
       imageUrl,
+      images: imageUrl ? [imageUrl] : [],
+      condition,
+      status: listingStatus,
+      acceptsJoncoin: req.body.acceptsJoncoin === false || req.body.acceptsJoncoin === 'false' ? false : true,
       stock: stockFields.stock,
       outOfStockAt: stockFields.outOfStockAt,
       sellerId: req.user.id,
     });
+    if (!product.slug) {
+      product.slug = slugifyName(product.name, product.id);
+      await product.save();
+    }
     res.status(201).json(formatProductResponse(req, product));
   } catch (err) {
     console.error('PRODUCT CREATE ERROR:', err);
@@ -180,7 +238,7 @@ exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ msg: 'Product not found' });
-    if (Number(product.sellerId) !== Number(req.user.id) && req.user.role !== 'admin') {
+    if (!canManageProduct(product, req.user)) {
       return res.status(403).json({ msg: 'Vetëm shitësi mund ta përditësojë këtë produkt' });
     }
 
@@ -228,17 +286,48 @@ exports.updateProduct = async (req, res) => {
       stockFields = nextStockFields(product.stock, product.outOfStockAt, stockParsed);
     }
 
+    let nextPrice = product.price;
+    if (price !== undefined && String(price).trim() !== '') {
+      const priceCents = toCents(price);
+      if (priceCents == null || priceCents <= 0) return res.status(400).json({ msg: 'Çmimi duhet të jetë më i madh se 0' });
+      nextPrice = fromCents(priceCents);
+    }
+    let nextCategory = product.category;
+    if (category !== undefined && String(category).trim() !== '') {
+      nextCategory = String(category).trim();
+      if (!['gear', 'tickets', 'merchandise'].includes(nextCategory)) {
+        return res.status(400).json({ msg: 'Kategoria është e pavlefshme' });
+      }
+    }
+    const nextName = name !== undefined && String(name).trim() !== '' ? String(name).trim() : product.name;
+    let nextStatus = product.status || 'active';
+    if (req.body.status !== undefined) {
+      const requested = String(req.body.status);
+      if (!PRODUCT_STATUSES.includes(requested) || requested === 'out_of_stock') {
+        return res.status(400).json({ msg: 'Statusi i produktit është i pavlefshëm' });
+      }
+      nextStatus = requested;
+    }
+    if (stockFields.stock <= 0) nextStatus = 'out_of_stock';
+    else if (nextStatus === 'out_of_stock') nextStatus = 'active';
+
     await product.update({
-      name: name !== undefined && String(name).trim() !== '' ? String(name).trim() : product.name,
+      name: nextName,
+      slug: product.slug || slugifyName(nextName, product.id),
       description: description !== undefined ? String(description) : product.description,
-      price:
-        price !== undefined && String(price).trim() !== ''
-          ? String(price).trim()
-          : product.price,
-      category: category !== undefined && String(category).trim() !== '' ? String(category).trim() : product.category,
+      price: nextPrice,
+      category: nextCategory,
       stock: stockFields.stock,
       outOfStockAt: stockFields.outOfStockAt,
       imageUrl: nextImageUrl,
+      images: nextImageUrl ? [nextImageUrl] : product.images,
+      status: nextStatus,
+      condition: ['new', 'used', 'refurbished'].includes(String(req.body.condition || ''))
+        ? String(req.body.condition)
+        : product.condition,
+      acceptsJoncoin: req.body.acceptsJoncoin === undefined
+        ? product.acceptsJoncoin
+        : !(req.body.acceptsJoncoin === false || req.body.acceptsJoncoin === 'false'),
     });
 
     await product.reload({ include: productIncludeSeller() });
@@ -256,11 +345,11 @@ exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ msg: 'Product not found' });
-    if (Number(product.sellerId) !== Number(req.user.id) && req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Vetëm shitësi mund ta fshijë këtë produkt' });
+    if (!canManageProduct(product, req.user)) {
+      return res.status(403).json({ msg: 'Vetëm shitësi mund ta arkivojë këtë produkt' });
     }
-    await product.destroy();
-    res.json({ msg: 'Product deleted' });
+    await product.update({ status: 'archived' });
+    res.json({ msg: 'Product archived', product: formatProductResponse(req, product) });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
