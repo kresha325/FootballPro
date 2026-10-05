@@ -126,12 +126,14 @@ function PublicCvPage() {
     if (profile.athletesCount != null) heroStats.push({ label: 'Atletë', value: profile.athletesCount });
     if (profile.staffCount != null) heroStats.push({ label: 'Staf', value: profile.staffCount });
   }
-  if (role === 'athlete') {
+  if (role === 'athlete' && profile.statisticsSource === 'matches') {
+    const career = profile.performance?.career || {};
     const directStats = [
-      ['Ndeshje', stats.appearances ?? (Array.isArray(profile.matches) ? profile.matches.length : null)],
-      ['Gola', stats.goals],
-      ['Asiste', stats.assists],
-      ['Minuta', stats.minutes],
+      ['Ndeshje', career.appearances],
+      ['Gola', career.goals],
+      ['Asiste', career.assists],
+      ['Minuta', career.minutes],
+      ['Vlerësimi', career.rating],
       ['Turne', profile.tournamentTotals?.tournamentsPlayed],
     ];
     directStats.forEach(([label, value]) => {
@@ -215,6 +217,17 @@ function PublicCvPage() {
                   <span className="rounded-full bg-[var(--xt-color-gold)]/15 px-3 py-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">
                     {roleLabel(profile.role)}
                   </span>
+                  {profile.verificationStatus && (
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
+                      {profile.verificationStatus === 'VERIFIED'
+                        ? 'I verifikuar'
+                        : profile.verificationStatus === 'PENDING'
+                          ? 'Në pritje'
+                          : profile.verificationStatus === 'REJECTED'
+                            ? 'Refuzuar'
+                            : 'I paverifikuar'}
+                    </span>
+                  )}
                   {profile.position && (
                     <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
                       {profile.position}
@@ -262,7 +275,27 @@ function PublicCvPage() {
             ) : (
               <p className="mt-3 text-sm text-slate-500">Nuk ka bio publike ende.</p>
             )}
-            {profile.careerHistory && (
+            {Array.isArray(profile.careerHistory) && profile.careerHistory.length > 0 && (
+              <div className="mt-6 border-t border-[var(--xt-color-border)] pt-5">
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Karriera</h3>
+                <ol className="mt-3 space-y-3">
+                  {profile.careerHistory.map((entry, index) => {
+                    const row = typeof entry === 'string' ? { club: entry } : entry || {};
+                    return (
+                      <li key={`${row.club || 'club'}-${index}`}>
+                        <p className="font-semibold text-white">{row.club || row.team || 'Klub'}</p>
+                        <p className="text-sm text-slate-400">
+                          {[row.season, row.team, row.position, row.appearances != null ? `${row.appearances} ndeshje` : null, row.goals != null ? `${row.goals} gola` : null]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            )}
+            {typeof profile.careerHistory === 'string' && profile.careerHistory.trim() && (
               <div className="mt-6 border-t border-[var(--xt-color-border)] pt-5">
                 <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Karriera</h3>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">

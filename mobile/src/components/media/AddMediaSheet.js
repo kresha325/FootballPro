@@ -31,6 +31,7 @@ export default function AddMediaSheet({
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [category, setCategory] = useState(defaults.category || 'other');
   const [visibility, setVisibility] = useState('public');
+  const [featured, setFeatured] = useState(false);
   const [season, setSeason] = useState(defaults.season || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +44,7 @@ export default function AddMediaSheet({
     setYoutubeUrl('');
     setCategory(defaults.category || 'other');
     setVisibility('public');
+    setFeatured(false);
     setSeason(defaults.season || '');
     setError('');
   };
@@ -65,6 +67,7 @@ export default function AddMediaSheet({
         youtubeUrl: youtubeUrl.trim(),
         category,
         visibility,
+        featured,
         season: season.trim() || undefined,
       };
       if (defaults.playerId) payload.playerId = defaults.playerId;
@@ -149,6 +152,9 @@ export default function AddMediaSheet({
                 </TouchableOpacity>
               ))}
             </View>
+            <TouchableOpacity style={[styles.chip, featured && styles.chipOn, { marginBottom: 10 }]} onPress={() => setFeatured((v) => !v)}>
+              <Text style={[styles.chipText, featured && styles.chipTextOn]}>{featured ? 'Highlight i veçuar' : 'Shënoje si highlight të veçuar'}</Text>
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
               placeholder="Sezoni (opsionale)"

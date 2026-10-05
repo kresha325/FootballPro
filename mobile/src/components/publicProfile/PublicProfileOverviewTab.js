@@ -397,12 +397,13 @@ export default function PublicProfileOverviewTab({
         : String(profile.careerHistory)
       : null;
 
-  const numericAppearances = numberValue(stats.appearances);
+  const official = profile?.statisticsSource === 'matches' ? profile?.performance?.career : null;
+  const numericAppearances = numberValue(official?.appearances);
   const tournamentAppearances = tournaments.reduce((sum, item) => sum + (numberValue(item.played) || 0), 0);
-  const appearances = numericAppearances ?? (tournaments.length ? tournamentAppearances : null);
-  const goals = numberValue(stats.goals) ?? numberValue(totals.scorerGoals);
-  const assists = numberValue(stats.assists) ?? numberValue(totals.scorerAssists);
-  const minutes = numberValue(stats.minutes);
+  const appearances = numericAppearances ?? (official ? null : tournaments.length ? tournamentAppearances : null);
+  const goals = numberValue(official?.goals);
+  const assists = numberValue(official?.assists);
+  const minutes = numberValue(official?.minutes);
   const performanceCards = [
     { key: 'nd', label: 'Ndeshje', value: appearances, color: '#9A6B12' },
     { key: 'g', label: 'Gola', value: goals, color: '#9A6B12' },
@@ -422,6 +423,8 @@ export default function PublicProfileOverviewTab({
     ['Shtetësia', profile?.country],
     ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ') || null],
     ['Klubi aktual', profile?.club],
+    ['Ekipi', stats.currentTeam],
+    ['Agjenti', stats.agentName],
   ].filter(([, value]) => hasValue(value));
 
   const scoutCards = [
@@ -467,6 +470,13 @@ export default function PublicProfileOverviewTab({
 
   return (
     <View style={styles.wrap}>
+      {isAthlete && profile.completeness?.percent != null ? (
+        <Text style={[styles.bio, { color: theme.muted, marginBottom: 12 }]}>
+          Plotësia e profilit: {profile.completeness.percent}%
+          {profile.verificationStatus ? ` · ${profile.verificationStatus}` : ''}
+        </Text>
+      ) : null}
+
       {profile.bio ? (
         <View style={{ marginBottom: 16 }}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Bio</Text>
@@ -540,7 +550,18 @@ export default function PublicProfileOverviewTab({
                   );
                 }
                 const title = item.club || item.clubName || item.team || item.name || item.competition || 'Klub';
-                const sub = [item.season, item.competition, item.role, item.period, item.position]
+                const sub = [
+                  item.season,
+                  item.team && item.team !== title ? item.team : null,
+                  item.competition,
+                  item.role,
+                  item.period,
+                  item.position,
+                  item.jerseyNumber != null ? `#${item.jerseyNumber}` : null,
+                  item.appearances != null ? `${item.appearances} ndeshje` : null,
+                  item.goals != null ? `${item.goals} gola` : null,
+                  item.assists != null ? `${item.assists} asiste` : null,
+                ]
                   .filter(Boolean)
                   .join(' · ');
                 return (

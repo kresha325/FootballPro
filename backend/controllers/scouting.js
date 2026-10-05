@@ -40,27 +40,30 @@ const calculateScore = async (playerProfile, player, scoutProfile) => {
     }
   }
 
-  // 2. Stats Scoring (35 points max)
-  if (playerProfile.stats && typeof playerProfile.stats === 'object') {
-    const stats = playerProfile.stats;
+  // 2. Stats Scoring (35 points max) — official match totals, never self-reported JSON.
+  const official = playerProfile.officialStats || {};
+  const goals = Number(official.goals) || 0;
+  const assists = Number(official.assists) || 0;
+  const matchesPlayed = Number(official.appearances) || 0;
+  {
     let statsScore = 0;
-    
-    if (stats.goals > 0) {
-      const goalPoints = Math.min(stats.goals * 0.5, 15);
+
+    if (goals > 0) {
+      const goalPoints = Math.min(goals * 0.5, 15);
       statsScore += goalPoints;
-      reasons.push(`⚽ ${stats.goals} goals`);
+      reasons.push(`⚽ ${goals} goals`);
     }
-    
-    if (stats.assists > 0) {
-      const assistPoints = Math.min(stats.assists * 0.4, 10);
+
+    if (assists > 0) {
+      const assistPoints = Math.min(assists * 0.4, 10);
       statsScore += assistPoints;
-      reasons.push(`🎯 ${stats.assists} assists`);
+      reasons.push(`🎯 ${assists} assists`);
     }
-    
-    if (stats.matches > 0) {
-      const matchPoints = Math.min(stats.matches * 0.2, 10);
+
+    if (matchesPlayed > 0) {
+      const matchPoints = Math.min(matchesPlayed * 0.2, 10);
       statsScore += matchPoints;
-      reasons.push(`🏆 ${stats.matches} matches`);
+      reasons.push(`🏆 ${matchesPlayed} matches`);
     }
 
     // Cap stats score at max weight
@@ -80,7 +83,10 @@ const calculateScore = async (playerProfile, player, scoutProfile) => {
   }
 
   // 4. Profile Completeness (10 points max)
-  const { filled: completeness, total: completenessTotal } = profileCompletenessScore(playerProfile);
+  const { filled: completeness, total: completenessTotal } = profileCompletenessScore(playerProfile, {
+    user: player,
+    official: playerProfile.officialStats,
+  });
   const completenessScore = (completeness / completenessTotal) * weights.profile;
   score += completenessScore;
   if (completeness >= 5) {
@@ -155,10 +161,22 @@ exports.getRecommendations = async (req, res) => {
     });
 
     const recommendations = [];
+    let officialByPlayer = {};
+    try {
+      const { loadOfficialTotalsForUsers } = require('../utils/playerProfileCv');
+      officialByPlayer = await loadOfficialTotalsForUsers(athletes.map((athlete) => athlete.id));
+    } catch (err) {
+      console.warn('scouting official stats:', err?.message || err);
+    }
 
     // Calculate score for each athlete
     for (const athlete of athletes) {
       if (athlete.Profile) {
+        athlete.Profile.officialStats = officialByPlayer[athlete.id] || {
+          goals: 0,
+          assists: 0,
+          appearances: 0,
+        };
         const { score, reasons, maxScore } = await calculateScore(
           athlete.Profile,
           athlete,
@@ -170,7 +188,6 @@ exports.getRecommendations = async (req, res) => {
           recommendations.push({
             playerId: athlete.id,
             playerName: `${athlete.firstName} ${athlete.lastName}`,
-            email: athlete.email,
             position: athlete.Profile.position,
             club: athlete.Profile.club,
             nationality: profileNationality(athlete.Profile),
@@ -180,7 +197,7 @@ exports.getRecommendations = async (req, res) => {
             percentage: Math.round((score / maxScore) * 100),
             reasons,
             profilePhoto: athlete.Profile.profilePhoto || null,
-            stats: athlete.Profile.stats || {},
+            stats: athlete.Profile.officialStats || {},
             premium: athlete.premium || false,
           });
         }
@@ -262,11 +279,18 @@ async function getPlayerMetrics(playerId) {
     }),
   ]);
 
-  const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
+  let official = { goals: 0, assists: 0, appearances: 0 };
+  try {
+    const { loadOfficialTotalsForUsers } = require('../utils/playerProfileCv');
+    const map = await loadOfficialTotalsForUsers([playerId]);
+    official = map[Number(playerId)] || official;
+  } catch (err) {
+    console.warn('compare official stats:', err?.message || err);
+  }
   return {
     profile,
-    goals: toSafeNumber(stats.goals),
-    assists: toSafeNumber(stats.assists),
+    goals: toSafeNumber(official.goals),
+    assists: toSafeNumber(official.assists),
     likes: toSafeNumber(likesCount),
     followers: toSafeNumber(followersCount),
   };
@@ -326,7 +350,7 @@ async function getFollowersAthleteCandidates(currentUserId, ageGroup) {
       id: { [Op.in]: followedIds },
       role: 'athlete',
     },
-    attributes: ['id', 'firstName', 'lastName', 'email'],
+    attributes: ['id', 'firstName', 'lastName'],
     include: [{
       model: Profile,
       where: profileWhere,
@@ -341,7 +365,6 @@ async function getFollowersAthleteCandidates(currentUserId, ageGroup) {
     fullName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || `Player ${u.id}`,
     firstName: u.firstName || '',
     lastName: u.lastName || '',
-    email: u.email || null,
     profilePhoto: u.Profile?.profilePhoto || null,
     position: u.Profile?.position || null,
     age: u.Profile?.age || null,
@@ -399,12 +422,12 @@ exports.comparePlayers = async (req, res) => {
     const [playerA, playerB] = await Promise.all([
       User.findOne({
         where: { id: playerAId, role: 'athlete' },
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: ['id', 'firstName', 'lastName'],
         include: [{ model: Profile, required: true, attributes: ['profilePhoto', 'position', 'age', 'ageGroup', 'club', 'stats'] }],
       }),
       User.findOne({
         where: { id: playerBId, role: 'athlete' },
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: ['id', 'firstName', 'lastName'],
         include: [{ model: Profile, required: true, attributes: ['profilePhoto', 'position', 'age', 'ageGroup', 'club', 'stats'] }],
       }),
     ]);

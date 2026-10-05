@@ -34,29 +34,38 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
   const totals = tournamentSummary?.totals || {};
   const matches = Array.isArray(profile?.matches) ? profile.matches : [];
   const achievements = Array.isArray(profile?.achievements) ? profile.achievements : [];
-  const numericAppearances = numberValue(stats.appearances);
-  const tournamentAppearances = tournaments.reduce((sum, item) => sum + (numberValue(item.played) || 0), 0);
-  const appearances = numericAppearances ?? (tournaments.length ? tournamentAppearances : null);
-  const goals = numberValue(stats.goals) ?? numberValue(totals.scorerGoals);
-  const assists = numberValue(stats.assists) ?? numberValue(totals.scorerAssists);
-  const minutes = numberValue(stats.minutes);
-  const performance = [
-    { label: 'Ndeshje', value: appearances },
-    { label: 'Gola', value: goals },
-    { label: 'Asiste', value: assists },
-    { label: 'Minuta', value: minutes },
-    { label: 'Pikë', value: totals && (totals.points != null || totals.pointsPossible != null) ? formatTotalsPoints(totals) : null },
-    { label: 'Turne', value: numberValue(totals.tournamentsPlayed) },
-  ].filter((item) => item.value !== null);
+  const official = profile?.performance?.career;
+  const hasOfficial = profile?.statisticsSource === 'matches' && official;
+  const performance = hasOfficial
+    ? [
+        { label: 'Ndeshje', value: official.appearances },
+        { label: 'Titullar', value: official.starts },
+        { label: 'Minuta', value: official.minutes },
+        { label: 'Gola', value: official.goals },
+        { label: 'Asiste', value: official.assists },
+        { label: 'Kartona', value: (Number(official.yellowCards) || 0) + (Number(official.redCards) || 0) },
+        { label: 'Fitore', value: official.wins },
+        { label: 'Vlerësimi', value: official.rating },
+        { label: 'Pikë', value: totals && (totals.points != null || totals.pointsPossible != null) ? formatTotalsPoints(totals) : null },
+      ].filter((item) => item.value !== null && item.value !== undefined)
+    : [];
   const identity = [
     ['Pozicioni', profile?.position],
+    ['Pozicione të tjera', Array.isArray(stats.secondaryPositions) ? stats.secondaryPositions.join(', ') : null],
     ['Këmba e preferuar', stats.preferredFoot],
     ['Gjatësia', hasValue(stats.height) ? `${stats.height} cm` : null],
     ['Pesha', hasValue(stats.weight) ? `${stats.weight} kg` : null],
     ['Numri', hasValue(stats.jerseyNumber) ? `#${stats.jerseyNumber}` : null],
-    ['Shtetësia', profile?.country],
+    ['Ekipi', stats.currentTeam],
+    ['Niveli', stats.playingLevel],
+    ['Kategoria', stats.footballCategory],
+    ['Statusi', stats.youthSenior],
+    ['Mosha', profile?.age != null ? String(profile.age) : null],
+    ['Shtetësia', stats.nationality || profile?.country],
     ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ')],
     ['Klubi aktual', profile?.club],
+    ['Agjenti', stats.agentName],
+    ['Agjencia', stats.agencyName],
   ].filter(([, value]) => hasValue(value));
   const videos = gallery.filter(isVideoMedia);
   const career = profile?.careerHistory;
@@ -79,7 +88,26 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <Section title="Performanca" eyebrow="Përmbledhje e karrierës">
+      {(profile?.bio || stats.footballJourney || stats.strengths || stats.playingStyle || stats.objectives) && (
+        <Section title="Bio" eyebrow="Lojtari">
+          {profile?.bio && <p className="whitespace-pre-wrap leading-relaxed text-[var(--xt-color-text-muted)]">{profile.bio}</p>}
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            {[
+              ['Rruga futbollistike', stats.footballJourney],
+              ['Pikat e forta', stats.strengths],
+              ['Stili i lojës', stats.playingStyle],
+              ['Objektivat', stats.objectives],
+            ].filter(([, value]) => hasValue(value)).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{label}</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-sm text-[var(--xt-color-text)]">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      )}
+
+      <Section title="Performanca" eyebrow={hasOfficial ? 'Nga ndeshjet zyrtare' : 'Përmbledhje e karrierës'}>
         {performance.length ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {performance.map((item) => (
@@ -89,7 +117,34 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
               </div>
             ))}
           </div>
-        ) : <Empty>Statistikat e ndeshjeve do të shfaqen këtu kur të jenë të disponueshme.</Empty>}
+        ) : <Empty>Statistikat e ndeshjeve do të shfaqen këtu kur të regjistrohen nga ndeshjet.</Empty>}
+        {profile?.performance?.positionStats && (
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            {Object.entries(profile.performance.positionStats)
+              .filter(([key, value]) => key !== 'group' && value != null)
+              .map(([key, value]) => (
+                <div key={key} className="rounded-lg border border-[var(--xt-color-border)] p-3">
+                  <dt className="text-xs uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{key}</dt>
+                  <dd className="text-lg font-semibold">{value}</dd>
+                </div>
+              ))}
+          </dl>
+        )}
+        {profile?.performance?.form && hasOfficial && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['5 ndeshjet e fundit', profile.performance.form.last5],
+              ['10 ndeshjet e fundit', profile.performance.form.last10],
+              ['Sezoni', profile.performance.form.season],
+              ['Karriera', profile.performance.form.career],
+            ].map(([label, row]) => (
+              <div key={label} className="rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">
+                <p className="font-semibold">{label}</p>
+                <p className="mt-1 text-[var(--xt-color-text-muted)]">{row?.goals ?? 0} gola · {row?.assists ?? 0} asiste · {row?.minutes ?? 0} min</p>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section title="Identiteti i lojtarit" eyebrow="Të dhënat kryesore">
@@ -111,8 +166,9 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
             {displayCareerRows.map((entry, index) => {
               const row = typeof entry === 'string' ? { club: entry } : entry || {};
               const name = row.club || row.clubName || row.team || row.name || row.competition || 'Klub';
-              const meta = [row.season, row.competition, row.position].filter(Boolean).join(' · ');
-              return <li key={row.id || `${name}-${index}`} className="flex gap-3 rounded-lg border border-[var(--xt-color-border)] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--xt-color-gold)]"/><div><p className="font-semibold">{name}</p>{meta && <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{meta}</p>}</div></li>;
+              const meta = [row.season, row.team, row.competition, row.position, hasValue(row.jerseyNumber) ? `#${row.jerseyNumber}` : null].filter(Boolean).join(' · ');
+              const lineStats = [row.appearances != null ? `${row.appearances} ndeshje` : null, row.goals != null ? `${row.goals} gola` : null, row.assists != null ? `${row.assists} asiste` : null].filter(Boolean).join(' · ');
+              return <li key={row.id || `${name}-${index}`} className="flex gap-3 rounded-lg border border-[var(--xt-color-border)] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--xt-color-gold)]"/><div><p className="font-semibold">{name}</p>{meta && <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{meta}</p>}{lineStats && <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{lineStats}</p>}</div></li>;
             })}
           </ol>
         ) : careerText ? (
@@ -155,7 +211,15 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Arritjet" eyebrow="Çmime dhe turne">
-          {achievements.length ? <ul className="space-y-3">{achievements.slice(0, 8).map((item, index) => <li key={item.id || index} className="flex items-start gap-3 rounded-lg border border-[var(--xt-color-border)] p-3"><span className="xt-badge xt-badge-gold">{item.year || 'Arritje'}</span><span className="font-medium">{item.title || item.name || item.description}</span></li>)}</ul> : <Empty>Arritjet dhe çmimet do të shfaqen kur të shtohen.</Empty>}
+          {achievements.length ? <ul className="space-y-3">{achievements.slice(0, 8).map((item, index) => <li key={item.tournamentId || item.title || index} className="flex items-start gap-3 rounded-lg border border-[var(--xt-color-border)] p-3"><span className="xt-badge xt-badge-gold">{item.season || item.year || 'Arritje'}</span><span><span className="font-medium">{item.title || item.name}</span>{item.competition ? <span className="mt-1 block text-sm text-[var(--xt-color-text-muted)]">{item.competition}</span> : null}</span></li>)}</ul> : <Empty>Arritjet dhe çmimet do të shfaqen kur të shtohen.</Empty>}
+          {profile?.scouting && (
+            <div className="mt-4 rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">
+              <p className="font-semibold">Skautimi</p>
+              <p className="mt-1 text-[var(--xt-color-text-muted)]">
+                Plotësia {profile.scouting.completeness?.percent ?? 0}% · {profile.scouting.position || 'pa pozicion'} · {profile.scouting.club || 'pa klub'}
+              </p>
+            </div>
+          )}
         </Section>
         <Section title="Turnet" eyebrow="Pjesëmarrja">
           {tournaments.length ? (

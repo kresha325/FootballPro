@@ -121,6 +121,8 @@ function App() {
 
             {/* Public digital CV (no login) */}
             <Route path="/cv/:id" element={<PublicCvPage />} />
+            <Route path="/players/:id" element={user ? <Profile /> : <PublicCvPage />} />
+            <Route path="/athletes/:id" element={user ? <Profile /> : <PublicCvPage />} />
             {/* Legacy / OG share path on SPA host → same public CV */}
             <Route path="/share/cv/:id" element={<PublicCvPage />} />
 

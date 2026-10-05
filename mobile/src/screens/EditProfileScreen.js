@@ -34,6 +34,7 @@ import {
   COACH_CATEGORIES,
   GENDER_OPTIONS,
   PREFERRED_FOOT_OPTIONS,
+  PRIVACY_OPTIONS,
 } from './editProfileConstants';
 
 function normalizeEditRole(role) {
@@ -94,7 +95,16 @@ const defaultForm = () => ({
   position: '',
   height: '',
   weight: '',
-  preferredFoot: 'right',
+  preferredFoot: '',
+  secondaryPositions: '',
+  agentName: '',
+  agencyName: '',
+  footballJourney: '',
+  privacyEmail: 'private',
+  privacyPhone: 'private',
+  privacyAgent: 'followers',
+  privacyGallery: 'public',
+  privacyCareer: 'public',
   jerseyNumber: '',
   coachAffiliation: '',
   coachCategory: '',
@@ -170,8 +180,17 @@ export default function EditProfileScreen({ navigation }) {
           position: p.position || '',
           height: stats.height != null ? String(stats.height) : '',
           weight: stats.weight != null ? String(stats.weight) : '',
-          preferredFoot: stats.preferredFoot || 'right',
+          preferredFoot: stats.preferredFoot || '',
           jerseyNumber: stats.jerseyNumber != null ? String(stats.jerseyNumber) : '',
+          secondaryPositions: Array.isArray(stats.secondaryPositions) ? stats.secondaryPositions.join(', ') : '',
+          agentName: stats.agentName || '',
+          agencyName: stats.agencyName || '',
+          footballJourney: stats.footballJourney || '',
+          privacyEmail: p.privacy?.email || 'private',
+          privacyPhone: p.privacy?.phone || 'private',
+          privacyAgent: p.privacy?.agent || 'followers',
+          privacyGallery: p.privacy?.gallery || 'public',
+          privacyCareer: p.privacy?.career || 'public',
           coachAffiliation: p.coachAffiliation || '',
           coachCategory: p.coachCategory || '',
           careerHistory: careerHistoryToString(p.careerHistory),
@@ -292,8 +311,19 @@ export default function EditProfileScreen({ navigation }) {
         payload.stats = {
           height: trim(form.height),
           weight: trim(form.weight),
-          preferredFoot: form.preferredFoot || 'right',
+          preferredFoot: form.preferredFoot || null,
           jerseyNumber: trim(form.jerseyNumber),
+          secondaryPositions: trim(form.secondaryPositions),
+          agentName: trim(form.agentName),
+          agencyName: trim(form.agencyName),
+          footballJourney: trim(form.footballJourney),
+        };
+        payload.privacy = {
+          email: form.privacyEmail || 'private',
+          phone: form.privacyPhone || 'private',
+          agent: form.privacyAgent || 'followers',
+          gallery: form.privacyGallery || 'public',
+          career: form.privacyCareer || 'public',
         };
         payload.matches = matches;
         payload.achievements = achievements;
@@ -516,7 +546,7 @@ export default function EditProfileScreen({ navigation }) {
 
   const genderDisplay = GENDER_OPTIONS.find((o) => o.value === form.gender)?.label || 'Select Gender';
   const positionDisplay = ATHLETE_POSITIONS.find((o) => o.value === form.position)?.label || 'Select Position';
-  const footDisplay = PREFERRED_FOOT_OPTIONS.find((o) => o.value === form.preferredFoot)?.label || 'Right';
+  const footDisplay = PREFERRED_FOOT_OPTIONS.find((o) => o.value === form.preferredFoot)?.label || 'Select foot';
   const coachAffDisplay = COACH_AFFILIATIONS.find((o) => o.value === form.coachAffiliation)?.label || 'Select Affiliation';
   const coachCatDisplay = COACH_CATEGORIES.find((o) => o.value === form.coachCategory)?.label || 'Select Category';
 
@@ -622,6 +652,24 @@ export default function EditProfileScreen({ navigation }) {
           {input('height', { keyboardType: 'number-pad', placeholder: '175' })}
           {labelFor('Weight (kg)')}
           {input('weight', { keyboardType: 'number-pad', placeholder: '70' })}
+          {labelFor('Secondary positions')}
+          {input('secondaryPositions', { placeholder: 'Winger, Striker' })}
+          {labelFor('Agent')}
+          {input('agentName')}
+          {labelFor('Agency')}
+          {input('agencyName')}
+          {labelFor('Football journey')}
+          {input('footballJourney', { multiline: true, style: [styles.input, styles.multiline] })}
+          {labelFor('Email visibility')}
+          {pickerButton('privacyEmail', 'Email visibility', PRIVACY_OPTIONS, form.privacyEmail || 'private')}
+          {labelFor('Phone visibility')}
+          {pickerButton('privacyPhone', 'Phone visibility', PRIVACY_OPTIONS, form.privacyPhone || 'private')}
+          {labelFor('Agent visibility')}
+          {pickerButton('privacyAgent', 'Agent visibility', PRIVACY_OPTIONS, form.privacyAgent || 'followers')}
+          {labelFor('Gallery visibility')}
+          {pickerButton('privacyGallery', 'Gallery visibility', PRIVACY_OPTIONS, form.privacyGallery || 'public')}
+          {labelFor('Career visibility')}
+          {pickerButton('privacyCareer', 'Career visibility', PRIVACY_OPTIONS, form.privacyCareer || 'public')}
           <EditAthleteMatchAchievements
             matches={matches}
             achievements={achievements}

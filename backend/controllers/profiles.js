@@ -455,7 +455,7 @@ exports.getProfile = async (req, res) => {
     if (!Number.isFinite(userId) || userId <= 0) {
       return res.status(400).json({ msg: 'ID e pavlefshme' });
     }
-    const profile = await Profile.findOne({ 
+    let profile = await Profile.findOne({ 
       where: { userId }, 
       include: [{
         model: User,
@@ -639,6 +639,13 @@ exports.getProfile = async (req, res) => {
           thumbnail: item.thumbnail ? toAbsoluteUploadsUrl(req, item.thumbnail) : item.thumbnail,
         };
       });
+    }
+
+    try {
+      const { finalizeProfileResponse } = require('../utils/playerProfileCv');
+      await finalizeProfileResponse(req, response, user);
+    } catch (cvErr) {
+      console.warn('getProfile cv finalize:', cvErr?.message || cvErr);
     }
 
     res.json(response);
@@ -921,6 +928,14 @@ exports.getPublicProfileCv = async (req, res) => {
     response.tournamentTotals = tournamentTotals;
     response.profilePath = `/profile/${userId}`;
     response.cvPath = `/cv/${userId}`;
+    response.playerPath = `/players/${userId}`;
+
+    try {
+      const { finalizeProfileResponse } = require('../utils/playerProfileCv');
+      await finalizeProfileResponse(req, response, user);
+    } catch (cvErr) {
+      console.warn('getPublicProfileCv finalize:', cvErr?.message || cvErr);
+    }
 
     res.json(response);
   } catch (err) {
@@ -960,6 +975,12 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Build updateData dynamically from req.body for Profile fields
+    delete req.body.verified;
+    delete req.body.clubVerified;
+    delete req.body.adminVerified;
+    delete req.body.parentVerified;
+    delete req.body.verificationStatus;
+
     const profileFields = [
       'bio',
       'city',
@@ -972,6 +993,7 @@ exports.updateProfile = async (req, res) => {
       'stats',
       'careerHistory',
       'contact',
+      'privacy',
       'coachAffiliation',
       'coachCategory',
       'matches',
@@ -1021,6 +1043,7 @@ exports.updateProfile = async (req, res) => {
           (key === 'stats' ||
             key === 'careerHistory' ||
             key === 'contact' ||
+            key === 'privacy' ||
             key === 'matches' ||
             key === 'achievements') &&
           typeof req.body[key] === 'string' &&
@@ -1227,6 +1250,29 @@ exports.updateProfile = async (req, res) => {
     const previousProfilePhoto = profile?.profilePhoto || null;
     const previousCoverPhoto = profile?.coverPhoto || null;
 
+    if (updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)) {
+      const { validateFootballStats } = require('../utils/playerProfileCv');
+      const checked = validateFootballStats(updateData.stats);
+      if (!checked.ok) {
+        return res.status(400).json({ msg: checked.msg, field: checked.field });
+      }
+      updateData.stats = checked.stats;
+    }
+    if (updateData.privacy !== undefined) {
+      const { parsePrivacyInput } = require('../utils/profilePrivacy');
+      const checked = parsePrivacyInput(updateData.privacy);
+      if (!checked.ok) {
+        return res.status(400).json({ msg: checked.msg, field: checked.field });
+      }
+      const { normalizePrivacy } = require('../utils/profilePrivacy');
+      const previous = normalizePrivacy(profile?.privacy);
+      updateData.privacy = { ...previous, ...(checked.privacy || {}) };
+    }
+    if (updateData.achievements !== undefined) {
+      const { sanitizeAchievements } = require('../utils/playerProfileCv');
+      updateData.achievements = sanitizeAchievements(updateData.achievements);
+    }
+
     if (updateData._mergeStats) {
       const prevStats =
         profile?.stats && typeof profile.stats === 'object' && !Array.isArray(profile.stats)
@@ -1236,7 +1282,8 @@ exports.updateProfile = async (req, res) => {
         updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)
           ? updateData.stats
           : {};
-      updateData.stats = { ...prevStats, ...incoming };
+      const { stripAuthoritativeStats } = require('../utils/playerProfileCv');
+      updateData.stats = { ...prevStats, ...stripAuthoritativeStats(incoming) };
       delete updateData._mergeStats;
     }
 

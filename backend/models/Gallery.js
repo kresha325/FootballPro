@@ -23,6 +23,21 @@ const Gallery = sequelize.define('Gallery', {
     type: DataTypes.ENUM('photo', 'video', 'highlight'),
     defaultValue: 'photo',
   },
+  visibility: {
+    type: DataTypes.STRING(16),
+    allowNull: false,
+    defaultValue: 'public',
+  },
+  featured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  sortOrder: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

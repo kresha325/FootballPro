@@ -37,29 +37,17 @@ exports.getClubAnalytics = async (req, res) => {
 exports.trackProfileView = async (req, res) => {
   const { profileId } = req.params;
   try {
-    // Don't track if user views their own profile
-    if (req.user.id === parseInt(profileId)) {
+    const { recordProfileView } = require('../utils/profileViews');
+    const result = await recordProfileView({
+      viewerId: req.user.id,
+      profileUserId: parseInt(profileId, 10),
+    });
+    if (!result.counted && result.reason === 'self') {
       return res.json({ msg: 'Own profile view not tracked' });
     }
-
-    await ProfileView.create({
-      viewerId: req.user.id,
-      profileId: parseInt(profileId),
-    });
-
-    // Update engagement metrics
-    const today = new Date().toISOString().split('T')[0];
-    let metrics = await EngagementMetrics.findOne({
-      where: { userId: profileId, date: today }
-    });
-    if (!metrics) {
-      metrics = await EngagementMetrics.create({
-        userId: profileId,
-        date: today,
-      });
+    if (!result.counted && result.reason === 'duplicate') {
+      return res.json({ msg: 'Profile view already counted' });
     }
-    metrics.profileViews += 1;
-    await metrics.save();
 
     res.json({ msg: 'Profile view tracked' });
   } catch (err) {
@@ -120,6 +108,14 @@ exports.getUserAnalytics = async (req, res) => {
         viewedAt: { [Op.gte]: startDate }
       }
     });
+    const uniqueViewers = await ProfileView.count({
+      where: {
+        profileId: userId,
+        viewedAt: { [Op.gte]: startDate },
+      },
+      distinct: true,
+      col: 'viewerId',
+    });
 
     // Post analytics
     const posts = await Post.findAll({ where: { userId } });
@@ -165,6 +161,7 @@ exports.getUserAnalytics = async (req, res) => {
 
     res.json({
       profileViews,
+      uniqueViewers,
       engagement,
       metrics,
       followersGained,

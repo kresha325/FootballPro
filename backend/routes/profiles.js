@@ -39,7 +39,7 @@ router.get('/me', auth, (req, res, next) => {
 });
 
 /** Public digital CV — no auth */
-router.get('/cv/:id', getPublicProfileCv);
+router.get('/cv/:id', optionalAuth, getPublicProfileCv);
 
 /** Tournament summary — public (optional auth); syncs club-category participation */
 router.get('/:userId/tournament-summary', optionalAuth, getUserTournamentSummary);

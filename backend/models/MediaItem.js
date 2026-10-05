@@ -99,6 +99,16 @@ const MediaItem = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    featured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    sortOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: 'MediaItems',

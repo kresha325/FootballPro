@@ -7,6 +7,7 @@ const { getGallery, getUserGallery, createGalleryItem, upload } = require('../co
 router.get('/', auth, getGallery);
 router.get('/user/:userId', auth, getUserGallery);
 router.post('/', auth, upload.single('image'), createGalleryItem);
+router.put('/:id', auth, require('../controllers/gallery').updateGalleryItem);
 router.delete('/:id', auth, require('../controllers/gallery').deleteGalleryItem);
 
 module.exports = router;

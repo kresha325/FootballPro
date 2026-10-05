@@ -775,6 +775,18 @@ export default function PublicProfileScreen({ route, navigation }) {
           >
             <Text style={[styles.name, { color: theme.text }]}>{displayName}</Text>
             <Text style={styles.roleLine}>{roleLabel(profile.role)}</Text>
+            {profile.verificationStatus ? (
+              <Text style={[styles.roleLine, { color: theme.muted }]}>
+                {profile.verificationStatus === 'VERIFIED'
+                  ? 'I verifikuar'
+                  : profile.verificationStatus === 'PENDING'
+                    ? 'Verifikimi në pritje'
+                    : profile.verificationStatus === 'REJECTED'
+                      ? 'Verifikimi u refuzua'
+                      : 'I paverifikuar'}
+                {profile.completeness?.percent != null ? ` · ${profile.completeness.percent}%` : ''}
+              </Text>
+            ) : null}
 
             <View style={styles.chipRow}>
               {isOrgProfileRole(profile.role) ? (

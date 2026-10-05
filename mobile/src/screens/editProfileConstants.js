@@ -17,9 +17,16 @@ export const GENDER_OPTIONS = [
 ];
 
 export const PREFERRED_FOOT_OPTIONS = [
+  { label: 'Select foot', value: '' },
   { label: 'Right', value: 'right' },
   { label: 'Left', value: 'left' },
   { label: 'Both', value: 'both' },
+];
+
+export const PRIVACY_OPTIONS = [
+  { label: 'Public', value: 'public' },
+  { label: 'Followers', value: 'followers' },
+  { label: 'Private', value: 'private' },
 ];
 
 /** Mirrors web `EditCoachProfile` affiliation select. */

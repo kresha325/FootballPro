@@ -74,6 +74,14 @@ const Profile = sequelize.define('Profile', {
     allowNull: true,
     defaultValue: 'default',
   },
+  /**
+   * Per-field visibility: public | followers | private.
+   * Email and phone default to private. Enforced on API responses.
+   */
+  privacy: {
+    type: DataTypes.JSON,
+    allowNull: true,
+  },
 });
 
 Profile.belongsTo(User, { foreignKey: 'userId' });

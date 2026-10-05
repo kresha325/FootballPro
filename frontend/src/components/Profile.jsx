@@ -58,6 +58,7 @@ const Profile = () => {
   }, [fetchUserPosts]);
 
   const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState('');
   const [jonCoinBalance, setJonCoinBalance] = useState(0);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -383,6 +384,8 @@ const Profile = () => {
     if (!id) return;
 
     const fetchProfile = async () => {
+      setLoading(true);
+      setProfileError('');
       try {
         const res = await profileAPI.getProfile(id);
         setProfile(res.data);
@@ -426,6 +429,8 @@ const Profile = () => {
         }
       } catch (err) {
         console.error('PROFILE FETCH ERROR:', err);
+        setProfile(null);
+        setProfileError(err?.response?.status === 404 ? 'Profili nuk u gjet' : 'Profili nuk u ngarkua. Provo përsëri.');
       } finally {
         setLoading(false);
       }
@@ -564,8 +569,11 @@ const Profile = () => {
   );
   
   if (!profile) return (
-    <div className="flex items-center justify-center h-screen">
-      <p className="xt-error-state xt-card text-xl">Profili nuk u gjet</p>
+    <div className="flex items-center justify-center h-screen px-4">
+      <div className="xt-error-state xt-card max-w-md p-6 text-center">
+        <p className="text-xl">{profileError || 'Profili nuk u gjet'}</p>
+        <button type="button" className="btn btn-outline mt-4" onClick={() => window.location.reload()}>Provo përsëri</button>
+      </div>
     </div>
   );
 
@@ -577,7 +585,15 @@ const Profile = () => {
     Boolean(profile.club), Boolean(profile.stats?.preferredFoot), Boolean(profile.stats?.height),
     gallery.length > 0,
   ];
-  const profileCompletion = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
+  const profileCompletion = Number.isFinite(Number(profile.completeness?.percent))
+    ? Number(profile.completeness.percent)
+    : Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
+  const verificationLabel = {
+    VERIFIED: 'I verifikuar',
+    PENDING: 'Verifikimi në pritje',
+    REJECTED: 'Verifikimi u refuzua',
+    UNVERIFIED: 'I paverifikuar',
+  }[profile.verificationStatus];
   const tabs = [
     { key: 'overview', label: isAthlete ? 'CV i lojtarit' : 'Përmbledhje' },
     { key: 'posts', label: 'Postime' },
@@ -766,6 +782,11 @@ const Profile = () => {
                   {profile.firstName} {profile.lastName}
                   {profile.verified ? <VerifiedBadge verified size="lg" /> : null}
                 </h1>
+                {verificationLabel && (
+                  <span className="rounded-full border border-[var(--xt-color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--xt-color-text-muted)]">
+                    {verificationLabel}
+                  </span>
+                )}
                 {isSponsoredProfile && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
                     <span>Sponsored</span>
@@ -1309,14 +1330,27 @@ const Profile = () => {
               <div className="space-y-6">
                 <div>
                   <h2 className="mb-4 text-lg font-semibold">Statistikat e lojës</h2>
+                  {profile.statisticsSource === 'matches' ? (
+                    <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">Llogaritur nga ndeshjet zyrtare.</p>
+                  ) : (
+                    <p className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] px-4 py-8 text-sm">Ende nuk ka statistika nga ndeshjet.</p>
+                  )}
+                  {profile.statisticsSource === 'matches' && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {[
-                      ['Ndeshje', profile.stats?.appearances],
-                      ['Gola', profile.stats?.goals ?? tournamentSummary.totals?.scorerGoals],
-                      ['Asiste', profile.stats?.assists ?? tournamentSummary.totals?.scorerAssists],
-                      ['Minuta', profile.stats?.minutes],
+                      ['Ndeshje', profile.performance?.career?.appearances],
+                      ['Titullar', profile.performance?.career?.starts],
+                      ['Minuta', profile.performance?.career?.minutes],
+                      ['Gola', profile.performance?.career?.goals],
+                      ['Asiste', profile.performance?.career?.assists],
+                      ['Të verdha', profile.performance?.career?.yellowCards],
+                      ['Të kuqe', profile.performance?.career?.redCards],
+                      ['Fletë të pastra', profile.performance?.career?.cleanSheets],
+                      ['Fitore', profile.performance?.career?.wins],
+                      ['Barazime', profile.performance?.career?.draws],
+                      ['Humbje', profile.performance?.career?.losses],
+                      ['Vlerësimi', profile.performance?.career?.rating],
                       ['Pikë', tournamentSummary.totals ? formatTotalsPoints(tournamentSummary.totals) : null],
-                      ['Turne', tournamentSummary.totals?.tournamentsPlayed],
                     ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
                       <div className="xt-stat-card" key={label}>
                         <div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div>
@@ -1324,6 +1358,22 @@ const Profile = () => {
                       </div>
                     ))}
                   </div>
+                  )}
+                  {Array.isArray(profile.performance?.competitions) && profile.performance.competitions.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="mb-3 text-base font-semibold">Sipas garës</h3>
+                      <div className="space-y-2">
+                        {profile.performance.competitions.map((row) => (
+                          <div key={`${row.id || row.name}`} className="rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">
+                            <p className="font-semibold">{row.name}</p>
+                            <p className="text-[var(--xt-color-text-muted)]">
+                              {[row.season, `${row.appearances} ndeshje`, `${row.goals} gola`, `${row.assists} asiste`, row.rating != null ? `vlerësim ${row.rating}` : null].filter(Boolean).join(' · ')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {(profile.stats?.height || profile.stats?.weight || profile.stats?.jerseyNumber || profile.stats?.preferredFoot) && (
                   <div>

@@ -14,6 +14,7 @@ const emptyForm = {
   category: 'other',
   visibility: 'public',
   season: '',
+  featured: false,
 };
 
 /**
@@ -73,6 +74,7 @@ export default function AddMediaModal({
         category: form.category,
         visibility: form.visibility,
         season: form.season.trim() || undefined,
+        featured: Boolean(form.featured),
       };
       if (defaults.playerId) payload.playerId = defaults.playerId;
       if (defaults.clubId) payload.clubId = defaults.clubId;
@@ -192,6 +194,15 @@ export default function AddMediaModal({
             </select>
           </label>
         </div>
+
+        <label className="mb-4 flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={Boolean(form.featured)}
+            onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))}
+          />
+          Shfaqe si highlight të veçuar
+        </label>
 
         <label className="mb-4 block text-sm font-medium">
           Sezoni (opsionale)

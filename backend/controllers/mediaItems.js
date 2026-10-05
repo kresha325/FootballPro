@@ -309,6 +309,8 @@ exports.createMedia = async (req, res) => {
       visibility: vis,
       durationSeconds: toInt(durationSeconds),
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
+      featured: req.body?.featured === true || req.body?.featured === 'true',
+      sortOrder: Number.isFinite(Number(req.body?.sortOrder)) ? Number(req.body.sortOrder) : 0,
     });
 
     const full = await MediaItem.findByPk(item.id, { include: listInclude });
@@ -333,7 +335,11 @@ exports.listMedia = async (req, res) => {
     const { rows, count } = await MediaItem.findAndCountAll({
       where,
       include: listInclude,
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['featured', 'DESC'],
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
       limit,
       offset,
     });
@@ -366,7 +372,11 @@ async function listByRelation(req, res, field, id) {
     const { rows, count } = await MediaItem.findAndCountAll({
       where,
       include: listInclude,
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['featured', 'DESC'],
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
       limit,
       offset,
     });
@@ -496,6 +506,10 @@ exports.updateMedia = async (req, res) => {
     if (season !== undefined) item.season = season ? String(season).trim().slice(0, 64) : null;
     if (durationSeconds !== undefined) item.durationSeconds = toInt(durationSeconds);
     if (publishedAt !== undefined) item.publishedAt = publishedAt ? new Date(publishedAt) : null;
+    if (req.body?.featured != null) item.featured = req.body.featured === true || req.body.featured === 'true';
+    if (req.body?.sortOrder != null && Number.isFinite(Number(req.body.sortOrder))) {
+      item.sortOrder = Number(req.body.sortOrder);
+    }
 
     await item.save();
     const full = await MediaItem.findByPk(item.id, { include: listInclude });
@@ -588,7 +602,11 @@ exports.adminListMedia = async (req, res) => {
     const { rows, count } = await MediaItem.findAndCountAll({
       where,
       include: listInclude,
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['featured', 'DESC'],
+        ['sortOrder', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
       limit,
       offset,
     });

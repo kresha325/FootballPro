@@ -30,19 +30,9 @@ function profilePhysical(profile) {
   };
 }
 
-function profileCompletenessScore(profile) {
-  const stats = readStats(profile);
-  const checks = [
-    profile?.bio,
-    profile?.club,
-    profile?.position,
-    profile?.country,
-    stats.height,
-    stats.weight,
-    stats.preferredFoot,
-  ];
-  const filled = checks.filter(Boolean).length;
-  return { filled, total: checks.length };
+function profileCompletenessScore(profile, extras = {}) {
+  const { buildCompleteness } = require('./playerProfileCv');
+  return buildCompleteness(profile, extras);
 }
 
 module.exports = {
