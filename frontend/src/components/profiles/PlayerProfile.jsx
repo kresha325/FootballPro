@@ -28,6 +28,26 @@ function Empty({ children }) {
   return <div className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] px-4 py-8 text-sm">{children}</div>;
 }
 
+/** Last 5 / last 10 only when they are a smaller slice than the career total already shown above. */
+function FormWindows({ form, careerAppearances }) {
+  const careerN = Number(careerAppearances) || 0;
+  const windows = [
+    ['5 ndeshjet e fundit', form?.last5],
+    ['10 ndeshjet e fundit', form?.last10],
+  ].filter(([, row]) => row && Number(row.appearances) > 0 && Number(row.appearances) < careerN);
+  if (!windows.length) return null;
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {windows.map(([label, row]) => (
+        <div key={label} className="rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">
+          <p className="font-semibold">{label}</p>
+          <p className="mt-1 text-[var(--xt-color-text-muted)]">{row.goals ?? 0} gola · {row.assists ?? 0} asiste · {row.minutes ?? 0} min</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos, onShowGallery }) => {
   const stats = profile?.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const tournaments = Array.isArray(tournamentSummary?.tournaments) ? tournamentSummary.tournaments : [];
@@ -62,7 +82,7 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
     ['Statusi', stats.youthSenior],
     ['Mosha', profile?.age != null ? String(profile.age) : null],
     ['Shtetësia', stats.nationality || profile?.country],
-    ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ')],
+    ['Qyteti', profile?.city],
     ['Klubi aktual', profile?.club],
     ['Agjenti', stats.agentName],
     ['Agjencia', stats.agencyName],
@@ -118,32 +138,8 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
             ))}
           </div>
         ) : <Empty>Statistikat e ndeshjeve do të shfaqen këtu kur të regjistrohen nga ndeshjet.</Empty>}
-        {profile?.performance?.positionStats && (
-          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-            {Object.entries(profile.performance.positionStats)
-              .filter(([key, value]) => key !== 'group' && value != null)
-              .map(([key, value]) => (
-                <div key={key} className="rounded-lg border border-[var(--xt-color-border)] p-3">
-                  <dt className="text-xs uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{key}</dt>
-                  <dd className="text-lg font-semibold">{value}</dd>
-                </div>
-              ))}
-          </dl>
-        )}
-        {profile?.performance?.form && hasOfficial && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ['5 ndeshjet e fundit', profile.performance.form.last5],
-              ['10 ndeshjet e fundit', profile.performance.form.last10],
-              ['Sezoni', profile.performance.form.season],
-              ['Karriera', profile.performance.form.career],
-            ].map(([label, row]) => (
-              <div key={label} className="rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">
-                <p className="font-semibold">{label}</p>
-                <p className="mt-1 text-[var(--xt-color-text-muted)]">{row?.goals ?? 0} gola · {row?.assists ?? 0} asiste · {row?.minutes ?? 0} min</p>
-              </div>
-            ))}
-          </div>
+        {hasOfficial && (
+          <FormWindows form={profile.performance?.form} careerAppearances={official.appearances} />
         )}
       </Section>
 
@@ -167,7 +163,10 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
               const row = typeof entry === 'string' ? { club: entry } : entry || {};
               const name = row.club || row.clubName || row.team || row.name || row.competition || 'Klub';
               const meta = [row.season, row.team, row.competition, row.position, hasValue(row.jerseyNumber) ? `#${row.jerseyNumber}` : null].filter(Boolean).join(' · ');
-              const lineStats = [row.appearances != null ? `${row.appearances} ndeshje` : null, row.goals != null ? `${row.goals} gola` : null, row.assists != null ? `${row.assists} asiste` : null].filter(Boolean).join(' · ');
+              const showLineStats = displayCareerRows.length > 1;
+              const lineStats = showLineStats
+                ? [row.appearances != null ? `${row.appearances} ndeshje` : null, row.goals != null ? `${row.goals} gola` : null, row.assists != null ? `${row.assists} asiste` : null].filter(Boolean).join(' · ')
+                : '';
               return <li key={row.id || `${name}-${index}`} className="flex gap-3 rounded-lg border border-[var(--xt-color-border)] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--xt-color-gold)]"/><div><p className="font-semibold">{name}</p>{meta && <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{meta}</p>}{lineStats && <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{lineStats}</p>}</div></li>;
             })}
           </ol>

@@ -1329,37 +1329,36 @@ const Profile = () => {
             {activeTab === 'stats' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="mb-4 text-lg font-semibold">Statistikat e lojës</h2>
+                  <h2 className="mb-4 text-lg font-semibold">Sezoni dhe garat</h2>
                   {profile.statisticsSource === 'matches' ? (
-                    <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">Llogaritur nga ndeshjet zyrtare.</p>
+                    <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">Totali i karrierës është te CV. Këtu është ndarja pa e përsëritur atë.</p>
                   ) : (
                     <p className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] px-4 py-8 text-sm">Ende nuk ka statistika nga ndeshjet.</p>
                   )}
-                  {profile.statisticsSource === 'matches' && (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {[
-                      ['Ndeshje', profile.performance?.career?.appearances],
-                      ['Titullar', profile.performance?.career?.starts],
-                      ['Minuta', profile.performance?.career?.minutes],
-                      ['Gola', profile.performance?.career?.goals],
-                      ['Asiste', profile.performance?.career?.assists],
-                      ['Të verdha', profile.performance?.career?.yellowCards],
-                      ['Të kuqe', profile.performance?.career?.redCards],
-                      ['Fletë të pastra', profile.performance?.career?.cleanSheets],
-                      ['Fitore', profile.performance?.career?.wins],
-                      ['Barazime', profile.performance?.career?.draws],
-                      ['Humbje', profile.performance?.career?.losses],
-                      ['Vlerësimi', profile.performance?.career?.rating],
-                      ['Pikë', tournamentSummary.totals ? formatTotalsPoints(tournamentSummary.totals) : null],
-                    ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
-                      <div className="xt-stat-card" key={label}>
-                        <div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div>
-                        <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--xt-color-text-muted)]">{label}</div>
-                      </div>
-                    ))}
+                  {profile.statisticsSource === 'matches' && profile.performance?.season && Number(profile.performance.career?.appearances) !== Number(profile.performance.season?.appearances) && (
+                  <div className="mb-6">
+                    <h3 className="mb-3 text-base font-semibold">Sezoni aktual</h3>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {[
+                        ['Ndeshje', profile.performance.season.appearances],
+                        ['Minuta', profile.performance.season.minutes],
+                        ['Gola', profile.performance.season.goals],
+                        ['Asiste', profile.performance.season.assists],
+                        ['Kartona', (Number(profile.performance.season.yellowCards) || 0) + (Number(profile.performance.season.redCards) || 0)],
+                        ['Vlerësimi', profile.performance.season.rating],
+                      ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
+                        <div className="xt-stat-card" key={label}>
+                          <div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div>
+                          <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--xt-color-text-muted)]">{label}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   )}
-                  {Array.isArray(profile.performance?.competitions) && profile.performance.competitions.length > 0 && (
+                  {profile.statisticsSource === 'matches' && Number(profile.performance?.career?.appearances) === Number(profile.performance?.season?.appearances) && (
+                    <p className="mb-4 text-sm text-[var(--xt-color-text-muted)]">Të gjitha ndeshjet e regjistruara janë të sezonit aktual, prandaj totali është vetëm te CV.</p>
+                  )}
+                  {Array.isArray(profile.performance?.competitions) && profile.performance.competitions.length > 1 && (
                     <div className="mt-6">
                       <h3 className="mb-3 text-base font-semibold">Sipas garës</h3>
                       <div className="space-y-2">
@@ -1375,17 +1374,6 @@ const Profile = () => {
                     </div>
                   )}
                 </div>
-                {(profile.stats?.height || profile.stats?.weight || profile.stats?.jerseyNumber || profile.stats?.preferredFoot) && (
-                  <div>
-                    <h2 className="mb-3 text-lg font-semibold">Të dhënat fizike dhe teknike</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.stats?.height && <span className="xt-badge">Gjatësia: {profile.stats.height} cm</span>}
-                      {profile.stats?.weight && <span className="xt-badge">Pesha: {profile.stats.weight} kg</span>}
-                      {profile.stats?.jerseyNumber && <span className="xt-badge">Numri: #{profile.stats.jerseyNumber}</span>}
-                      {profile.stats?.preferredFoot && <span className="xt-badge">Këmba: {profile.stats.preferredFoot}</span>}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 

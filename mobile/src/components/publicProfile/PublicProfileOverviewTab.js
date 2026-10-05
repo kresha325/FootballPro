@@ -421,7 +421,7 @@ export default function PublicProfileOverviewTab({
     ['Numri', hasValue(stats.jerseyNumber) ? `#${stats.jerseyNumber}` : null],
     ['Mosha', profile?.age != null ? `${profile.age}${profile.ageGroup ? ` (${profile.ageGroup})` : ''}` : null],
     ['Shtetësia', profile?.country],
-    ['Vendndodhja', [profile?.city, profile?.country].filter(Boolean).join(', ') || null],
+    ['Qyteti', profile?.city],
     ['Klubi aktual', profile?.club],
     ['Ekipi', stats.currentTeam],
     ['Agjenti', stats.agentName],
@@ -550,6 +550,7 @@ export default function PublicProfileOverviewTab({
                   );
                 }
                 const title = item.club || item.clubName || item.team || item.name || item.competition || 'Klub';
+                const showLineStats = (careerItems?.length || 0) > 1;
                 const sub = [
                   item.season,
                   item.team && item.team !== title ? item.team : null,
@@ -558,9 +559,9 @@ export default function PublicProfileOverviewTab({
                   item.period,
                   item.position,
                   item.jerseyNumber != null ? `#${item.jerseyNumber}` : null,
-                  item.appearances != null ? `${item.appearances} ndeshje` : null,
-                  item.goals != null ? `${item.goals} gola` : null,
-                  item.assists != null ? `${item.assists} asiste` : null,
+                  showLineStats && item.appearances != null ? `${item.appearances} ndeshje` : null,
+                  showLineStats && item.goals != null ? `${item.goals} gola` : null,
+                  showLineStats && item.assists != null ? `${item.assists} asiste` : null,
                 ]
                   .filter(Boolean)
                   .join(' · ');
