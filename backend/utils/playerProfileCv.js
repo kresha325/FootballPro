@@ -929,6 +929,7 @@ module.exports = {
   mergeAchievements,
   buildCompleteness,
   overlayOfficialStats,
+  loadBundle,
   loadOfficialPerformance,
   loadOfficialTotalsForUsers,
   resolveVerificationStatus,

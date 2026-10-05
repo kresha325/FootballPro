@@ -366,6 +366,14 @@ export const analyticsAPI = {
   getDashboard: (period) => API.get(`/analytics/dashboard?period=${period}`),
   getFollowerGrowth: (period) => API.get(`/analytics/follower-growth?period=${period}`),
   getEngagementRate: (period) => API.get(`/analytics/engagement-rate?period=${period}`),
+  getHome: (params) => API.get('/analytics/home', { params }),
+  getPlayer: (userId, params) => API.get(`/analytics/player/${userId}`, { params }),
+  getClub: (clubId, params) => API.get(`/analytics/club/${clubId}`, { params }),
+  getScouting: (params) => API.get('/analytics/scouting', { params }),
+  getMarketplace: (params) => API.get('/analytics/marketplace', { params }),
+  getVideo: (params) => API.get('/analytics/video', { params }),
+  getWallet: (params) => API.get('/analytics/wallet', { params }),
+  compare: (params) => API.get('/analytics/compare', { params }),
 };
 // Stream-related API removed
 

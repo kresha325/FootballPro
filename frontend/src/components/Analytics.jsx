@@ -199,14 +199,12 @@ const Analytics = () => {
             icon={UserGroupIcon}
             label="Followers"
             value={analytics.overview.totalFollowers}
-            change={analytics.growth?.followers?.change ?? 0}
             color="bg-blue-500"
           />
           <StatCard
             icon={HeartIcon}
             label="Total Likes"
             value={analytics.overview.totalLikes}
-            change={analytics.growth?.likes?.change ?? 0}
             color="bg-red-500"
           />
           <StatCard
@@ -250,9 +248,12 @@ const Analytics = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Engagement Rate</p>
+                <p className="text-sm text-gray-600">Engagement rate</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {analytics.overview.engagementRate}
+                  {analytics.overview.engagementRate == null ? '—' : `${analytics.overview.engagementRate}%`}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {analytics.overview.engagementFormula || '(likes + comments + shares) / impressions × 100'}
                 </p>
               </div>
               <TrophyIcon className="h-8 w-8 text-yellow-500" />
@@ -265,6 +266,9 @@ const Analytics = () => {
           {/* Follower Growth Chart */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Follower Growth</h2>
+            {followerGrowth.length < 2 ? (
+              <p className="text-sm text-gray-500">Nuk ka mjaft ndjekës të rinj për këtë periudhë.</p>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={followerGrowth}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -272,14 +276,18 @@ const Analytics = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} />
+                <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} name="Followers" />
               </LineChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Engagement Rate Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Engagement Rate</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Engagement rate (%)</h2>
+            {engagementRate.filter((row) => row.rate != null).length < 1 ? (
+              <p className="text-sm text-gray-500">Nuk ka shikime të mjaftueshme për të llogaritur normën.</p>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={engagementRate}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -292,6 +300,7 @@ const Analytics = () => {
                 <Line type="monotone" dataKey="comments" stroke="#F59E0B" strokeWidth={2} name="Comments" />
               </LineChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Post Type Performance */}

@@ -366,6 +366,8 @@ export const followerGrowthAnalyticsRequest = (period = 30) =>
   api.get('/api/analytics/follower-growth', { params: { period } });
 export const engagementRateAnalyticsRequest = (period = 30) =>
   api.get('/api/analytics/engagement-rate', { params: { period } });
+export const performanceAnalyticsRequest = (range = '30d') =>
+  api.get('/api/analytics/home', { params: { range } });
 
 export const gamificationUserRequest = () => api.get('/api/gamification/user');
 export const gamificationAchievementsRequest = () => api.get('/api/gamification/achievements');

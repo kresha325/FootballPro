@@ -53,6 +53,7 @@ const LegalPage = lazyWithReload(() => import('./components/LegalPage'));
 const PublicCvPage = lazyWithReload(() => import('./components/PublicCvPage'));
 const SponsorsAdsHub = lazyWithReload(() => import('./components/SponsorsAdsHub'));
 const InsightsHub = lazyWithReload(() => import('./components/InsightsHub'));
+const AnalyticsCenter = lazyWithReload(() => import('./components/analytics/AnalyticsCenter'));
 const EmbedIncomingCall = lazyWithReload(() => import('./components/EmbedIncomingCall'));
 const EmbedGoLive = lazyWithReload(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
@@ -181,7 +182,8 @@ function App() {
             <Route path="/competitions/:id/fixtures" element={<CompetitionCenter section="fixtures" />} />
             <Route path="/competitions/:id/bracket" element={<CompetitionCenter section="bracket" />} />
             <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/analytics" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
+            <Route path="/analytics" element={user ? <AnalyticsCenter /> : <Navigate to="/login" />} />
+            <Route path="/analytics/:section" element={user ? <AnalyticsCenter /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/gamification/:userId" element={user ? <Gamification /> : <Navigate to="/login" />} />
             <Route path="/insights" element={user ? <InsightsHub /> : <Navigate to="/login" />} />

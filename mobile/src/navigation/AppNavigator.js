@@ -24,6 +24,7 @@ import EditProductScreen from '../screens/EditProductScreen';
 import WalletScreen from '../screens/WalletScreen';
 import VideosScreen from '../screens/VideosScreen';
 import InsightsScreen from '../screens/InsightsScreen';
+import PerformanceScreen from '../screens/PerformanceScreen';
 import TournamentsScreen from '../screens/TournamentsScreen';
 import TournamentDetailScreen from '../screens/TournamentDetailScreen';
 import ScoutingScreen from '../screens/ScoutingScreen';
@@ -353,6 +354,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
+      <MoreStack.Screen name="Performance" component={PerformanceScreen} options={{ title: 'Performanca' }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen
         name="TournamentDetail"

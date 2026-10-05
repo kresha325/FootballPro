@@ -1,7 +1,9 @@
 /**
  * Season / competition player totals derived from match rows.
- * Goals and assists prefer MatchScorer. Stat-line goals are ignored when a scorer
- * row already exists for that player in the same match, so totals are not doubled.
+ * Goals and assists prefer MatchScorer, then match events, then the stat line.
+ * A stat-line value is ignored when that match already counted the same fact
+ * from a scorer row or event, so totals are not doubled.
+ * Cards prefer match events, then the stat line for that match.
  */
 
 function blank(userId) {
@@ -38,6 +40,8 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
   const map = {};
   const scorerGoalsByMatchUser = new Set();
   const assistByMatchUser = new Set();
+  const yellowByMatchUser = new Set();
+  const redByMatchUser = new Set();
 
   for (const row of scorers) {
     const player = bucket(map, row.userId);
@@ -59,8 +63,13 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
     if (!player) {
       continue;
     }
-    if (event.type === 'yellow_card') player.yellowCards += 1;
-    else if (event.type === 'red_card') player.redCards += 1;
+    if (event.type === 'yellow_card') {
+      player.yellowCards += 1;
+      yellowByMatchUser.add(`${event.matchId}:${event.userId}`);
+    } else if (event.type === 'red_card') {
+      player.redCards += 1;
+      redByMatchUser.add(`${event.matchId}:${event.userId}`);
+    }
     else if (event.type === 'own_goal') player.ownGoals += 1;
     else if (event.type === 'assist' && !assistByMatchUser.has(`${event.matchId}:${event.userId}`)) {
       player.assists += 1;
@@ -94,6 +103,27 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
       if (extraGoals) {
         player.goals += extraGoals;
         scorerGoalsByMatchUser.add(`${row.matchId}:${row.userId}`);
+      }
+    }
+    if (!assistByMatchUser.has(`${row.matchId}:${row.userId}`)) {
+      const extraAssists = Number(row.assists) || 0;
+      if (extraAssists) {
+        player.assists += extraAssists;
+        assistByMatchUser.add(`${row.matchId}:${row.userId}`);
+      }
+    }
+    if (!yellowByMatchUser.has(`${row.matchId}:${row.userId}`)) {
+      const extraYellow = Number(row.yellowCards) || 0;
+      if (extraYellow) {
+        player.yellowCards += extraYellow;
+        yellowByMatchUser.add(`${row.matchId}:${row.userId}`);
+      }
+    }
+    if (!redByMatchUser.has(`${row.matchId}:${row.userId}`)) {
+      const extraRed = Number(row.redCards) || 0;
+      if (extraRed) {
+        player.redCards += extraRed;
+        redByMatchUser.add(`${row.matchId}:${row.userId}`);
       }
     }
     if (row.rating != null && row.rating !== '') {

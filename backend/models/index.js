@@ -79,6 +79,8 @@ const MediaItem = require('./MediaItem');
 const MediaEvent = require('./MediaEvent');
 const PostSponsor = require('./PostSponsor');
 const EngagementMetrics = require('./EngagementMetrics');
+const PostAnalytics = require('./PostAnalytics');
+const LiveStreamAnalytics = require('./LiveStreamAnalytics');
 const VideoCallHistory = require('./VideoCallHistory')(sequelize, DataTypes);
 const LiveStream = require('./LiveStream');
 const Stream = require('./Stream');
@@ -191,6 +193,8 @@ module.exports = {
   PostSponsor,
   ProfileView,
   EngagementMetrics,
+  PostAnalytics,
+  LiveStreamAnalytics,
   MatchScorer,
   MatchEvent,
   PlayerMatchStat,

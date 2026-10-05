@@ -74,6 +74,10 @@ setInterval(() => {
     console.warn('purgeExpiredOutOfStockProducts:', err?.message || err)
   );
 }, 60 * 60 * 1000);
+const { purgeExpiredAnalyticsEvents } = require('./services/analytics/retention');
+setInterval(() => {
+  purgeExpiredAnalyticsEvents().catch((err) => console.warn('purgeExpiredAnalyticsEvents:', err?.message || err));
+}, 6 * 60 * 60 * 1000);
 const { expireStaleLiveStreams, notifyStreamsStartingSoon } = require('./utils/streamLive');
 expireStaleLiveStreams()
   .then((n) => {

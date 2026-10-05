@@ -15,6 +15,11 @@ const LiveStreamAnalytics = sequelize.define('LiveStreamAnalytics', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
+  peakViewers: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   duration: {
     type: DataTypes.INTEGER,
     defaultValue: 0, // seconds

@@ -1,39 +1,41 @@
 const db = require('../models');
-const { ProfileView, PostAnalytics, EngagementMetrics, User, Post, Profile, Like, Comment, Subscription, Follow } = db;
-const { Op } = require('sequelize');
-const sequelize = require('../config/database');
-const ClubMember = require('../models/ClubRosterRequest');
+const { Post } = db;
+const { recordPostEvent } = require('../services/analytics/events');
+const { userAnalytics, dashboard, followerSeries, engagementSeries } = require('../services/analytics/social');
+const { clubAnalytics, assertClubAccess } = require('../services/analytics/club');
+const { parseRange } = require('../services/analytics/formulas');
 
-// Club analytics summary for club panel
+function sendError(res, err, label) {
+  const status = err.status || 500;
+  if (status >= 500) console.error(label || 'analytics', err);
+  res.status(status).json({ msg: status >= 500 ? 'Server error' : err.message });
+}
+
 exports.getClubAnalytics = async (req, res) => {
   try {
-    const clubId = req.params.clubId;
-    // Total approved athletes
-    const totalAthletes = await ClubMember.count({ where: { clubId, status: 'approved' } });
-    // Pending requests
-    const pendingRequests = await ClubMember.count({ where: { clubId, status: 'pending' } });
-    // Shortlist count
-      const shortlistCount = 0; // ClubShortlist model nuk ekziston
-    // Offers sent
-    const offersSent = 0; // ClubOffer model nuk ekziston
-    // Offers accepted
-    const offersAccepted = 0;
-    // Offers rejected
-    const offersRejected = 0;
+    const clubId = Number(req.params.clubId);
+    if (!Number.isFinite(clubId)) return res.status(400).json({ msg: 'Invalid club id.' });
+    const allowed = await assertClubAccess(req.user, clubId);
+    if (!allowed) return res.status(403).json({ msg: 'Club analytics are visible to the club and its staff.' });
+    const data = await clubAnalytics(clubId, parseRange(req.query));
     res.json({
-      totalAthletes,
-      pendingRequests,
-      shortlistCount,
-      offersSent,
-      offersAccepted,
-      offersRejected,
+      totalAthletes: data.squadSize,
+      pendingRequests: data.pendingRequests,
+      shortlistCount: null,
+      offersSent: null,
+      offersAccepted: null,
+      offersRejected: null,
+      unavailable: {
+        shortlistCount: 'Club shortlist is not a separate table. Scout shortlist is on /analytics/scouting.',
+        offers: 'Transfer offers are not a ledger, so offer totals are omitted.',
+      },
+      ...data,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err, 'getClubAnalytics');
   }
 };
 
-// Track profile view
 exports.trackProfileView = async (req, res) => {
   const { profileId } = req.params;
   try {
@@ -48,7 +50,6 @@ exports.trackProfileView = async (req, res) => {
     if (!result.counted && result.reason === 'duplicate') {
       return res.json({ msg: 'Profile view already counted' });
     }
-
     res.json({ msg: 'Profile view tracked' });
   } catch (err) {
     console.error(err);
@@ -56,399 +57,104 @@ exports.trackProfileView = async (req, res) => {
   }
 };
 
-// Track post interaction
 exports.trackPostInteraction = async (req, res) => {
-  const { postId, type } = req.params;
   try {
-    await PostAnalytics.create({
-      postId: parseInt(postId),
+    const result = await recordPostEvent({
+      postId: req.params.postId,
       userId: req.user.id,
-      type,
+      type: req.params.type,
     });
-
-    // Update engagement metrics for post owner
-    const post = await Post.findByPk(postId);
-    if (post) {
-      const today = new Date().toISOString().split('T')[0];
-      let metrics = await EngagementMetrics.findOne({
-        where: { userId: post.userId, date: today }
-      });
-      if (!metrics) {
-        metrics = await EngagementMetrics.create({
-          userId: post.userId,
-          date: today,
-        });
-      }
-      if (type === 'view') metrics.postViews += 1;
-      else if (type === 'like') metrics.likesReceived += 1;
-      else if (type === 'comment') metrics.commentsReceived += 1;
-      else if (type === 'share') {
-        metrics.sharesReceived += 1;
-        if (Number(post.userId) !== Number(req.user.id)) {
-          try {
-            const { notify } = require('../services/notifications/service');
-            const actor = await User.findByPk(req.user.id, { attributes: ['firstName', 'lastName'] });
-            const actorName = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim() || 'Dikush';
-            await notify({
-              userId: post.userId,
-              actorId: req.user.id,
-              eventType: 'POST_SHARED',
-              actorName,
-              title: 'Shpërndarje',
-              message: `${actorName} shpërndau postimin tuaj`,
-              entityType: 'post',
-              entityId: Number(postId),
-              link: `/feed?post=${postId}`,
-            });
-          } catch (shareErr) {
-            console.warn('share notification:', shareErr?.message || shareErr);
-          }
+    if (!result.counted && result.reason === 'self') return res.json({ msg: 'Own post view not tracked' });
+    if (!result.counted && result.reason === 'duplicate') return res.json({ msg: 'Interaction already counted' });
+    if (req.params.type === 'share' && result.counted) {
+      const post = await Post.findByPk(req.params.postId, { attributes: ['id', 'userId'] });
+      if (post && Number(post.userId) !== Number(req.user.id)) {
+        try {
+          const { notify } = require('../services/notifications/service');
+          const User = require('../models/User');
+          const actor = await User.findByPk(req.user.id, { attributes: ['firstName', 'lastName'] });
+          const actorName = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim() || 'Dikush';
+          await notify({
+            userId: post.userId,
+            actorId: req.user.id,
+            eventType: 'POST_SHARED',
+            actorName,
+            title: 'Shpërndarje',
+            message: `${actorName} shpërndau postimin tuaj`,
+            entityType: 'post',
+            entityId: Number(req.params.postId),
+            link: `/feed?post=${req.params.postId}`,
+          });
+        } catch (shareErr) {
+          console.warn('share notification:', shareErr?.message || shareErr);
         }
       }
-      await metrics.save();
     }
-
     res.json({ msg: 'Interaction tracked' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    sendError(res, err, 'trackPostInteraction');
   }
 };
 
-// Get user analytics
 exports.getUserAnalytics = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { period = '30' } = req.query; // days
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-
-    // Profile views
-    const profileViews = await ProfileView.count({
-      where: {
-        profileId: userId,
-        viewedAt: { [Op.gte]: startDate }
-      }
-    });
-    const uniqueViewers = await ProfileView.count({
-      where: {
-        profileId: userId,
-        viewedAt: { [Op.gte]: startDate },
-      },
-      distinct: true,
-      col: 'viewerId',
-    });
-
-    // Post analytics
-    const posts = await Post.findAll({ where: { userId } });
-    const postIds = posts.map(p => p.id);
-
-    const postInteractions = await PostAnalytics.findAll({
-      where: {
-        postId: { [Op.in]: postIds },
-        createdAt: { [Op.gte]: startDate }
-      },
-      attributes: [
-        'type',
-        [require('sequelize').fn('COUNT', require('sequelize').col('type')), 'count']
-      ],
-      group: ['type']
-    });
-
-    const engagement = {};
-    postInteractions.forEach(item => {
-      engagement[item.type] = parseInt(item.dataValues.count);
-    });
-
-    // Engagement metrics over time
-    const metrics = await EngagementMetrics.findAll({
-      where: {
-        userId,
-        date: { [Op.gte]: startDate }
-      },
-      order: [['date', 'ASC']]
-    });
-
-    // Follower growth - assuming there's a followers relationship
-    // Followers gained in the last 30 days
-    const days = 30;
-    const sinceDate = new Date();
-    sinceDate.setDate(sinceDate.getDate() - days);
-    const followersGained = await Follow.count({
-      where: {
-        followingId: req.user.id,
-        createdAt: { [Op.gte]: sinceDate }
-      }
-    });
-
-    res.json({
-      profileViews,
-      uniqueViewers,
-      engagement,
-      metrics,
-      followersGained,
-      postsCount: posts.length
-    });
+    const range = parseRange(req.query);
+    res.json(await userAnalytics(req.user.id, range));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    sendError(res, err, 'getUserAnalytics');
   }
 };
 
-// Get post analytics
 exports.getPostAnalytics = async (req, res) => {
   const { postId } = req.params;
   try {
-    const post = await Post.findOne({
-      where: { id: postId, userId: req.user.id }
-    });
+    const post = await Post.findOne({ where: { id: postId, userId: req.user.id } });
     if (!post) return res.status(404).json({ msg: 'Post not found' });
-
-    const analytics = await PostAnalytics.findAll({
-      where: { postId },
-      attributes: [
-        'type',
-        [require('sequelize').fn('COUNT', require('sequelize').col('type')), 'count']
-      ],
-      group: ['type']
+    const PostAnalytics = require('../models/PostAnalytics');
+    const { Like, Comment } = require('../models');
+    const [likes, comments, views, shares] = await Promise.all([
+      Like.count({ where: { postId } }),
+      Comment.count({ where: { postId } }),
+      PostAnalytics.count({ where: { postId, type: 'view' } }),
+      PostAnalytics.count({ where: { postId, type: 'share' } }),
+    ]);
+    const { engagementRate, ENGAGEMENT_RATE_FORMULA } = require('../services/analytics/formulas');
+    const rate = engagementRate({ likes, comments, shares, impressions: views });
+    res.json({
+      view: views,
+      like: likes,
+      comment: comments,
+      share: shares,
+      engagementRate: rate.rate,
+      engagementFormula: ENGAGEMENT_RATE_FORMULA,
     });
-
-    const result = {};
-    analytics.forEach(item => {
-      result[item.type] = parseInt(item.dataValues.count);
-    });
-
-    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
-// Get comprehensive dashboard analytics
 exports.getDashboardAnalytics = async (req, res) => {
-    // LOGGING për debug (moved after variable declarations)
-      const userId = req.user.id;
-
-      // Statistikat kryesore
-      const totalPosts = await Post.count({ where: { userId } });
-      const totalFollowers = await Follow.count({ where: { followingId: userId } });
-      const totalFollowing = await Follow.count({ where: { followerId: userId } });
-
-      // Merr id-të e postimeve të userit
-      const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });
-      const userPostIds = userPosts.map(p => p.id);
-
-      // Numëro pëlqimet dhe komentet për këto postime
-      let totalLikes = 0;
-      let totalComments = 0;
-      if (userPostIds.length > 0) {
-        totalLikes = await Like.count({ where: { postId: { [Op.in]: userPostIds } } });
-        totalComments = await Comment.count({ where: { postId: { [Op.in]: userPostIds } } });
-      }
-
-      // Numëro shikimet e profilit
-      const profileViews = await ProfileView.count({ where: { profileId: userId } });
-
-      // LOGGING pas llogaritjeve
-      console.log('DashboardAnalytics userId:', userId);
-      console.log('userPostIds:', userPostIds);
-      console.log('totalPosts:', totalPosts);
-      console.log('totalLikes:', totalLikes);
-      console.log('totalComments:', totalComments);
-      console.log('profileViews:', profileViews);
   try {
-    const userId = req.user.id;
-
-    // Statistikat kryesore
-    const totalPosts = await Post.count({ where: { userId } });
-    const totalFollowers = await Follow.count({ where: { followingId: userId, status: 'accepted' } });
-    const totalFollowing = await Follow.count({ where: { followerId: userId, status: 'accepted' } });
-
-    // Merr id-të e postimeve të userit
-    const userPosts = await Post.findAll({ where: { userId }, attributes: ['id'], raw: true });
-    const userPostIds = userPosts.map(p => p.id);
-
-    // Numëro pëlqimet dhe komentet për këto postime
-    let totalLikes = 0;
-    let totalComments = 0;
-    if (userPostIds.length > 0) {
-      totalLikes = await Like.count({ where: { postId: { [Op.in]: userPostIds } } });
-      totalComments = await Comment.count({ where: { postId: { [Op.in]: userPostIds } } });
-    }
-
-    // Numëro shikimet e profilit
-    const profileViews = await ProfileView.count({ where: { profileId: userId } });
-
-    // Top 5 postimet me të dhënat e plota të postit dhe autorit/profilit
-    const topPostsRaw = await Post.findAll({
-      where: { userId },
-      attributes: {
-        include: [
-          [sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "postId" = "Post"."id")'), 'likesCount'],
-          [sequelize.literal('(SELECT COUNT(*) FROM "Comments" WHERE "postId" = "Post"."id")'), 'commentsCount'],
-        ]
-      },
-      include: [
-        {
-          model: User,
-          as: 'author',
-            attributes: ['id', 'firstName', 'lastName', 'email'],
-          include: [
-            {
-              model: Profile,
-              attributes: ['country', 'profilePhoto']
-            }
-          ]
-        }
-      ],
-      order: [[sequelize.literal('"likesCount"'), 'DESC']],
-      limit: 5
-    });
-
-    // Shto likesCount, commentsCount, isLiked (nëse ka user në req)
-    const postsWithCounts = await Promise.all(topPostsRaw.map(async (post) => {
-      let isLiked = false;
-      if (req.user) {
-        const userLiked = await Like.findOne({ where: { postId: post.id, userId: req.user.id } });
-        isLiked = !!userLiked;
-      }
-      return {
-        ...post.toJSON(),
-        likesCount: parseInt(post.get('likesCount')) || 0,
-        commentsCount: parseInt(post.get('commentsCount')) || 0,
-        isLiked
-      };
-    }));
-
-    // Performanca e postimeve me/pa foto
-    const postsWithImage = await Post.count({ where: { userId, imageUrl: { [Op.ne]: null } } });
-    const postsWithoutImage = await Post.count({ where: { userId, imageUrl: null } });
-    let likesOnImagePosts = 0;
-    let likesOnTextPosts = 0;
-    if (userPostIds.length > 0) {
-      const imagePostIds = (await Post.findAll({ where: { userId, imageUrl: { [Op.ne]: null } }, attributes: ['id'], raw: true })).map(p => p.id);
-      const textPostIds = (await Post.findAll({ where: { userId, imageUrl: null }, attributes: ['id'], raw: true })).map(p => p.id);
-      if (imagePostIds.length > 0) likesOnImagePosts = await Like.count({ where: { postId: { [Op.in]: imagePostIds } } });
-      if (textPostIds.length > 0) likesOnTextPosts = await Like.count({ where: { postId: { [Op.in]: textPostIds } } });
-    }
-
-    // Përgjigja
-    res.json({
-      overview: {
-        totalPosts,
-        totalFollowers,
-        totalFollowing,
-        totalLikes,
-        totalComments,
-        profileViews,
-        engagementRate: totalPosts > 0 ? ((totalLikes + totalComments) / totalPosts).toFixed(2) : 0,
-      },
-      topPosts: postsWithCounts,
-      postTypePerformance: {
-        withImage: {
-          count: postsWithImage,
-          avgLikes: postsWithImage > 0 ? (likesOnImagePosts / postsWithImage).toFixed(1) : 0,
-        },
-        withoutImage: {
-          count: postsWithoutImage,
-          avgLikes: postsWithoutImage > 0 ? (likesOnTextPosts / postsWithoutImage).toFixed(1) : 0,
-        },
-      },
-    });
+    const range = parseRange({ ...req.query, range: req.query.range || (req.query.period ? req.query.period : '30d') });
+    res.json(await dashboard(req.user.id, range, req.user.id));
   } catch (err) {
-    console.error('Dashboard analytics error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    sendError(res, err, 'getDashboardAnalytics');
   }
 };
 
-// Get follower growth chart data
 exports.getFollowerGrowth = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { period = '30' } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-
-    const follows = await Follow.findAll({
-      where: {
-        followingId: userId,
-        createdAt: { [Op.gte]: startDate },
-      },
-      attributes: [
-        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-      ],
-      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
-      raw: true,
-    });
-
-    // Calculate cumulative count
-    let cumulative = await Follow.count({
-      where: { followingId: userId, createdAt: { [Op.lt]: startDate } },
-    });
-
-    const growthData = follows.map(item => {
-      cumulative += parseInt(item.count);
-      return {
-        date: item.date,
-        count: cumulative,
-      };
-    });
-
-    res.json(growthData);
+    res.json(await followerSeries(req.user.id, parseRange(req.query)));
   } catch (err) {
-    console.error('Follower growth error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    sendError(res, err, 'getFollowerGrowth');
   }
 };
 
-// Get engagement rate by day
 exports.getEngagementRate = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { period = '30' } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-
-    const posts = await Post.findAll({
-      where: { userId, createdAt: { [Op.gte]: startDate } },
-      attributes: [
-        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-        [sequelize.fn('COUNT', sequelize.col('Post.id')), 'postsCount'],
-      ],
-      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
-    });
-
-    const postsByDate = {};
-    posts.forEach(p => {
-      postsByDate[p.dataValues.date] = parseInt(p.dataValues.postsCount);
-    });
-
-    const metrics = await EngagementMetrics.findAll({
-      where: {
-        userId,
-        date: { [Op.gte]: startDate },
-      },
-      order: [['date', 'ASC']],
-    });
-
-    const engagementData = metrics.map(m => {
-      const postsCount = postsByDate[m.date] || 1;
-      return {
-        date: m.date,
-        rate: ((m.likesReceived + m.commentsReceived) / postsCount).toFixed(2),
-        likes: m.likesReceived,
-        comments: m.commentsReceived,
-        views: m.postViews,
-      };
-    });
-
-    res.json(engagementData);
+    res.json(await engagementSeries(req.user.id, parseRange(req.query)));
   } catch (err) {
-    console.error('Engagement rate error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    sendError(res, err, 'getEngagementRate');
   }
 };

@@ -12,9 +12,21 @@ const {
   getEngagementRate,
   getClubAnalytics
 } = require('../controllers/analytics');
+const hub = require('../controllers/analyticsHub');
 
-// Club analytics summary
-router.get('/club/:clubId', getClubAnalytics);
+router.get('/home', auth, hub.home);
+router.get('/definitions', auth, hub.definitions);
+router.get('/player/:userId', auth, hub.player);
+router.get('/scouting/player/:userId', auth, hub.scoutingPlayer);
+router.get('/scouting', auth, hub.scouting);
+router.get('/marketplace', auth, hub.marketplace);
+router.get('/wallet', auth, hub.wallet);
+router.get('/video', auth, hub.video);
+router.get('/competition/:id', auth, hub.competition);
+router.get('/compare', auth, hub.compare);
+router.get('/social', auth, requireTier('basic'), hub.socialSummary);
+
+router.get('/club/:clubId', auth, getClubAnalytics);
 
 // Track interactions
 router.post('/profile/:profileId/view', auth, trackProfileView);

@@ -14,7 +14,7 @@ const {
   toCents,
 } = require('../../config/economy');
 const { postLedgerEntry, lockUsers, economyError } = require('./ledger');
-const { purchaseBlockReason, assertStatusTransition, isRecognizedSaleStatus, claimUnits } = require('./rules');
+const { purchaseBlockReason, assertStatusTransition, claimUnits } = require('./rules');
 
 const DELIVERY_METHODS = new Set(['pickup', 'shipping', 'meetup']);
 const REFUNDABLE = new Set(['paid', 'processing', 'shipped', 'delivered']);
@@ -476,35 +476,24 @@ async function refundOrder(orderId, actor) {
 }
 
 async function sellerSummary(sellerId) {
+  const { aggregateSellerOrders } = require('../analytics/marketplace');
   const { getCompletedLedgerBalance } = require('./ledger');
-  const orders = await Order.findAll({ where: { sellerId } });
-  let gross = 0;
-  let fees = 0;
-  let net = 0;
-  let recognized = 0;
-  let delivered = 0;
-  let refunded = 0;
-  for (const order of orders) {
-    if (isRecognizedSaleStatus(order.status)) {
-      recognized += 1;
-      if (order.status === 'delivered') delivered += 1;
-      gross += toCents(order.grossAmount || order.totalAmount) || 0;
-      fees += toCents(order.platformFeeAmount || 0) || 0;
-      net += toCents(order.sellerNetAmount || order.totalAmount) || 0;
-    } else if (order.status === 'refunded') {
-      refunded += 1;
-    }
-  }
+  const totals = await aggregateSellerOrders(sellerId, null);
   const sellerBalance = await getCompletedLedgerBalance(sellerId);
   return {
-    grossSales: fromCents(gross),
-    platformFees: fromCents(fees),
-    netAmount: fromCents(net),
+    grossSales: totals.grossRevenue,
+    platformFees: totals.platformFees,
+    netAmount: totals.netRevenue,
     sellerBalance,
-    currency: 'JON',
-    recognizedOrders: recognized,
-    completedOrders: delivered,
-    refundedOrders: refunded,
+    currency: totals.primaryCurrency || 'JON',
+    mixedCurrency: totals.mixedCurrency,
+    byCurrency: totals.byCurrency,
+    recognizedOrders: totals.recognizedOrders,
+    completedOrders: totals.completedOrders,
+    refundedOrders: totals.refundedOrders,
+    cancelledOrders: totals.cancelledOrders,
+    orders: totals.orders,
+    averageOrderValue: totals.averageOrderValue,
   };
 }
 

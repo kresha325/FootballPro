@@ -128,6 +128,11 @@ export default function MoreScreen({ navigation }) {
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>Module</Text>
       {btn({ title: 'Wallet', subtitle: 'XCoin balance and transactions', onPress: () => navigation.navigate('Wallet') })}
+      {btn({
+        title: 'Performance',
+        subtitle: 'Statistika, formë, shitje dhe wallet',
+        onPress: () => navigation.navigate('Performance'),
+      })}
       {canUseInsights
         ? btn({
             title: 'Insights',

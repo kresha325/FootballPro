@@ -266,27 +266,12 @@ exports.getPost = async (req, res) => {
 
     // Track view if not own post
     if (post.userId !== req.user.id) {
-      const PostAnalytics = require('../models/PostAnalytics');
-      await PostAnalytics.create({
-        postId: post.id,
-        userId: req.user.id,
-        type: 'view',
-      });
-
-      // Update engagement metrics
-      const EngagementMetrics = require('../models/EngagementMetrics');
-      const today = new Date().toISOString().split('T')[0];
-      let metrics = await EngagementMetrics.findOne({
-        where: { userId: post.userId, date: today }
-      });
-      if (!metrics) {
-        metrics = await EngagementMetrics.create({
-          userId: post.userId,
-          date: today,
-        });
+      try {
+        const { recordPostEvent } = require('../services/analytics/events');
+        await recordPostEvent({ postId: post.id, userId: req.user.id, type: 'view' });
+      } catch (viewErr) {
+        console.warn('post view:', viewErr?.message || viewErr);
       }
-      metrics.postViews += 1;
-      await metrics.save();
     }
 
     const postObj = post.toJSON();

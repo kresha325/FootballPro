@@ -13,7 +13,7 @@ function tabFromPath(pathname, search) {
 
 /**
  * Combined Insights hub (1:1 with mobile More → Insights).
- * Also used by /analytics and /gamification deep links.
+ * Performance analytics live at /analytics.
  */
 export default function InsightsHub() {
   const location = useLocation();
@@ -39,10 +39,10 @@ export default function InsightsHub() {
             </p>
           </div>
           <Link
-            to="/premium"
+            to="/analytics"
             className="text-sm font-semibold text-[var(--xt-color-gold-bright,#9A6B12)] hover:underline"
           >
-            Planet Premium →
+            Analitika e performancës →
           </Link>
         </div>
         <div className="flex gap-2 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
