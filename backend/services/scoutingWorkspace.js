@@ -8,7 +8,6 @@ const Match = require('../models/Match');
 const { Tournament } = require('../models/Tournament');
 const PlayerMatchStat = require('../models/PlayerMatchStat');
 const MediaItem = require('../models/MediaItem');
-const Notification = require('../models/Notification');
 const ScoutShortlist = require('../models/ScoutShortlist');
 const ScoutWatchlist = require('../models/ScoutWatchlist');
 const ScoutWatchEvent = require('../models/ScoutWatchEvent');
@@ -679,6 +678,12 @@ async function addShortlist(user, body = {}) {
   if (!parsed.ok) return { status: 400, body: { msg: parsed.msg } };
   try {
     const row = await ScoutShortlist.create({ scoutId: user.id, playerId: athlete.id, ...parsed.value });
+    try {
+      const { notifyShortlist } = require('./notifications/events');
+      await notifyShortlist({ scoutId: user.id, playerId: athlete.id, shortlistId: row.id });
+    } catch (err) {
+      console.warn('shortlist notification:', err?.message || err);
+    }
     return { status: 201, body: row };
   } catch (err) {
     if (err instanceof UniqueConstraintError) {
@@ -708,19 +713,10 @@ async function removeShortlist(user, id) {
   return { status: 200, body: { ok: true } };
 }
 
-async function notifyScout(scoutId, player, event) {
+async function notifyScout(scoutId, player, event, watchlistId) {
   try {
-    await Notification.create({
-      userId: scoutId,
-      actorId: player?.id || null,
-      type: 'system',
-      title: 'Watchlist',
-      message: `${playerName(player)}: ${event.summary}`,
-      link: '/scouting/watchlist',
-      entityType: 'scouting',
-      entityId: player?.id || null,
-      metadata: { changeType: event.type, ...(event.payload || {}) },
-    });
+    const { notifyWatchChange } = require('./notifications/events');
+    await notifyWatchChange({ scoutId, player, change: event, watchlistId });
   } catch (err) {
     console.warn('scouting notification:', err?.message || err);
   }
@@ -747,7 +743,7 @@ async function refreshWatchRows(rows) {
         payload: change.payload || null,
       });
       events.push(created);
-      await notifyScout(row.scoutId, player, change);
+      await notifyScout(row.scoutId, player, change, row.id);
     }
     await row.update({ snapshot: next, lastViewedAt: new Date() });
   }

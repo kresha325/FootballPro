@@ -92,6 +92,54 @@ export async function navigateFromNotification(notification, navigation) {
     return true;
   }
 
+  const entityType = String(notification?.entityType || '').toLowerCase();
+  const eventType = String(notification?.eventType || notification?.metadata?.eventType || '').toUpperCase();
+  const entityId = notification?.entityId != null ? Number(notification.entityId) : null;
+
+  if (entityType === 'match' || eventType.startsWith('MATCH_')) {
+    if (entityId) {
+      tabs.navigate('More', { screen: 'MatchDetail', params: { matchId: entityId } });
+      return true;
+    }
+    tabs.navigate('More', { screen: 'Matches' });
+    return true;
+  }
+
+  if (entityType === 'stream' || eventType.startsWith('STREAM_') || eventType === 'REPLAY_AVAILABLE' || link.includes('/live/')) {
+    const streamId = entityId || Number(link.match(/\/live\/(\d+)/)?.[1]);
+    if (streamId) {
+      tabs.navigate('More', { screen: 'LiveViewer', params: { streamId } });
+      return true;
+    }
+    tabs.navigate('More', { screen: 'Streams' });
+    return true;
+  }
+
+  if (entityType === 'order' || eventType.startsWith('ORDER_') || eventType === 'PAYMENT_STATUS' || eventType === 'REFUND') {
+    tabs.navigate('Marketplace', { screen: 'MarketplaceHome', params: { orderId: entityId || undefined } });
+    return true;
+  }
+
+  if (entityType === 'wallet' || entityType === 'transaction' || eventType.startsWith('WALLET_') || link.includes('/wallet')) {
+    tabs.navigate('More', { screen: 'Wallet' });
+    return true;
+  }
+
+  if (entityType === 'scouting' || eventType.startsWith('SCOUT_') || link.includes('/scouting')) {
+    tabs.navigate('More', { screen: 'Scouting' });
+    return true;
+  }
+
+  if (entityType === 'club' && entityId) {
+    tabs.navigate('Profile', { screen: 'PublicProfile', params: { userId: entityId } });
+    return true;
+  }
+
+  if (entityType === 'player' && entityId) {
+    tabs.navigate('Profile', { screen: 'PublicProfile', params: { userId: entityId } });
+    return true;
+  }
+
   const postId = parsePostId(link, notification);
   if (type === 'like' || type === 'comment' || postId) {
     if (postId) {
@@ -180,6 +228,14 @@ export function getNotificationIcon(notification) {
       return '⚽';
     case 'achievement':
       return '🎖️';
+    case 'system': {
+      const eventType = String(notification?.eventType || notification?.metadata?.eventType || '');
+      if (eventType.startsWith('ORDER_')) return '📦';
+      if (eventType.startsWith('WALLET_')) return '🪙';
+      if (eventType.startsWith('SCOUT_')) return '🔎';
+      if (eventType.startsWith('STREAM_') || eventType === 'REPLAY_AVAILABLE') return '📺';
+      return '🔔';
+    }
     default:
       return '🔔';
   }

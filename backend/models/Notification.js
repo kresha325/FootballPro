@@ -25,19 +25,21 @@ const Notification = sequelize.define('Notification', {
     },
   },
   type: {
-    type: DataTypes.ENUM(
-      'like',
-      'comment',
-      'follow',
-      'message',
-      'mention',
-      'post',
-      'tournament',
-      'match',
-      'achievement',
-      'system'
-    ),
+    type: DataTypes.STRING(64),
     allowNull: false,
+  },
+  eventType: {
+    type: DataTypes.STRING(64),
+    allowNull: true,
+  },
+  category: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+  },
+  priority: {
+    type: DataTypes.STRING(16),
+    allowNull: false,
+    defaultValue: 'NORMAL',
   },
   title: {
     type: DataTypes.STRING,
@@ -63,10 +65,29 @@ const Notification = sequelize.define('Notification', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  readAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  expiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  idempotencyKey: {
+    type: DataTypes.STRING(191),
+    allowNull: true,
+    unique: true,
+  },
   metadata: {
     type: DataTypes.JSON,
     allowNull: true,
   },
+}, {
+  indexes: [
+    { fields: ['userId', 'isRead'] },
+    { fields: ['userId', 'createdAt'] },
+    { fields: ['userId', 'category', 'isRead'] },
+  ],
 });
 
 Notification.belongsTo(User, { as: 'user', foreignKey: 'userId' });

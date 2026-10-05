@@ -1024,6 +1024,12 @@ if (!PORT) {
 }
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+  try {
+    const { startNotificationScheduler } = require('./services/notifications/scheduler');
+    startNotificationScheduler();
+  } catch (err) {
+    console.warn('notification scheduler:', err?.message || err);
+  }
   ensureOgImageOnCloudinary().catch((err) => {
     console.warn('[og-image] startup upload error:', err?.message || err);
   });

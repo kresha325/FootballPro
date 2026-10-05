@@ -257,8 +257,12 @@ export const userOnlineStatusRequest = (userId) => api.get(`/api/users/${userId}
 export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });
 export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');
 export const markNotificationReadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/read`);
+export const markNotificationUnreadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/unread`);
 export const markAllNotificationsReadRequest = () => api.put('/api/notifications/mark-all-read');
 export const deleteNotificationRequest = (notificationId) => api.delete(`/api/notifications/${notificationId}`);
+export const notificationPreferencesRequest = () => api.get('/api/notifications/preferences');
+export const updateNotificationPreferencesRequest = (preferences) =>
+  api.put('/api/notifications/preferences', { preferences });
 
 export const productsRequest = () => api.get('/api/products');
 export const productByIdRequest = (id) => api.get(`/api/products/${id}`);
@@ -403,10 +407,10 @@ export const rejectTournamentParticipantRequest = (tournamentId, userId) =>
 
 export const publicConfigRequest = () => api.get('/api/config/public');
 
-export const registerPushTokenRequest = (token, type = 'mobile') =>
+export const registerPushTokenRequest = (token, type = 'mobile', deviceId = null) =>
   api.post(
     '/api/profiles/me/push-token',
-    { token: token || null, type },
+    { token: token || null, type, deviceId },
     { skipUnauthorized: true }
   );
 

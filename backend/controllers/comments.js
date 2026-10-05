@@ -1,8 +1,6 @@
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
-const User = require('../models/User');
-const { sendNotification, notifyComment } = require('./notifications');
-const { sendEmail } = require('../services/emailService');
+const { notifyComment } = require('./notifications');
 
 exports.getComments = async (req, res) => {
   try {
@@ -50,20 +48,6 @@ exports.createComment = async (req, res) => {
       // Send notification and award XP to post owner
       if (post.userId !== req.user.id) {
         await notifyComment(post.userId, req.user.id, req.params.postId, content);
-        
-        // Send email notification
-        try {
-          const commenter = await User.findByPk(req.user.id);
-          const postOwner = await User.findByPk(post.userId);
-          const commenterName = `${commenter.firstName} ${commenter.lastName}`;
-          const preview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
-          await sendEmail(postOwner.email, 'newComment', commenterName, preview, req.params.postId);
-        } catch (emailError) {
-          console.error('Email notification failed:', emailError);
-        }
-        
-        // Award points to post owner for receiving a comment
-        // Gamification u largua
       }
 
       // Award points to commenter

@@ -1,8 +1,6 @@
 const Like = require('../models/Like');
 const Post = require('../models/Post');
-const User = require('../models/User');
 const { notifyLike } = require('./notifications');
-const { sendEmail } = require('../services/emailService');
 
 exports.getLikes = async (req, res) => {
   try {
@@ -72,16 +70,6 @@ exports.likePost = async (req, res) => {
       }
       if (post && post.userId !== req.user.id) {
         await notifyLike(post.userId, req.user.id, postId);
-        try {
-          const liker = await User.findByPk(req.user.id);
-          const postOwner = await User.findByPk(post.userId);
-          if (liker && postOwner?.email) {
-            const likerName = `${liker.firstName || ''} ${liker.lastName || ''}`.trim() || 'Someone';
-            await sendEmail(postOwner.email, 'newLike', likerName, String(postId));
-          }
-        } catch (emailError) {
-          console.warn('likePost: email skipped:', emailError?.message || emailError);
-        }
       }
     } catch (notifyErr) {
       console.warn('likePost: notification skipped:', notifyErr?.message || notifyErr);

@@ -82,7 +82,29 @@ exports.trackPostInteraction = async (req, res) => {
       if (type === 'view') metrics.postViews += 1;
       else if (type === 'like') metrics.likesReceived += 1;
       else if (type === 'comment') metrics.commentsReceived += 1;
-      else if (type === 'share') metrics.sharesReceived += 1;
+      else if (type === 'share') {
+        metrics.sharesReceived += 1;
+        if (Number(post.userId) !== Number(req.user.id)) {
+          try {
+            const { notify } = require('../services/notifications/service');
+            const actor = await User.findByPk(req.user.id, { attributes: ['firstName', 'lastName'] });
+            const actorName = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim() || 'Dikush';
+            await notify({
+              userId: post.userId,
+              actorId: req.user.id,
+              eventType: 'POST_SHARED',
+              actorName,
+              title: 'Shpërndarje',
+              message: `${actorName} shpërndau postimin tuaj`,
+              entityType: 'post',
+              entityId: Number(postId),
+              link: `/feed?post=${postId}`,
+            });
+          } catch (shareErr) {
+            console.warn('share notification:', shareErr?.message || shareErr);
+          }
+        }
+      }
       await metrics.save();
     }
 

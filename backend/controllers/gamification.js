@@ -1,6 +1,15 @@
 const { User, Profile, Achievement, Badge, Reward, UserAchievement, UserBadge, UserReward, Post, Like, Comment, Subscription, Match } = require('../models');
 const sequelize = require('sequelize');
 
+async function safeAchievement(userId, achievement) {
+  try {
+    const { notifyAchievement } = require('../services/notifications/events');
+    await notifyAchievement(userId, achievement);
+  } catch (err) {
+    console.warn('achievement notification:', err?.message || err);
+  }
+}
+
 // Award points and level up; emits xp:earned to user's socket room when available.
 async function awardPoints(userId, points, reason = '') {
   const user = await User.findByPk(userId);
@@ -120,6 +129,7 @@ async function getUserGamification(req, res) {
       const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
       if (!hasAchievement) {
         await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
+        await safeAchievement(userId, achievement);
         const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
         if (!hasBadge) {
           await UserBadge.create({ userId, badgeId: badge.id, earnedAt: new Date() });
@@ -153,6 +163,7 @@ async function getUserGamification(req, res) {
       const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
       if (!hasAchievement && participationCount >= milestone) {
         await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
+        await safeAchievement(userId, achievement);
         const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
         if (!hasBadge) {
           await UserBadge.create({ userId, badgeId: badge.id, earnedAt: new Date() });
@@ -182,6 +193,7 @@ async function getUserGamification(req, res) {
       const hasAchievement = await UserAchievement.findOne({ where: { userId, achievementId: achievement.id } });
       if (!hasAchievement && likesCount >= milestone) {
         await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
+        await safeAchievement(userId, achievement);
         const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: badge.id } });
         if (!hasBadge) {
           await UserBadge.create({ userId, badgeId: badge.id, earnedAt: new Date() });
@@ -211,6 +223,7 @@ async function getUserGamification(req, res) {
         }
         if (unlocked) {
           await UserAchievement.create({ userId, achievementId: achievement.id, unlockedAt: new Date() });
+          await safeAchievement(userId, achievement);
           if (criteria.badgeId) {
             const hasBadge = await UserBadge.findOne({ where: { userId, badgeId: criteria.badgeId } });
             if (!hasBadge) {

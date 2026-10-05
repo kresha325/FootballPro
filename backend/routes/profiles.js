@@ -16,6 +16,7 @@ const {
   getFollowing,
   checkFollowStatus,
   registerPushToken,
+  clearPushToken,
   getUserTournamentSummary,
 } = require('../controllers/profiles');
 const uploadCloud = require('../middleware/uploadCloudinary');
@@ -65,6 +66,7 @@ router.put('/me', auth, uploadCloud.fields([
 ]), updateProfile);
 
 router.post('/me/push-token', auth, registerPushToken);
+router.delete('/me/push-token', auth, clearPushToken);
 
 /**
  * FOLLOW A USER

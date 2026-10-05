@@ -68,6 +68,12 @@ export const SocketProvider = ({ children }) => {
       showXPNotification(data.xp ?? 0, data.reason ?? '', data.levelUp ?? null);
     };
     newSocket.on('xp:earned', onXpEarned);
+    newSocket.on('notification:new', (payload) => {
+      window.dispatchEvent(new CustomEvent('notification-received', { detail: payload }));
+    });
+    newSocket.on('notification:unread', (payload) => {
+      window.dispatchEvent(new CustomEvent('notifications-unread-changed', { detail: payload || {} }));
+    });
 
     newSocket.on('disconnect', () => {
       console.log('❌ Socket disconnected');
@@ -86,6 +92,8 @@ export const SocketProvider = ({ children }) => {
       newSocket.off('messageUpdated', bumpMessagingUnread);
       newSocket.off('messageDeleted', bumpMessagingUnread);
       newSocket.off('xp:earned', onXpEarned);
+      newSocket.off('notification:new');
+      newSocket.off('notification:unread');
       newSocket.close();
     };
   }, [user]);

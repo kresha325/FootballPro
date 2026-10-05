@@ -80,6 +80,7 @@ async function markClubVerified(user) {
   user.clubVerifiedAt = new Date();
   syncOverallVerified(user);
   await user.save();
+  await notifyVerificationSafe(user.id, 'club');
   return user;
 }
 
@@ -139,6 +140,7 @@ async function markParentVerified(user) {
   user.parentVerificationExpire = null;
   syncOverallVerified(user);
   await user.save();
+  await notifyVerificationSafe(user.id, 'parent');
   return user;
 }
 
@@ -147,6 +149,7 @@ async function markAdminVerified(user) {
   user.adminVerified = true;
   syncOverallVerified(user);
   await user.save();
+  await notifyVerificationSafe(user.id, 'admin');
   return user;
 }
 
@@ -166,6 +169,15 @@ async function ensureVerifiedSynced(user) {
     await user.save();
   }
   return user;
+}
+
+async function notifyVerificationSafe(userId, kind) {
+  try {
+    const { notifyVerification } = require('../services/notifications/events');
+    await notifyVerification(userId, kind);
+  } catch (err) {
+    console.warn('verification notification:', err?.message || err);
+  }
 }
 
 module.exports = {

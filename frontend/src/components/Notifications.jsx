@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import ListSearchBar from './ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { notificationsAPI } from '../services/api';
@@ -15,44 +15,91 @@ const notificationDateGroup = (date) => {
   return dayAge < 1 ? 'Sot' : dayAge === 1 ? 'Dje' : 'Më herët';
 };
 
+const FILTERS = [
+  ['all', 'Të gjitha'],
+  ['unread', 'Palexuara'],
+  ['SOCIAL', 'Shoqërore'],
+  ['FOOTBALL', 'Futboll'],
+  ['SCOUTING', 'Skautim'],
+  ['VIDEO', 'Video'],
+  ['MARKETPLACE', 'Tregu'],
+  ['WALLET', 'Wallet'],
+  ['SYSTEM', 'Sistem'],
+];
+
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [listSearch, setListSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchNotifications();
-    fetchUnreadCount();
-  }, []);
-
-  // Rifresko njoftimet sa herë që ndryshon unreadCount
-  useEffect(() => {
-    fetchNotifications();
-  }, [unreadCount]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async (nextPage = 1, activeFilter = filter) => {
+    setLoading(true);
+    setError('');
     try {
-      const response = await notificationsAPI.getNotifications();
-      setNotifications(response.data.notifications || []);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+      const params = { page: nextPage, limit: 20 };
+      if (activeFilter === 'unread') params.unreadOnly = true;
+      else if (activeFilter !== 'all') params.category = activeFilter;
+      const response = await notificationsAPI.getNotifications(params);
+      const rows = response.data.notifications || [];
+      setNotifications((prev) => (nextPage === 1 ? rows : [...prev, ...rows]));
+      setPage(response.data.page || nextPage);
+      setPages(response.data.pages || 1);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('Njoftimet nuk u ngarkuan. Provo përsëri.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
       const count = Number(response.data.count || 0);
       setUnreadCount(count);
       window.dispatchEvent(new CustomEvent('notifications-unread-changed', { detail: { count } }));
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications(1, filter);
+    fetchUnreadCount();
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const onIncoming = (event) => {
+      const item = event?.detail;
+      if (!item?.id) return;
+      setNotifications((prev) => {
+        const index = prev.findIndex((row) => row.id === item.id);
+        if (index >= 0) {
+          const copy = [...prev];
+          copy[index] = { ...copy[index], ...item };
+          return copy;
+        }
+        if (filter !== 'all' && filter !== 'unread' && item.category !== filter) return prev;
+        return [item, ...prev];
+      });
+    };
+    const onUnread = (event) => {
+      const count = Number(event?.detail?.count);
+      if (Number.isFinite(count)) setUnreadCount(Math.max(0, count));
+    };
+    window.addEventListener('notification-received', onIncoming);
+    window.addEventListener('notifications-unread-changed', onUnread);
+    return () => {
+      window.removeEventListener('notification-received', onIncoming);
+      window.removeEventListener('notifications-unread-changed', onUnread);
+    };
+  }, [filter]);
 
   const markAsRead = async (id) => {
     try {
@@ -70,6 +117,17 @@ const Notifications = () => {
     }
   };
 
+  const markAsUnread = async (id) => {
+    try {
+      await notificationsAPI.markAsUnread(id);
+      setNotifications((prev) => prev.map((notif) => (
+        notif.id === id ? { ...notif, isRead: false, readAt: null } : notif
+      )));
+      fetchUnreadCount();
+    } catch (err) {
+      console.error('Error marking unread:', err);
+    }
+  };
   const markAllAsRead = async () => {
     try {
       await notificationsAPI.markAllAsRead();
@@ -149,7 +207,7 @@ const Notifications = () => {
     return [...groups.entries()];
   }, [filteredNotifications]);
 
-  if (loading) {
+  if (loading && notifications.length === 0 && !error) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center bg-[var(--xt-color-canvas)]">
         <div className="xt-skeleton h-12 w-12 rounded-full" aria-label="Po ngarkohen njoftimet" />
@@ -184,6 +242,30 @@ const Notifications = () => {
         onChange={setListSearch}
         placeholder="Kërko njoftime…"
       />
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {FILTERS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setFilter(id)}
+            className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-bold ${
+              filter === id
+                ? 'bg-[var(--xt-color-gold)] text-[#101114]'
+                : 'bg-white/5 text-[var(--xt-color-text-muted)]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {error ? (
+        <div className="xt-card border border-red-500/40 p-4 text-sm">
+          <p>{error}</p>
+          <button type="button" className="btn btn-quiet mt-2" onClick={() => fetchNotifications(1, filter)}>Provo përsëri</button>
+        </div>
+      ) : null}
 
       {/* Notifications List */}
       <div className="space-y-5">
@@ -229,14 +311,19 @@ const Notifications = () => {
                 </button>
 
                 {/* Mark as read button */}
-                {!notification.isRead && (
+                {!notification.isRead ? (
                   <button
-                    onClick={() => {
-                      markAsRead(notification.id);
-                    }}
+                    onClick={() => markAsRead(notification.id)}
                     className="btn btn-quiet min-h-10 ml-auto flex-shrink-0 px-3 text-xs"
                   >
-                    ✓
+                    Lexo
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => markAsUnread(notification.id)}
+                    className="btn btn-quiet min-h-10 ml-auto flex-shrink-0 px-3 text-xs"
+                  >
+                    Palexuar
                   </button>
                 )}
               </div>
@@ -250,6 +337,11 @@ const Notifications = () => {
           </div>
         )}
       </div>
+      {page < pages ? (
+        <button type="button" className="btn btn-quiet" onClick={() => fetchNotifications(page + 1, filter)} disabled={loading}>
+          {loading ? 'Po ngarkohet…' : 'Ngarko më shumë'}
+        </button>
+      ) : null}
     </main>
   );
 };

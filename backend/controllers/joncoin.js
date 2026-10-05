@@ -2,6 +2,16 @@ const sequelize = require('../config/database');
 const { User, JonCoinTransaction, WithdrawalRequest } = require('../models');
 const { getCompletedLedgerBalance } = require('../utils/joncoinLedger');
 
+async function safeWallet(tx) {
+  if (!tx?.id) return;
+  try {
+    const { notifyWallet } = require('../services/notifications/events');
+    await notifyWallet(tx);
+  } catch (err) {
+    console.warn('wallet notification:', err?.message || err);
+  }
+}
+
 const round2 = (n) => Math.round(parseFloat(n || 0) * 100) / 100;
 
 /** Komision në tërheqje (0–25%). Të gjithë përdoruesit që tërheqin paguajnë këtë përqindje nga shuma e kërkuar. */
@@ -67,7 +77,7 @@ exports.transfer = async (req, res) => {
       await fromUser.save({ transaction });
       await toUser.save({ transaction });
 
-      await JonCoinTransaction.create(
+      const spent = await JonCoinTransaction.create(
         {
           userId: req.user.id,
           type: 'spend',
@@ -79,7 +89,7 @@ exports.transfer = async (req, res) => {
         },
         { transaction }
       );
-      await JonCoinTransaction.create(
+      const received = await JonCoinTransaction.create(
         {
           userId: toUserId,
           type: 'reward',
@@ -92,10 +102,12 @@ exports.transfer = async (req, res) => {
         { transaction }
       );
 
-      return { success: true };
+      return { success: true, spent, received };
     });
 
     if (result.code) return res.status(result.code).json({ error: result.error });
+    await safeWallet(result.spent);
+    await safeWallet(result.received);
     return res.json({ success: true });
   } catch (err) {
     console.error('XCoin transfer error:', err);
@@ -169,6 +181,7 @@ exports.purchase = async (req, res) => {
       } catch (invErr) {
         console.warn('XCoin auto invoice skipped:', invErr?.message || invErr);
       }
+      await safeWallet(tx);
       return res.json({ success: true, transaction: tx, autoCompleted: true });
     }
 
@@ -179,6 +192,7 @@ exports.purchase = async (req, res) => {
       status: 'pending',
       description: 'Blerje XCoin (në pritje të konfirmimit nga admin)',
     });
+    await safeWallet(tx);
     return res.json({ success: true, transaction: tx, autoCompleted: false });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -204,6 +218,7 @@ exports.spend = async (req, res) => {
       relatedEntityId,
       description,
     });
+    await safeWallet(tx);
     return res.json({ success: true, transaction: tx });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -227,6 +242,7 @@ exports.reward = async (req, res) => {
       relatedEntityId,
       description,
     });
+    await safeWallet(tx);
     return res.json({ success: true, transaction: tx });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -261,7 +277,7 @@ exports.withdraw = async (req, res) => {
       amount: netPayout.toFixed(2),
       status: 'pending',
     });
-    await JonCoinTransaction.create({
+    const withdrawalTx = await JonCoinTransaction.create({
       userId: req.user.id,
       type: 'withdrawal',
       amount: gross,
@@ -273,6 +289,7 @@ exports.withdraw = async (req, res) => {
           ? `Tërheqje XCoin (bruto ${gross}, komision ${feePct}%: ${feeAmount}, net ${netPayout})`
           : 'Kërkesë për tërheqje XCoin',
     });
+    await safeWallet(withdrawalTx);
     return res.json({
       success: true,
       withdrawal,
@@ -333,6 +350,7 @@ exports.updateTransactionStatus = async (req, res) => {
     });
 
     if (out.code) return res.status(out.code).json({ error: out.error });
+    await safeWallet(out.tx);
 
     if (status === 'completed' && out.tx?.type === 'purchase') {
       try {

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import NotificationBell from './NotificationBell';
 import { Cog6ToothIcon, ChartBarIcon, TrophyIcon, VideoCameraIcon, Bars3Icon, XMarkIcon, MagnifyingGlassIcon, HomeIcon, ShoppingBagIcon, BellIcon, ChatBubbleLeftRightIcon, UsersIcon, BuildingOffice2Icon, LockClosedIcon, SparklesIcon, MegaphoneIcon, ArrowRightOnRectangleIcon, CalendarDaysIcon, GiftIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePosts } from '../contexts/PostsContext';
@@ -88,14 +89,22 @@ function Navbar() {
 
   useEffect(() => {
     if (!user) return undefined;
+    const onNotif = (event) => {
+      const count = Number(event?.detail?.count);
+      if (Number.isFinite(count)) {
+        setUnreadCount(Math.max(0, count));
+        return;
+      }
+      void fetchHeaderBadges();
+    };
     const onBump = () => {
       void fetchHeaderBadges();
     };
     window.addEventListener('messaging-unread-changed', onBump);
-    window.addEventListener('notifications-unread-changed', onBump);
+    window.addEventListener('notifications-unread-changed', onNotif);
     return () => {
       window.removeEventListener('messaging-unread-changed', onBump);
-      window.removeEventListener('notifications-unread-changed', onBump);
+      window.removeEventListener('notifications-unread-changed', onNotif);
     };
   }, [user, fetchHeaderBadges]);
 
@@ -355,6 +364,8 @@ function Navbar() {
               )}
             </Link>
           ) : null}
+
+          <NotificationBell unreadCount={unreadCount} />
 
           <button
             onClick={() => {

@@ -35,6 +35,13 @@ async function recordProfileView({ viewerId, profileUserId }) {
   });
 
   try {
+    const { notifyProfileViewed } = require('../services/notifications/events');
+    await notifyProfileViewed({ viewerId: viewer, profileUserId: profileId });
+  } catch (err) {
+    console.warn('profile view notification:', err?.message || err);
+  }
+
+  try {
     const EngagementMetrics = require('../models/EngagementMetrics');
     const today = new Date().toISOString().split('T')[0];
     let metrics = await EngagementMetrics.findOne({ where: { userId: profileId, date: today } });

@@ -149,6 +149,9 @@ const ScoutWatchEvent = require('./ScoutWatchEvent');
 const ScoutingReport = require('./ScoutingReport');
 const ScoutPreference = require('./ScoutPreference');
 const ScoutingRecommendation = require('./ScoutingRecommendation');
+const Notification = require('./Notification');
+const NotificationPreference = require('./NotificationPreference');
+const PushDevice = require('./PushDevice');
 
 module.exports = {
   User,
@@ -198,6 +201,9 @@ module.exports = {
   ScoutingReport,
   ScoutPreference,
   ScoutingRecommendation,
+  Notification,
+  NotificationPreference,
+  PushDevice,
 };
 
 

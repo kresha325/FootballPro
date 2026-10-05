@@ -356,6 +356,13 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordExpire = null;
     await user.save();
 
+    try {
+      const { notifyPasswordChanged } = require('../services/notifications/events');
+      await notifyPasswordChanged(user.id);
+    } catch (notifyErr) {
+      console.warn('password notification:', notifyErr?.message || notifyErr);
+    }
+
     res.json({ msg: 'Fjalëkalimi u rivendos me sukses' });
   } catch (err) {
     console.error('Reset password error:', err);

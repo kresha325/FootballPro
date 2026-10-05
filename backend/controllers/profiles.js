@@ -1640,22 +1640,35 @@ exports.getAllProfiles = async (req, res) => {
 };
 
 exports.registerPushToken = async (req, res) => {
-  const { token, type } = req.body; // type: 'mobile' or 'web'; token null clears
+  const { token, type, deviceId } = req.body || {};
   try {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
-
-    const cleared = token == null || token === '';
-    if (type === 'mobile') {
-      user.pushTokenMobile = cleared ? null : token;
-    } else if (type === 'web') {
-      user.pushTokenWeb = cleared ? null : token; // token is the subscription object
+    const { registerDevice } = require('../services/notifications/service');
+    const result = await registerDevice({
+      userId: req.user.id,
+      platform: type === 'web' ? 'web' : 'mobile',
+      token,
+      deviceId: deviceId || null,
+    });
+    if (result?.error === 'invalid_token') {
+      return res.status(400).json({ msg: result.msg || 'Push token i pavlefshëm' });
     }
-    await user.save();
-    res.json({ msg: cleared ? 'Push token cleared' : 'Push token registered' });
+    res.json({ msg: result?.cleared ? 'Push token cleared' : 'Push token registered' });
   } catch (err) {
+    console.error('registerPushToken', err);
     res.status(500).json({ msg: 'Gabim në server' });
   }
+};
+
+exports.clearPushToken = async (req, res) => {
+  req.body = {
+    ...(req.body || {}),
+    token: null,
+    type: req.body?.type || req.query?.type || 'mobile',
+    deviceId: req.body?.deviceId || req.query?.deviceId || null,
+  };
+  return exports.registerPushToken(req, res);
 };
 
 // Follow a user
@@ -1677,8 +1690,10 @@ exports.followUser = async (req, res) => {
       where: { followerId, followingId },
     });
 
+    let acceptedExisting = false;
     if (existingFollow) {
       if (existingFollow.status !== 'accepted') {
+        acceptedExisting = true;
         existingFollow.status = 'accepted';
         await existingFollow.save();
       } else {
@@ -1693,15 +1708,7 @@ exports.followUser = async (req, res) => {
     }
 
     const { notifyFollow } = require('./notifications');
-    await notifyFollow(followingId, followerId);
-
-    try {
-      const follower = await User.findByPk(followerId);
-      const followerName = `${follower.firstName} ${follower.lastName}`;
-      await sendEmail(userToFollow.email, 'newFollower', followerName, followerId);
-    } catch (emailError) {
-      console.error('Email notification failed:', emailError);
-    }
+    await notifyFollow(followingId, followerId, { accepted: acceptedExisting });
 
     const [targetStats, viewerStats] = await Promise.all([
       countFollowStats(followingId),

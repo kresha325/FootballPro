@@ -248,10 +248,13 @@ export const supportAPI = {
 ========================= */
 export const notificationsAPI = {
   getNotifications: (params) => API.get('/notifications', { params }),
-  getUnreadCount: () => API.get('/notifications/unread-count'),
+  getUnreadCount: (params) => API.get('/notifications/unread-count', { params }),
   markAsRead: (id) => API.put(`/notifications/${id}/read`),
+  markAsUnread: (id) => API.put(`/notifications/${id}/unread`),
   markAllAsRead: () => API.put('/notifications/mark-all-read'),
   deleteNotification: (id) => API.delete(`/notifications/${id}`),
+  getPreferences: () => API.get('/notifications/preferences'),
+  updatePreferences: (preferences) => API.put('/notifications/preferences', { preferences }),
 };
 
 /* =========================

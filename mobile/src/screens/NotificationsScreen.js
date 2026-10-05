@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import ListSearchBar from '../components/ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
@@ -56,19 +57,27 @@ export default function NotificationsScreen() {
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
   const [listSearch, setListSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   const filteredItems = useMemo(
     () => filterBySearch(items, listSearch, (n) => [n.title, n.message, n.type, n.body]),
     [items, listSearch]
   );
 
-  const loadNotifications = useCallback(async ({ silent } = { silent: false }) => {
+  const loadNotifications = useCallback(async ({ silent, nextPage = 1, activeFilter = filter } = { silent: false }) => {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const response = await notificationsRequest({ page: 1, limit: 30 });
+      const params = { page: nextPage, limit: 30 };
+      if (activeFilter === 'unread') params.unreadOnly = 'true';
+      else if (activeFilter !== 'all') params.category = activeFilter;
+      const response = await notificationsRequest(params);
       const list = Array.isArray(response?.data?.notifications) ? response.data.notifications : [];
-      setItems(list);
+      setItems((prev) => (nextPage === 1 ? list : [...prev, ...list]));
+      setPage(response?.data?.page || nextPage);
+      setPages(response?.data?.pages || 1);
       await refreshBadges();
     } catch (err) {
       setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i njoftimeve'));
@@ -76,11 +85,18 @@ export default function NotificationsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshBadges]);
+  }, [refreshBadges, filter]);
 
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    loadNotifications({ nextPage: 1, activeFilter: filter });
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('notifications-refresh', () => {
+      loadNotifications({ silent: true, nextPage: 1, activeFilter: filter });
+    });
+    return () => sub.remove();
+  }, [loadNotifications, filter]);
 
   const onPressNotification = async (item) => {
     if (!item?.isRead) {
@@ -186,6 +202,23 @@ export default function NotificationsScreen() {
         placeholder="Kërko njoftime…"
         onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
       />
+      <View style={styles.filters}>
+        {[
+          ['all', 'Të gjitha'],
+          ['unread', 'Palexuara'],
+          ['SOCIAL', 'Shoqërore'],
+          ['FOOTBALL', 'Futboll'],
+          ['SCOUTING', 'Skaut'],
+          ['VIDEO', 'Video'],
+          ['MARKETPLACE', 'Tregu'],
+          ['WALLET', 'Wallet'],
+          ['SYSTEM', 'Sistem'],
+        ].map(([id, label]) => (
+          <TouchableOpacity key={id} onPress={() => setFilter(id)} style={[styles.filterChip, filter === id && styles.filterChipOn]}>
+            <Text style={[styles.filterText, filter === id && styles.filterTextOn]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => String(item.id)}
@@ -200,6 +233,10 @@ export default function NotificationsScreen() {
             colors={['#9A6B12']}
           />
         }
+        onEndReached={() => {
+          if (page < pages && !loading) loadNotifications({ silent: true, nextPage: page + 1, activeFilter: filter });
+        }}
+        onEndReachedThreshold={0.4}
         renderItem={({ item }) => (
           <NotificationRow
             item={item}
@@ -233,6 +270,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
   unreadHint: { color: '#dc2626', fontWeight: '700', fontSize: 13, marginTop: 2 },
   headerAction: { color: '#9A6B12', fontWeight: '700', fontSize: 12 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingBottom: 8 },
+  filterChip: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#fff' },
+  filterChipOn: { backgroundColor: '#9A6B12', borderColor: '#9A6B12' },
+  filterText: { color: '#475569', fontSize: 12, fontWeight: '700' },
+  filterTextOn: { color: '#fff' },
   list: { padding: 12 },
   row: {
     backgroundColor: '#fff',

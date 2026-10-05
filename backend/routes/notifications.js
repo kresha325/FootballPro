@@ -5,23 +5,27 @@ const {
   getNotifications,
   getUnreadCount,
   markAsRead,
+  markAsUnread,
   markAllAsRead,
   deleteNotification,
+  getPreferences,
+  updatePreferences,
 } = require('../controllers/notifications');
 
-// Get all notifications for current user
 router.get('/', auth, getNotifications);
-
-// Get unread count
 router.get('/unread-count', auth, getUnreadCount);
+router.get('/preferences', auth, getPreferences);
+router.put('/preferences', auth, updatePreferences);
 
-// Mark notification as read
-router.put('/:id/read', auth, markAsRead);
-
-// Mark all as read
 router.put('/mark-all-read', auth, markAllAsRead);
+router.put('/read-all', auth, markAllAsRead);
+router.post('/mark-all-read', auth, markAllAsRead);
+router.post('/read-all', auth, markAllAsRead);
 
-// Delete notification
+router.put('/:id/read', auth, markAsRead);
+router.post('/:id/read', auth, markAsRead);
+router.put('/:id/unread', auth, markAsUnread);
+router.post('/:id/unread', auth, markAsUnread);
 router.delete('/:id', auth, deleteNotification);
 
 module.exports = router;

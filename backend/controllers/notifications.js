@@ -1,197 +1,57 @@
-const { Expo } = require('expo-server-sdk');
-const webPush = require('web-push');
-const { Op } = require('sequelize');
+'use strict';
+
+const notifications = require('../services/notifications/service');
 const User = require('../models/User');
-const Notification = require('../models/Notification');
 
-const expo = new Expo();
-
-// Set VAPID keys for web push (you need to generate these)
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webPush.setVapidDetails(
-    process.env.VAPID_EMAIL || 'mailto:admin@jonsport.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+function http(handler) {
+  return async (req, res) => {
+    try {
+      const result = await handler(req);
+      if (result && typeof result.status === 'number' && result.body) {
+        return res.status(result.status).json(result.body);
+      }
+      return res.json(result);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ msg: 'Gabim në server' });
+    }
+  };
 }
 
-// Get all notifications for current user
-exports.getNotifications = async (req, res) => {
+exports.getNotifications = http(async (req) => notifications.list(req.user.id, req.query || {}));
+
+exports.getUnreadCount = http(async (req) => {
   try {
-    const { page = 1, limit = 20, unreadOnly = false } = req.query;
-    const offset = (page - 1) * limit;
-
-    // Chat/DM përdor badge në messaging; mos i përzier me njoftimet e ziles.
-    const where = { userId: req.user.id, type: { [Op.ne]: 'message' } };
-    if (unreadOnly === 'true') {
-      where.isRead = false;
-    }
-
-    const notifications = await Notification.findAndCountAll({
-      where,
-      include: [
-        {
-          model: User,
-          as: 'actor',
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-
-    res.json({
-      notifications: notifications.rows,
-      total: notifications.count,
-      page: parseInt(page),
-      pages: Math.ceil(notifications.count / limit),
-    });
-  } catch (err) {
-    console.error('Get notifications error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
-  }
-};
-
-// Get unread count
-exports.getUnreadCount = async (req, res) => {
-  try {
-    const count = await Notification.count({
-      where: {
-        userId: req.user.id,
-        isRead: false,
-        type: { [Op.ne]: 'message' },
-      },
-    });
-    res.json({ count });
+    return await notifications.unread(req.user.id, req.query?.category);
   } catch (err) {
     const message = err?.original?.message || err?.message || '';
     if (message.includes('Notifications') && message.includes('does not exist')) {
-      return res.json({ count: 0 });
+      return { count: 0, byCategory: {} };
     }
-    console.error('Get unread count error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
-  }
-};
-
-// Mark notification as read
-exports.markAsRead = async (req, res) => {
-  try {
-    const notification = await Notification.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id,
-      },
-    });
-
-    if (!notification) {
-      return res.status(404).json({ msg: 'Njoftimi nuk u gjet' });
-    }
-
-    await notification.update({ isRead: true });
-    res.json({ msg: 'Njoftimi u shënua si i lexuar' });
-  } catch (err) {
-    console.error('Mark as read error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
-  }
-};
-
-// Mark all as read
-exports.markAllAsRead = async (req, res) => {
-  try {
-    await Notification.update(
-      { isRead: true },
-      {
-        where: {
-          userId: req.user.id,
-          isRead: false,
-        },
-      }
-    );
-    res.json({ msg: 'Të gjitha njoftimet u shënuan si të lexuara' });
-  } catch (err) {
-    console.error('Mark all as read error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
-  }
-};
-
-// Delete notification
-exports.deleteNotification = async (req, res) => {
-  try {
-    const notification = await Notification.findOne({
-      where: {
-        id: req.params.id,
-        userId: req.user.id,
-      },
-    });
-
-    if (!notification) {
-      return res.status(404).json({ msg: 'Njoftimi nuk u gjet' });
-    }
-
-    await notification.destroy();
-    res.json({ msg: 'Njoftimi u fshi' });
-  } catch (err) {
-    console.error('Delete notification error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
-  }
-};
-
-// Create notification (internal use) + optional push
-exports.createNotification = async (data) => {
-  try {
-    const { skipPush, ...persist } = data || {};
-    const notification = await Notification.create(persist);
-    
-    // Get notification with actor info
-    const fullNotification = await Notification.findByPk(notification.id, {
-      include: [
-        {
-          model: User,
-          as: 'actor',
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-      ],
-    });
-
-    // Push to mobile/web when token exists (skip if caller will send separately)
-    if (!skipPush && persist.userId) {
-      try {
-        let body = persist.message || '';
-        if (persist.type === 'message') {
-          body = 'Ke një mesazh të ri';
-        }
-        await exports.sendNotification(persist.userId, persist.title || 'X TALENTI', body, {
-          type: persist.type,
-          link: persist.link,
-          entityType: persist.entityType,
-          entityId: persist.entityId,
-          actorId: persist.actorId,
-          ...(persist.metadata && typeof persist.metadata === 'object' ? { metadata: persist.metadata } : {}),
-        });
-      } catch (pushErr) {
-        console.warn('Push after createNotification failed:', pushErr?.message || pushErr);
-      }
-    }
-
-    return fullNotification;
-  } catch (err) {
-    console.error('Create notification error:', err);
     throw err;
   }
-};
+});
 
-// Helper functions for creating specific notification types
+exports.markAsRead = http(async (req) => notifications.markRead(req.user.id, req.params.id));
+exports.markAsUnread = http(async (req) => notifications.markUnread(req.user.id, req.params.id));
+exports.markAllAsRead = http(async (req) => notifications.markAllRead(req.user.id));
+exports.deleteNotification = http(async (req) => notifications.remove(req.user.id, req.params.id));
+exports.getPreferences = http(async (req) => notifications.getPreferences(req.user.id));
+exports.updatePreferences = http(async (req) => notifications.savePreferences(req.user.id, req.body || {}));
+
+exports.createNotification = async (data) => notifications.notify(data || {});
+
 exports.notifyLike = async (postOwnerId, likerId, postId) => {
-  if (postOwnerId === likerId) return; // Don't notify self
-
+  if (Number(postOwnerId) === Number(likerId)) return null;
   const liker = await User.findByPk(likerId);
+  const name = `${liker?.firstName || ''} ${liker?.lastName || ''}`.trim() || 'Dikush';
   return exports.createNotification({
     userId: postOwnerId,
     actorId: likerId,
-    type: 'like',
+    eventType: 'POST_LIKED',
+    actorName: name,
     title: 'Pëlqim i ri',
-    message: `${liker.firstName} ${liker.lastName} pëlqeu postimin tuaj`,
+    message: `${name} pëlqeu postimin tuaj`,
     link: `/feed?post=${postId}`,
     entityType: 'post',
     entityId: postId,
@@ -199,32 +59,37 @@ exports.notifyLike = async (postOwnerId, likerId, postId) => {
 };
 
 exports.notifyComment = async (postOwnerId, commenterId, postId, commentText) => {
-  if (postOwnerId === commenterId) return; // Don't notify self
-
+  if (Number(postOwnerId) === Number(commenterId)) return null;
   const commenter = await User.findByPk(commenterId);
+  const name = `${commenter?.firstName || ''} ${commenter?.lastName || ''}`.trim() || 'Dikush';
+  const text = String(commentText || '');
   return exports.createNotification({
     userId: postOwnerId,
     actorId: commenterId,
-    type: 'comment',
+    eventType: 'POST_COMMENTED',
     title: 'Koment i ri',
-    message: `${commenter.firstName} ${commenter.lastName} komentoi: "${commentText.substring(0, 50)}${commentText.length > 50 ? '...' : ''}"`,
+    message: `${name} komentoi: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
     link: `/feed?post=${postId}`,
     entityType: 'post',
     entityId: postId,
   });
 };
 
-exports.notifyFollow = async (followedId, followerId) => {
+exports.notifyFollow = async (followedId, followerId, options = {}) => {
+  if (Number(followedId) === Number(followerId)) return null;
   const follower = await User.findByPk(followerId);
+  const name = `${follower?.firstName || ''} ${follower?.lastName || ''}`.trim() || 'Dikush';
+  const accepted = Boolean(options.accepted);
   return exports.createNotification({
     userId: followedId,
     actorId: followerId,
-    type: 'follow',
-    title: 'Ndjekës i ri',
-    message: `${follower.firstName} ${follower.lastName} filloi t'ju ndjekë`,
+    eventType: accepted ? 'FOLLOW_ACCEPTED' : 'FOLLOW',
+    title: accepted ? 'Ndjekja u pranua' : 'Ndjekës i ri',
+    message: accepted ? `${name} pranoi ndjekjen` : `${name} filloi t'ju ndjekë`,
     link: `/profile/${followerId}`,
     entityType: 'user',
     entityId: followerId,
+    idempotencyKey: `follow:${followerId}:user:${followedId}`,
   });
 };
 
@@ -232,117 +97,34 @@ exports.notifyMessage = async (recipientId, senderId, message) => {
   const sender = await User.findByPk(senderId);
   if (!sender) return null;
   const text = typeof message === 'string' ? message : '';
+  const name = `${sender.firstName || ''} ${sender.lastName || ''}`.trim();
   return exports.createNotification({
     userId: recipientId,
     actorId: senderId,
-    type: 'message',
+    eventType: 'MESSAGE',
     title: 'Mesazh i ri',
-    message: `${sender.firstName} ${sender.lastName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
-    link: `/messaging`,
+    message: `${name}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
+    link: '/messaging',
     entityType: 'message',
     entityId: senderId,
   });
 };
 
-exports.notifyTournament = async (userId, tournamentId, title, message) => {
+exports.notifyTournament = async (userId, tournamentId, title, message, opts = {}) => {
   const tid = Number(tournamentId);
   return exports.createNotification({
     userId,
-    type: 'tournament',
+    eventType: opts.eventType || 'TOURNAMENT_UPDATE',
     title: title || 'Përditësim i turneut',
     message: message || '',
-    // SPA route is /tournaments?tournamentId=… (path /tournaments/:id is not mounted alone)
     link: Number.isFinite(tid) && tid > 0 ? `/tournaments?tournamentId=${tid}` : '/tournaments',
     entityType: 'tournament',
     entityId: tid || tournamentId,
+    idempotencyKey: opts.idempotencyKey || null,
+    metadata: { tournamentId: tid || tournamentId },
   });
 };
 
 exports.sendNotification = async (userId, title, body, data = {}) => {
-  try {
-    const user = await User.findByPk(userId);
-    if (!user) return;
-
-    const type = String(data?.type || '').toLowerCase();
-    const safeBody = body || (type === 'message' ? 'Ke një mesazh të ri' : '');
-
-    // App icon badge = unread bell notifications + unread chat messages
-    let badge = 0;
-    try {
-      const notifUnread = await Notification.count({
-        where: {
-          userId,
-          isRead: false,
-          type: { [Op.ne]: 'message' },
-        },
-      });
-      badge = Number(notifUnread) || 0;
-      // Best-effort message unread (same idea as /api/messaging/unread-count)
-      try {
-        const { Conversation, ConversationMember } = require('../models/Conversation');
-        const Message = require('../models/Message');
-        const conversations = await Conversation.findAll({
-          attributes: ['id'],
-          include: [
-            {
-              model: ConversationMember,
-              as: 'memberships',
-              where: { userId },
-              attributes: ['lastReadAt'],
-            },
-          ],
-        });
-        const msgCounts = await Promise.all(
-          conversations.map(async (conv) => {
-            const membership = conv.memberships && conv.memberships[0];
-            if (!membership) return 0;
-            return Message.count({
-              where: {
-                conversationId: conv.id,
-                senderId: { [Op.ne]: userId },
-                deleted: false,
-                createdAt: {
-                  [Op.gt]: membership.lastReadAt || new Date(0),
-                },
-              },
-            });
-          })
-        );
-        badge += msgCounts.reduce((a, b) => a + b, 0);
-      } catch (msgErr) {
-        console.warn('Push badge message count skipped:', msgErr?.message || msgErr);
-      }
-    } catch (badgeErr) {
-      console.warn('Push badge count failed:', badgeErr?.message || badgeErr);
-    }
-
-    // Send to mobile
-    if (user.pushTokenMobile && Expo.isExpoPushToken(user.pushTokenMobile)) {
-      const message = {
-        to: user.pushTokenMobile,
-        sound: 'default',
-        title,
-        body: safeBody,
-        data,
-        badge,
-        priority: 'high',
-      };
-      await expo.sendPushNotificationsAsync([message]);
-    }
-
-    // Send to web
-    if (user.pushTokenWeb) {
-      const subscription = user.pushTokenWeb;
-      const payload = JSON.stringify({
-        title,
-        body: safeBody,
-        icon: '/icon.png', // Add icon
-        data,
-        badge,
-      });
-      await webPush.sendNotification(subscription, payload);
-    }
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
+  await notifications.sendPush(userId, title, body, data);
 };

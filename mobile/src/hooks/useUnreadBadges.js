@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 
@@ -37,7 +38,13 @@ export function useUnreadBadges(getSocket, socketConnected = false) {
   useEffect(() => {
     refresh();
     const id = setInterval(refresh, 30000);
-    return () => clearInterval(id);
+    const sub = DeviceEventEmitter.addListener('notifications-refresh', () => {
+      refresh();
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
   }, [refresh]);
 
   useEffect(() => {
@@ -47,10 +54,14 @@ export function useUnreadBadges(getSocket, socketConnected = false) {
     socket.on('newMessage', bump);
     socket.on('messageUpdated', bump);
     socket.on('messageDeleted', bump);
+    socket.on('notification:new', bump);
+    socket.on('notification:unread', bump);
     return () => {
       socket.off('newMessage', bump);
       socket.off('messageUpdated', bump);
       socket.off('messageDeleted', bump);
+      socket.off('notification:new', bump);
+      socket.off('notification:unread', bump);
     };
   }, [getSocket, socketConnected, refresh]);
 

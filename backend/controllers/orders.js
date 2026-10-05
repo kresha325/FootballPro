@@ -3,6 +3,16 @@ const { User, Product, Order, Payment, JonCoinTransaction } = require('../models
 const { notifySellersOfMarketplaceOrder } = require('../services/marketplaceOrderChat');
 const { normalizeOrderCart } = require('../utils/orderCart');
 
+async function safeOrderNotice(order, actorId) {
+  if (!order) return;
+  try {
+    const { notifyOrderParties } = require('../services/notifications/events');
+    await notifyOrderParties(order, { actorId });
+  } catch (err) {
+    console.warn('order notification:', err?.message || err);
+  }
+}
+
 const DELIVERY_METHODS = new Set(['pickup', 'shipping', 'meetup']);
 
 /** Balancë llogaritëse vetëm nga transaksionet e përfunduara. */
@@ -294,6 +304,9 @@ exports.createOrder = async (req, res) => {
       where: { id: ids },
       include: buyerSellerInclude,
     });
+    for (const order of full) {
+      await safeOrderNotice(order, req.user.id);
+    }
 
     return res.json({
       orders: full.map(serializeOrder),
@@ -396,6 +409,18 @@ exports.acceptOrder = async (req, res) => {
     });
 
     const full = await Order.findByPk(order.id, { include: buyerSellerInclude });
+    await safeOrderNotice(full, req.user.id);
+    try {
+      const { notifyWallet } = require('../services/notifications/events');
+      const txs = await JonCoinTransaction.findAll({
+        where: { relatedEntityId: order.id },
+        order: [['id', 'DESC']],
+        limit: 4,
+      });
+      for (const tx of txs) await notifyWallet(tx);
+    } catch (walletErr) {
+      console.warn('order wallet notification:', walletErr?.message || walletErr);
+    }
     return res.json({
       order: serializeOrder(full),
       msg: 'Porosia u pranua. XCoin u transferuan.',
@@ -443,6 +468,7 @@ exports.rejectOrder = async (req, res) => {
     });
 
     const full = await Order.findByPk(order.id, { include: buyerSellerInclude });
+    await safeOrderNotice(full, req.user.id);
     return res.json({
       order: serializeOrder(full),
       msg: 'Porosia u refuzua. Stoku u kthye.',
@@ -536,6 +562,7 @@ exports.updateOrderStatus = async (req, res) => {
     });
 
     const full = await Order.findByPk(updated.id, { include: buyerSellerInclude });
+    await safeOrderNotice(full, req.user.id);
     res.json(serializeOrder(full));
   } catch (err) {
     const statusCode = err.status || 500;

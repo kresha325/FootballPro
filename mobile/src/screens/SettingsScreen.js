@@ -28,6 +28,7 @@ import {
   getNotificationPermissionGranted,
   getPushPreference,
 } from '../notifications/push';
+import { notificationPreferencesRequest, updateNotificationPreferencesRequest } from '../api/client';
 import { hasTier } from '../utils/subscriptionAccess';
 import {
   PROFILE_THEMES,
@@ -63,6 +64,7 @@ export default function SettingsScreen() {
   const { colors, isDark, preference, setPreference, setDarkMode, darkModeEnabled } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushBusy, setPushBusy] = useState(false);
+  const [prefRows, setPrefRows] = useState([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -92,6 +94,8 @@ export default function SettingsScreen() {
         const pref = await getPushPreference();
         const granted = await getNotificationPermissionGranted();
         if (!cancelled) setNotificationsEnabled(Boolean(pref && granted));
+        const prefs = await notificationPreferencesRequest();
+        if (!cancelled) setPrefRows(prefs?.data?.preferences || []);
       } catch {
         /* keep default */
       }
@@ -100,6 +104,17 @@ export default function SettingsScreen() {
       cancelled = true;
     };
   }, []);
+
+  const savePref = async (category, channel, value) => {
+    const next = prefRows.map((row) => (row.category === category ? { ...row, [channel]: value } : row));
+    setPrefRows(next);
+    try {
+      const res = await updateNotificationPreferencesRequest(next);
+      setPrefRows(res?.data?.preferences || next);
+    } catch (err) {
+      Alert.alert('Njoftimet', extractErrorMessage(err, 'Preferencat nuk u ruajtën'));
+    }
+  };
 
   const handleNotificationsToggle = async (next) => {
     setPushBusy(true);
@@ -312,7 +327,37 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
           Njoftime push për like, komente, ndjekje, thirrje. Kërkon build me njoftime (jo Expo Go).
+          Njoftimet e sigurisë mbeten të aktivizuara.
         </Text>
+        {prefRows.map((row) => (
+          <View key={row.category} style={{ marginTop: 10 }}>
+            <Text style={[styles.label, { color: colors.text }]}>{row.category}</Text>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Në app</Text>
+              <Switch
+                value={row.inApp !== false}
+                onValueChange={(value) => savePref(row.category, 'inApp', value)}
+                trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
+              />
+            </View>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Push</Text>
+              <Switch
+                value={row.push !== false}
+                onValueChange={(value) => savePref(row.category, 'push', value)}
+                trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
+              />
+            </View>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Email</Text>
+              <Switch
+                value={Boolean(row.email)}
+                onValueChange={(value) => savePref(row.category, 'email', value)}
+                trackColor={{ false: colors.borderStrong, true: isDark ? '#115e59' : '#99f6e4' }}
+              />
+            </View>
+          </View>
+        ))}
       </View>
 
       <View

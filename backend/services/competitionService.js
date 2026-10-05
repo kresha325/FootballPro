@@ -223,7 +223,8 @@ async function startCompetition({ tournamentId, user, options = {} }) {
         participant.userId,
         tournament.id,
         'Tournament Started!',
-        `${tournament.name} has started! Check your match schedule.`
+        `${tournament.name} has started! Check your match schedule.`,
+        { idempotencyKey: `tournament-started:${tournament.id}:user:${participant.userId}`, eventType: 'COMPETITION_UPDATE' }
       );
     } catch (_err) {
       /* notification failure must not roll back fixtures */

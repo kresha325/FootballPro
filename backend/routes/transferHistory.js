@@ -137,6 +137,8 @@ async function notifyClubsOfPendingTransfer(transfer, athlete) {
         link,
         entityType: 'transfer',
         entityId: transfer.id,
+        idempotencyKey: `transfer-pending:${transfer.id}:user:${clubUserId}`,
+        eventType: 'CLUB_CHANGE',
         metadata: { kind: 'transfer_confirm', transferId: transfer.id },
       });
     }
@@ -161,6 +163,9 @@ async function notifyAthleteTransferResult(transfer, result) {
       link: `/profile/${transfer.userId}?tab=about`,
       entityType: 'transfer',
       entityId: transfer.id,
+      eventType: 'CLUB_CHANGE',
+      idempotencyKey: `transfer-${result}:${transfer.id}:user:${transfer.userId}`,
+      allowSelf: true,
       metadata: { kind: 'transfer_result', status: result },
     });
   } catch (err) {

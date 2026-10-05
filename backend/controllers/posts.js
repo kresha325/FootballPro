@@ -369,19 +369,23 @@ exports.createPost = async (req, res) => {
 
     // Create notifications for mentioned users
     if (mentionsParsed && mentionsParsed.length > 0) {
-      const Notification = require('../models/Notification');
+      const { createNotification } = require('./notifications');
       const User = require('../models/User');
       const author = await User.findByPk(req.user.id);
-      
+      const authorName = `${author?.firstName || ''} ${author?.lastName || ''}`.trim() || 'Dikush';
+
       for (const userId of mentionsParsed) {
         try {
-          await Notification.create({
-            userId: userId,
+          await createNotification({
+            userId,
             actorId: req.user.id,
-            type: 'mention',
-            title: 'You were mentioned',
-            message: `${author.firstName} ${author.lastName} mentioned you in a post`,
-            link: `/feed?post=${post.id}`
+            eventType: 'MENTION',
+            title: 'Të përmendën',
+            message: `${authorName} të përmendi në një postim`,
+            link: `/feed?post=${post.id}`,
+            entityType: 'post',
+            entityId: post.id,
+            idempotencyKey: `mention:post:${post.id}:user:${userId}`,
           });
         } catch (notifErr) {
           console.log('⚠️ Notification error for mention:', notifErr.message);

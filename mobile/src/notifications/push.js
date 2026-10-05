@@ -6,6 +6,8 @@ import Constants from 'expo-constants';
 import { registerPushTokenRequest } from '../api/client';
 
 const PREF_KEY = 'pushNotificationsEnabled';
+const DEVICE_KEY = 'pushDeviceId';
+const TOKEN_KEY = 'pushTokenValue';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -79,14 +81,34 @@ export async function getExpoPushTokenString() {
   return result?.data || null;
 }
 
+export async function getOrCreateDeviceId() {
+  try {
+    const existing = await SecureStore.getItemAsync(DEVICE_KEY);
+    if (existing) return existing;
+    const created = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    await SecureStore.setItemAsync(DEVICE_KEY, created);
+    return created;
+  } catch {
+    return `${Platform.OS}-fallback`;
+  }
+}
+
 export async function syncPushTokenToBackend(token) {
   if (!token) return;
-  await registerPushTokenRequest(token, 'mobile');
+  const deviceId = await getOrCreateDeviceId();
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch (_err) {
+    /* preference store is best-effort */
+  }
+  await registerPushTokenRequest(token, 'mobile', deviceId);
 }
 
 export async function clearPushTokenFromBackend() {
   try {
-    await registerPushTokenRequest(null, 'mobile');
+    const deviceId = await getOrCreateDeviceId();
+    await registerPushTokenRequest(null, 'mobile', deviceId);
+    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
   } catch (error) {
     console.warn('clear push token failed:', error?.message || error);
   }

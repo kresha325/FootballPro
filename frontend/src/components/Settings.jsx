@@ -7,12 +7,10 @@ import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroico
 import ParentVerificationForm from './ParentVerificationForm';
 import { Link } from 'react-router-dom';
 import ProPerksPanel from './ProPerksPanel';
-
-const NOTIFICATIONS_PREF_KEY = 'fp_notifications_enabled';
+import NotificationPreferences from './NotificationPreferences';
 
 const Settings = () => {
   const { user, refreshUser, logout, darkMode, toggleDarkMode } = useAuth();
-  const [notifications, setNotifications] = useState(false);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -35,10 +33,6 @@ const Settings = () => {
   const [resolvingYoutube, setResolvingYoutube] = useState(false);
   const [resolveError, setResolveError] = useState('');
   const resolveSkipRef = useRef(false);
-
-  useEffect(() => {
-    setNotifications(localStorage.getItem(NOTIFICATIONS_PREF_KEY) === 'true');
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -64,12 +58,6 @@ const Settings = () => {
       })
       .catch(() => {});
   }, [user]);
-
-  const toggleNotifications = () => {
-    const next = !notifications;
-    setNotifications(next);
-    localStorage.setItem(NOTIFICATIONS_PREF_KEY, next ? 'true' : 'false');
-  };
 
   const resolveYoutubeFromInput = async (raw, { silent } = { silent: false }) => {
     const trimmed = String(raw || '').trim();
@@ -215,21 +203,8 @@ const Settings = () => {
           <BellIcon className="w-6 h-6 mr-2" />
           Njoftimet
         </h2>
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <span className="text-gray-700 dark:text-gray-300">Aktivizo njoftimet</span>
-          <button
-            type="button"
-            onClick={toggleNotifications}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              notifications ? 'bg-primary' : 'bg-gray-200'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                notifications ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
+        <div className="rounded-lg border border-[var(--xt-color-border)] p-4">
+          <NotificationPreferences />
         </div>
       </div>
 

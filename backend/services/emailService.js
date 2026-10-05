@@ -221,6 +221,21 @@ const emailTemplates = {
     };
   },
 
+  importantNotice: (firstName, title, message, url) => ({
+    subject: title || 'X TALENTI',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #9A6B12;">${title || 'Njoftim'}</h2>
+        <p>Përshëndetje ${firstName || ''},</p>
+        <p>${message || ''}</p>
+        ${url ? `<a href="${process.env.FRONTEND_URL || 'https://xtalenti.com'}${url}"
+           style="background: #9A6B12; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">
+          Hape në X TALENTI
+        </a>` : ''}
+      </div>
+    `,
+  }),
+
   rosterRejected: (data) => ({
     subject: `Roster Request Update from ${data.clubName}`,
     html: `

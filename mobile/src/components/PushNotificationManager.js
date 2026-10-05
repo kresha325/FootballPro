@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import { handlePushOpen } from '../notifications/handlePushOpen';
 import {
+  getExpoPushTokenString,
   registerPushWithBackend,
   syncPushTokenToBackend,
 } from '../notifications/push';
@@ -24,12 +26,16 @@ export default function PushNotificationManager() {
       }
     })();
 
-    const tokenSub = Notifications.addPushTokenListener((devicePushToken) => {
-      const next = devicePushToken?.data;
-      if (!next) return;
-      syncPushTokenToBackend(next).catch((error) => {
-        console.warn('push token refresh failed:', error?.message || error);
-      });
+    const tokenSub = Notifications.addPushTokenListener(() => {
+      getExpoPushTokenString()
+        .then((next) => (next ? syncPushTokenToBackend(next) : null))
+        .catch((error) => {
+          console.warn('push token refresh failed:', error?.message || error);
+        });
+    });
+
+    const receivedSub = Notifications.addNotificationReceivedListener(() => {
+      DeviceEventEmitter.emit('notifications-refresh');
     });
 
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
@@ -54,6 +60,7 @@ export default function PushNotificationManager() {
     return () => {
       cancelled = true;
       tokenSub.remove();
+      receivedSub.remove();
       responseSub.remove();
     };
   }, [token, user?.id]);
