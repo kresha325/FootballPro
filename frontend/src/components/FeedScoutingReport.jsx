@@ -12,7 +12,7 @@ function avatarOrFallback(url) {
 }
 
 const METRICS = ['goals', 'assists', 'likes', 'followers'];
-const SCOUTING_REPORT_ROLES = new Set(['federation', 'scout', 'manager']);
+const SCOUTING_REPORT_ROLES = new Set(['federation', 'scout', 'manager', 'club']);
 
 const FeedScoutingReport = () => {
   const { user } = useAuth();

@@ -143,6 +143,13 @@ const Invoice = require('./Invoice');
 User.hasMany(Invoice, { foreignKey: 'userId' });
 Invoice.belongsTo(User, { foreignKey: 'userId' });
 
+const ScoutShortlist = require('./ScoutShortlist');
+const ScoutWatchlist = require('./ScoutWatchlist');
+const ScoutWatchEvent = require('./ScoutWatchEvent');
+const ScoutingReport = require('./ScoutingReport');
+const ScoutPreference = require('./ScoutPreference');
+const ScoutingRecommendation = require('./ScoutingRecommendation');
+
 module.exports = {
   User,
   Product,
@@ -185,6 +192,12 @@ module.exports = {
   Block,
   IapPurchase,
   Invoice,
+  ScoutShortlist,
+  ScoutWatchlist,
+  ScoutWatchEvent,
+  ScoutingReport,
+  ScoutPreference,
+  ScoutingRecommendation,
 };
 
 

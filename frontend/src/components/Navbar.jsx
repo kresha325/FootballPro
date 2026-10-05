@@ -537,7 +537,7 @@ function Navbar() {
             </Link>
 
             {/* Scouting (scout + club) */}
-            {(user?.role === 'scout' || user?.role === 'club') && (
+            {(user?.role === 'scout' || user?.role === 'club' || user?.role === 'manager') && (
               <Link 
                 to="/scouting" 
                 onClick={() => setIsMenuOpen(false)}

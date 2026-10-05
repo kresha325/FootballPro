@@ -32,9 +32,10 @@ exports.createScout = async (req, res) => {
 exports.getScout = async (req, res) => {
   try {
     const userId = req.params.id || req.user.id;
+    const isSelf = Number(userId) === Number(req.user.id);
     const profile = await Scout.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: isSelf ? ['id', 'role', 'firstName', 'lastName', 'email'] : ['id', 'role', 'firstName', 'lastName'], where: { role: 'scout' }, required: true }],
     });
     if (!profile) {
       return res.status(404).json({ msg: 'Scout profile not found' });
@@ -72,7 +73,7 @@ exports.updateScout = async (req, res) => {
 exports.getAllScouts = async (req, res) => {
   try {
     const scouts = await Scout.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'], where: { role: 'scout' }, required: true }],
       order: [['createdAt', 'DESC']]
     });
     res.json(scouts);

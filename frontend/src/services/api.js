@@ -308,7 +308,24 @@ export const ordersAPI = {
    SCOUTING
 ========================= */
 export const scoutingAPI = {
+  getMeta: () => API.get('/scouting/meta'),
+  getDashboard: (config = {}) => API.get('/scouting/dashboard', config),
   getRecommendations: (params, config = {}) => API.get('/scouting/recommendations', { ...config, params }),
+  getPlayers: (params, config = {}) => API.get('/scouting/players', { ...config, params }),
+  getPlayer: (id, config = {}) => API.get(`/scouting/players/${id}`, config),
+  getPreferences: () => API.get('/scouting/preferences'),
+  savePreferences: (data) => API.put('/scouting/preferences', data),
+  getShortlist: (params) => API.get('/scouting/shortlist', { params }),
+  addShortlist: (data) => API.post('/scouting/shortlist', data),
+  updateShortlist: (id, data) => API.put(`/scouting/shortlist/${id}`, data),
+  removeShortlist: (id) => API.delete(`/scouting/shortlist/${id}`),
+  getWatchlist: (params) => API.get('/scouting/watchlist', { params }),
+  addWatchlist: (data) => API.post('/scouting/watchlist', data),
+  removeWatchlist: (id) => API.delete(`/scouting/watchlist/${id}`),
+  getReports: (params) => API.get('/scouting/reports', { params }),
+  createReport: (data) => API.post('/scouting/reports', data),
+  updateReport: (id, data) => API.put(`/scouting/reports/${id}`, data),
+  removeReport: (id) => API.delete(`/scouting/reports/${id}`),
   getCandidates: (params) => API.get('/scouting/candidates', { params }),
   comparePlayers: (params) => API.get('/scouting/compare', { params }),
 };

@@ -418,6 +418,20 @@ export const verifyIapPurchaseRequest = (payload) => api.post('/api/iap/verify',
 
 export const scoutingRecommendationsRequest = (params = {}) =>
   api.get('/api/scouting/recommendations', { params });
+export const scoutingDashboardRequest = () => api.get('/api/scouting/dashboard');
+export const scoutingPlayersRequest = (params = {}) => api.get('/api/scouting/players', { params });
+export const scoutingShortlistRequest = (params = {}) => api.get('/api/scouting/shortlist', { params });
+export const scoutingAddShortlistRequest = (data) => api.post('/api/scouting/shortlist', data);
+export const scoutingUpdateShortlistRequest = (id, data) => api.put(`/api/scouting/shortlist/${id}`, data);
+export const scoutingRemoveShortlistRequest = (id) => api.delete(`/api/scouting/shortlist/${id}`);
+export const scoutingWatchlistRequest = (params = {}) => api.get('/api/scouting/watchlist', { params });
+export const scoutingAddWatchlistRequest = (data) => api.post('/api/scouting/watchlist', data);
+export const scoutingRemoveWatchlistRequest = (id) => api.delete(`/api/scouting/watchlist/${id}`);
+export const scoutingReportsRequest = (params = {}) => api.get('/api/scouting/reports', { params });
+export const scoutingCreateReportRequest = (data) => api.post('/api/scouting/reports', data);
+export const scoutingUpdateReportRequest = (id, data) => api.put(`/api/scouting/reports/${id}`, data);
+export const scoutingRemoveReportRequest = (id) => api.delete(`/api/scouting/reports/${id}`);
+export const scoutingCompareRequest = (params = {}) => api.get('/api/scouting/compare', { params });
 
 export const searchEverythingRequest = (params = {}) => api.get('/api/search', { params });
 export const searchUsersRequest = (params = {}) => api.get('/api/search/users', { params });

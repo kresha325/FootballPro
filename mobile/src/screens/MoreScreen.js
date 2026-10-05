@@ -59,7 +59,7 @@ export default function MoreScreen({ navigation }) {
     return parts;
   }, [messagesCount, notificationsCount]);
 
-  const canUseScouting = user?.role === 'scout' || user?.role === 'club';
+  const canUseScouting = user?.role === 'scout' || user?.role === 'club' || user?.role === 'manager';
   const hasScoutingPlan = hasTier(user, 'pro');
   const canUseInsights = ['athlete', 'coach', 'club', 'scout', 'manager', 'business', 'federation', 'admin'].includes(
     user?.role
@@ -142,7 +142,7 @@ export default function MoreScreen({ navigation }) {
       {canUseScouting
         ? btn({
             title: 'Scouting',
-            subtitle: hasScoutingPlan ? 'Recommendations and filters' : 'Kërkon planin Pro',
+            subtitle: hasScoutingPlan ? 'Zbulim, shortlist, raporte' : 'Kërkon planin Pro',
             onPress: () => navigation.navigate('Scouting'),
           })
         : null}
@@ -214,7 +214,7 @@ export default function MoreScreen({ navigation }) {
         >
           <Text style={[styles.noteTitle, { color: colors.warningText }]}>Scouting Access</Text>
           <Text style={[styles.noteText, { color: colors.warningText }]}>
-            Scouting është për Scout/Club me planin Pro.
+            Scouting është për Scout, Club dhe Manager me planin Pro.
           </Text>
         </View>
       ) : !hasScoutingPlan ? (
