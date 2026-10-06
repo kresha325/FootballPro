@@ -76,9 +76,18 @@ router.get('/verify', async (req, res) => {
   if (!token) return res.json({ valid: false });
   try {
     const decoded = jwt.verify(token, require('../utils/jwtSecret').getJwtSecret());
-    res.json({ valid: true, user: decoded.user });
+    const userId = decoded?.user?.id;
+    if (!userId) return res.json({ valid: false });
+    const dbUser = await User.findByPk(userId, {
+      attributes: ['id', 'role', 'bannedAt', 'deletedAt', 'tokenVersion'],
+    });
+    if (!dbUser || dbUser.deletedAt || dbUser.bannedAt) return res.json({ valid: false });
+    const tokenVersion = Number(dbUser.tokenVersion || 0);
+    const claimedVersion = Number(decoded?.user?.tv || 0);
+    if (tokenVersion > 0 && claimedVersion !== tokenVersion) return res.json({ valid: false });
+    return res.json({ valid: true, user: { id: dbUser.id, role: dbUser.role } });
   } catch (err) {
-    res.json({ valid: false });
+    return res.json({ valid: false });
   }
 });
 

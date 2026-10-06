@@ -27,7 +27,6 @@ exports.searchEverything = async (req, res) => {
         [Op.or]: [
           { firstName: { [Op.iLike]: `%${q}%` } },
           { lastName: { [Op.iLike]: `%${q}%` } },
-          { email: { [Op.iLike]: `%${q}%` } },
         ],
       } : {},
       include: [
@@ -36,7 +35,7 @@ exports.searchEverything = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'role', 'verified', 'createdAt'],
       limit: SEARCH_LIMIT,
     });
 
@@ -168,7 +167,9 @@ exports.searchUsers = async (req, res) => {
   } = req.query;
 
   try {
-    const offset = (page - 1) * limit;
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 50);
+    const safePage = Math.min(Math.max(parseInt(page, 10) || 1, 1), 500);
+    const offset = (safePage - 1) * safeLimit;
     const whereUser = {};
     const whereProfile = {};
 
@@ -177,7 +178,6 @@ exports.searchUsers = async (req, res) => {
       whereUser[Op.or] = [
         { firstName: { [Op.iLike]: `%${q}%` } },
         { lastName: { [Op.iLike]: `%${q}%` } },
-        { email: { [Op.iLike]: `%${q}%` } },
       ];
     }
 
@@ -229,17 +229,17 @@ exports.searchUsers = async (req, res) => {
           attributes: ['bio', 'position', 'club', 'city', 'country', 'profilePhoto'],
         },
       ],
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'createdAt'],
+      attributes: ['id', 'firstName', 'lastName', 'role', 'verified', 'createdAt'],
       order,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: safeLimit,
+      offset,
     });
 
     res.json({
       users: users.rows,
       total: users.count,
-      page: parseInt(page),
-      pages: Math.ceil(users.count / limit),
+      page: safePage,
+      pages: Math.ceil(users.count / safeLimit),
     });
   } catch (err) {
     console.error('Search users error:', err);
@@ -259,7 +259,9 @@ exports.searchPosts = async (req, res) => {
   } = req.query;
 
   try {
-    const offset = (page - 1) * limit;
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 50);
+    const safePage = Math.min(Math.max(parseInt(page, 10) || 1, 1), 500);
+    const offset = (safePage - 1) * safeLimit;
     const where = {};
 
     // Text search
@@ -324,8 +326,8 @@ exports.searchPosts = async (req, res) => {
         },
       ],
       order,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: safeLimit,
+      offset,
     });
 
     // Filter by min likes after fetching (requires Like count)

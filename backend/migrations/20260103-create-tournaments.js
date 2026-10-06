@@ -39,12 +39,6 @@ module.exports = {
         creatorId: {
           type: Sequelize.INTEGER,
           allowNull: true,
-          references: {
-            model: 'Users',
-            key: 'id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
         },
         createdAt: {
           type: Sequelize.DATE,
@@ -79,12 +73,6 @@ module.exports = {
         userId: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          references: {
-            model: 'Users',
-            key: 'id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
         },
         points: {
           type: Sequelize.INTEGER,

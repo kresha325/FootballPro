@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /messages
+Disallow: /wallet
+Disallow: /settings
+Disallow: /orders
+Disallow: /cart
+Disallow: /checkout
 
 User-agent: facebookexternalhit
 Allow: /

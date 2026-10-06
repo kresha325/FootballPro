@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { getJwtSecret } = require('../utils/jwtSecret');
+const User = require('../models/User');
 
 /**
  * Socket.IO middleware.
@@ -26,6 +27,18 @@ async function socketAuth(socket, next) {
     const decoded = jwt.verify(token, getJwtSecret());
     const userId = decoded?.user?.id;
     if (!userId) {
+      return next(new Error('Unauthorized'));
+    }
+
+    const dbUser = await User.findByPk(userId, {
+      attributes: ['id', 'bannedAt', 'deletedAt', 'tokenVersion'],
+    });
+    if (!dbUser || dbUser.deletedAt || dbUser.bannedAt) {
+      return next(new Error('Unauthorized'));
+    }
+    const tokenVersion = Number(dbUser.tokenVersion || 0);
+    const claimedVersion = Number(decoded?.user?.tv || 0);
+    if (tokenVersion > 0 && claimedVersion !== tokenVersion) {
       return next(new Error('Unauthorized'));
     }
 

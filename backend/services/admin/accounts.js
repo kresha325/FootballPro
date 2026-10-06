@@ -25,6 +25,7 @@ async function suspendUser(userId, reason, actorId) {
   user.verified = false;
   user.pushTokenMobile = null;
   user.pushTokenWeb = null;
+  user.tokenVersion = Number(user.tokenVersion || 0) + 1;
   await user.save();
   return user;
 }

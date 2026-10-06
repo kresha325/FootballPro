@@ -4,7 +4,7 @@ module.exports = {
     if (!tables.includes('UserRewards')) {
       await queryInterface.createTable('UserRewards', {
         id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-        userId: { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'CASCADE' },
+        userId: { type: Sequelize.INTEGER, allowNull: false },
         rewardId: { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Rewards', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'CASCADE' },
         claimedAt: { type: Sequelize.DATE, allowNull: true, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
         createdAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },

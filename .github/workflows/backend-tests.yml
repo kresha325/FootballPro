@@ -39,3 +39,49 @@ jobs:
         env:
           NODE_ENV: test
           JWT_SECRET: ci-test-jwt-secret
+
+  migrate:
+    name: Clean database migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: footballpro_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Migrate an empty database
+        env:
+          DB_USER: postgres
+          DB_PASS: postgres
+          DB_NAME: footballpro_ci
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_SSL: 'false'
+          PGSSLMODE: disable
+          NODE_ENV: development
+        run: npx sequelize-cli db:migrate

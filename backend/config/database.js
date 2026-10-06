@@ -26,14 +26,7 @@ function createSequelizeFromDatabaseUrl() {
 if (process.env.DATABASE_URL) {
   sequelize = createSequelizeFromDatabaseUrl();
 } else if (process.env.NODE_ENV === 'production') {
-  // If a DATABASE_URL contains sslmode param, libpq will still log a warning if it uses legacy aliases.
-  // Best practice: set PGSSLMODE=verify-full in environment and provide CA certs.
-  const dialectOptions = {};
-  if (sslRequired) {
-    dialectOptions.ssl = { require: true, rejectUnauthorized };
-  }
-
-  sequelize = createSequelizeFromDatabaseUrl();
+  throw new Error('DATABASE_URL is required in production');
 } else {
   const config = {
     username: process.env.DB_USER,

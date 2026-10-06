@@ -61,6 +61,7 @@ jobs:
           PGPORT: ${{ secrets.PROD_PGPORT }}
           NODE_ENV: production
         run: |
+          export DATABASE_URL="$(node -e "const u=encodeURIComponent(process.env.PGUSER); const p=encodeURIComponent(process.env.PGPASSWORD); const h=process.env.PGHOST; const port=process.env.PGPORT||5432; const db=encodeURIComponent(process.env.PGDATABASE); process.stdout.write('postgresql://'+u+':'+p+'@'+h+':'+port+'/'+db+'?sslmode=require');")"
           npx sequelize-cli db:migrate --env production
 
       - name: Backend health check
@@ -72,12 +73,13 @@ jobs:
           echo "Checking backend health at $FOOTBALLPRO_API_URL/health"
           curl -fsS "$FOOTBALLPRO_API_URL/health" || (echo 'Health check failed' && exit 1)
 
-      - name: Info when skipping migrations
+      - name: Fail when production database secrets are missing
         if: ${{ steps.verify_secrets.outputs.have_secrets == 'false' }}
         run: |
-          echo "GitHub Secrets for direct DB access are not set. Migrations and health check were skipped."
-          echo "If you manage the database on Render, trigger migrations there (SSH/Deploy hook) or add the required GitHub Secrets to run them from Actions."
+          echo "GitHub Secrets for the production database are not set, so this workflow did not migrate."
+          echo "Add PROD_PGHOST, PROD_PGUSER, PROD_PGPASSWORD, PROD_PGDATABASE, PROD_PGPORT and FOOTBALLPRO_API_URL, or remove this workflow if Render runs migrations itself."
+          exit 1
 
       - name: Notify success
-        if: success()
+        if: ${{ steps.verify_secrets.outputs.have_secrets == 'true' && success() }}
         run: echo "Migrations completed and health check OK"

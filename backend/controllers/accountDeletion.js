@@ -51,6 +51,7 @@ exports.deleteMyAccount = async (req, res) => {
     user.parentEmail = null;
     user.parentVerificationToken = null;
     user.deletedAt = new Date();
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     user.deletionRequestedAt = user.deletionRequestedAt || new Date();
     user.bannedAt = user.bannedAt || new Date();
     user.banReason = user.banReason || 'account_deleted';

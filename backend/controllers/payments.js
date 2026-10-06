@@ -20,10 +20,14 @@ exports.createPayment = async (req, res) => {
     return res.status(400).json({ msg: 'Shuma e pavlefshme' });
   }
   try {
+    const currency = String(req.body?.currency || 'eur').trim().toLowerCase();
+    if (currency !== 'eur') {
+      return res.status(400).json({ msg: 'Monedha e mbështetur është EUR' });
+    }
     const payment = await Payment.create({
       userId: req.user.id,
       amount: require('../utils/money').fromCents(amountCents),
-      currency: String(req.body?.currency || 'eur').toLowerCase().slice(0, 8),
+      currency,
       description: req.body?.description ? String(req.body.description).slice(0, 255) : null,
       status: 'pending',
     });

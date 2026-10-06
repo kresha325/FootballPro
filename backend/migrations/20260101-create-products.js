@@ -4,7 +4,7 @@ module.exports = {
     if (!tables.includes('Products')) {
       await queryInterface.createTable('Products', {
         id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-        sellerId: { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'CASCADE' },
+        sellerId: { type: Sequelize.INTEGER, allowNull: false },
         name: { type: Sequelize.STRING, allowNull: false },
         description: { type: Sequelize.TEXT, allowNull: true },
         price: { type: Sequelize.DECIMAL(10,2), allowNull: false },

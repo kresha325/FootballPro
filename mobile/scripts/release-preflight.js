@@ -58,11 +58,11 @@ console.log('- ALLOW_MOBILE_DIGITAL_PURCHASES ... PASS');
 // Legal URLs exist in Settings
 const settingsPath = path.join(root, 'src/screens/SettingsScreen.js');
 const settingsSrc = fs.readFileSync(settingsPath, 'utf8');
-if (!settingsSrc.includes('/privacy') || !settingsSrc.includes('/terms')) {
-  fail('Settings missing privacy/terms URLs');
+if (!settingsSrc.includes("openLegal(navigation, 'privacy')") || !settingsSrc.includes("openLegal(navigation, 'terms')")) {
+  fail('Settings missing privacy/terms legal screens');
 }
-if (!settingsSrc.includes('/help') || !settingsSrc.includes('/data') || !settingsSrc.includes('/cookies')) {
-  fail('Settings missing help/data/cookies URLs');
+if (!settingsSrc.includes("openLegal(navigation, 'help')") || !settingsSrc.includes("openLegal(navigation, 'data')") || !settingsSrc.includes("openLegal(navigation, 'cookies')")) {
+  fail('Settings missing help/data/cookies legal screens');
 }
 if (!settingsSrc.includes('deleteMyAccountRequest') && !settingsSrc.includes('Fshi llogarinë')) {
   fail('Account deletion UI missing from Settings');

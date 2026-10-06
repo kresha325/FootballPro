@@ -551,7 +551,7 @@ app.get('/api/users/:userId/online', async (req, res) => {
       lastSeenAt: lastSeenAt ? new Date(lastSeenAt).toISOString() : null,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -1056,6 +1056,10 @@ app.use((err, req, res, next) => {
   }
   if (err && err.message === 'Invalid file type') {
     return res.status(400).json({ error: 'Invalid file type.' });
+  }
+  const status = Number(err?.status || err?.statusCode || 500);
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({ error: 'Invalid request' });
   }
   if (process.env.NODE_ENV === 'production') {
     return res.status(500).json({ error: 'Internal Server Error' });

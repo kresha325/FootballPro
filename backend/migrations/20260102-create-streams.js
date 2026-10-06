@@ -19,12 +19,6 @@ module.exports = {
         streamerId: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          references: {
-            model: 'Users',
-            key: 'id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
         },
         isLive: {
           type: Sequelize.BOOLEAN,

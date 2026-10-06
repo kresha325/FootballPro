@@ -4,7 +4,7 @@ module.exports = {
     if (!tables.includes('Profiles')) {
       await queryInterface.createTable('Profiles', {
         id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-        userId: { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'CASCADE' },
+        userId: { type: Sequelize.INTEGER, allowNull: false },
         bio: { type: Sequelize.TEXT, allowNull: true },
         city: { type: Sequelize.STRING, allowNull: true },
         country: { type: Sequelize.STRING, allowNull: true },

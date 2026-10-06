@@ -1,55 +1,16 @@
 'use strict';
 
-const bcrypt = require('bcryptjs');
-
-const ADMIN_EMAIL = 'kresha325@gmail.com';
-
+/**
+ * Filename kept so databases that already applied this migration are not asked
+ * to run it again. The previous revision hashed a password that was committed
+ * to the repository and could reset that account on a fresh install.
+ * This revision does not create an account and does not change a password.
+ * Bootstrap an administrator with ADMIN_BOOTSTRAP_EMAIL and
+ * ADMIN_BOOTSTRAP_PASSWORD outside source control, and rotate any password
+ * that the previous revision already wrote.
+ */
 module.exports = {
-  up: async (queryInterface) => {
-    const passwordHash = await bcrypt.hash('kresha325gashi', 10);
-    const [rows] = await queryInterface.sequelize.query(
-      `SELECT id FROM "Users" WHERE lower(email) = lower(:email) LIMIT 1`,
-      { replacements: { email: ADMIN_EMAIL } }
-    );
+  up: async () => {},
 
-    if (rows && rows.length) {
-      await queryInterface.sequelize.query(
-        `UPDATE "Users"
-         SET role = 'admin',
-             verified = true,
-             password = :passwordHash,
-             "updatedAt" = NOW()
-         WHERE id = :id`,
-        { replacements: { passwordHash, id: rows[0].id } }
-      );
-      return;
-    }
-
-    await queryInterface.bulkInsert('Users', [
-      {
-        email: ADMIN_EMAIL,
-        password: passwordHash,
-        role: 'admin',
-        verified: true,
-        premium: false,
-        firstName: 'Kresha',
-        lastName: 'Admin',
-        joncoinBalance: 0,
-        points: 0,
-        level: 1,
-        experience: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-  },
-
-  down: async (queryInterface) => {
-    await queryInterface.sequelize.query(
-      `UPDATE "Users"
-       SET role = 'athlete', "updatedAt" = NOW()
-       WHERE lower(email) = lower(:email) AND role = 'admin'`,
-      { replacements: { email: ADMIN_EMAIL } }
-    );
-  },
+  down: async () => {},
 };

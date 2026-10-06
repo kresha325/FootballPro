@@ -217,6 +217,15 @@ describe('socketAuth middleware', () => {
     const jwt = require('jsonwebtoken');
     const token = jwt.sign({ user: { id: 123 } }, 'phase1-test-secret');
 
+    const userPath = require.resolve('../models/User');
+    require.cache[userPath] = {
+      id: userPath,
+      filename: userPath,
+      loaded: true,
+      exports: {
+        findByPk: async () => ({ id: 123, bannedAt: null, deletedAt: null, tokenVersion: 0 }),
+      },
+    };
     const modPath = require.resolve('../middleware/socketAuth');
     delete require.cache[modPath];
     delete require.cache[require.resolve('../utils/jwtSecret')];
