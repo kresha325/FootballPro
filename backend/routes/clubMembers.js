@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param, query, validationResult } = require('express-validator');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, optionalAuth } = require('../middleware/auth');
 const ClubMember = require('../models/ClubMember');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
@@ -69,7 +69,7 @@ const hydrateAgeGroup = async (membership) => {
 };
 
 // Get club members (for club profile)
-router.get('/club/:clubId', async (req, res) => {
+router.get('/club/:clubId', optionalAuth, async (req, res) => {
     await param('clubId').isInt({ min: 1 }).run(req);
     await query('status').optional().isIn(['pending', 'approved', 'rejected']).run(req);
     const errors = validationResult(req);
@@ -80,9 +80,15 @@ router.get('/club/:clubId', async (req, res) => {
     const { clubId } = req.params;
     const { status } = req.query; // pending, approved, rejected
 
-    const where = { clubId: parseInt(clubId) };
+    const where = { clubId: parseInt(clubId, 10) };
+    const isManager = req.user && (req.user.role === 'admin' || Number(req.user.id) === Number(clubId));
+    if ((status === 'pending' || status === 'rejected') && !isManager) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
     if (status) {
       where.status = status;
+    } else if (!isManager) {
+      where.status = 'approved';
     }
 
     if (!status) {
@@ -153,7 +159,13 @@ router.get('/club/:clubId', async (req, res) => {
     });
 
     const serialized = await Promise.all(members.map(hydrateAgeGroup));
-    res.json(serialized);
+    const visible = serialized.map((member) => {
+      if (isManager || !member?.athlete) return member;
+      const next = { ...member, athlete: { ...member.athlete } };
+      delete next.athlete.email;
+      return next;
+    });
+    res.json(visible);
   } catch (error) {
     console.error('Get club members error:', error);
     res.status(500).json({ msg: 'Server error' });

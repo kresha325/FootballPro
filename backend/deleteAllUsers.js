@@ -1,3 +1,7 @@
+const { assertDestructiveAllowed } = require('./utils/destructiveGuard');
+
+assertDestructiveAllowed('deleteAllUsers.js');
+
 const sequelize = require('./config/database');
 const User = require('./models/User');
 const Profile = require('./models/Profile');

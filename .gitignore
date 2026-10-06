@@ -4,16 +4,22 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 yarn.lock
-package-lock.json
 
-# Environment variables
+# Environment variables and local secrets.
+# Example files stay tracked. package-lock.json stays tracked because CI uses npm ci.
 .env
-.env.local
-.env.production
-.env.remote
-**/.env.remote
-backend/.env
-frontend/.env
+.env.*
+!.env.example
+!**/.env.example
+!.env.*.example
+*.key
+*.pem
+*.p12
+*.pfx
+certs/
+secrets/
+credentials/
+credentials.json
 
 # Build outputs
 dist/
@@ -32,15 +38,19 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs, coverage, and debug output
 logs/
 *.log
+coverage/
+.nyc_output/
+*.pid
 
-# Database
+# Local databases
 *.sqlite
+*.sqlite3
 *.db
 
-# Misc
+# Temporary files
 .cache/
 .temp/
 tmp/
@@ -52,4 +62,3 @@ mobile/.expo/
 
 # Android signing (never commit)
 *.keystore
-

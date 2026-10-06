@@ -204,7 +204,7 @@ exports.createMatch = async (req, res) => {
     res.status(201).json(match);
   } catch (err) {
     console.error('Error creating match:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message, details: err });
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 

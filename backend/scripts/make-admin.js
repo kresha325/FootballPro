@@ -13,6 +13,8 @@
  */
 
 require('dotenv').config();
+const { assertDestructiveAllowed } = require('../utils/destructiveGuard');
+assertDestructiveAllowed('scripts/make-admin.js');
 const bcrypt = require('bcryptjs');
 
 async function main() {

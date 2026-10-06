@@ -23,6 +23,31 @@ function meJsonWithAbsolutePhoto(plain, req) {
 }
 const rateLimit = require('express-rate-limit');
 
+const authRateLimitEnabled = process.env.AUTH_RATE_LIMIT_ENABLED !== 'false';
+
+function maybeLimit(limiter) {
+  return (req, res, next) => {
+    if (!authRateLimitEnabled) return next();
+    return limiter(req, res, next);
+  };
+}
+
+const authWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { msg: 'Shumë përpjekje. Provo përsëri më vonë.' },
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { msg: 'Shumë përpjekje. Provo përsëri më vonë.' },
+});
+
 // Lightweight in-memory cache for /me responses to reduce DB calls and avoid 429
 const meCache = new Map(); // key: userId, value: { plain, expiry } — plain pa URL absolute (ri-lidhet me req)
 const ME_CACHE_TTL = 5 * 1000; // 5 seconds
@@ -34,10 +59,7 @@ const meLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Allow toggling auth-specific rate limiter via env var
-const authRateLimitEnabled = process.env.AUTH_RATE_LIMIT_ENABLED !== 'false';
-
-// middleware wrapper that conditionally applies the limiter
+// Allow toggling auth-specific rate limiter via AUTH_RATE_LIMIT_ENABLED (declared above).
 const maybeMeLimiter = (req, res, next) => {
   if (!authRateLimitEnabled) return next();
   return meLimiter(req, res, next);
@@ -53,7 +75,7 @@ router.get('/verify', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.json({ valid: false });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, require('../utils/jwtSecret').getJwtSecret());
     res.json({ valid: true, user: decoded.user });
   } catch (err) {
     res.json({ valid: false });
@@ -65,8 +87,8 @@ router.get('/verify', async (req, res) => {
  * AUTH – REGISTER & LOGIN
  * ============================
  */
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', maybeLimit(authWriteLimiter), register);
+router.post('/login', maybeLimit(authWriteLimiter), login);
 // Example route setup (replace/add as needed):
 // router.post('/login', passport.authenticate('local'), authController.login);
 // router.post('/register', authController.register);
@@ -76,8 +98,8 @@ router.post('/login', login);
  * PASSWORD RESET
  * ============================
  */
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', maybeLimit(passwordResetLimiter), forgotPassword);
+router.post('/reset-password', maybeLimit(passwordResetLimiter), resetPassword);
 
 /**
  * ============================
@@ -175,7 +197,7 @@ function oauthSuccessRedirect(req, token) {
 function issueOAuthJwtRedirect(req, res) {
   const token = jwt.sign(
     { user: { id: req.user.id } },
-    process.env.JWT_SECRET,
+    require('../utils/jwtSecret').getJwtSecret(),
     { expiresIn: '7d' }
   );
   res.redirect(oauthSuccessRedirect(req, token));
@@ -190,15 +212,7 @@ function authenticateOAuth(provider) {
       }
       if (!user) {
         const msg = info?.message || info?.toString?.() || 'no_user';
-        console.error(`[oauth:${provider}] failed:`, msg, {
-          query: req.query,
-          callbackHint:
-            provider === 'facebook'
-              ? require('../config/passport').facebookCallbackURL?.()
-              : provider === 'google'
-                ? require('../config/passport').googleCallbackURL?.()
-                : undefined,
-        });
+        console.error(`[oauth:${provider}] failed:`, msg);
         return res.redirect(oauthFailureRedirect(req, msg));
       }
       req.user = user;

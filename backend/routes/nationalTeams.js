@@ -62,6 +62,9 @@ router.get('/player/:playerId', async (req, res) => {
 // Add player to national team (national team managers only)
 router.post('/', protect, async (req, res) => {
   try {
+    if (req.user.role !== 'federation' && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Vetëm federata mund të menaxhojë kombëtaren' });
+    }
     const { playerId, teamCategory, position, jerseyNumber } = req.body;
 
     // Check if already exists
@@ -113,7 +116,10 @@ router.patch('/:memberId', protect, async (req, res) => {
       return res.status(404).json({ msg: 'Player not found' });
     }
 
-    if (member.nationalTeamId !== req.user.id) {
+    if (req.user.role !== 'federation' && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Vetëm federata mund të menaxhojë kombëtaren' });
+    }
+    if (req.user.role !== 'admin' && member.nationalTeamId !== req.user.id) {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 
@@ -158,7 +164,10 @@ router.delete('/:memberId', protect, async (req, res) => {
       return res.status(404).json({ msg: 'Player not found' });
     }
 
-    if (member.nationalTeamId !== req.user.id) {
+    if (req.user.role !== 'federation' && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Vetëm federata mund të menaxhojë kombëtaren' });
+    }
+    if (req.user.role !== 'admin' && member.nationalTeamId !== req.user.id) {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 

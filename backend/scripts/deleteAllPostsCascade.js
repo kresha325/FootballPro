@@ -1,4 +1,6 @@
 // Script to delete all posts and their related comments/likes/galleries
+const { assertDestructiveAllowed } = require('../utils/destructiveGuard');
+assertDestructiveAllowed('scripts/deleteAllPostsCascade.js');
 const { Post, Comment, Like, Gallery } = require('../models');
 const PostAnalytics = require('../models/PostAnalytics');
 

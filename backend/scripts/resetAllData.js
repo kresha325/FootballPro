@@ -1,4 +1,6 @@
 // Script to reset all data and uploads folder
+const { assertDestructiveAllowed } = require('../utils/destructiveGuard');
+assertDestructiveAllowed('scripts/resetAllData.js');
 const fs = require('fs');
 const path = require('path');
 const { sequelize, User, Post, Comment, Like, Gallery, PostAnalytics, Notification, Ad, Sponsor, Follow, Profile } = require('../models');

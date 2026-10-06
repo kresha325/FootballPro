@@ -100,7 +100,7 @@ export default function AdminDashboardScreen() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [newRole, setNewRole] = useState('athlete');
-  const [passwordDraft, setPasswordDraft] = useState('123456');
+  const [passwordDraft, setPasswordDraft] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [verifiedFilter, setVerifiedFilter] = useState('');
   const [reportsStatus, setReportsStatus] = useState('pending');

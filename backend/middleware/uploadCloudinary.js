@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const cloudinary = require('../utils/cloudinary');
+const { MEDIA_EXTS, storedFilename, BLOCKED_EXT } = require('../utils/uploadNames');
 
 const isCloudinaryEnabled = !!(
   process.env.CLOUDINARY_CLOUD_NAME &&
@@ -20,8 +21,9 @@ const tempStorage = multer.diskStorage({
 		cb(null, tempDir);
 	},
 	filename: function (req, file, cb) {
-		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-		cb(null, uniqueSuffix + '-' + file.originalname.replace(/\s+/g, '_'));
+		const name = storedFilename(file, MEDIA_EXTS);
+		if (!name) return cb(new Error('Invalid image file'));
+		cb(null, name);
 	}
 });
 
@@ -34,8 +36,9 @@ const localStorage = multer.diskStorage({
 		cb(null, dest);
 	},
 	filename: function (req, file, cb) {
-		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-		cb(null, uniqueSuffix + '-' + file.originalname.replace(/\s+/g, '_'));
+		const name = storedFilename(file, MEDIA_EXTS);
+		if (!name) return cb(new Error('Invalid image file'));
+		cb(null, name);
 	}
 });
 
@@ -48,14 +51,15 @@ const MAX_VIDEO_SIZE = parseInt(
 const MAX_FILE_SIZE = Math.max(MAX_IMAGE_SIZE, MAX_VIDEO_SIZE);
 
 function fileFilter(req, file, cb) {
-	if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) return cb(null, true);
-	// React Native / some clients send image/jpg or octet-stream for picked photos
-	if (String(file.mimetype || '').toLowerCase() === 'image/jpg') return cb(null, true);
 	const ext = path.extname(file.originalname || '').toLowerCase();
-	const imageExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.bmp'];
-	if (String(file.mimetype || '').toLowerCase() === 'application/octet-stream' && imageExt.includes(ext)) {
-		return cb(null, true);
+	if (BLOCKED_EXT.has(ext) || ext === '.svg') return cb(new Error('Invalid image file'));
+	if (String(file.mimetype || '').toLowerCase() === 'image/svg+xml') {
+		return cb(new Error('Invalid image file'));
 	}
+	if (!storedFilename(file, MEDIA_EXTS)) return cb(new Error('Invalid image file'));
+	if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) return cb(null, true);
+	if (String(file.mimetype || '').toLowerCase() === 'image/jpg') return cb(null, true);
+	if (String(file.mimetype || '').toLowerCase() === 'application/octet-stream') return cb(null, true);
 	cb(new Error('Invalid image file'));
 }
 

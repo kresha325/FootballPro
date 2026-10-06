@@ -56,7 +56,12 @@ export const getApiUrl = (path) => {
 };
 
 export const fetchJsonSafe = async (path, options = {}) => {
-  const response = await fetch(getApiUrl(path), options);
+  const headers = { ...(options.headers || {}) };
+  if (!headers.Authorization && typeof localStorage !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  const response = await fetch(getApiUrl(path), { ...options, headers });
   const contentType = response.headers.get('content-type') || '';
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);

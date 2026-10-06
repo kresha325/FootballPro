@@ -1,5 +1,8 @@
-const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
-const stripe = require('stripe')(stripeKey);
+function stripeClient() {
+  const key = process.env.STRIPE_SECRET_KEY || '';
+  if (!key || key.includes('dummy') || !key.startsWith('sk_')) return null;
+  return require('stripe')(key);
+}
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const { stripeLiveReady } = require('../config/payments');
@@ -167,6 +170,11 @@ async function activatePremiumFromStripeSession(session) {
   const plan = session.metadata.plan || 'monthly';
   if (!Number.isFinite(userId)) return null;
   if (session.payment_status !== 'paid') return null;
+  const expected = PLANS[plan]?.amountCents;
+  if (expected != null && Number(session.amount_total) !== Number(expected)) {
+    console.error('Premium checkout amount mismatch', session.id);
+    return null;
+  }
   return activatePremiumForUser(userId, plan, session.id);
 }
 
@@ -174,9 +182,9 @@ exports.PLANS = PLANS;
 exports.activatePremiumForUser = activatePremiumForUser;
 
 function demoPremiumAllowed() {
+  if (process.env.NODE_ENV === 'production') return false;
   const flag = String(process.env.PREMIUM_DEMO_MODE || '').trim().toLowerCase();
   if (flag === 'true' || flag === '1') return true;
-  if (process.env.NODE_ENV === 'production') return false;
   return !stripeConfigured();
 }
 
@@ -231,6 +239,10 @@ exports.createPremiumCheckout = async (req, res) => {
     }
 
     const base = frontendBase();
+    const stripe = stripeClient();
+    if (!stripe) {
+      return res.status(503).json({ msg: 'Pagesat premium me kartë nuk janë aktive. Përdor XCoin ose aktivizo Stripe.' });
+    }
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -262,7 +274,7 @@ exports.createPremiumCheckout = async (req, res) => {
     });
   } catch (err) {
     console.error('createPremiumCheckout:', err);
-    res.status(500).json({ msg: 'Could not start checkout', error: err.message });
+    res.status(500).json({ msg: 'Could not start checkout' });
   }
 };
 
@@ -275,6 +287,10 @@ exports.verifyPremiumSession = async (req, res) => {
       return res.status(400).json({ msg: 'Stripe is not configured' });
     }
 
+    const stripe = stripeClient();
+    if (!stripe) {
+      return res.status(400).json({ msg: 'Stripe is not configured' });
+    }
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (String(session.metadata?.userId) !== String(req.user.id)) {
       return res.status(403).json({ msg: 'Session does not belong to this user' });
@@ -288,7 +304,7 @@ exports.verifyPremiumSession = async (req, res) => {
     res.json({ success: true, ...result });
   } catch (err) {
     console.error('verifyPremiumSession:', err);
-    res.status(500).json({ msg: 'Failed to verify session', error: err.message });
+    res.status(500).json({ msg: 'Failed to verify session' });
   }
 };
 

@@ -259,18 +259,16 @@ npm start
 
 ---
 
-## 🎨 Default Users (After Seeding)
+## Bootstrap admin (local only)
 
-If you run seed scripts:
+There is no default admin password in the repository.
 
-```javascript
-// backend/seeds/defaultUsers.js
-{
-  email: 'admin@footballpro.al',
-  password: 'Admin123!',
-  role: 'admin'
-}
-```
+To create a local admin, set these environment variables and run the admin seeder or `backend/scripts/make-admin.js`:
+
+- `ADMIN_BOOTSTRAP_EMAIL`
+- `ADMIN_BOOTSTRAP_PASSWORD` (minimum 8 characters, never commit the value)
+
+In production, `make-admin.js` and the seeder do nothing unless `ALLOW_DESTRUCTIVE=true` or `ALLOW_ADMIN_BOOTSTRAP=true` is set for that maintenance window.
 
 ---
 

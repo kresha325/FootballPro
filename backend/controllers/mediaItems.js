@@ -312,7 +312,7 @@ exports.createMedia = async (req, res) => {
       visibility: vis,
       durationSeconds: toInt(durationSeconds),
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
-      featured: req.body?.featured === true || req.body?.featured === 'true',
+      featured: req.user?.role === 'admin' && (req.body?.featured === true || req.body?.featured === 'true'),
       sortOrder: Number.isFinite(Number(req.body?.sortOrder)) ? Number(req.body.sortOrder) : 0,
       tags: normalizeTags(req.body?.tags),
       timestampSeconds: toInt(req.body?.timestampSeconds),

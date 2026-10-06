@@ -4,6 +4,8 @@
  * jo këtë skript, që historia e skemës të jetë e gjurmueshme dhe e ripërsëritshme.
  */
 require('dotenv').config();
+const { assertDestructiveAllowed } = require('./utils/destructiveGuard');
+assertDestructiveAllowed('syncDatabase.js');
 const sequelize = require('./config/database');
 
 // Import all models

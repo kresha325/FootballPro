@@ -948,8 +948,7 @@ exports.updateProfile = async (req, res) => {
   const cloudinary = require('../utils/cloudinary');
   const fs = require('fs');
   try {
-    console.log('📝 UPDATE PROFILE - Body:', req.body);
-    console.log('📁 UPDATE PROFILE - Files:', req.files);
+    console.log('📝 UPDATE PROFILE', { userId: req.user?.id, fileFields: Object.keys(req.files || {}) });
 
     let nextGender = undefined;
     if (req.body.gender !== undefined) {

@@ -285,8 +285,7 @@ exports.getPost = async (req, res) => {
 
 exports.createPost = async (req, res) => {
   try {
-    console.log('📝 CREATE POST - Body:', req.body);
-    console.log('📁 CREATE POST - File:', req.file);
+    console.log('📝 CREATE POST', { userId: req.user?.id, hasFile: !!req.file });
     if (!req.user || !req.user.id) {
       console.error('❌ CREATE POST: missing req.user - unauthorized request');
       return res.status(401).json({ msg: 'Unauthorized' });

@@ -18,8 +18,6 @@ function normalizeEmail(raw) {
 }
 
 exports.register = async (req, res) => {
-  console.log('BACKEND: REGISTER BODY:', req.body);
-
   const { email: rawEmail, password, role, firstName, lastName, dateOfBirth, city, country } = req.body;
   const email = normalizeEmail(rawEmail);
 
@@ -157,10 +155,8 @@ exports.register = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('BACKEND: REGISTER ERROR:', err);
-    console.error('BACKEND: Error message:', err.message);
-    console.error('BACKEND: Error stack:', err.stack);
-    res.status(500).json({ msg: 'Gabim në server', error: err.message });
+    console.error('BACKEND: REGISTER ERROR:', err && err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 
@@ -265,8 +261,8 @@ exports.login = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('BACKEND: LOGIN ERROR:', err);
-    res.status(500).json({ msg: 'Gabim në server', error: err && err.message });
+    console.error('BACKEND: LOGIN ERROR:', err && err.message);
+    res.status(500).json({ msg: 'Gabim në server' });
   }
 };
 

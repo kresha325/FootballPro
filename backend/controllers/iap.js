@@ -2,7 +2,7 @@ const https = require('https');
 const IapPurchase = require('../models/IapPurchase');
 const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
-const { activatePremiumForUser, PLANS } = require('./premium');
+const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 
 /** Store product catalog — must match App Store Connect / Play Console. */
 const PRODUCT_CATALOG = {
@@ -68,10 +68,7 @@ function postJson(url, body) {
 }
 
 function allowUnverifiedIap() {
-  return (
-    String(process.env.IAP_ALLOW_UNVERIFIED || '').toLowerCase() === 'true' ||
-    process.env.IAP_ALLOW_UNVERIFIED === '1'
-  );
+  return unverifiedIapAllowed();
 }
 
 async function verifyAppleReceipt(receiptData) {
@@ -128,14 +125,13 @@ async function verifyApplePurchase({ transactionReceipt, purchaseToken, productI
     const productOk = !jwsProduct || jwsProduct === productId;
     const txOk = !transactionId || !jwsTx || String(jwsTx) === String(transactionId);
     if (payload && productOk && txOk) {
-      // Production should verify JWS signature / App Store Server API; allow gated soft-accept.
-      if (process.env.NODE_ENV === 'production' && !allowUnverifiedIap() && !process.env.APPLE_IAP_SHARED_SECRET) {
-        return {
-          ok: false,
-          msg: 'Apple JWS: vendos APPLE_IAP_SHARED_SECRET ose App Store Server API; për staging IAP_ALLOW_UNVERIFIED=true',
-        };
+      if (unverifiedIapAllowed()) {
+        return { ok: true, jws: true, unverified: true };
       }
-      return { ok: true, jws: true, payload };
+      return {
+        ok: false,
+        msg: 'Apple JWS nuk verifikohet. Konfiguro App Store Server API para se blerjet të pranohen.',
+      };
     }
   }
 
@@ -154,23 +150,12 @@ async function verifyGooglePurchase({ productId, purchaseToken }) {
     return { ok: false, msg: 'purchaseToken / productId mungojnë' };
   }
 
-  if (!process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON) {
-    if (allowUnverifiedIap() && process.env.NODE_ENV !== 'production') {
-      return { ok: true, unverified: true };
-    }
-    return {
-      ok: false,
-      msg: 'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON mungon — vendos service account ose IAP_ALLOW_UNVERIFIED për dev',
-    };
-  }
-
-  // Full Google API verify can be wired with googleapis; token presence + staging flag for now.
-  if (allowUnverifiedIap()) {
-    return { ok: true, unverified: true, note: 'Token present; wire Play Developer API for production' };
+  if (unverifiedIapAllowed()) {
+    return { ok: true, unverified: true };
   }
   return {
     ok: false,
-    msg: 'Google Play receipt verification not fully configured — set IAP_ALLOW_UNVERIFIED for staging or wire Play Developer API',
+    msg: 'Google Play receipt verification nuk është konfiguruar. Blerjet nuk pranohen derisa Play Developer API të jetë aktive.',
   };
 }
 

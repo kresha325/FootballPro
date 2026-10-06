@@ -12,7 +12,7 @@ const Video = require('../models/Video');
 const Stream = require('../models/Stream');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
-const bcrypt = require('bcryptjs');
+const { ASSIGNABLE_ROLES, toPublicUser } = require('../utils/publicUser');
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
@@ -35,7 +35,7 @@ exports.getAllUsers = async (req, res) => {
 
     const users = await User.findAndCountAll({
       where: whereClause,
-      attributes: { exclude: ['password'] },
+      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] },
       include: [
         {
           model: Profile,
@@ -77,11 +77,14 @@ exports.updateUserRole = async (req, res) => {
   try {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
-    
+    if (!ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(400).json({ msg: 'Invalid role' });
+    }
+
     user.role = role;
     await user.save();
-    
-    res.json({ msg: 'User role updated', user });
+
+    res.json({ msg: 'User role updated', user: toPublicUser(user) });
   } catch (error) {
     console.error('Update user role error:', error);
     res.status(500).json({ msg: 'Server error' });
@@ -467,7 +470,7 @@ exports.verifyUser = async (req, res) => {
         : isAthleteRole(user)
           ? 'Klubi u verifikua. Për moshat e vogla duhet edhe verifikimi i prindit.'
           : 'Aktivizo Premium që profili të verifikohet.',
-      user,
+      user: toPublicUser(user),
     });
   } catch (error) {
     console.error('Verify user error:', error);
@@ -487,7 +490,7 @@ exports.togglePremium = async (req, res) => {
     syncOverallVerified(user);
     await user.save();
 
-    res.json({ msg: `Premium ${user.premium ? 'enabled' : 'disabled'}`, user });
+    res.json({ msg: `Premium ${user.premium ? 'enabled' : 'disabled'}`, user: toPublicUser(user) });
   } catch (error) {
     console.error('Toggle premium error:', error);
     res.status(500).json({ msg: 'Server error' });

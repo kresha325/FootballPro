@@ -3,6 +3,8 @@
 const express = require('express');
 const cors = require('cors');
 const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
+const { buildAllowedOrigins, isAllowedOrigin } = require('./utils/corsPolicy');
+const { installErrorSanitizer } = require('./utils/errorSanitize');
 const dotenv = require('dotenv');
 const http = require('http');
 const https = require('https');
@@ -110,12 +112,20 @@ const { QueryTypes } = require('sequelize');
 // `uploads` static assets are served below; global CORS middleware will set
 // the appropriate headers for those responses. Do not set headers twice.
 
-// Helmet for HTTP headers
-app.use(helmet());
+// Helmet for HTTP headers. CSP stays on Helmet defaults for this API process.
+// HSTS is production-only so local HTTP development is not pinned to HTTPS.
+app.use(helmet({
+  hsts: process.env.NODE_ENV === 'production'
+    ? { maxAge: 15552000, includeSubDomains: true }
+    : false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+}));
 
-// Rate limiting (per IP). Note: behind proxies (Render) set `trust proxy` above
-// Increased default to reduce false-positives on shared IP hosts; consider using a
-// centralized store (Redis) for multi-instance deployments.
+// Rate limiting (per IP, in memory, per process).
+// Behind multiple API instances the limit is not shared, so a client can exceed it
+// by spreading requests. A shared store is intentionally not added in this phase.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -142,64 +152,13 @@ app.use(xss());
 // NoSQL/SQL injection protection
 app.use(mongoSanitize());
 
-// CORS: production allowlist + local Vite/dev hosts (common when UI hits Render API).
-const DEFAULT_CORS_ORIGINS = [
-  'https://xtalenti.com',
-  'https://www.xtalenti.com',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3000',
-  'http://localhost:4173',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:4173',
-];
-
-function normalizeOrigin(value) {
-  return String(value || '')
-    .trim()
-    .replace(/\/$/, '');
-}
-
-const corsEnvRaw = [
-  process.env.CORS_ORIGIN,
-  process.env.FRONTEND_URL,
-]
-  .filter(Boolean)
-  .join(',');
-
-const allowedOrigins = (() => {
-  if (corsEnvRaw.trim() === '*') return ['*'];
-  const fromEnv = corsEnvRaw
-    .split(',')
-    .map(normalizeOrigin)
-    .filter(Boolean);
-  const merged = [...new Set([...DEFAULT_CORS_ORIGINS, ...fromEnv])];
-  return merged;
-})();
-
-function isAllowedOrigin(origin) {
-  if (!origin) return true;
-  const normalized = normalizeOrigin(origin);
-  if (allowedOrigins.includes('*')) return true;
-  if (allowedOrigins.includes(normalized)) return true;
-  // Local LAN / Expo web during device testing
-  try {
-    const u = new URL(normalized);
-    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
-  } catch (_e) {
-    /* ignore */
-  }
-  return false;
-}
+// CORS: production uses an explicit allowlist. Mobile clients omit Origin and stay allowed.
+// Localhost origins are development-only. A wildcard is never combined with credentials.
+const allowedOrigins = buildAllowedOrigins();
 
 function dynamicOrigin(origin, callback) {
-  if (!origin) return callback(null, true);
-  if (process.env.NODE_ENV !== 'production') return callback(null, true);
-  if (isAllowedOrigin(origin)) return callback(null, true);
-  // Do not throw — cors package turns Error into opaque failures for browsers.
-  console.warn(`CORS blocked origin: ${origin}`);
+  if (isAllowedOrigin(origin, process.env, allowedOrigins)) return callback(null, true);
+  console.warn('CORS blocked origin');
   return callback(null, false);
 }
 
@@ -223,9 +182,8 @@ io = socketIo(server, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (process.env.NODE_ENV !== 'production') return callback(null, true);
-      if (isAllowedOrigin(origin)) return callback(null, true);
-      console.warn(`Socket CORS blocked origin: ${origin}`);
+      if (isAllowedOrigin(origin, process.env, allowedOrigins)) return callback(null, true);
+      console.warn('Socket CORS blocked origin');
       return callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -252,18 +210,33 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), str
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+installErrorSanitizer(app);
 app.use(passport.initialize());
 
 // Serve static files from uploads directory (now from 'uploads' at project root).
 // Helmet defaults Cross-Origin-Resource-Policy to same-origin, which makes the
 // browser drop <img>/<video> from xtalenti.com with ERR_BLOCKED_BY_RESPONSE.NotSameOrigin.
 const path = require('path');
+function setUploadHeaders(res, filePath) {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const ext = path.extname(filePath || '').toLowerCase();
+  if (['.html', '.htm', '.svg', '.js', '.mjs', '.xml', '.php'].includes(ext)) {
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment');
+  }
+}
+
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders: setUploadHeaders,
+}));
 // Fallback placeholder for missing uploads (avoid CORB on 404)
 app.use('/uploads', (req, res) => {
   const placeholder = Buffer.from(
@@ -272,7 +245,7 @@ app.use('/uploads', (req, res) => {
   );
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.status(200).send(placeholder);
 });
 
@@ -1028,7 +1001,7 @@ sequelize.authenticate()
     console.log('✅ Database connected');
     // Migrimet ekzekutohen vetëm me CLI, jo nga kodi.
   })
-  .catch(err => console.error('❌ Database connection error:', err));
+  .catch(err => console.error('Database connection error:', err && err.message));
 
 
 if (!PORT) {
@@ -1050,14 +1023,17 @@ server.listen(PORT, '0.0.0.0', () => {
 
 // Error handling middleware (duhet të jetë në fund të file-it)
 app.use((err, req, res, next) => {
-  console.error('❌ Express error:', err);
+  console.error('Express error:', err && err.message);
   if (err && err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({ error: 'File too large. Foto max 10MB, video max 100MB.' });
   }
   if (err && err.message === 'Invalid file type') {
     return res.status(400).json({ error: 'Invalid file type.' });
   }
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+  res.status(500).json({ error: (err && err.message) ? String(err.message).slice(0, 300) : 'Internal Server Error' });
 });
 // Expose io to controllers via helper
 try {

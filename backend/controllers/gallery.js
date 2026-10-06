@@ -34,16 +34,20 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
+    const { IMAGE_EXTS, VIDEO_EXTS, storedFilename } = require('../utils/uploadNames');
+    const allowed = new Set([...IMAGE_EXTS, ...VIDEO_EXTS]);
+    const name = storedFilename(file, allowed);
+    if (!name) return cb(new Error('Invalid file type'));
+    cb(null, name);
   },
 });
 const upload = multer({ 
   storage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|bmp|webp|svg|tiff|ico|heic|heif|mp4|mov|avi/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    if (extname) {
+    const allowed = new Set(['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif', '.mp4', '.mov', '.avi']);
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (allowed.has(ext)) {
       return cb(null, true);
     }
     cb(new Error('Invalid file type'));

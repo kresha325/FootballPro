@@ -1,3 +1,5 @@
+const { assertDestructiveAllowed } = require('../utils/destructiveGuard');
+assertDestructiveAllowed('scripts/deleteAllPosts.js');
 const { Post } = require('../models');
 
 async function deleteAllPosts() {

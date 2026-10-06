@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { viewerCanSeeVideo } = require('../utils/videoAccess');
 
 // Configure multer for video uploads
 const storage = multer.diskStorage({
@@ -114,7 +115,7 @@ exports.uploadVideo = async (req, res) => {
       matchId: req.body.matchId ? parseInt(req.body.matchId, 10) : null,
       tournamentId: req.body.tournamentId ? parseInt(req.body.tournamentId, 10) : null,
       season: req.body.season ? String(req.body.season).slice(0, 64) : null,
-      featured: req.body.featured === 'true' || req.body.featured === true,
+      featured: req.user.role === 'admin' && (req.body.featured === 'true' || req.body.featured === true),
       provider: 'upload',
       providerId,
     });
@@ -253,20 +254,35 @@ exports.getVideo = async (req, res) => {
 exports.getUserVideos = async (req, res) => {
   try {
     const { userId } = req.params;
-    const videos = await Video.findAll({
-      where: {
-        userId,
-        processingStatus: 'completed',
+    const isOwner = req.user && Number(req.user.id) === Number(userId);
+    const isAdmin = req.user?.role === 'admin';
+    const where = {
+      userId,
+      processingStatus: 'completed',
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { category: { [Op.ne]: 'live' } },
+            { category: null },
+            { category: '' },
+          ],
+        },
+      ],
+    };
+    if (!isOwner && !isAdmin) {
+      where[Op.and].push({
         [Op.or]: [
-          { category: { [Op.ne]: 'live' } },
-          { category: null },
-          { category: '' },
+          { visibility: 'public' },
+          { visibility: 'unlisted' },
+          { visibility: null },
         ],
-      },
+      });
+    }
+    const videos = await Video.findAll({
+      where,
       order: [['createdAt', 'DESC']],
     });
-
-    res.json(videos);
+    res.json(videos.filter((video) => viewerCanSeeVideo(video, req.user)));
   } catch (error) {
     console.error('Get user videos error:', error);
     res.status(500).json({ error: error.message });
@@ -339,10 +355,17 @@ exports.getTrendingVideos = async (req, res) => {
     const videos = await Video.findAll({
       where: {
         processingStatus: 'completed',
-        [Op.or]: [
-          { category: { [Op.ne]: 'live' } },
-          { category: null },
-          { category: '' },
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { category: { [Op.ne]: 'live' } },
+              { category: null },
+              { category: '' },
+            ],
+          },
+          {
+            [Op.or]: [{ visibility: 'public' }, { visibility: null }],
+          },
         ],
       },
       include: [
