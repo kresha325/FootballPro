@@ -307,7 +307,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
       <h3 className="text-lg font-semibold mb-3">Club Profile</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Club Name</label>
+          <label className="block text-sm font-medium mb-1">Emri i klubit</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>

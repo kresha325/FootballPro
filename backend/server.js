@@ -254,8 +254,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
 
-// Serve static files from uploads directory (now from 'uploads' at project root)
+// Serve static files from uploads directory (now from 'uploads' at project root).
+// Helmet defaults Cross-Origin-Resource-Policy to same-origin, which makes the
+// browser drop <img>/<video> from xtalenti.com with ERR_BLOCKED_BY_RESPONSE.NotSameOrigin.
 const path = require('path');
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Fallback placeholder for missing uploads (avoid CORB on 404)
 app.use('/uploads', (req, res) => {
@@ -264,7 +271,8 @@ app.use('/uploads', (req, res) => {
     'base64'
   );
   res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] === '*' ? '*' : (allowedOrigins[0] || 'https://xtalenti.com'));
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).send(placeholder);
 });
 

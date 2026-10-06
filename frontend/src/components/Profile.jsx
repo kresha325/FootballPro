@@ -15,7 +15,7 @@ import EditProfile from './EditProfile';
 import { useAuth } from '../contexts/AuthContext';
 import ProfileSelector from './profiles/ProfileSelector';
 import { ClubBadge } from '../utils/clubLogos';
-import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
+import { getFoundingYear, isOrgProfileRole, publicProfileInitials, publicProfileName } from '../utils/orgProfile';
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 import { getFullUrl } from '../utils/mediaUrl';
@@ -578,6 +578,7 @@ const Profile = () => {
   );
 
   const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
+  const displayName = publicProfileName(profile) || 'Profil';
   const isSponsoredProfile = sponsorList.length > 0;
   const completionFields = [
     Boolean(profile.profilePhoto), Boolean(profile.bio), Boolean(profile.position),
@@ -662,7 +663,7 @@ const Profile = () => {
                   {profile.profilePhoto && !avatarBroken ? (
                     <img
                       src={getFullUrl(profile.profilePhoto)}
-                      alt={`${profile.firstName} ${profile.lastName}`}
+                      alt={displayName}
                       className="w-full h-full object-cover bg-white cursor-pointer"
                       loading="lazy"
                       decoding="async"
@@ -681,7 +682,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-5xl font-bold">
-                      {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`}
+                      {publicProfileInitials(profile)}
                     </div>
                   )}
                 </div>
@@ -779,7 +780,7 @@ const Profile = () => {
             <div className="mt-4 min-w-0 flex-1 text-center md:ml-6 md:mt-0 md:pt-6 md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white inline-flex items-center gap-2">
-                  {profile.firstName} {profile.lastName}
+                  {displayName}
                   {profile.verified ? <VerifiedBadge verified size="lg" /> : null}
                 </h1>
                 {verificationLabel && (

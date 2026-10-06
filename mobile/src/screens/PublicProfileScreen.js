@@ -56,7 +56,7 @@ import ReportSheet from '../components/ReportSheet';
 import PublicProfileTournamentsTab from '../components/publicProfile/PublicProfileTournamentsTab';
 import { promptShareProfileCv } from '../utils/shareProfile';
 import PublicProfileAchievementsTab from '../components/publicProfile/PublicProfileAchievementsTab';
-import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
+import { getFoundingYear, isOrgProfileRole, publicProfileName } from '../utils/orgProfile';
 import PublicProfileAboutTab from '../components/publicProfile/PublicProfileAboutTab';
 import PublicProfileMatchHistoryTab from '../components/publicProfile/PublicProfileMatchHistoryTab';
 import PublicProfileContactTab from '../components/publicProfile/PublicProfileContactTab';
@@ -162,8 +162,7 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const displayName = useMemo(() => {
     if (!profile) return APP_BRAND_NAME;
-    const n = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
-    return n || 'Përdorues';
+    return publicProfileName(profile) || 'Përdorues';
   }, [profile]);
 
   useLayoutEffect(() => {

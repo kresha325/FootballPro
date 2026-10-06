@@ -11,6 +11,26 @@ export function isOrgProfileRole(role) {
   return ORG_PROFILE_ROLES.has(String(role || '').toLowerCase());
 }
 
+/** Public heading: people use first + last; clubs keep the full organization name. */
+export function publicProfileName(profile = {}) {
+  const person = [profile.firstName, profile.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const club = String(profile.club || '').replace(/\s+/g, ' ').trim();
+  if (!isOrgProfileRole(profile.role)) return person || club;
+  if (club && (!person || club.length > person.length)) return club;
+  return person || club;
+}
+
+export function publicProfileInitials(profile = {}) {
+  const parts = publicProfileName(profile).split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+}
+
 /**
  * Resolve founding year from stats / liga field / dateOfBirth / name (e.g. "… 2017").
  */

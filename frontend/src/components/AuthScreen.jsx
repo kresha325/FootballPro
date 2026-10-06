@@ -362,10 +362,22 @@ export default function AuthScreen({ initialMode }) {
         <form onSubmit={onSubmit} className="space-y-3">
           {mode === 'register' ? (
             <>
+              <label className="label">Lloji i llogarisë</label>
+              <button
+                type="button"
+                onClick={() => setRolePickerOpen(true)}
+                className={`${inputClass} flex min-h-11 items-center justify-between text-left font-semibold`}
+                aria-haspopup="dialog"
+                aria-expanded={rolePickerOpen}
+              >
+                <span>{registerRoleLabel(role)}</span>
+                <span className="text-[var(--xt-color-text-muted)]" aria-hidden="true">▾</span>
+              </button>
+
               <input
                 className={inputClass}
-                aria-label={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
-                placeholder={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+                aria-label={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+                placeholder={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete={isOrgProfileRole(role) ? 'organization' : 'given-name'}
@@ -380,18 +392,6 @@ export default function AuthScreen({ initialMode }) {
                   autoComplete="family-name"
                 />
               ) : null}
-
-              <label className="label">Lloji i llogarisë</label>
-              <button
-                type="button"
-                onClick={() => setRolePickerOpen(true)}
-                className={`${inputClass} flex min-h-11 items-center justify-between text-left font-semibold`}
-                aria-haspopup="dialog"
-                aria-expanded={rolePickerOpen}
-              >
-                <span>{registerRoleLabel(role)}</span>
-                <span className="text-[var(--xt-color-text-muted)]" aria-hidden="true">▾</span>
-              </button>
 
               {String(role || '').toLowerCase() === 'athlete' ? (
                 <>
@@ -532,7 +532,10 @@ export default function AuthScreen({ initialMode }) {
                     type="button"
                     onClick={() => {
                       setRole(item.value);
-                      if (isOrgProfileRole(item.value)) setLastName('');
+                      if (isOrgProfileRole(item.value)) {
+                        setFirstName((prev) => [prev, lastName].map((s) => String(s || '').trim()).filter(Boolean).join(' '));
+                        setLastName('');
+                      }
                       setRolePickerOpen(false);
                     }}
                     className={`flex min-h-14 w-full items-center justify-between border-b border-[var(--xt-color-border)] px-5 py-3 text-left transition-colors hover:bg-white/5 ${

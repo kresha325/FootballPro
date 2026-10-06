@@ -346,9 +346,17 @@ export default function LoginScreen() {
 
         {mode === 'register' ? (
           <>
+            <Text style={[styles.fieldLabel, themed.fieldLabel]}>Lloji i llogarisë</Text>
+            <TouchableOpacity
+              style={[styles.pickerBtn, themed.pickerBtn]}
+              onPress={() => setRolePickerOpen(true)}
+            >
+              <Text style={[styles.pickerBtnText, themed.pickerBtnText]}>{registerRoleLabel(role)}</Text>
+              <Ionicons name="chevron-down" size={20} color={colors.muted} />
+            </TouchableOpacity>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder={isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+              placeholder={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
               value={firstName}
               onChangeText={setFirstName}
               {...inputProps}
@@ -362,14 +370,6 @@ export default function LoginScreen() {
                 {...inputProps}
               />
             ) : null}
-            <Text style={[styles.fieldLabel, themed.fieldLabel]}>Lloji i llogarisë</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, themed.pickerBtn]}
-              onPress={() => setRolePickerOpen(true)}
-            >
-              <Text style={[styles.pickerBtnText, themed.pickerBtnText]}>{registerRoleLabel(role)}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.muted} />
-            </TouchableOpacity>
             {String(role || '').toLowerCase() === 'athlete' ? (
               <>
                 <Text style={[styles.fieldLabel, themed.fieldLabel]}>Datëlindja</Text>
@@ -534,7 +534,10 @@ export default function LoginScreen() {
         selectedValue={role}
         onSelect={(value) => {
           setRole(value);
-          if (isOrgProfileRole(value)) setLastName('');
+          if (isOrgProfileRole(value)) {
+            setFirstName((prev) => [prev, lastName].map((s) => String(s || '').trim()).filter(Boolean).join(' '));
+            setLastName('');
+          }
         }}
         onClose={() => setRolePickerOpen(false)}
         colors={colors}

@@ -156,6 +156,7 @@ function Messaging() {
   const [searchHits, setSearchHits] = useState(null);
   const [highlightId, setHighlightId] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
+  const [reactionMenuId, setReactionMenuId] = useState(null);
   const [groupRename, setGroupRename] = useState('');
   const messagesEndRef = useRef(null);
   const messagesListRef = useRef(null);
@@ -1690,11 +1691,32 @@ function Messaging() {
                                 Fshi
                               </button>
                             )}
-                            {REACTION_EMOJIS.map((emoji) => (
-                              <button key={emoji} type="button" className="hover:scale-110" onClick={() => toggleReaction(message.id, emoji)}>
-                                {emoji}
+                            <span className="relative">
+                              <button
+                                type="button"
+                                className="hover:underline"
+                                onClick={() => setReactionMenuId((openId) => (openId === message.id ? null : message.id))}
+                              >
+                                Reagim
                               </button>
-                            ))}
+                              {reactionMenuId === message.id ? (
+                                <span className="absolute bottom-full left-0 z-30 mb-1 flex gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800">
+                                  {REACTION_EMOJIS.map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      className="text-base leading-none hover:scale-110"
+                                      onClick={() => {
+                                        setReactionMenuId(null);
+                                        toggleReaction(message.id, emoji);
+                                      }}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </span>
                             {!isMine && (
                               <button type="button" className="hover:underline" onClick={() => setReportTarget(message)}>
                                 Raporto

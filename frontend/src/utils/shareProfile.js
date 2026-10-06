@@ -1,4 +1,5 @@
 import { APP_BRAND_NAME } from '../config/branding';
+import { publicProfileName } from './orgProfile';
 
 function apiOrigin() {
   const env = import.meta.env?.VITE_API_URL;
@@ -50,7 +51,7 @@ export function getSiteShareUrl() {
 }
 
 export function getProfileCvShareText(profile = {}) {
-  const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.club || 'Profil';
+  const name = publicProfileName(profile) || 'Profil';
   const role = profile.role ? String(profile.role) : '';
   const bits = [`CV · ${name}`];
   if (role) bits.push(role);

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { profileAPI } from '../services/api';
 import { getFullUrl, getGalleryMediaUrl, getVideoPosterUrl, isVideoMedia } from '../utils/mediaUrl';
-import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
+import { getFoundingYear, isOrgProfileRole, publicProfileName } from '../utils/orgProfile';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
 import { useAuth } from '../contexts/AuthContext';
@@ -70,9 +70,7 @@ function PublicCvPage() {
 
   const displayName = useMemo(() => {
     if (!profile) return '';
-    const full = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
-    if (full) return full;
-    return profile.club || roleLabel(profile.role);
+    return publicProfileName(profile) || roleLabel(profile.role);
   }, [profile]);
 
   const shareUrl = profile ? getProfileCvShareUrl(profile.id || id) : '';

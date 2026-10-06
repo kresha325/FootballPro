@@ -1339,6 +1339,17 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
+    // Club/org heading is the organization name, not a person's first name.
+    if (isOrgProfileRole(req.user?.role) && req.body.club != null) {
+      const clubName = String(req.body.club).replace(/\s+/g, ' ').trim();
+      if (clubName) {
+        const orgUser = await User.findByPk(req.user.id);
+        if (orgUser) {
+          await orgUser.update({ firstName: clubName.slice(0, 120), lastName: '' });
+        }
+      }
+    }
+
     if (req.user?.role === 'athlete') {
       const clubName = req.body.club || updateData.club;
       const clubId = req.body.clubId || updateData.clubId;

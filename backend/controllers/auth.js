@@ -44,8 +44,13 @@ exports.register = async (req, res) => {
     }
 
     const isOrg = isOrgProfileRole(normalizedRole);
-    const trimmedFirst = String(firstName || '').trim();
-    const trimmedLast = isOrg ? '' : String(lastName || '').trim();
+    let trimmedFirst = String(firstName || '').trim();
+    let trimmedLast = String(lastName || '').trim();
+    // Clubs and other orgs are one public name ("ShF Arasta"), even if an older form sent two fields.
+    if (isOrg) {
+      trimmedFirst = [trimmedFirst, trimmedLast].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      trimmedLast = '';
+    }
     if (!trimmedFirst) {
       return res.status(400).json({ msg: 'Vendos emrin' });
     }
