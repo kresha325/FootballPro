@@ -5,6 +5,8 @@ const joncoin = require('../controllers/joncoin');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 
+const { requirePermission } = require('../middleware/admin');
+
 // Të gjitha ruterat kërkojnë autentikim
 router.use(auth);
 
@@ -13,9 +15,9 @@ router.get('/transactions', joncoin.getTransactions);
 router.post('/purchase', joncoin.purchase);
 router.post('/deposit-checkout', joncoin.createDepositCheckout);
 router.post('/spend', joncoin.spend);
-router.post('/reward', admin, joncoin.reward); // admin only — never mint for any authed user
+router.post('/reward', admin, requirePermission('finance.adjust'), joncoin.reward); // admin only — never mint for any authed user
 router.post('/withdraw', joncoin.withdraw);
-router.patch('/transaction/:id', admin, joncoin.updateTransactionStatus); // admin
+router.patch('/transaction/:id', admin, requirePermission('finance.adjust'), joncoin.updateTransactionStatus); // admin
 router.post('/transfer', joncoin.transfer); // user-to-user transfer
 
 module.exports = router;

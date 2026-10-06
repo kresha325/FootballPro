@@ -22,8 +22,19 @@ const USER_AUTH_ATTRS = [
   'createdAt',
 ];
 
+const USER_AUTH_EXTRA = ['adminRole', 'tokenVersion'];
+
+async function findAuthUser(userId) {
+  try {
+    return await User.findByPk(userId, { attributes: [...USER_AUTH_ATTRS, ...USER_AUTH_EXTRA] });
+  } catch (err) {
+    if (!/adminRole|tokenVersion|column/i.test(String(err?.message || ''))) throw err;
+    return User.findByPk(userId, { attributes: USER_AUTH_ATTRS });
+  }
+}
+
 async function attachUser(req, userId) {
-  const dbUser = await User.findByPk(userId, { attributes: USER_AUTH_ATTRS });
+  const dbUser = await findAuthUser(userId);
   if (!dbUser) return null;
   if (dbUser.deletedAt || dbUser.bannedAt) return dbUser;
   await persistReconcileIfNeeded(dbUser);
@@ -53,10 +64,16 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ msg: 'Tokeni nuk është i vlefshëm' });
     }
 
-    const dbUser = await User.findByPk(userId, { attributes: USER_AUTH_ATTRS });
+    const dbUser = await findAuthUser(userId);
 
     if (!dbUser) {
       return res.status(401).json({ msg: 'Përdoruesi nuk u gjet' });
+    }
+
+    const tokenVersion = Number(dbUser.tokenVersion || 0);
+    const claimedVersion = Number(decoded?.user?.tv || 0);
+    if (tokenVersion > 0 && claimedVersion !== tokenVersion) {
+      return res.status(401).json({ msg: 'Sesioni është mbyllur. Hyni përsëri.' });
     }
 
     if (dbUser.deletedAt) {

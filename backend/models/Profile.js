@@ -82,6 +82,11 @@ const Profile = sequelize.define('Profile', {
     type: DataTypes.JSON,
     allowNull: true,
   },
+  featured: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 });
 
 Profile.belongsTo(User, { foreignKey: 'userId' });

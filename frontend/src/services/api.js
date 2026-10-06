@@ -84,6 +84,16 @@ API.interceptors.request.use(config => {
   return config;
 });
 
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 503 && error?.response?.data?.maintenance) {
+      window.dispatchEvent(new CustomEvent('xt-maintenance', { detail: error.response.data }));
+    }
+    return Promise.reject(error);
+  }
+);
+
 /* =========================
    SPONSORS
 ========================= */

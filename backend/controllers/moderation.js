@@ -194,13 +194,27 @@ exports.reviewReportAdmin = async (req, res) => {
     const report = await Report.findByPk(req.params.reportId);
     if (!report) return res.status(404).json({ msg: 'Raporti nuk u gjet' });
     const status = String(req.body?.status || '').toLowerCase();
-    if (!['reviewed', 'actioned', 'dismissed'].includes(status)) {
+    const allowed = ['reviewed', 'actioned', 'dismissed', 'in_review', 'resolved', 'rejected'];
+    if (!allowed.includes(status)) {
       return res.status(400).json({ msg: 'Status i pavlefshëm' });
     }
     report.status = status;
     report.reviewedBy = req.user.id;
     report.reviewedAt = new Date();
     await report.save();
+    try {
+      const { writeAudit } = require('../services/admin/audit');
+      await writeAudit({
+        adminId: req.user.id,
+        action: 'REPORT_REVIEWED',
+        entity: 'report',
+        entityId: report.id,
+        result: 'success',
+        metadata: { status },
+      });
+    } catch (_err) {
+      /* audit must not hide the moderation result */
+    }
     res.json({ msg: 'Raporti u përditësua', report });
   } catch (err) {
     console.error('reviewReportAdmin error:', err);

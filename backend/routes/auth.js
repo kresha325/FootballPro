@@ -196,7 +196,7 @@ function oauthSuccessRedirect(req, token) {
 
 function issueOAuthJwtRedirect(req, res) {
   const token = jwt.sign(
-    { user: { id: req.user.id } },
+    { user: { id: req.user.id, tv: Number(req.user.tokenVersion || 0) } },
     require('../utils/jwtSecret').getJwtSecret(),
     { expiresIn: '7d' }
   );

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('../middleware/admin');
+const { requirePermission } = require('../middleware/admin');
 const {
   getAllUsers,
   updateUserRole,
@@ -26,33 +27,33 @@ const {
 router.use(admin);
 
 // User management
-router.get('/users', getAllUsers);
-router.put('/users/:userId/role', updateUserRole);
-router.post('/users/:userId/ban', banUser);
-router.post('/users/:userId/unban', unbanUser);
-router.post('/users/:userId/verify', verifyUser);
-router.post('/users/:userId/premium', togglePremium);
-router.post('/users/:userId/reset-password', resetUserPassword);
-router.delete('/users/:userId', deleteUser);
+router.get('/users', requirePermission('users.read'), getAllUsers);
+router.put('/users/:userId/role', requirePermission('users.role'), updateUserRole);
+router.post('/users/:userId/ban', requirePermission('users.suspend'), banUser);
+router.post('/users/:userId/unban', requirePermission('users.suspend'), unbanUser);
+router.post('/users/:userId/verify', requirePermission('users.verify'), verifyUser);
+router.post('/users/:userId/premium', requirePermission('users.premium'), togglePremium);
+router.post('/users/:userId/reset-password', requirePermission('users.secrets'), resetUserPassword);
+router.delete('/users/:userId', requirePermission('users.delete'), deleteUser);
 
 // Content management
-router.get('/posts', getAllPosts);
-router.delete('/posts/:postId', deletePost);
+router.get('/posts', requirePermission('content.manage'), getAllPosts);
+router.delete('/posts/:postId', requirePermission('content.manage'), deletePost);
 
 // Tournaments
-router.get('/tournaments', listTournaments);
-router.put('/tournaments/:id', adminUpdateTournament);
-router.delete('/tournaments/:id', adminDeleteTournament);
+router.get('/tournaments', requirePermission('competitions.manage'), listTournaments);
+router.put('/tournaments/:id', requirePermission('competitions.manage'), adminUpdateTournament);
+router.delete('/tournaments/:id', requirePermission('competitions.manage'), adminDeleteTournament);
 
 // Analytics
-router.get('/analytics', getAnalytics);
+router.get('/analytics', requirePermission('analytics.read'), getAnalytics);
 
 // JonCoin moderation
-router.get('/joncoin/pending', getPendingJonCoinTransactions);
+router.get('/joncoin/pending', requirePermission('finance.read'), getPendingJonCoinTransactions);
 
 // Invoices
-router.get('/invoices/export.csv', exportInvoicesCsv);
-router.get('/invoices', listInvoices);
-router.get('/invoices/:id', getInvoice);
+router.get('/invoices/export.csv', requirePermission('export.finance'), exportInvoicesCsv);
+router.get('/invoices', requirePermission('finance.read'), listInvoices);
+router.get('/invoices/:id', requirePermission('finance.read'), getInvoice);
 
 module.exports = router;

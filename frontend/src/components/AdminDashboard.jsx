@@ -51,9 +51,9 @@ function apiError(error, fallback = 'Veprimi dështoi') {
   );
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ section = null, embedded = false }) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(section || 'dashboard');
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
@@ -262,10 +262,14 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (section) setActiveTab(section);
+  }, [section]);
+
+  useEffect(() => {
+    if (user?.role === 'admin' && (!embedded || section === 'dashboard')) {
       fetchAnalytics();
     }
-  }, [user]);
+  }, [user, embedded, section]);
 
   useEffect(() => {
     if (activeTab === 'users') {
@@ -301,10 +305,12 @@ export default function AdminDashboard() {
       window.alert('Nuk mund të fshish veten');
       return;
     }
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    const reason = window.prompt('Reason for deleting this user (required)');
+    if (!reason || reason.trim().length < 3) return;
+    if (!window.confirm('Delete this user? This cannot be undone.')) return;
     setActionBusy(true);
     try {
-      await api.delete(`/admin/users/${userId}`);
+      await api.delete(`/admin/users/${userId}`, { data: { reason: reason.trim() } });
       await fetchUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -319,10 +325,12 @@ export default function AdminDashboard() {
       window.alert('Nuk mund të banosh veten');
       return;
     }
-    if (!window.confirm('Are you sure you want to ban this user?')) return;
+    const reason = window.prompt('Reason for suspending this user (required)');
+    if (!reason || reason.trim().length < 3) return;
+    if (!window.confirm('Suspend this user?')) return;
     setActionBusy(true);
     try {
-      await api.post(`/admin/users/${userId}/ban`, { reason: 'Admin action' });
+      await api.post(`/admin/users/${userId}/ban`, { reason: reason.trim() });
       await fetchUsers();
     } catch (error) {
       console.error('Error banning user:', error);
@@ -372,9 +380,12 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateRole = async (userId, newRole) => {
+    const reason = window.prompt(`Reason for changing role to ${newRole} (required)`);
+    if (!reason || reason.trim().length < 3) return;
+    if (!window.confirm(`Change this role to ${newRole}?`)) return;
     setActionBusy(true);
     try {
-      await api.put(`/admin/users/${userId}/role`, { role: newRole });
+      await api.put(`/admin/users/${userId}/role`, { role: newRole, reason: reason.trim() });
       await fetchUsers();
     } catch (error) {
       console.error('Error updating role:', error);
@@ -434,8 +445,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="xt-dashboard-page xt-admin-page max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
+    <div className={`xt-dashboard-page xt-admin-page ${embedded ? '' : 'max-w-7xl mx-auto px-4 py-8'}`}>
+      {!embedded && (
+      <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="text-gray-600 mt-2">Manage users, content, and monitor platform activity</p>
@@ -543,6 +555,8 @@ export default function AdminDashboard() {
           Turne
         </button>
       </div>
+      </>
+      )}
 
       {/* Tab Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

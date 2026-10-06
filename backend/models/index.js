@@ -160,6 +160,11 @@ const ScoutingRecommendation = require('./ScoutingRecommendation');
 const Notification = require('./Notification');
 const NotificationPreference = require('./NotificationPreference');
 const PushDevice = require('./PushDevice');
+const AdminAuditLog = require('./AdminAuditLog');
+const PlatformSetting = require('./PlatformSetting');
+const AdminErrorGroup = require('./AdminErrorGroup');
+const AdminJobRun = require('./AdminJobRun');
+const FinancialAdjustment = require('./FinancialAdjustment');
 
 module.exports = {
   User,
@@ -216,6 +221,11 @@ module.exports = {
   Notification,
   NotificationPreference,
   PushDevice,
+  AdminAuditLog,
+  PlatformSetting,
+  AdminErrorGroup,
+  AdminJobRun,
+  FinancialAdjustment,
 };
 
 

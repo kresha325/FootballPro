@@ -136,6 +136,17 @@ const User = sequelize.define('User', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  /** Solo-admin permission tier. Null keeps existing admins on full access. */
+  adminRole: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+  },
+  /** Incremented to revoke outstanding sessions. */
+  tokenVersion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   deletedAt: {
     type: DataTypes.DATE,
     allowNull: true,

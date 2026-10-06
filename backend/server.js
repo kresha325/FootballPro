@@ -66,19 +66,26 @@ if (db.Match) {
 }
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
-setInterval(deleteExpiredAds, 60 * 60 * 1000);
+const { runTrackedJob } = require('./services/admin/jobs');
+setInterval(() => {
+  runTrackedJob('ads_cleanup', deleteExpiredAds).catch((err) =>
+    console.warn('ads_cleanup:', err?.message || err)
+  );
+}, 60 * 60 * 1000);
 const { purgeExpiredOutOfStockProducts } = require('./utils/productStock');
 purgeExpiredOutOfStockProducts().catch((err) =>
   console.warn('purgeExpiredOutOfStockProducts startup:', err?.message || err)
 );
 setInterval(() => {
-  purgeExpiredOutOfStockProducts().catch((err) =>
+  runTrackedJob('product_stock_purge', purgeExpiredOutOfStockProducts).catch((err) =>
     console.warn('purgeExpiredOutOfStockProducts:', err?.message || err)
   );
 }, 60 * 60 * 1000);
 const { purgeExpiredAnalyticsEvents } = require('./services/analytics/retention');
 setInterval(() => {
-  purgeExpiredAnalyticsEvents().catch((err) => console.warn('purgeExpiredAnalyticsEvents:', err?.message || err));
+  runTrackedJob('analytics_retention', purgeExpiredAnalyticsEvents).catch((err) =>
+    console.warn('purgeExpiredAnalyticsEvents:', err?.message || err)
+  );
 }, 6 * 60 * 60 * 1000);
 const { expireStaleLiveStreams, notifyStreamsStartingSoon } = require('./utils/streamLive');
 expireStaleLiveStreams()
@@ -87,7 +94,9 @@ expireStaleLiveStreams()
   })
   .catch((err) => console.warn('expireStaleLiveStreams startup:', err?.message || err));
 setInterval(() => {
-  expireStaleLiveStreams().catch((err) => console.warn('expireStaleLiveStreams:', err?.message || err));
+  runTrackedJob('stream_expiry', () => expireStaleLiveStreams()).catch((err) =>
+    console.warn('expireStaleLiveStreams:', err?.message || err)
+  );
   notifyStreamsStartingSoon().catch((err) => console.warn('notifyStreamsStartingSoon:', err?.message || err));
 }, 5 * 60 * 1000);
 // Import models
@@ -210,6 +219,8 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), str
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(require('./middleware/apiMetrics'));
+app.use(require('./middleware/maintenance'));
 installErrorSanitizer(app);
 app.use(passport.initialize());
 
@@ -284,6 +295,7 @@ try {
 app.use('/api/config', require('./routes/config'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin/ops', require('./routes/adminOps'));
 // Public CV + landing showcase must be reachable without auth (also registered inside profiles router).
 app.get('/api/profiles/cv/:id', require('./middleware/auth').optionalAuth, require('./controllers/profiles').getPublicProfileCv);
 app.get('/api/profiles/showcase', require('./controllers/profiles').getLandingShowcase);
@@ -297,10 +309,14 @@ app.use('/api/messaging', require('./routes/messaging'));
   app.use('/api/support', require('./routes/support'));
   app.use('/api/subscriptions', require('./routes/subscriptions'));
 app.use('/api/payments', require('./routes/payments'));
+const { requireFeature } = require('./middleware/featureFlag');
+app.use('/api/premium', requireFeature('PREMIUM'));
 app.use('/api/premium', require('./routes/premium'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/analytics', requireFeature('ANALYTICS'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/gamification', require('./routes/gamification'));
+app.use('/api/scouting', requireFeature('SCOUTING'));
 app.use('/api/scouting', require('./routes/scouting'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ads', require('./routes/ads'));
@@ -314,13 +330,17 @@ app.use('/api/matches', require('./routes/matches'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/matches', require('./routes/matchScorers'));
 app.use('/api/user-matches', require('./routes/matchesUser'));
+app.use('/api/products', requireFeature('MARKETPLACE'));
 app.use('/api/products', require('./routes/products'));
+app.use('/api/cart', requireFeature('MARKETPLACE'));
 app.use('/api/cart', require('./routes/cart'));
+app.use('/api/orders', requireFeature('MARKETPLACE'));
 app.use('/api/orders', require('./routes/orders'));
 
 app.use('/api/football', require('./routes/football'));
 app.use('/api/live-chat', require('./routes/liveChat'));
 app.use('/api/live-reaction', require('./routes/liveReaction'));
+app.use('/api/live-stream', requireFeature('LIVE_STREAMING'));
 app.use('/api/live-stream', require('./routes/liveStream'));
 app.use('/api/live-stream-guest', require('./routes/liveStreamGuest'));
 app.use('/api/live-stream-analytics', require('./routes/liveStreamAnalytics'));
@@ -354,9 +374,11 @@ app.use('/api/ligas', require('./routes/liga'));
 app.use('/api/stadiums', require('./routes/stadium'));
 
 // Streams routes (live/recording)
+app.use('/api/streams', requireFeature('LIVE_STREAMING'));
 app.use('/api/streams', require('./routes/streams'));
 
 // JonCoin API
+app.use('/api/joncoin', requireFeature('JONCOIN'));
 app.use('/api/joncoin', require('./routes/joncoin'));
 app.use('/api/moderation', require('./routes/moderation'));
 app.use('/api/iap', require('./routes/iap'));
@@ -1024,6 +1046,11 @@ server.listen(PORT, '0.0.0.0', () => {
 // Error handling middleware (duhet të jetë në fund të file-it)
 app.use((err, req, res, next) => {
   console.error('Express error:', err && err.message);
+  try {
+    require('./services/admin/errors').captureError(err, req);
+  } catch (_captureErr) {
+    /* error center must not replace the response */
+  }
   if (err && err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({ error: 'File too large. Foto max 10MB, video max 100MB.' });
   }

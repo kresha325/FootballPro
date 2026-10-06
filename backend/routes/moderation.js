@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const { requirePermission } = require('../middleware/admin');
 const {
   createReport,
   blockUser,
@@ -21,7 +22,7 @@ router.post('/blocks/:userId', auth, blockUser);
 router.delete('/blocks/:userId', auth, unblockUser);
 router.delete('/account', auth, deleteMyAccount);
 
-router.get('/admin/reports', admin, listReportsAdmin);
-router.put('/admin/reports/:reportId', admin, reviewReportAdmin);
+router.get('/admin/reports', admin, requirePermission('reports.read'), listReportsAdmin);
+router.put('/admin/reports/:reportId', admin, requirePermission('reports.manage'), reviewReportAdmin);
 
 module.exports = router;

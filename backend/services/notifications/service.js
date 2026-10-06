@@ -345,6 +345,7 @@ async function defaultPush(userId, title, body, data, badge) {
         const tickets = await expo.sendPushNotificationsAsync(chunk);
         tickets.forEach((ticket, index) => {
           if (ticket?.status === 'error' && ticket?.details?.error === 'DeviceNotRegistered') {
+            try { require('../admin/deliverySignals').note('invalidToken'); } catch (_noteErr) { /* ignore */ }
             repo.disableToken(chunk[index]?.to).catch(() => {});
             if (user.pushTokenMobile === chunk[index]?.to) {
               user.pushTokenMobile = null;
@@ -355,6 +356,7 @@ async function defaultPush(userId, title, body, data, badge) {
           }
         });
       } catch (err) {
+        try { require('../admin/deliverySignals').note('push'); } catch (_noteErr) { /* ignore */ }
         console.warn('Expo push chunk failed:', err?.message || err);
       }
     }
@@ -385,6 +387,7 @@ async function defaultPush(userId, title, body, data, badge) {
             user.save().catch(() => {});
           }
         } else {
+          try { require('../admin/deliverySignals').note('push'); } catch (_noteErr) { /* ignore */ }
           console.warn('Web push failed:', err?.message || err);
         }
       }
@@ -400,6 +403,7 @@ async function defaultEmail(user, title, message, link) {
     await sendEmail(user.email, 'importantNotice', user.firstName || 'there', title, message, link || '');
     return { sent: true };
   } catch (err) {
+    try { require('../admin/deliverySignals').note('email'); } catch (_noteErr) { /* ignore */ }
     console.warn('Notification email failed:', err?.message || err);
     return { sent: false };
   }
@@ -608,6 +612,7 @@ function createRuntime(overrides = {}) {
         const user = await repo().loadUser(userId);
         await email(user, presented.title, presented.message, presented.link);
       } catch (err) {
+        try { require('../admin/deliverySignals').note('email'); } catch (_noteErr) { /* ignore */ }
         console.warn('Notification email failed:', err?.message || err);
       }
     }

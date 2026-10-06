@@ -13,6 +13,10 @@ const Stream = require('../models/Stream');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const { ASSIGNABLE_ROLES, toPublicUser } = require('../utils/publicUser');
+const { writeAudit } = require('../services/admin/audit');
+const { requireReason } = require('../services/admin/policy');
+const accounts = require('../services/admin/accounts');
+const bcrypt = require('bcryptjs');
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
@@ -35,7 +39,7 @@ exports.getAllUsers = async (req, res) => {
 
     const users = await User.findAndCountAll({
       where: whereClause,
-      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] },
+      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire', 'parentVerificationToken', 'pushTokenMobile', 'pushTokenWeb', 'tokenVersion'] },
       include: [
         {
           model: Profile,
@@ -75,19 +79,33 @@ exports.updateUserRole = async (req, res) => {
   const { userId } = req.params;
   const { role } = req.body;
   try {
+    const reason = requireReason(req.body?.reason);
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
     if (!ASSIGNABLE_ROLES.includes(role)) {
       return res.status(400).json({ msg: 'Invalid role' });
     }
+    if (String(userId) === String(req.user.id) && role !== 'admin') {
+      return res.status(400).json({ msg: 'You cannot remove your own admin role' });
+    }
 
+    const previous = user.role;
     user.role = role;
     await user.save();
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'ROLE_CHANGED',
+      entity: 'user',
+      entityId: userId,
+      result: 'success',
+      reason,
+      metadata: { from: previous, to: role },
+    });
 
     res.json({ msg: 'User role updated', user: toPublicUser(user) });
   } catch (error) {
     console.error('Update user role error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(error.status || 500).json({ msg: error.status ? error.message : 'Server error' });
   }
 };
 
@@ -95,18 +113,27 @@ exports.updateUserRole = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   const { userId } = req.params;
   try {
+    const reason = requireReason(req.body?.reason);
     if (String(userId) === String(req.user.id)) {
       return res.status(400).json({ msg: 'Nuk mund të fshish llogarinë tënde nga admin panel' });
     }
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
     await user.destroy();
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'USER_DELETED',
+      entity: 'user',
+      entityId: userId,
+      result: 'success',
+      reason,
+    });
     res.json({ msg: 'User deleted' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({
-      msg: 'Server error',
-      error: error?.message || 'Delete failed (FK constraints?)',
+    res.status(error.status || 500).json({
+      msg: error.status ? error.message : 'Server error',
+      error: error.status ? undefined : (error?.message || 'Delete failed (FK constraints?)'),
     });
   }
 };
@@ -176,6 +203,13 @@ exports.deletePost = async (req, res) => {
     const post = await Post.findByPk(postId);
     if (!post) return res.status(404).json({ msg: 'Post not found' });
     await post.destroy();
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'POST_DELETED',
+      entity: 'post',
+      entityId: postId,
+      result: 'success',
+    });
     res.json({ msg: 'Post deleted' });
   } catch (error) {
     console.error('Delete post error:', error);
@@ -400,70 +434,51 @@ exports.getAnalytics = async (req, res) => {
 // Ban user
 exports.banUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { reason, duration } = req.body;
-
-    if (String(userId) === String(req.user.id)) {
-      return res.status(400).json({ msg: 'Nuk mund të banosh veten' });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    user.bannedAt = new Date();
-    user.banReason = reason ? String(reason).slice(0, 1000) : 'Banned by admin';
-    user.verified = false;
-    if (duration) {
-      user.banReason = `${user.banReason} (durationDays=${duration})`;
-    }
-    user.pushTokenMobile = null;
-    user.pushTokenWeb = null;
-    await user.save();
-
+    const reason = requireReason(req.body?.reason);
+    const user = await accounts.suspendUser(req.params.userId, reason, req.user.id);
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'USER_SUSPENDED',
+      entity: 'user',
+      entityId: user.id,
+      result: 'success',
+      reason,
+    });
     res.json({ msg: 'User banned successfully', userId: user.id, bannedAt: user.bannedAt });
   } catch (error) {
     console.error('Ban user error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(error.status || 500).json({ msg: error.status ? error.message : 'Server error' });
   }
 };
 
-// Unban user
 exports.unbanUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    user.bannedAt = null;
-    user.banReason = null;
-    await user.save();
-
+    const user = await accounts.restoreUser(req.params.userId);
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'USER_RESTORED',
+      entity: 'user',
+      entityId: user.id,
+      result: 'success',
+    });
     res.json({ msg: 'User unbanned successfully', userId: user.id });
   } catch (error) {
     console.error('Unban user error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(error.status || 500).json({ msg: error.status ? error.message : 'Server error' });
   }
 };
 
-// Verify user
 exports.verifyUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    const { isAthleteRole, markClubVerified, syncOverallVerified } = require('../utils/userVerification');
-    if (isAthleteRole(user)) {
-      // Club side of athlete verification (parent still needs parent confirm for minors)
-      await markClubVerified(user);
-    } else {
-      // Coach / referee / club / … — abonimi mjafton; admin mund ta aktivizojë premium
-      user.premium = true;
-      syncOverallVerified(user);
-      await user.save();
-    }
-
-    await user.reload();
+    const { isAthleteRole } = require('../utils/userVerification');
+    const user = await accounts.verifyUser(req.params.userId);
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'USER_VERIFIED',
+      entity: 'user',
+      entityId: user.id,
+      result: 'success',
+    });
     res.json({
       msg: user.verified
         ? 'User verified successfully'
@@ -474,7 +489,7 @@ exports.verifyUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Verify user error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(error.status || 500).json({ msg: error.status ? error.message : 'Server error' });
   }
 };
 
@@ -515,7 +530,15 @@ exports.resetUserPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
+    await writeAudit({
+      adminId: req.user.id,
+      action: 'PASSWORD_RESET',
+      entity: 'user',
+      entityId: userId,
+      result: 'success',
+    });
 
     res.json({ 
       msg: 'Password reset successfully',

@@ -3,7 +3,7 @@
  * (open / ongoing / finished). `lifecycle` is the canonical state.
  */
 
-const LIFECYCLES = ['draft', 'registration', 'active', 'in_progress', 'completed', 'cancelled'];
+const LIFECYCLES = ['draft', 'registration', 'active', 'in_progress', 'paused', 'completed', 'cancelled'];
 
 const COMPETITION_TYPES = ['league', 'cup', 'knockout', 'group_knockout', 'tournament'];
 
@@ -14,6 +14,7 @@ const LEGACY_STATUS = {
   registration: 'open',
   active: 'ongoing',
   in_progress: 'ongoing',
+  paused: 'paused',
   completed: 'finished',
   cancelled: 'cancelled',
 };
@@ -26,6 +27,7 @@ const STATUS_TO_LIFECYCLE = {
   registration: 'registration',
   active: 'active',
   in_progress: 'in_progress',
+  paused: 'paused',
   completed: 'completed',
   cancelled: 'cancelled',
 };
@@ -34,8 +36,9 @@ const STATUS_TO_LIFECYCLE = {
 const TRANSITIONS = {
   draft: ['registration', 'cancelled'],
   registration: ['active', 'in_progress', 'draft', 'cancelled'],
-  active: ['in_progress', 'completed', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
+  active: ['in_progress', 'paused', 'completed', 'cancelled'],
+  in_progress: ['paused', 'completed', 'cancelled'],
+  paused: ['active', 'in_progress', 'cancelled'],
   completed: [],
   cancelled: [],
 };
@@ -99,6 +102,9 @@ function assertResultMutation(tournament) {
   }
   if (lifecycle === 'draft' || lifecycle === 'registration') {
     return { ok: false, status: 400, msg: 'Start the competition before recording results.' };
+  }
+  if (lifecycle === 'paused') {
+    return { ok: false, status: 409, msg: 'Paused competition cannot accept results.' };
   }
   return { ok: true };
 }

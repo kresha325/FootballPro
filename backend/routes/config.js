@@ -13,7 +13,7 @@ function livekitConfigured() {
   );
 }
 
-router.get('/public', (_req, res) => {
+router.get('/public', async (_req, res) => {
   res.json({
     paymentsEnabled: paymentsLiveEnabled(),
     stripeConfigured: stripeLiveReady(),
@@ -24,6 +24,7 @@ router.get('/public', (_req, res) => {
     marketplacePayments: 'joncoin',
     premiumMode: stripeLiveReady() ? 'stripe' : 'demo',
     version: process.env.APP_VERSION || '1.0.2-cv',
+    ...(await require('../services/admin/settings').publicConfig()),
   });
 });
 

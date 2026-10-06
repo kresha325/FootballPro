@@ -2,6 +2,11 @@ const SENSITIVE_USER_FIELDS = [
   'password',
   'resetPasswordToken',
   'resetPasswordExpire',
+  'parentVerificationToken',
+  'pushTokenMobile',
+  'pushTokenWeb',
+  'tokenVersion',
+  'adminRole',
 ];
 
 const ASSIGNABLE_ROLES = [

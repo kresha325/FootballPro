@@ -74,7 +74,8 @@ async function runDueNotifications() {
 function startNotificationScheduler() {
   if (timer || process.env.NODE_ENV === 'test') return;
   timer = setInterval(() => {
-    runDueNotifications().catch(() => {});
+    const { runTrackedJob } = require('../admin/jobs');
+    runTrackedJob('notification_reminders', runDueNotifications).catch(() => {});
   }, 10 * 60 * 1000);
   if (typeof timer.unref === 'function') timer.unref();
   const boot = setTimeout(() => {

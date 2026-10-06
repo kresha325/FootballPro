@@ -130,7 +130,7 @@ exports.register = async (req, res) => {
       });
 
     // 5. Check age and JWT
-    const payload = { user: { id: user.id } };
+    const payload = { user: { id: user.id, tv: Number(user.tokenVersion || 0) } };
     const token = jwt.sign(payload, getJwtSecret(), {
       expiresIn: '7d',
     });
@@ -233,7 +233,8 @@ exports.login = async (req, res) => {
     const payload = {
       user: {
         id: user.id,
-        role: user.role
+        role: user.role,
+        tv: Number(user.tokenVersion || 0),
       }
     };
 

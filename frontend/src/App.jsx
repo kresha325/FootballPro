@@ -17,6 +17,7 @@ import BottomNav from "./components/BottomNav";
 import Settings from './components/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
 import { lazyWithReload } from './utils/lazyWithReload';
+import { PlatformProvider, MaintenanceBanner, FeatureGate } from './components/admin/platformState';
 
 // Lazy-loaded route components to reduce initial bundle size
 const Profile = lazyWithReload(() => import('./components/Profile'));
@@ -41,7 +42,7 @@ const Gamification = lazyWithReload(() => import('./components/Gamification'));
 const Analytics = lazyWithReload(() => import('./components/Analytics'));
 const Premium = lazyWithReload(() => import('./components/Premium'));
 const Matches = lazyWithReload(() => import('./components/Matches'));
-const AdminDashboard = lazyWithReload(() => import('./components/AdminDashboard'));
+const AdminShell = lazyWithReload(() => import('./components/admin/AdminShell'));
 const ClubRoster = lazyWithReload(() => import('./components/ClubRoster'));
 const Videos = lazyWithReload(() => import('./components/Videos'));
 const VideoPlayer = lazyWithReload(() => import('./components/VideoPlayer'));
@@ -95,8 +96,10 @@ function App() {
     <ErrorBoundary>
       <CartProvider>
       <PostsProvider>
+      <PlatformProvider>
         <div className={`min-h-screen bg-[var(--xt-color-canvas)] ${isFullscreenRoute ? 'live-fullscreen' : ''}`}>
           {user && !isFullscreenRoute && <Navbar />}
+          <MaintenanceBanner />
           {user && !isFullscreenRoute && <BottomNav />}
           {user && <XPNotificationManager />}
           {user && <VideoCallManager />}
@@ -162,18 +165,18 @@ function App() {
             <Route path="/embed-call" element={user ? <EmbedOutboundCall /> : <Navigate to="/login" />} />
             <Route path="/embed-incoming-call" element={user ? <EmbedIncomingCall /> : <Navigate to="/login" />} />
             <Route path="/embed-go-live" element={user ? <EmbedGoLive /> : <Navigate to="/login" />} />
-            <Route path="/marketplace" element={user ? <Marketplace /> : <Navigate to="/login" />} />
-            <Route path="/marketplace/:productId" element={user ? <ProductPage /> : <Navigate to="/login" />} />
-            <Route path="/cart" element={user ? <CartPage /> : <Navigate to="/login" />} />
-            <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
-            <Route path="/orders" element={user ? <OrdersPage /> : <Navigate to="/login" />} />
-            <Route path="/orders/:id" element={user ? <OrdersPage /> : <Navigate to="/login" />} />
+            <Route path="/marketplace" element={user ? <FeatureGate flag="MARKETPLACE"><Marketplace /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/marketplace/:productId" element={user ? <FeatureGate flag="MARKETPLACE"><ProductPage /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/cart" element={user ? <FeatureGate flag="MARKETPLACE"><CartPage /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/checkout" element={user ? <FeatureGate flag="MARKETPLACE"><CheckoutPage /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/orders" element={user ? <FeatureGate flag="MARKETPLACE"><OrdersPage /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/orders/:id" element={user ? <FeatureGate flag="MARKETPLACE"><OrdersPage /></FeatureGate> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
             <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
-            <Route path="/scouting" element={user ? <Scouting /> : <Navigate to="/login" />} />
-            <Route path="/scouting/*" element={user ? <Scouting /> : <Navigate to="/login" />} />
-            <Route path="/live" element={<LiveDiscovery />} />
-            <Route path="/streams" element={user ? <StreamsPage /> : <Navigate to="/login" />} />
+            <Route path="/scouting" element={user ? <FeatureGate flag="SCOUTING"><Scouting /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/scouting/*" element={user ? <FeatureGate flag="SCOUTING"><Scouting /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/live" element={<FeatureGate flag="LIVE_STREAMING"><LiveDiscovery /></FeatureGate>} />
+            <Route path="/streams" element={user ? <FeatureGate flag="LIVE_STREAMING"><StreamsPage /></FeatureGate> : <Navigate to="/login" />} />
             <Route path="/tournaments" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/tournaments/:tournamentId" element={user ? <Tournaments /> : <Navigate to="/login" />} />
             <Route path="/competitions" element={<CompetitionCenter />} />
@@ -182,24 +185,24 @@ function App() {
             <Route path="/competitions/:id/fixtures" element={<CompetitionCenter section="fixtures" />} />
             <Route path="/competitions/:id/bracket" element={<CompetitionCenter section="bracket" />} />
             <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/analytics" element={user ? <AnalyticsCenter /> : <Navigate to="/login" />} />
-            <Route path="/analytics/:section" element={user ? <AnalyticsCenter /> : <Navigate to="/login" />} />
+            <Route path="/analytics" element={user ? <FeatureGate flag="ANALYTICS"><AnalyticsCenter /></FeatureGate> : <Navigate to="/login" />} />
+            <Route path="/analytics/:section" element={user ? <FeatureGate flag="ANALYTICS"><AnalyticsCenter /></FeatureGate> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
             <Route path="/gamification/:userId" element={user ? <Gamification /> : <Navigate to="/login" />} />
             <Route path="/insights" element={user ? <InsightsHub /> : <Navigate to="/login" />} />
-            <Route path="/premium" element={user ? <Premium /> : <Navigate to="/login" />} />
+            <Route path="/premium" element={user ? <FeatureGate flag="PREMIUM"><Premium /></FeatureGate> : <Navigate to="/login" />} />
             <Route path="/sponsors" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
             <Route path="/ads" element={user ? <SponsorsAdsHub /> : <Navigate to="/login" />} />
             <Route path="/matches" element={user ? <Matches /> : <Navigate to="/login" />} />
             <Route path="/matches/:id" element={<MatchCenterPage />} />
-            <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/feed" />} />
+            <Route path="/admin/*" element={user?.role === 'admin' ? <AdminShell /> : <Navigate to="/feed" />} />
             <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
-            <Route path="/live/:streamId" element={<LiveStreamViewer />} />
+            <Route path="/live/:streamId" element={<FeatureGate flag="LIVE_STREAMING"><LiveStreamViewer /></FeatureGate>} />
 
             {/* WALLET PAGE */}
-            <Route path="/wallet" element={user ? <WalletPage /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={user ? <FeatureGate flag="JONCOIN"><WalletPage /></FeatureGate> : <Navigate to="/login" />} />
             <Route path="/community-guidelines" element={<LegalPage kind="community-guidelines" />} />
             <Route path="/privacy" element={<LegalPage kind="privacy" />} />
             <Route path="/terms" element={<LegalPage kind="terms" />} />
@@ -228,6 +231,7 @@ function App() {
           </Suspense>
         </main>
         </div>
+      </PlatformProvider>
       </PostsProvider>
       </CartProvider>
     </ErrorBoundary>
