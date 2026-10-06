@@ -1623,7 +1623,7 @@ function Messaging() {
                     )}
                     <div
                       id={`msg-${message.id}`}
-                      className={`max-w-[min(85%,28rem)] rounded-2xl px-3 py-2 shadow-md ${
+                      className={`relative max-w-[min(85%,28rem)] rounded-2xl px-3 py-2 shadow-md ${
                         highlightId === message.id ? 'ring-2 ring-amber-400' : ''
                       } ${
                         isMine
@@ -1631,6 +1631,23 @@ function Messaging() {
                           : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)] border border-[var(--xt-color-border)] rounded-bl-md'
                       }`}
                     >
+                      {reactionMenuId === message.id && !message.deleted ? (
+                        <div className="absolute inset-x-1 top-1/2 z-30 flex -translate-y-1/2 flex-wrap justify-center gap-0.5 rounded-full bg-slate-900 px-1.5 py-1 shadow-lg">
+                          {REACTION_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              className="px-0.5 text-base leading-none hover:scale-110"
+                              onClick={() => {
+                                setReactionMenuId(null);
+                                toggleReaction(message.id, emoji);
+                              }}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                       {!isMine && selectedConversation.isGroup && message.sender && (
                         <p className="text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300 inline-flex items-center gap-1">
                           {message.sender.firstName} {message.sender.lastName}
@@ -1691,32 +1708,13 @@ function Messaging() {
                                 Fshi
                               </button>
                             )}
-                            <span className="relative">
-                              <button
-                                type="button"
-                                className="hover:underline"
-                                onClick={() => setReactionMenuId((openId) => (openId === message.id ? null : message.id))}
-                              >
-                                Reagim
-                              </button>
-                              {reactionMenuId === message.id ? (
-                                <span className="absolute bottom-full left-0 z-30 mb-1 flex gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800">
-                                  {REACTION_EMOJIS.map((emoji) => (
-                                    <button
-                                      key={emoji}
-                                      type="button"
-                                      className="text-base leading-none hover:scale-110"
-                                      onClick={() => {
-                                        setReactionMenuId(null);
-                                        toggleReaction(message.id, emoji);
-                                      }}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </span>
-                              ) : null}
-                            </span>
+                            <button
+                              type="button"
+                              className="hover:underline"
+                              onClick={() => setReactionMenuId((openId) => (openId === message.id ? null : message.id))}
+                            >
+                              Reagim
+                            </button>
                             {!isMine && (
                               <button type="button" className="hover:underline" onClick={() => setReportTarget(message)}>
                                 Raporto
