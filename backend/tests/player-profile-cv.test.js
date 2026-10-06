@@ -172,6 +172,15 @@ describe('profile completeness and edits', () => {
     assert.equal(score.percent, 100);
   });
 
+  it('does not count a club default cover as the athlete media section', () => {
+    const score = buildCompleteness(
+      { coverPhoto: 'https://cdn.example/club-cover.jpg', coverPhotoFromClub: true },
+      { galleryCount: 0, mediaCount: 0 }
+    );
+    const media = score.sections.find((section) => section.key === 'media');
+    assert.equal(media.filled, false);
+  });
+
   it('drops authoritative match statistics from a profile edit', () => {
     const stats = stripAuthoritativeStats({ height: 180, goals: 40, assists: 10, minutes: 900 });
     assert.deepEqual(stats, { height: 180 });

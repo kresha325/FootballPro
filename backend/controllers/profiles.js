@@ -188,7 +188,7 @@ async function enrichClubDisplayFields(req, response) {
 
       const clubProfile = await Profile.findOne({
         where: { userId: clubId },
-        attributes: ['profilePhoto', 'club', 'clubLogo'],
+        attributes: ['profilePhoto', 'club', 'clubLogo', 'coverPhoto'],
       });
       if (clubProfile) {
         const logo = clubProfile.profilePhoto || clubProfile.clubLogo || response.clubLogo;
@@ -197,6 +197,16 @@ async function enrichClubDisplayFields(req, response) {
         }
         if (!response.club && clubProfile.club) {
           response.club = clubProfile.club;
+        }
+        const ownCover = String(response.coverPhoto || '').trim();
+        const clubCover = String(clubProfile.coverPhoto || '').trim();
+        if (
+          !ownCover &&
+          clubCover &&
+          String(response.role || '').toLowerCase() === 'athlete'
+        ) {
+          response.coverPhoto = toAbsoluteUploadsUrl(req, clubCover);
+          response.coverPhotoFromClub = true;
         }
       } else if (response.clubLogo) {
         response.clubLogo = toAbsoluteUploadsUrl(req, response.clubLogo);
@@ -1518,6 +1528,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     const response = profile.get ? profile.get({ plain: true }) : profile;
+    if (!response.role && req.user?.role) response.role = req.user.role;
     if (response.profilePhoto) {
       response.profilePhoto = toAbsoluteUploadsUrl(req, response.profilePhoto);
     }

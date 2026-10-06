@@ -562,7 +562,11 @@ function buildCompleteness(profile, extras = {}) {
     {
       key: 'media',
       label: 'Media',
-      filled: Boolean((extras.galleryCount || 0) > 0 || (extras.mediaCount || 0) > 0 || profile?.coverPhoto),
+      filled: Boolean(
+        (extras.galleryCount || 0) > 0 ||
+          (extras.mediaCount || 0) > 0 ||
+          (profile?.coverPhoto && !profile?.coverPhotoFromClub)
+      ),
     },
     { key: 'bio', label: 'Bio', filled: Boolean(String(profile?.bio || '').trim()) },
     {
