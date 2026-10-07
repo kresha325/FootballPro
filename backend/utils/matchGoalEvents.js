@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const MatchScorer = require('../models/MatchScorer');
 const Profile = require('../models/Profile');
 
@@ -119,7 +120,7 @@ async function saveMatchGoalEvents(matchId, rawEvents, match, options = {}) {
     try {
       await syncProfileGoalAssistStats([...affected]);
     } catch (syncErr) {
-      console.error('syncProfileGoalAssistStats:', syncErr);
+      logger.error('syncProfileGoalAssistStats:', syncErr);
     }
   }
 

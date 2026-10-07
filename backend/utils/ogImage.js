@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const fs = require('fs');
 const path = require('path');
 
@@ -75,12 +76,12 @@ async function ensureOgImageOnCloudinary() {
       process.env.CLOUDINARY_API_SECRET) ||
     process.env.CLOUDINARY_URL;
   if (!hasCreds) {
-    console.warn('[og-image] Cloudinary credentials missing — using', SITE_OG_FALLBACK);
+    logger.warn('[og-image] Cloudinary credentials missing — using', SITE_OG_FALLBACK);
     return null;
   }
   const files = resolveLocalOgFiles();
   if (!files.length) {
-    console.warn('[og-image] No local share-card.jpg found to upload');
+    logger.warn('[og-image] No local share-card.jpg found to upload');
     return null;
   }
   try {
@@ -92,10 +93,10 @@ async function ensureOgImageOnCloudinary() {
       resource_type: 'image',
     });
     runtimeCloudinaryUrl = cloudinaryOgDeliveryUrl();
-    console.log('[og-image] Uploaded to Cloudinary:', result.secure_url || runtimeCloudinaryUrl);
+    logger.info('[og-image] Uploaded to Cloudinary:', result.secure_url || runtimeCloudinaryUrl);
     return runtimeCloudinaryUrl;
   } catch (err) {
-    console.warn('[og-image] Cloudinary upload failed:', err?.message || err);
+    logger.warn('[og-image] Cloudinary upload failed:', err?.message || err);
     return null;
   }
 }

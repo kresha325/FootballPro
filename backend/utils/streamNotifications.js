@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const Follow = require('../models/Follow');
 const { notify } = require('../services/notifications/service');
 const { idempotencyKey } = require('../services/notifications/policy');
@@ -59,7 +60,7 @@ async function notifyStreamFollowers(streamerId, event, stream) {
       });
       if (created && !created.duplicate) sent += 1;
     } catch (err) {
-      console.warn('stream notification', followerId, err?.message || err);
+      logger.warn('stream notification', followerId, err?.message || err);
     }
   }
   return sent;

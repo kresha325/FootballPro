@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 const { ageFromDateOnly } = require('./registerValidation');
 
 const PARENT_VERIFICATION_MAX_AGE = 17; // under 18
@@ -109,7 +111,7 @@ async function ensureClubVerifiedFromRoster(user) {
       return markClubVerified(user);
     }
   } catch (err) {
-    console.warn('ensureClubVerifiedFromRoster ClubMember:', err?.message || err);
+    logger.warn('ensureClubVerifiedFromRoster ClubMember:', err?.message || err);
   }
 
   try {
@@ -122,7 +124,7 @@ async function ensureClubVerifiedFromRoster(user) {
       return markClubVerified(user);
     }
   } catch (err) {
-    console.warn('ensureClubVerifiedFromRoster roster request:', err?.message || err);
+    logger.warn('ensureClubVerifiedFromRoster roster request:', err?.message || err);
   }
 
   const before = Boolean(user.verified);
@@ -176,7 +178,7 @@ async function notifyVerificationSafe(userId, kind) {
     const { notifyVerification } = require('../services/notifications/events');
     await notifyVerification(userId, kind);
   } catch (err) {
-    console.warn('verification notification:', err?.message || err);
+    logger.warn('verification notification:', err?.message || err);
   }
 }
 

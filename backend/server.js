@@ -1,3 +1,4 @@
+const logger = require('./utils/logger');
 const express = require('express');
 const cors = require('cors');
 const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
@@ -19,7 +20,7 @@ try {
   const { getJwtSecret } = require('./utils/jwtSecret');
   getJwtSecret();
 } catch (jwtErr) {
-  console.error(jwtErr.message);
+  logger.error(jwtErr.message);
   process.exit(1);
 }
 
@@ -28,9 +29,9 @@ function logSocketEvent(socket, event, details) {
   try {
     const sid = socket && socket.id ? socket.id : 'no-socket';
     const t = new Date().toISOString();
-    console.log(`[${t}] [socket:${sid}] ${event} -`, details || {});
+    logger.info(`[${t}] [socket:${sid}] ${event} -`, details || {});
   } catch (e) {
-    console.log('Logger error:', e && e.message);
+    logger.info('Logger error:', e && e.message);
   }
 }
 const app = express();
@@ -57,41 +58,8 @@ const PORT = process.env.PORT || 10000;
 // actual responses always return consistent, valid headers. The explicit
 // header middleware was removed to avoid duplication and invalid responses.
 
-// Fshi reklamat e skaduara çdo 1 orë
-const deleteExpiredAds = require('./utils/deleteExpiredAds');
-const { runTrackedJob } = require('./services/admin/jobs');
-setInterval(() => {
-  runTrackedJob('ads_cleanup', deleteExpiredAds).catch((err) =>
-    console.warn('ads_cleanup:', err?.message || err)
-  );
-}, 60 * 60 * 1000);
-const { purgeExpiredOutOfStockProducts } = require('./utils/productStock');
-purgeExpiredOutOfStockProducts().catch((err) =>
-  console.warn('purgeExpiredOutOfStockProducts startup:', err?.message || err)
-);
-setInterval(() => {
-  runTrackedJob('product_stock_purge', purgeExpiredOutOfStockProducts).catch((err) =>
-    console.warn('purgeExpiredOutOfStockProducts:', err?.message || err)
-  );
-}, 60 * 60 * 1000);
-const { purgeExpiredAnalyticsEvents } = require('./services/analytics/retention');
-setInterval(() => {
-  runTrackedJob('analytics_retention', purgeExpiredAnalyticsEvents).catch((err) =>
-    console.warn('purgeExpiredAnalyticsEvents:', err?.message || err)
-  );
-}, 6 * 60 * 60 * 1000);
-const { expireStaleLiveStreams, notifyStreamsStartingSoon } = require('./utils/streamLive');
-expireStaleLiveStreams()
-  .then((n) => {
-    if (n > 0) console.log(`Expired ${n} stale live stream(s) on startup`);
-  })
-  .catch((err) => console.warn('expireStaleLiveStreams startup:', err?.message || err));
-setInterval(() => {
-  runTrackedJob('stream_expiry', () => expireStaleLiveStreams()).catch((err) =>
-    console.warn('expireStaleLiveStreams:', err?.message || err)
-  );
-  notifyStreamsStartingSoon().catch((err) => console.warn('notifyStreamsStartingSoon:', err?.message || err));
-}, 5 * 60 * 1000);
+const { startJobs } = require('./jobs');
+startJobs();
 // Import models
 const User = require('./models/User');
 const Achievement = require('./models/Achievement');
@@ -134,7 +102,7 @@ const limiter = rateLimit({
   standardHeaders: 'draft-6',
   legacyHeaders: false,
   handler: (req, res) => {
-    console.warn(`Rate limit exceeded for IP ${req.ip} on ${req.originalUrl}`);
+    logger.warn(`Rate limit exceeded for IP ${req.ip} on ${req.originalUrl}`);
     res.status(429).json({ msg: 'Too many requests, please try again later.' });
   }
 });
@@ -145,7 +113,7 @@ const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false';
 if (rateLimitEnabled) {
   app.use(limiter);
 } else {
-  console.log('Rate limiting disabled (RATE_LIMIT_ENABLED=false) - global limiter not applied.');
+  logger.info('Rate limiting disabled (RATE_LIMIT_ENABLED=false) - global limiter not applied.');
 }
 
 // XSS protection
@@ -160,7 +128,7 @@ const allowedOrigins = buildAllowedOrigins();
 
 function dynamicOrigin(origin, callback) {
   if (isAllowedOrigin(origin, process.env, allowedOrigins)) return callback(null, true);
-  console.warn('CORS blocked origin');
+  logger.warn('CORS blocked origin');
   return callback(null, false);
 }
 
@@ -185,7 +153,7 @@ io = socketIo(server, {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       if (isAllowedOrigin(origin, process.env, allowedOrigins)) return callback(null, true);
-      console.warn('Socket CORS blocked origin');
+      logger.warn('Socket CORS blocked origin');
       return callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -203,7 +171,7 @@ try {
   const socketUtil = require('./utils/socket');
   socketUtil.setIo(io);
 } catch (e) {
-  console.warn('Could not set io in utils/socket:', e && e.message);
+  logger.warn('Could not set io in utils/socket:', e && e.message);
 }
 
 // Stripe webhook must receive raw body (before express.json)
@@ -278,7 +246,7 @@ try {
     app.use('/icons', express.static(iconsDir, { maxAge: '30d' }));
   }
 } catch (e) {
-  console.warn('Could not mount frontend public icons:', e && e.message);
+  logger.warn('Could not mount frontend public icons:', e && e.message);
 }
 
 // ...frontend serving removed for Render split-service deployment...
@@ -509,7 +477,7 @@ app.get('/share/cv/:id', async (req, res) => {
       type: 'profile',
     });
   } catch (err) {
-    console.warn('share/cv error:', err?.message || err);
+    logger.warn('share/cv error:', err?.message || err);
     const frontendBase = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || 'https://xtalenti.com').replace(
       /\/$/,
       ''
@@ -569,7 +537,7 @@ async function persistLastSeen(userId, lastSeenAt) {
   try {
     await UserModel.update({ lastSeenAt }, { where: { id: Number(userId) } });
   } catch (err) {
-    console.warn('persistLastSeen failed:', err?.message || err);
+    logger.warn('persistLastSeen failed:', err?.message || err);
   }
 }
 
@@ -615,7 +583,7 @@ io.on('connection', (socket) => {
           return;
         }
       } catch (err) {
-        console.warn('call:join-room membership check failed:', err.message);
+        logger.warn('call:join-room membership check failed:', err.message);
         return;
       }
     }
@@ -639,7 +607,7 @@ io.on('connection', (socket) => {
         }
       }
     } catch (err) {
-      console.warn('⚠️ VideoCallHistory not available:', err.message);
+      logger.warn('⚠️ VideoCallHistory not available:', err.message);
     }
     io.to(roomId).emit('call:user-joined', { userId });
   });
@@ -661,7 +629,7 @@ io.on('connection', (socket) => {
       socket.join('streams');
       logSocketEvent(socket, 'subscribe:streams', { socketId: socket.id });
     } catch (e) {
-      console.warn('subscribe:streams error:', e && e.message);
+      logger.warn('subscribe:streams error:', e && e.message);
     }
   });
 
@@ -680,7 +648,7 @@ io.on('connection', (socket) => {
         logSocketEvent(socket, 'subscribe:stream', { streamId, socketId: socket.id });
       }
     } catch (e) {
-      console.warn('subscribe:stream error:', e && e.message);
+      logger.warn('subscribe:stream error:', e && e.message);
     }
   });
 
@@ -732,7 +700,7 @@ io.on('connection', (socket) => {
       socket.join(`conversation-${conversationId}`);
       logSocketEvent(socket, 'joinConversation', { conversationId, userId: authenticatedUserId });
     } catch (err) {
-      console.warn('joinConversation error:', err.message);
+      logger.warn('joinConversation error:', err.message);
     }
   });
 
@@ -786,7 +754,7 @@ io.on('connection', (socket) => {
         deliveredAt: new Date(message.deliveredAt).toISOString(),
       });
     } catch (err) {
-      console.warn('messageDeliveredAck failed:', err.message);
+      logger.warn('messageDeliveredAck failed:', err.message);
     }
   });
 
@@ -848,7 +816,7 @@ io.on('connection', (socket) => {
                   logSocketEvent(socket, 'conversation-created-for-call', { conversationId, callId: usedCallId });
                 } catch (txErr) {
                   await t.rollback();
-                  console.warn('Failed to create conversation for call fallback:', txErr && txErr.message);
+                  logger.warn('Failed to create conversation for call fallback:', txErr && txErr.message);
                 }
               }
               if (conversationId) {
@@ -863,10 +831,10 @@ io.on('connection', (socket) => {
                 logSocketEvent(socket, 'call-message-saved', { callId: usedCallId, messageId: callMessage.id });
               }
             } catch (msgErr) {
-              console.warn('Failed to persist call fallback message:', msgErr && msgErr.message);
+              logger.warn('Failed to persist call fallback message:', msgErr && msgErr.message);
             }
           } catch (createErr) {
-            console.warn('Failed to create VideoCall fallback:', createErr && createErr.message);
+            logger.warn('Failed to create VideoCall fallback:', createErr && createErr.message);
           }
         }
 
@@ -884,7 +852,7 @@ io.on('connection', (socket) => {
           socket.emit('call:failed', { reason: 'User not available' });
         }
       } catch (outerErr) {
-        console.error('Error handling call:offer fallback:', outerErr && outerErr.stack ? outerErr.stack : outerErr);
+        logger.error('Error handling call:offer fallback:', outerErr && outerErr.stack ? outerErr.stack : outerErr);
         socket.emit('call:failed', { reason: 'Server error' });
       }
     })();
@@ -905,7 +873,7 @@ io.on('connection', (socket) => {
         try {
           callRecord = await VideoCall.findByPk(callId);
         } catch (resolveErr) {
-          console.warn('Failed to resolve call recipient for answer:', resolveErr && resolveErr.message);
+          logger.warn('Failed to resolve call recipient for answer:', resolveErr && resolveErr.message);
           socket.emit('call:failed', { reason: 'Server error' });
           return;
         }
@@ -947,10 +915,10 @@ io.on('connection', (socket) => {
           io.to(String(callRecord.callerId)).emit('call:connected', { callId: callRecord.id });
           io.to(String(callRecord.receiverId)).emit('call:connected', { callId: callRecord.id });
         } catch (emitErr) {
-          console.warn('Failed to emit call:connected:', emitErr.message);
+          logger.warn('Failed to emit call:connected:', emitErr.message);
         }
       } catch (e) {
-        console.warn('Failed to update VideoCall on answer:', e.message);
+        logger.warn('Failed to update VideoCall on answer:', e.message);
       }
     })();
   });
@@ -996,7 +964,7 @@ io.on('connection', (socket) => {
         }
       }
     } catch (err) {
-      console.warn('⚠️ VideoCallHistory not available:', err.message);
+      logger.warn('⚠️ VideoCallHistory not available:', err.message);
     }
   });
 
@@ -1022,38 +990,38 @@ UserReward.belongsTo(Reward, { foreignKey: 'rewardId' });
 Reward.belongsTo(Badge, { foreignKey: 'badgeId' });
 
 /*sequelize.sync({alter: true}).then(() => {
-  console.log('Database synced');
-}).catch(err => console.log('DB sync error:', err));*/
+  logger.info('Database synced');
+}).catch(err => logger.info('DB sync error:', err));*/
 
 // DB connection test only
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Database connected');
+    logger.info('✅ Database connected');
     // Migrimet ekzekutohen vetëm me CLI, jo nga kodi.
   })
-  .catch(err => console.error('Database connection error:', err && err.message));
+  .catch(err => logger.error('Database connection error:', err && err.message));
 
 
 if (!PORT) {
-  console.error('❌ PORT environment variable is not set.');
+  logger.error('❌ PORT environment variable is not set.');
   process.exit(1);
 }
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  logger.info(`Server running on http://0.0.0.0:${PORT}`);
   try {
     const { startNotificationScheduler } = require('./services/notifications/scheduler');
     startNotificationScheduler();
   } catch (err) {
-    console.warn('notification scheduler:', err?.message || err);
+    logger.warn('notification scheduler:', err?.message || err);
   }
   ensureOgImageOnCloudinary().catch((err) => {
-    console.warn('[og-image] startup upload error:', err?.message || err);
+    logger.warn('[og-image] startup upload error:', err?.message || err);
   });
 });
 
 // Error handling middleware (duhet të jetë në fund të file-it)
 app.use((err, req, res, next) => {
-  console.error('Express error:', err && err.message);
+  logger.error('Express error:', err && err.message);
   try {
     require('./services/admin/errors').captureError(err, req);
   } catch (_captureErr) {
@@ -1078,5 +1046,5 @@ app.use((err, req, res, next) => {
 try {
   require('./socket').setIo(io);
 } catch (e) {
-  console.warn('Could not set io in socket helper', e && e.message);
+  logger.warn('Could not set io in socket helper', e && e.message);
 }

@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { Op } = require('sequelize');
 const Product = require('../models/Product');
 
@@ -77,7 +78,7 @@ async function purgeExpiredOutOfStockProducts() {
     await product.update({ status: 'archived' });
   }
   if (expired.length > 0) {
-    console.log(`Archived ${expired.length} out-of-stock product(s) older than ${OUT_OF_STOCK_TTL_HOURS}h.`);
+    logger.info(`Archived ${expired.length} out-of-stock product(s) older than ${OUT_OF_STOCK_TTL_HOURS}h.`);
   }
   return expired.length;
 }

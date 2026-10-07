@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 /**
  * Plan access for X TALENTI:
  * - free: social features only (after trial)
@@ -122,7 +124,7 @@ async function persistReconcileIfNeeded(user) {
     try {
       await user.save();
     } catch (err) {
-      console.warn('reconcileExpiredAccess save:', err?.message || err);
+      logger.warn('reconcileExpiredAccess save:', err?.message || err);
     }
   }
   return user;

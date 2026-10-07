@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 const { Op } = require('sequelize');
 const { aggregatePlayerStats, blank } = require('./playerStatsEngine');
 const { footballSeasonFromDate } = require('./footballSeason');
@@ -757,7 +759,7 @@ async function resolveVerificationStatus(user) {
     });
     parentPending = Boolean(full?.parentVerificationToken) && needsParentVerification(full || user) && !full?.parentVerified;
   } catch (err) {
-    console.warn('verification parent check:', err?.message || err);
+    logger.warn('verification parent check:', err?.message || err);
   }
 
   try {
@@ -775,7 +777,7 @@ async function resolveVerificationStatus(user) {
     const rejected = await ClubMember.count({ where: { athleteId: user.id, status: 'rejected' } });
     if (rejected > 0 && approved === 0) return 'REJECTED';
   } catch (err) {
-    console.warn('verification club check:', err?.message || err);
+    logger.warn('verification club check:', err?.message || err);
     if (parentPending) return 'PENDING';
   }
   return 'UNVERIFIED';
@@ -796,7 +798,7 @@ async function viewerAccess(req, profileUserId) {
       });
       isFollower = Boolean(row);
     } catch (err) {
-      console.warn('viewer follow check:', err?.message || err);
+      logger.warn('viewer follow check:', err?.message || err);
     }
   }
   return { isOwner, isFollower, isProfessional, viewer };
@@ -813,7 +815,7 @@ async function finalizeProfileResponse(req, response, user) {
     try {
       performance = await loadOfficialPerformance(user.id, response.position);
     } catch (err) {
-      console.warn('official performance:', err?.message || err);
+      logger.warn('official performance:', err?.message || err);
     }
     response.performance = {
       hasOfficial: performance.hasOfficial,
@@ -846,21 +848,21 @@ async function finalizeProfileResponse(req, response, user) {
         response.stats.jerseyNumber = current.jerseyNumber;
       }
     } catch (err) {
-      console.warn('career enrichment:', err?.message || err);
+      logger.warn('career enrichment:', err?.message || err);
     }
 
     try {
       const derived = await loadDerivedAchievements(user.id);
       response.achievements = mergeAchievements(response.achievements, derived);
     } catch (err) {
-      console.warn('derived achievements:', err?.message || err);
+      logger.warn('derived achievements:', err?.message || err);
       response.achievements = sanitizeAchievements(response.achievements);
     }
 
     try {
       response.verificationStatus = await resolveVerificationStatus(user);
     } catch (err) {
-      console.warn('verification status:', err?.message || err);
+      logger.warn('verification status:', err?.message || err);
       response.verificationStatus = user.verified ? 'VERIFIED' : 'UNVERIFIED';
     }
 
@@ -912,7 +914,7 @@ async function finalizeProfileResponse(req, response, user) {
       const { recordProfileView } = require('./profileViews');
       await recordProfileView({ viewerId: access.viewer?.id, profileUserId: user.id });
     } catch (err) {
-      console.warn('profile view:', err?.message || err);
+      logger.warn('profile view:', err?.message || err);
     }
   }
 

@@ -4,6 +4,13 @@
  * jo këtë skript, që historia e skemës të jetë e gjurmueshme dhe e ripërsëritshme.
  */
 require('dotenv').config();
+
+if (process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'syncDatabase.js refused: sequelize.sync({ alter: true }) is not allowed when NODE_ENV=production. Use migrations (npx sequelize-cli db:migrate).'
+  );
+}
+
 const { assertDestructiveAllowed } = require('./utils/destructiveGuard');
 assertDestructiveAllowed('syncDatabase.js');
 const sequelize = require('./config/database');

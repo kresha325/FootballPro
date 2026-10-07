@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { Op } = require('sequelize');
 const Liga = require('../models/Liga');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
@@ -280,7 +281,7 @@ async function syncAthleteApprovedMemberships(athleteId) {
     try {
       await softLinkClubToMatchingLigas(m.clubId);
     } catch (linkErr) {
-      console.warn('softLinkClubToMatchingLigas:', linkErr && linkErr.message);
+      logger.warn('softLinkClubToMatchingLigas:', linkErr && linkErr.message);
     }
     const r = await syncClubMemberToLigaTournaments(m);
     synced += r.synced || 0;
