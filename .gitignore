@@ -55,6 +55,10 @@ coverage/
 .temp/
 tmp/
 
+# Local user uploads stay on disk; only the empty marker is tracked.
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # Expo / EAS local state
 .expo/
 mobile/.expo/

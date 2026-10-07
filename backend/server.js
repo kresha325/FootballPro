@@ -1,5 +1,3 @@
-// ...existing code...
-
 const express = require('express');
 const cors = require('cors');
 const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
@@ -58,12 +56,6 @@ const PORT = process.env.PORT || 10000;
 // actual responses always return consistent, valid headers. The explicit
 // header middleware was removed to avoid duplication and invalid responses.
 
-// Debug: Log Match model attributes and associations at startup
-const db = require('./models');
-if (db.Match) {
-  console.log('Match model attributes:', Object.keys(db.Match.rawAttributes));
-  console.log('Match model associations:', Object.keys(db.Match.associations));
-}
 // Fshi reklamat e skaduara çdo 1 orë
 const deleteExpiredAds = require('./utils/deleteExpiredAds');
 const { runTrackedJob } = require('./services/admin/jobs');
