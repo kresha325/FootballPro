@@ -277,6 +277,30 @@ export default function TournamentDetailScreen({ route, navigation }) {
       );
       return;
     }
+    const category = String(tournament?.category || '').toLowerCase();
+    if (
+      user?.role === 'club' &&
+      category.startsWith('u') &&
+      (pt === 'club' || pt === 'mixed')
+    ) {
+      const joinGroup = (squadGroup) => {
+        joinTournamentRequest(tournamentId, { squadGroup, athleteIds: [] })
+          .then(() => {
+            Alert.alert('Sukses', `Klubi u bashkua me grupin ${category.toUpperCase()}/${squadGroup}.`);
+            loadDetail();
+          })
+          .catch((err) => {
+            Alert.alert('Bashkimi dështoi', extractErrorMessage(err, 'Nuk u arrit bashkimi'));
+          });
+      };
+      Alert.alert(`Grupi ${category.toUpperCase()}`, 'Zgjidh A, B ose C. Në turne hyjnë atletët e atij grupi.', [
+        { text: 'A', onPress: () => joinGroup('A') },
+        { text: 'B', onPress: () => joinGroup('B') },
+        { text: 'C', onPress: () => joinGroup('C') },
+        { text: 'Anulo', style: 'cancel' },
+      ]);
+      return;
+    }
     try {
       await joinTournamentRequest(tournamentId, { athleteIds: [] });
       Alert.alert(

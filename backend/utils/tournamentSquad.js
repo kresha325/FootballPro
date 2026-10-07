@@ -4,6 +4,7 @@ const Profile = require('../models/Profile');
 const ClubMember = require('../models/ClubMember');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
+const { normalizeSquadGroup, isYouthCategory, squadLabel } = require('./squadGroup');
 
 function serializeAthleteUser(user) {
   if (!user) return null;
@@ -108,7 +109,7 @@ async function attachSquadToSerializedTournament(serialized) {
           model: User,
           as: 'participants',
           attributes: ['id', 'firstName', 'lastName', 'role'],
-          through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status'] },
+          through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status', 'squadGroup'] },
           include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
         },
       ],
@@ -134,6 +135,7 @@ async function attachSquadToSerializedTournament(serialized) {
           losses: through.losses,
           goalsFor: through.goalsFor,
           goalsAgainst: through.goalsAgainst,
+          squadGroup: through.squadGroup || null,
         };
       });
     }
@@ -204,10 +206,87 @@ async function setClubTournamentSquad(tournamentId, clubUserId, athleteIds) {
   return loadSquadByClub(tournamentId);
 }
 
+/**
+ * Approved athletes of this club in one age band and squad letter.
+ */
+async function athleteIdsForClubSquad(clubUserId, category, squadGroup) {
+  const cat = String(category || '').trim().toLowerCase();
+  const group = normalizeSquadGroup(squadGroup);
+  if (!isYouthCategory(cat) || !group) return [];
+  const memberships = await ClubMember.findAll({
+    where: { clubId: clubUserId, status: 'approved', squadGroup: group },
+    attributes: ['athleteId', 'competitionCategory'],
+  });
+  return memberships
+    .filter((row) => String(row.competitionCategory || '').trim().toLowerCase() === cat)
+    .map((row) => row.athleteId);
+}
+
+/**
+ * Keep a club tournament squad aligned with the athlete's current A/B/C assignment.
+ * Entries that never chose a squad letter stay as the club left them.
+ */
+async function syncAthleteClubSquads(membership) {
+  if (!membership?.athleteId || !membership?.clubId) return;
+  const participations = await TournamentParticipant.findAll({
+    where: { userId: membership.clubId },
+    attributes: ['tournamentId', 'squadGroup'],
+  });
+  for (const entry of participations) {
+    const group = normalizeSquadGroup(entry.squadGroup);
+    if (!group) continue;
+    const tournament = await Tournament.findByPk(entry.tournamentId, {
+      attributes: ['id', 'category', 'participantType'],
+    });
+    const pt = tournament?.participantType || 'individual';
+    if (!tournament || (pt !== 'club' && pt !== 'mixed') || !isYouthCategory(tournament.category)) {
+      continue;
+    }
+    const sameCategory =
+      String(membership.competitionCategory || '').trim().toLowerCase() ===
+      String(tournament.category || '').trim().toLowerCase();
+    const sameGroup = normalizeSquadGroup(membership.squadGroup) === group;
+    const belongs = membership.status === 'approved' && sameCategory && sameGroup;
+    if (belongs) {
+      const [row, created] = await TournamentSquadMember.findOrCreate({
+        where: { tournamentId: tournament.id, athleteUserId: membership.athleteId },
+        defaults: {
+          tournamentId: tournament.id,
+          clubUserId: membership.clubId,
+          athleteUserId: membership.athleteId,
+        },
+      });
+      if (!created && Number(row.clubUserId) !== Number(membership.clubId)) {
+        row.clubUserId = membership.clubId;
+        await row.save();
+      }
+    } else {
+      await TournamentSquadMember.destroy({
+        where: {
+          tournamentId: tournament.id,
+          clubUserId: membership.clubId,
+          athleteUserId: membership.athleteId,
+        },
+      });
+    }
+  }
+}
+
+async function removeAthleteFromClubSquads(clubUserId, athleteUserId) {
+  if (!clubUserId || !athleteUserId) return;
+  await TournamentSquadMember.destroy({
+    where: { clubUserId, athleteUserId },
+  });
+}
+
 module.exports = {
   demoteAthleteParticipantsOnClubTournament,
   loadSquadByClub,
   attachSquadToSerializedTournament,
   setClubTournamentSquad,
+  athleteIdsForClubSquad,
+  syncAthleteClubSquads,
+  removeAthleteFromClubSquads,
   serializeAthleteUser,
+  squadLabel,
 };

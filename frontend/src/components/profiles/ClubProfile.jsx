@@ -507,6 +507,9 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                             {competition && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
                                 Ligë: {competition}
+                                {member.squadGroup && String(member.competitionCategory || '').toLowerCase().startsWith('u')
+                                  ? `/${String(member.squadGroup).toUpperCase()}`
+                                  : ''}
                               </span>
                             )}
                             {ageGroup && (

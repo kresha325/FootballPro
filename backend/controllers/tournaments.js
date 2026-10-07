@@ -29,7 +29,10 @@ const {
   setClubTournamentSquad,
   demoteAthleteParticipantsOnClubTournament,
   loadSquadByClub,
+  athleteIdsForClubSquad,
+  squadLabel,
 } = require('../utils/tournamentSquad');
+const { normalizeSquadGroup, isYouthCategory } = require('../utils/squadGroup');
 
 /** Siguron që çdo pjesëmarrës ka userId/id të user-it (jo id të rreshtit në TournamentParticipant). */
 function serializeTournamentParticipants(participants) {
@@ -55,6 +58,7 @@ function serializeTournamentParticipants(participants) {
       losses: through.losses ?? j.losses,
       goalsFor: through.goalsFor ?? j.goalsFor,
       goalsAgainst: through.goalsAgainst ?? j.goalsAgainst,
+      squadGroup: through.squadGroup ?? j.squadGroup ?? null,
     };
   });
 }
@@ -337,7 +341,7 @@ exports.getTournament = async (req, res) => {
           model: User,
           as: 'participants',
           attributes: ['id', 'firstName', 'lastName', 'role'],
-          through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status'] },
+          through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status', 'squadGroup'] },
           include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
         },
         { model: Match, include: [{ model: User, as: 'homeUser' }, { model: User, as: 'awayUser' }] },
@@ -358,7 +362,7 @@ exports.getTournament = async (req, res) => {
             model: User,
             as: 'participants',
             attributes: ['id', 'firstName', 'lastName', 'role'],
-            through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status'] },
+            through: { attributes: ['points', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'status', 'squadGroup'] },
             include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
           },
           { model: Match, include: [{ model: User, as: 'homeUser' }, { model: User, as: 'awayUser' }] },
@@ -425,16 +429,38 @@ exports.joinTournament = async (req, res) => {
     });
     if (!registration.ok) return res.status(registration.status).json({ msg: registration.msg });
 
+    const category = String(tournament.category || 'open').trim().toLowerCase();
+    const youthSquad = req.user.role === 'club' && isYouthCategory(category);
+    const squadGroup = normalizeSquadGroup(req.body?.squadGroup);
+    if (youthSquad && !squadGroup) {
+      return res.status(400).json({
+        msg: `Zgjidh grupin A, B ose C për ${String(tournament.category).toUpperCase()}.`,
+      });
+    }
+
     await TournamentParticipant.create({
       tournamentId: req.params.id,
       userId: req.user.id,
       status: 'accepted',
+      squadGroup: youthSquad ? squadGroup : null,
     });
 
-    // Club may nominate athletes for this tournament on join
+    // Club may nominate athletes for this tournament on join.
+    // Youth bands use the roster group (U13/A) so the squad is not a free pick.
     let squadByClub = {};
     if (req.user.role === 'club' && (participantType === 'club' || participantType === 'mixed')) {
-      const athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+      let athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+      if (youthSquad) {
+        athleteIds = await athleteIdsForClubSquad(req.user.id, category, squadGroup);
+        if (!athleteIds.length) {
+          await TournamentParticipant.destroy({
+            where: { tournamentId: req.params.id, userId: req.user.id },
+          });
+          return res.status(400).json({
+            msg: `Nuk ka atletë të aprovuar në ${squadLabel(category, squadGroup)}. Caktoji te skuadra e klubit, pastaj bashkohu.`,
+          });
+        }
+      }
       if (athleteIds.length) {
         squadByClub = await setClubTournamentSquad(tournament.id, req.user.id, athleteIds);
       }
@@ -478,7 +504,32 @@ exports.setTournamentSquad = async (req, res) => {
       return res.status(400).json({ msg: 'Bashkohuni në turne para se të caktoni lojtarët.' });
     }
 
-    const athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+    const category = String(tournament.category || 'open').trim().toLowerCase();
+    const youthSquad = isYouthCategory(category);
+    let athleteIds = Array.isArray(req.body?.athleteIds) ? req.body.athleteIds : [];
+    let squadGroup = normalizeSquadGroup(req.body?.squadGroup);
+    if (!squadGroup && youthSquad) {
+      const current = await TournamentParticipant.findOne({
+        where: { tournamentId: tournament.id, userId: req.user.id },
+        attributes: ['squadGroup'],
+      });
+      squadGroup = normalizeSquadGroup(current?.squadGroup);
+    }
+    if (youthSquad) {
+      if (!squadGroup) {
+        return res.status(400).json({ msg: 'Zgjidh grupin A, B ose C për këtë grupmoshë.' });
+      }
+      athleteIds = await athleteIdsForClubSquad(req.user.id, category, squadGroup);
+      if (!athleteIds.length) {
+        return res.status(400).json({
+          msg: `Nuk ka atletë të aprovuar në ${squadLabel(category, squadGroup)}.`,
+        });
+      }
+      await TournamentParticipant.update(
+        { squadGroup },
+        { where: { tournamentId: tournament.id, userId: req.user.id } }
+      );
+    }
     const squadByClub = await setClubTournamentSquad(tournament.id, req.user.id, athleteIds);
     res.json({
       msg: 'Skuadra e turneut u përditësua',

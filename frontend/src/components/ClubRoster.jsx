@@ -43,7 +43,10 @@ function ClubRoster() {
   const [selectedMembership, setSelectedMembership] = useState(null);
   const [selectedTeamType, setSelectedTeamType] = useState('first_team');
   const [selectedCompetitionCategory, setSelectedCompetitionCategory] = useState('open');
+  const [selectedSquadGroup, setSelectedSquadGroup] = useState('A');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const squadGroups = ['A', 'B', 'C'];
+  const categoryNeedsSquad = (category) => String(category || '').toLowerCase().startsWith('u');
 
   const teamTypes = [
     { id: 'all', label: 'Të gjitha ekipet', icon: '👥' },
@@ -305,15 +308,21 @@ function ClubRoster() {
             : selectedCompetitionCategory
           : selectedCompetitionCategory;
 
+      if (categoryNeedsSquad(competitionCategory) && !selectedSquadGroup) {
+        alert('Zgjidh grupin A, B ose C për këtë grupmoshë.');
+        return;
+      }
       await clubMembersAPI.updateMembershipStatus(selectedMembership.id, 'approved', {
         teamType: teamTypeToSave,
         competitionCategory,
+        squadGroup: categoryNeedsSquad(competitionCategory) ? selectedSquadGroup : null,
       });
       
       setShowTeamSelectModal(false);
       setSelectedMembership(null);
       setSelectedTeamType('first_team');
       setSelectedCompetitionCategory('open');
+      setSelectedSquadGroup('A');
       fetchRosterData();
       alert('Athlete approved successfully!');
     } catch (error) {
@@ -333,13 +342,21 @@ function ClubRoster() {
         : membership.teamType) ||
       'open';
     setSelectedCompetitionCategory(fallback);
+    setSelectedSquadGroup(String(membership.squadGroup || 'A').toUpperCase());
     setShowCategoryModal(true);
   };
 
   const confirmCategoryChange = async () => {
     try {
       const cat = String(selectedCompetitionCategory || '').trim().toLowerCase();
-      const patch = { competitionCategory: selectedCompetitionCategory };
+      if (categoryNeedsSquad(cat) && !selectedSquadGroup) {
+        alert('Zgjidh grupin A, B ose C për këtë grupmoshë.');
+        return;
+      }
+      const patch = {
+        competitionCategory: selectedCompetitionCategory,
+        squadGroup: categoryNeedsSquad(cat) ? selectedSquadGroup : null,
+      };
       // Keep teamType aligned: First Team only for seniors; youth liga → youth age team.
       if (cat.startsWith('u')) {
         patch.teamType = cat;
@@ -615,6 +632,9 @@ function ClubRoster() {
                         {competitionCategories.find(
                           (c) => c.id === (membership.competitionCategory || 'open')
                         )?.label || membership.competitionCategory || 'Open'}
+                        {categoryNeedsSquad(membership.competitionCategory) && membership.squadGroup
+                          ? `/${String(membership.squadGroup).toUpperCase()}`
+                          : ''}
                       </span>
                       {membership.position && (
                         <span className="xt-badge">{membership.position}</span>
@@ -944,6 +964,30 @@ function ClubRoster() {
               ))}
             </div>
 
+            {categoryNeedsSquad(selectedCompetitionCategory) ? (
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                  Grupi i kësaj grupmoshe
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {squadGroups.map((group) => (
+                    <button
+                      key={group}
+                      type="button"
+                      onClick={() => setSelectedSquadGroup(group)}
+                      className={`min-h-10 rounded-lg border text-sm font-semibold ${
+                        selectedSquadGroup === group
+                          ? 'border-blue-600 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {String(selectedCompetitionCategory || '').toUpperCase()}/{group}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {/* Action Buttons */}
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
@@ -997,6 +1041,29 @@ function ClubRoster() {
                 </button>
               ))}
             </div>
+            {categoryNeedsSquad(selectedCompetitionCategory) ? (
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                  Grupi i kësaj grupmoshe
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {squadGroups.map((group) => (
+                    <button
+                      key={group}
+                      type="button"
+                      onClick={() => setSelectedSquadGroup(group)}
+                      className={`min-h-10 rounded-lg border text-sm font-semibold ${
+                        selectedSquadGroup === group
+                          ? 'border-blue-600 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {String(selectedCompetitionCategory || '').toUpperCase()}/{group}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
                 type="button"

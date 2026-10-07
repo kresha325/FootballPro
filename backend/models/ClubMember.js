@@ -37,6 +37,11 @@ const ClubMember = sequelize.define('ClubMember', {
     type: DataTypes.STRING(32),
     allowNull: true,
   },
+  /** Nëngrupi i grupmoshës: A, B ose C (U13/A). Bosh për senior/open. */
+  squadGroup: {
+    type: DataTypes.STRING(1),
+    allowNull: true,
+  },
   position: {
     type: DataTypes.STRING,
     allowNull: true,

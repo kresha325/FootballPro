@@ -377,6 +377,13 @@ router.put('/:membershipId/status', protect, async (req, res) => {
       if (cat.startsWith('u') && membership.teamType === 'first_team') {
         membership.teamType = cat;
       }
+      const squadAssignment = require('../utils/squadGroup').assignSquadGroup(
+        membership,
+        req.body.squadGroup
+      );
+      if (!squadAssignment.ok) {
+        return res.status(400).json({ msg: squadAssignment.msg });
+      }
       const clubProfile = await Profile.findOne({ where: { userId: membership.clubId } });
       const athleteProfile = await Profile.findOne({ where: { userId: membership.athleteId } });
       if (athleteProfile && clubProfile) {
@@ -400,6 +407,12 @@ router.put('/:membershipId/status', protect, async (req, res) => {
         await syncClubMemberToLigaTournaments(membership);
       } catch (syncErr) {
         console.error('syncClubMemberToLigaTournaments:', syncErr);
+      }
+      try {
+        const { syncAthleteClubSquads } = require('../utils/tournamentSquad');
+        await syncAthleteClubSquads(membership);
+      } catch (squadErr) {
+        console.error('syncAthleteClubSquads:', squadErr);
       }
     }
 
@@ -453,6 +466,13 @@ router.patch('/:membershipId', protect, async (req, res) => {
     } else if (cat === 'senior' && (!teamType || teamType === 'first_team')) {
       membership.teamType = 'first_team';
     }
+    const squadAssignment = require('../utils/squadGroup').assignSquadGroup(
+      membership,
+      req.body.squadGroup !== undefined ? req.body.squadGroup : membership.squadGroup
+    );
+    if (!squadAssignment.ok) {
+      return res.status(400).json({ msg: squadAssignment.msg });
+    }
     if (position) membership.position = position;
     if (jerseyNumber !== undefined) membership.jerseyNumber = jerseyNumber;
     
@@ -464,6 +484,12 @@ router.patch('/:membershipId', protect, async (req, res) => {
         await syncClubMemberToLigaTournaments(membership);
       } catch (syncErr) {
         console.error('syncClubMemberToLigaTournaments on patch:', syncErr);
+      }
+      try {
+        const { syncAthleteClubSquads } = require('../utils/tournamentSquad');
+        await syncAthleteClubSquads(membership);
+      } catch (squadErr) {
+        console.error('syncAthleteClubSquads on patch:', squadErr);
       }
     }
 
@@ -504,6 +530,12 @@ router.delete('/:membershipId', protect, async (req, res) => {
     const athleteId = membership.athleteId;
     const clubId = membership.clubId;
     await membership.destroy();
+    try {
+      const { removeAthleteFromClubSquads } = require('../utils/tournamentSquad');
+      await removeAthleteFromClubSquads(clubId, athleteId);
+    } catch (squadErr) {
+      console.error('removeAthleteFromClubSquads:', squadErr);
+    }
     try {
       const { removeAthleteFromClubLigaTournaments } = require('../utils/ligaTournaments');
       await removeAthleteFromClubLigaTournaments(athleteId, clubId);

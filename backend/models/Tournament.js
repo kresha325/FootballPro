@@ -134,6 +134,8 @@ const TournamentParticipant = sequelize.define('TournamentParticipant', {
     defaultValue: 'pending',
   },
   groupName: { type: DataTypes.STRING(8), allowNull: true },
+  /** Youth squad letter the club registered (A, B or C). */
+  squadGroup: { type: DataTypes.STRING(1), allowNull: true },
   seed: { type: DataTypes.INTEGER, allowNull: true },
 });
 
