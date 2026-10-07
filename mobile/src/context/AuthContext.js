@@ -161,13 +161,14 @@ export const AuthProvider = ({ children }) => {
 
     let me = loginUser;
     try {
-      const meResponse = await meRequest();
+      const meResponse = await meRequest({ skipUnauthorized: true });
       me = meResponse.data;
     } catch (meErr) {
-      console.warn('Login: /me failed, using login payload user:', meErr?.message);
-      if (!me) {
+      if (meErr?.response?.status === 401 || !me) {
+        setAuthToken(null);
         throw meErr;
       }
+      console.warn('Login: /me failed, using login payload user:', meErr?.message);
     }
 
     await SecureStore.setItemAsync('token', nextToken);
@@ -207,11 +208,12 @@ export const AuthProvider = ({ children }) => {
 
       let me = fallbackUser;
       try {
-        const meResponse = await meRequest();
+        const meResponse = await meRequest({ skipUnauthorized: true });
         me = meResponse.data;
-      } catch (_error) {
-        if (!me) {
-          throw _error;
+      } catch (meErr) {
+        if (meErr?.response?.status === 401 || !me) {
+          setAuthToken(null);
+          throw meErr;
         }
       }
 
@@ -269,20 +271,28 @@ export const AuthProvider = ({ children }) => {
         setPendingOnboarding(onboardingFlag === '1');
 
         try {
-          const meResponse = await meRequest();
+          const meResponse = await meRequest({ skipUnauthorized: true });
           const me = meResponse.data;
           setToken(storedToken);
           setUser(me);
           await SecureStore.setItemAsync('user', JSON.stringify(me));
           connectSocket(storedToken, me);
-        } catch (_error) {
-          if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setToken(storedToken);
-            setUser(parsedUser);
-            connectSocket(storedToken, parsedUser);
-          } else {
+        } catch (error) {
+          const status = error?.response?.status;
+          if (status === 401) {
             await logout();
+            return;
+          }
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              setAuthToken(storedToken);
+              setToken(storedToken);
+              setUser(parsedUser);
+              connectSocket(storedToken, parsedUser);
+            } catch (_parseErr) {
+              await logout();
+            }
           }
         }
       } catch (error) {

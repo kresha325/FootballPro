@@ -15,7 +15,8 @@ export function matchesSearchQuery(query, strings) {
 }
 
 export function filterBySearch(items, query, getStrings) {
+  const list = Array.isArray(items) ? items : [];
   const q = normalizeSearchQuery(query);
-  if (!q || !Array.isArray(items)) return items || [];
-  return items.filter((item) => matchesSearchQuery(q, getStrings(item)));
+  if (!q) return list;
+  return list.filter((item) => matchesSearchQuery(q, getStrings(item)));
 }

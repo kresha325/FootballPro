@@ -143,7 +143,10 @@ export default function MarketplaceSimple() {
   const fetchProducts = async () => {
     try {
       const response = await API.get('/products');
-      let allProducts = response.data || [];
+      const payload = response.data;
+      let allProducts = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload?.products) ? payload.products : []);
       if (category !== 'all') {
         allProducts = allProducts.filter(p => p.category === category);
       }

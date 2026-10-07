@@ -18,6 +18,15 @@ export const setUnauthorizedHandler = (fn) => {
   onUnauthorized = typeof fn === 'function' ? fn : null;
 };
 
+function authorizationHeader(headers) {
+  if (!headers) return '';
+  if (typeof headers.get === 'function') {
+    const value = headers.get('Authorization');
+    if (value) return String(value);
+  }
+  return String(headers.Authorization || headers.authorization || '');
+}
+
 function shouldSkipUnauthorized(error) {
   const config = error?.config;
   if (!config) return true;
@@ -26,6 +35,14 @@ function shouldSkipUnauthorized(error) {
   // Auth attempts and push clear must not trigger session logout (avoids kick-out loops).
   if (/\/api\/auth\/(login|register|forgot-password|reset-password)/i.test(url)) return true;
   if (/\/push-token/i.test(url)) return true;
+
+  const sent = authorizationHeader(config.headers).trim();
+  // A 401 with no Bearer token is this call's problem. Do not delete the saved session.
+  if (!/^Bearer\s+\S+/.test(sent)) return true;
+
+  const current = authorizationHeader(api.defaults.headers.common).trim();
+  // An in-flight request from an older login must not clear the token just stored.
+  if (current && sent !== current) return true;
   return false;
 }
 
@@ -90,7 +107,7 @@ export const loginRequest = (email, password) => api.post('/api/auth/login', { e
 export const registerRequest = (payload) => api.post('/api/auth/register', payload);
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
 export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
-export const meRequest = () => api.get('/api/auth/me');
+export const meRequest = (config = {}) => api.get('/api/auth/me', config);
 export const oauthProvidersRequest = () => api.get('/api/auth/providers');
 export const exchangeOAuthCodeRequest = (code) => api.post('/api/auth/oauth/exchange', { code });
 export const adminMediaListRequest = (params = {}) => api.get('/api/media/admin', { params });

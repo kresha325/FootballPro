@@ -81,20 +81,21 @@ exports.getProducts = async (req, res) => {
       /* best-effort */
     }
 
-    const page = Math.max(1, parseInt(req.query.page, 10) || 0);
+    const rawPage = parseInt(req.query.page, 10);
+    const paginate = Number.isFinite(rawPage) && rawPage > 0;
     const limit = Math.min(48, Math.max(1, parseInt(req.query.limit, 10) || 24));
     const query = {
       where: activeListingWhere(req.query),
       include: productIncludeSeller(),
       order: productOrder(req.query.sort),
     };
-    if (page > 0) {
+    if (paginate) {
       query.limit = limit;
-      query.offset = (page - 1) * limit;
+      query.offset = (rawPage - 1) * limit;
       const result = await Product.findAndCountAll(query);
       return res.json({
         products: result.rows.map((p) => formatProductResponse(req, p)),
-        page,
+        page: rawPage,
         limit,
         total: result.count,
       });
