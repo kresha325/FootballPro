@@ -16,7 +16,7 @@ const isCloudinaryEnabled = !!(
 // Multer config: store temporarily in system temp (cloudinary) or in /uploads (local fallback)
 const tempDir = os.tmpdir() || '/tmp';
 if (!fs.existsSync(tempDir)) {
-	try { fs.mkdirSync(tempDir, { recursive: true }); } catch (e) { /* ignore */ }
+	try { fs.mkdirSync(tempDir, { recursive: true }); } catch { /* ignore */ }
 }
 const tempStorage = multer.diskStorage({
 	destination: function (req, file, cb) {
@@ -181,7 +181,7 @@ function cloudinaryFields(fields) {
 									} else {
 										req.body[field.name] = deliveredUrl;
 									}
-								} catch (urlErr) {
+								} catch {
 									if (resource_type === 'video') {
 										req.body.video = cloudRes.secure_url;
 									} else {

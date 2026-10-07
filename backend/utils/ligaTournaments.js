@@ -271,7 +271,6 @@ async function syncAthleteApprovedMemberships(athleteId) {
   const uid = parseInt(athleteId, 10);
   if (!Number.isFinite(uid) || uid <= 0) return { synced: 0, memberships: 0 };
   const ClubMember = require('../models/ClubMember');
-  const Profile = require('../models/Profile');
   const members = await ClubMember.findAll({
     where: { athleteId: uid, status: 'approved' },
   });

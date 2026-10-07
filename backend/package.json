@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "migrate": "npx sequelize-cli db:migrate",
     "test": "node --test tests/*.test.js",
+    "lint": "eslint .",
     "test:phase1": "node --test tests/phase1-security.test.js",
     "test:phase3": "node --test tests/phase3-smoke.test.js",
     "smoke:api": "node scripts/smoke-api.js",
@@ -49,6 +50,8 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
     "nodemon": "^3.0.2",
     "sequelize-cli": "^6.6.5"
   }

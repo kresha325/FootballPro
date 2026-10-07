@@ -113,7 +113,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
       order: [['matchDate', 'DESC']],
       limit: Math.max(1, Math.min(Number(limit) || 12, 30)),
     });
-  } catch (err) {
+  } catch {
     // Fallback without MatchScorer include
     try {
       matches = await Match.findAll({

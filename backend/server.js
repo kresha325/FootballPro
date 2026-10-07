@@ -6,7 +6,6 @@ const { buildAllowedOrigins, isAllowedOrigin } = require('./utils/corsPolicy');
 const { installErrorSanitizer } = require('./utils/errorSanitize');
 const dotenv = require('dotenv');
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const passport = require('./config/passport');
@@ -68,9 +67,9 @@ const Reward = require('./models/Reward');
 const UserAchievement = require('./models/UserAchievement');
 const UserBadge = require('./models/UserBadge');
 const UserReward = require('./models/UserReward');
-const Notification = require('./models/Notification');
-const Follow = require('./models/Follow');
-const Profile = require('./models/Profile');
+require('./models/Notification');
+require('./models/Follow');
+require('./models/Profile');
 const { Conversation, ConversationMember } = require('./models/Conversation');
 const Message = require('./models/Message');
 const { VideoCallHistory } = require('./models');
@@ -502,7 +501,7 @@ app.get('/api/users/:userId/online', async (req, res) => {
           lastSeenAt = row.lastSeenAt;
           setLastSeenCache(userId, row.lastSeenAt);
         }
-      } catch (_) {
+      } catch {
         /* column may not exist yet on older DBs */
       }
     }
@@ -511,7 +510,7 @@ app.get('/api/users/:userId/online', async (req, res) => {
       online,
       lastSeenAt: lastSeenAt ? new Date(lastSeenAt).toISOString() : null,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -548,7 +547,7 @@ function emitPresence(userId, online, lastSeenAt) {
       online: !!online,
       lastSeenAt: lastSeenAt ? new Date(lastSeenAt).toISOString() : null,
     });
-  } catch (_) {
+  } catch {
     /* ignore */
   }
 }
@@ -613,7 +612,7 @@ io.on('connection', (socket) => {
   });
 
   // Join user's private room — ignore client-supplied uid; use JWT identity only
-  socket.on('join', (_uid) => {
+  socket.on('join', () => {
     if (!authenticatedUserId) return;
     socket.userId = authenticatedUserId;
     socket.join(authenticatedUserId);
@@ -637,7 +636,9 @@ io.on('connection', (socket) => {
     try {
       socket.leave('streams');
       logSocketEvent(socket, 'unsubscribe:streams', { socketId: socket.id });
-    } catch (e) {}
+    } catch {
+      /* leave is best-effort */
+    }
   });
 
   // Subscribe to a specific stream room to receive viewer updates
@@ -655,7 +656,9 @@ io.on('connection', (socket) => {
   socket.on('unsubscribe:stream', (streamId) => {
     try {
       if (streamId) socket.leave(`stream:${streamId}`);
-    } catch (e) {}
+    } catch {
+      /* leave is best-effort */
+    }
   });
 
   // Handle disconnect
@@ -776,7 +779,7 @@ io.on('connection', (socket) => {
             socket.emit('call:failed', { reason: 'User not available' });
             return;
           }
-        } catch (_blockErr) {
+        } catch {
           /* Blocks table may be missing before migrate */
         }
         // If no callId provided, create a VideoCall fallback so server-side records exist
@@ -1021,10 +1024,11 @@ server.listen(PORT, '0.0.0.0', () => {
 
 // Error handling middleware (duhet të jetë në fund të file-it)
 app.use((err, req, res, next) => {
+  void next;
   logger.error('Express error:', err && err.message);
   try {
     require('./services/admin/errors').captureError(err, req);
-  } catch (_captureErr) {
+  } catch {
     /* error center must not replace the response */
   }
   if (err && err.code === 'LIMIT_FILE_SIZE') {

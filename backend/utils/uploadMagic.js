@@ -60,7 +60,7 @@ async function inspectUpload(file, allowed) {
   try {
     if (file?.path) detected = await FileType.fromFile(file.path);
     else if (file?.buffer) detected = await FileType.fromBuffer(file.buffer);
-  } catch (_err) {
+  } catch {
     return { ok: false, msg: 'Skedari nuk u lexua' };
   }
   const matches = detected && EXT_FOR_DETECTED[detected.ext];

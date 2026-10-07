@@ -87,7 +87,7 @@ router.get('/verify', async (req, res) => {
     const claimedVersion = Number(decoded?.user?.tv || 0);
     if (tokenVersion > 0 && claimedVersion !== tokenVersion) return res.json({ valid: false });
     return res.json({ valid: true, user: { id: dbUser.id, role: dbUser.role } });
-  } catch (err) {
+  } catch {
     return res.json({ valid: false });
   }
 });

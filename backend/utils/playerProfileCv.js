@@ -769,7 +769,7 @@ async function resolveVerificationStatus(user) {
     try {
       const ClubRosterRequest = require('../models/ClubRosterRequest');
       rosterPending = await ClubRosterRequest.count({ where: { athleteId: user.id, status: 'pending' } });
-    } catch (_err) {
+    } catch {
       rosterPending = 0;
     }
     if (parentPending || pending > 0 || rosterPending > 0) return 'PENDING';
@@ -871,7 +871,7 @@ async function finalizeProfileResponse(req, response, user) {
       try {
         const Gallery = require('../models/Gallery');
         galleryCount = await Gallery.count({ where: { userId: user.id } });
-      } catch (_err) {
+      } catch {
         galleryCount = 0;
       }
     }
@@ -879,7 +879,7 @@ async function finalizeProfileResponse(req, response, user) {
     try {
       const MediaItem = require('../models/MediaItem');
       mediaCount = await MediaItem.count({ where: { playerId: user.id } });
-    } catch (_err) {
+    } catch {
       mediaCount = 0;
     }
     response.completeness = buildCompleteness(response, {
