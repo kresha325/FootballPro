@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { Op } = require('sequelize');
 const Liga = require('../models/Liga');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
@@ -270,7 +271,6 @@ async function syncAthleteApprovedMemberships(athleteId) {
   const uid = parseInt(athleteId, 10);
   if (!Number.isFinite(uid) || uid <= 0) return { synced: 0, memberships: 0 };
   const ClubMember = require('../models/ClubMember');
-  const Profile = require('../models/Profile');
   const members = await ClubMember.findAll({
     where: { athleteId: uid, status: 'approved' },
   });
@@ -280,7 +280,7 @@ async function syncAthleteApprovedMemberships(athleteId) {
     try {
       await softLinkClubToMatchingLigas(m.clubId);
     } catch (linkErr) {
-      console.warn('softLinkClubToMatchingLigas:', linkErr && linkErr.message);
+      logger.warn('softLinkClubToMatchingLigas:', linkErr && linkErr.message);
     }
     const r = await syncClubMemberToLigaTournaments(m);
     synced += r.synced || 0;

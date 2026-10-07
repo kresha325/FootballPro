@@ -120,7 +120,8 @@ export default function MarketplaceScreen() {
     setError('');
     try {
       const [productsRes, balanceRes] = await Promise.all([productsRequest(), joncoinBalanceRequest()]);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+      const payload = productsRes.data;
+      setProducts(Array.isArray(payload) ? payload : (Array.isArray(payload?.products) ? payload.products : []));
       setBalance(Number(balanceRes?.data?.balance || 0));
       setVisibleCount(PAGE_SIZE);
     } catch (err) {

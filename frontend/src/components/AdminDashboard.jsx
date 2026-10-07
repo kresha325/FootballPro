@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
+import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import AdminStadiums from './AdminStadiums';
 import AdminTournaments from './AdminTournaments';
 import AdminMedia from './AdminMedia';
@@ -410,8 +411,9 @@ export default function AdminDashboard({ section = null, embedded = false }) {
   };
 
   const handleResetPassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
+    const passwordError = passwordPolicyMessage(newPassword);
+    if (passwordError) {
+      alert(passwordError);
       return;
     }
     setActionBusy(true);

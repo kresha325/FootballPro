@@ -4,45 +4,51 @@
  * jo këtë skript, që historia e skemës të jetë e gjurmueshme dhe e ripërsëritshme.
  */
 require('dotenv').config();
+
+if (process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'syncDatabase.js refused: sequelize.sync({ alter: true }) is not allowed when NODE_ENV=production. Use migrations (npx sequelize-cli db:migrate).'
+  );
+}
+
 const { assertDestructiveAllowed } = require('./utils/destructiveGuard');
 assertDestructiveAllowed('syncDatabase.js');
 const sequelize = require('./config/database');
 
-// Import all models
-const User = require('./models/User');
-const Profile = require('./models/Profile');
-const Post = require('./models/Post');
-const Comment = require('./models/Comment');
-const Like = require('./models/Like');
-const Gallery = require('./models/Gallery');
-const Message = require('./models/Message');
-const Conversation = require('./models/Conversation');
-const Notification = require('./models/Notification');
-const Achievement = require('./models/Achievement');
-const Badge = require('./models/Badge');
-const Reward = require('./models/Reward');
-const UserAchievement = require('./models/UserAchievement');
-const UserBadge = require('./models/UserBadge');
-const UserReward = require('./models/UserReward');
-const Stream = require('./models/Stream');
-const Tournament = require('./models/Tournament');
-const Match = require('./models/Match');
-const Product = require('./models/Product');
-const Order = require('./models/Order');
-const Payment = require('./models/Payment');
-const Subscription = require('./models/Subscription');
-const VideoCall = require('./models/VideoCall');
-const ScheduledCall = require('./models/ScheduledCall');
-const ScoutingRecommendation = require('./models/ScoutingRecommendation');
-const Bracket = require('./models/Bracket');
-const PostAnalytics = require('./models/PostAnalytics');
-const ProfileView = require('./models/ProfileView');
-const EngagementMetrics = require('./models/EngagementMetrics');
-
-const Video = require('./models/Video');
-const Follow = require('./models/Follow');
-const Ad = require('./models/Ad');
-const Sponsor = require('./models/Sponsor');
+// Import all models so sequelize.sync sees them.
+require('./models/User');
+require('./models/Profile');
+require('./models/Post');
+require('./models/Comment');
+require('./models/Like');
+require('./models/Gallery');
+require('./models/Message');
+require('./models/Conversation');
+require('./models/Notification');
+require('./models/Achievement');
+require('./models/Badge');
+require('./models/Reward');
+require('./models/UserAchievement');
+require('./models/UserBadge');
+require('./models/UserReward');
+require('./models/Stream');
+require('./models/Tournament');
+require('./models/Match');
+require('./models/Product');
+require('./models/Order');
+require('./models/Payment');
+require('./models/Subscription');
+require('./models/VideoCall');
+require('./models/ScheduledCall');
+require('./models/ScoutingRecommendation');
+require('./models/Bracket');
+require('./models/PostAnalytics');
+require('./models/ProfileView');
+require('./models/EngagementMetrics');
+require('./models/Video');
+require('./models/Follow');
+require('./models/Ad');
+require('./models/Sponsor');
 
 console.log('🔄 Starting database sync (alter) — vetëm për dev lokal; përndryshe migrime.\n');
 

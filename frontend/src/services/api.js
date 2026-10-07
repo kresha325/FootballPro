@@ -145,6 +145,7 @@ export const authAPI = {
   forgotPassword: (email) => API.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => API.post('/auth/reset-password', { token, password }),
   oauthProviders: () => API.get('/auth/providers'),
+  exchangeOAuthCode: (code) => API.post('/auth/oauth/exchange', { code }),
 };
 
 /* =========================

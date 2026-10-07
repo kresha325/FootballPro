@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 const { Op } = require('sequelize');
 
 const VIEW_DEDUPE_MS = 6 * 60 * 60 * 1000;
@@ -38,7 +40,7 @@ async function recordProfileView({ viewerId, profileUserId }) {
     const { notifyProfileViewed } = require('../services/notifications/events');
     await notifyProfileViewed({ viewerId: viewer, profileUserId: profileId });
   } catch (err) {
-    console.warn('profile view notification:', err?.message || err);
+    logger.warn('profile view notification:', err?.message || err);
   }
 
   try {
@@ -51,7 +53,7 @@ async function recordProfileView({ viewerId, profileUserId }) {
     metrics.profileViews = (Number(metrics.profileViews) || 0) + 1;
     await metrics.save();
   } catch (err) {
-    console.warn('profile view metrics:', err?.message || err);
+    logger.warn('profile view metrics:', err?.message || err);
   }
 
   return { counted: true };

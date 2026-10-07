@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 const { Op } = require('sequelize');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const { TournamentParticipant } = require('../models/Tournament');
@@ -28,7 +30,7 @@ async function notifyMatchParticipants(match, tournament, opts = {}) {
     const found = participants.map((p) => Number(p.userId)).filter((id) => id > 0);
     if (found.length) allowedSideIds = found;
   } catch (err) {
-    console.warn('notifyMatchParticipants participants:', err?.message || err);
+    logger.warn('notifyMatchParticipants participants:', err?.message || err);
   }
 
   const recipientIds = new Set(allowedSideIds);
@@ -42,7 +44,7 @@ async function notifyMatchParticipants(match, tournament, opts = {}) {
       if (Number.isFinite(athleteId) && athleteId > 0) recipientIds.add(athleteId);
     }
   } catch (err) {
-    console.warn('notifyMatchParticipants squad:', err?.message || err);
+    logger.warn('notifyMatchParticipants squad:', err?.message || err);
   }
 
   let notified = 0;
@@ -59,7 +61,7 @@ async function notifyMatchParticipants(match, tournament, opts = {}) {
       const row = await notify(notice);
       if (row && !row.duplicate) notified += 1;
     } catch (err) {
-      console.warn('notifyMatchParticipants user', userId, err?.message || err);
+      logger.warn('notifyMatchParticipants user', userId, err?.message || err);
     }
   }
   return { notified, tournamentId, recipients: [...recipientIds] };

@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const TransferHistory = require('../models/TransferHistory');
 const Profile = require('../models/Profile');
 const User = require('../models/User');
@@ -102,7 +103,7 @@ async function buildCareerHistoryFromTransfers(userId, options = {}) {
     });
   } catch (err) {
     // status column may be missing before migration
-    console.warn('buildCareerHistoryFromTransfers status filter:', err?.message || err);
+    logger.warn('buildCareerHistoryFromTransfers status filter:', err?.message || err);
     transfers = await TransferHistory.findAll({
       where: { userId: uid },
       order: [
@@ -264,7 +265,7 @@ async function applyCurrentClubJoinedYear(userId, year, profileLike = null) {
       });
     }
   } catch (err) {
-    console.warn('applyCurrentClubJoinedYear transfer:', err?.message || err);
+    logger.warn('applyCurrentClubJoinedYear transfer:', err?.message || err);
   }
 
   try {
@@ -288,7 +289,7 @@ async function applyCurrentClubJoinedYear(userId, year, profileLike = null) {
       }
     }
   } catch (err) {
-    console.warn('applyCurrentClubJoinedYear career:', err?.message || err);
+    logger.warn('applyCurrentClubJoinedYear career:', err?.message || err);
   }
 
   return { clubJoinedYear: joinedYear };
@@ -338,13 +339,13 @@ async function syncProfileCurrentClubFromTransfer(userId, transferLike) {
       );
     }
   } catch (err) {
-    console.warn('syncProfileCurrentClubFromTransfer mark current:', err?.message || err);
+    logger.warn('syncProfileCurrentClubFromTransfer mark current:', err?.message || err);
   }
 
   try {
     await syncCareerHistoryFromTransfers(uid, profile, { force: true });
   } catch (err) {
-    console.warn('syncProfileCurrentClubFromTransfer careerHistory:', err?.message || err);
+    logger.warn('syncProfileCurrentClubFromTransfer careerHistory:', err?.message || err);
   }
 
   return patch;
@@ -437,14 +438,14 @@ async function syncCurrentClubCareer({
       await existing[0].update(transferPayload);
     }
   } catch (err) {
-    console.warn('syncCurrentClubCareer transfer upsert skipped:', err && err.message);
+    logger.warn('syncCurrentClubCareer transfer upsert skipped:', err && err.message);
   }
 
   if (profile) {
     try {
       await syncCareerHistoryFromTransfers(userId, profile, { force: true });
     } catch (err) {
-      console.warn('syncCurrentClubCareer careerHistory update skipped:', err && err.message);
+      logger.warn('syncCurrentClubCareer careerHistory update skipped:', err && err.message);
     }
   }
 

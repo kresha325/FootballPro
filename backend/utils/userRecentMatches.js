@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 // Ensure Match ↔ User / MatchScorer associations from models/index
 require('../models');
 
@@ -39,7 +41,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
     });
     asSide.forEach((m) => matchIdSet.add(m.id));
   } catch (err) {
-    console.warn('loadRecentMatchesForUser side:', err?.message || err);
+    logger.warn('loadRecentMatchesForUser side:', err?.message || err);
   }
 
   let scorerRows = [];
@@ -54,7 +56,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
       if (r.matchId != null) matchIdSet.add(r.matchId);
     });
   } catch (err) {
-    console.warn('loadRecentMatchesForUser scorers:', err?.message || err);
+    logger.warn('loadRecentMatchesForUser scorers:', err?.message || err);
   }
 
   let squad = [];
@@ -64,7 +66,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
       attributes: ['tournamentId', 'clubUserId'],
     });
   } catch (err) {
-    console.warn('loadRecentMatchesForUser squad:', err?.message || err);
+    logger.warn('loadRecentMatchesForUser squad:', err?.message || err);
   }
 
   const clubByTournament = {};
@@ -90,7 +92,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
         });
         clubMatches.forEach((m) => matchIdSet.add(m.id));
       } catch (err) {
-        console.warn('loadRecentMatchesForUser club matches:', err?.message || err);
+        logger.warn('loadRecentMatchesForUser club matches:', err?.message || err);
       }
     }
   }
@@ -111,7 +113,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
       order: [['matchDate', 'DESC']],
       limit: Math.max(1, Math.min(Number(limit) || 12, 30)),
     });
-  } catch (err) {
+  } catch {
     // Fallback without MatchScorer include
     try {
       matches = await Match.findAll({
@@ -125,7 +127,7 @@ async function loadRecentMatchesForUser(userId, limit = 12) {
         limit: Math.max(1, Math.min(Number(limit) || 12, 30)),
       });
     } catch (err2) {
-      console.warn('loadRecentMatchesForUser fetch:', err2?.message || err2);
+      logger.warn('loadRecentMatchesForUser fetch:', err2?.message || err2);
       return [];
     }
   }

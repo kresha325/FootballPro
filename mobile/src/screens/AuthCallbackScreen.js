@@ -3,10 +3,11 @@ import { ActivityIndicator, StyleSheet, Text, View } from '../theme/nativeCompon
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { exchangeOAuthCodeRequest, extractErrorMessage } from '../api/client';
 
 /**
- * Deep link target: xtalenti://auth/callback?token=...
- * Backend OAuth redirects here when started with ?app=1.
+ * Deep link target: xtalenti://auth/callback?code=...
+ * The code is exchanged once for the JWT. The JWT is not in the link.
  */
 export default function AuthCallbackScreen() {
   const navigation = useNavigation();
@@ -20,15 +21,31 @@ export default function AuthCallbackScreen() {
     (async () => {
       const params = route.params || {};
       const error = params.error;
-      const token = params.token;
+      const code = params.code;
       if (error) {
         setMessage('Hyrja sociale dështoi. Provo përsëri.');
         setTimeout(() => navigation.replace('Login'), 1200);
         return;
       }
-      if (!token) {
-        setMessage('Token mungon.');
+      if (!code) {
+        setMessage('Kodi i hyrjes mungon.');
         setTimeout(() => navigation.replace('Login'), 1200);
+        return;
+      }
+      let token = '';
+      try {
+        const exchanged = await exchangeOAuthCodeRequest(code);
+        token = exchanged?.data?.token || '';
+      } catch (err) {
+        if (cancelled) return;
+        setMessage(extractErrorMessage(err, 'Kodi i hyrjes është i pavlefshëm ose i skaduar'));
+        setTimeout(() => navigation.replace('Login'), 1500);
+        return;
+      }
+      if (cancelled) return;
+      if (!token) {
+        setMessage('Kodi i hyrjes është i pavlefshëm ose i skaduar');
+        setTimeout(() => navigation.replace('Login'), 1500);
         return;
       }
       const result = await loginWithToken(token);
@@ -36,9 +53,7 @@ export default function AuthCallbackScreen() {
       if (!result?.ok) {
         setMessage(result?.message || 'Hyrja dështoi.');
         setTimeout(() => navigation.replace('Login'), 1500);
-        return;
       }
-      // Auth gate in navigator will switch to Main when token is set.
     })();
     return () => {
       cancelled = true;

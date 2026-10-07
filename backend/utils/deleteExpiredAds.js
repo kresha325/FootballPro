@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const { Ad } = require('../models');
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +17,7 @@ async function deleteExpiredAds() {
     await ad.destroy();
   }
   if (expiredAds.length > 0) {
-    console.log(`Deleted ${expiredAds.length} expired ads.`);
+    logger.info(`Deleted ${expiredAds.length} expired ads.`);
   }
 }
 

@@ -12,6 +12,7 @@ const {
 const { getJwtSecret } = require('../utils/jwtSecret');
 const { needsParentVerification } = require('../utils/userVerification');
 const { isOrgProfileRole } = require('../utils/orgProfile');
+const { passwordPolicyMessage } = require('../utils/passwordPolicy');
 
 function normalizeEmail(raw) {
   return String(raw || '').trim().toLowerCase();
@@ -32,8 +33,9 @@ exports.register = async (req, res) => {
       return res.status(400).json({ msg: 'Adresa e email-it është e pavlefshme' });
     }
 
-    if (String(password).length < 6) {
-      return res.status(400).json({ msg: 'Fjalëkalimi duhet të ketë të paktën 6 karaktere' });
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) {
+      return res.status(400).json({ msg: passwordError });
     }
 
     const normalizedRole = String(role || 'athlete').trim().toLowerCase();
@@ -329,6 +331,14 @@ exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;
 
   try {
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) {
+      return res.status(400).json({ msg: passwordError });
+    }
+    if (!token) {
+      return res.status(400).json({ msg: 'Tokeni i rivendosjes është i pavlefshëm ose i skaduar' });
+    }
+
     // Hash the token from URL to compare with stored hash
     const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
 

@@ -77,8 +77,8 @@ function runUpload(uploader) {
 
 const sendLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 40,
-  standardHeaders: true,
+  limit: 40,
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
   keyGenerator: (req) => `user:${req.user?.id || 'anonymous'}`,
   handler: (_req, res) => {

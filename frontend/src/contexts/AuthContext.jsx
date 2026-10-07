@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }) => {
       } else if (/invalid email/i.test(serverMsg)) {
         errorMsg = 'Email jo valid.';
       } else if (/password must be at least/i.test(serverMsg)) {
-        errorMsg = 'Fjalëkalimi duhet të ketë të paktën 6 karaktere.';
+        errorMsg = 'Fjalëkalimi duhet të ketë të paktën 10 karaktere';
       } else if (/invalid account type/i.test(serverMsg)) {
         errorMsg = 'Lloji i llogarisë nuk është valid.';
       } else if (serverMsg) {

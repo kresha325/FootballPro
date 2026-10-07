@@ -1,3 +1,4 @@
+const logger = require('./logger');
 /**
  * JWT secret resolution.
  * Production must have JWT_SECRET set — never fall back to a hardcoded value.
@@ -12,7 +13,7 @@ function getJwtSecret() {
     throw new Error('JWT_SECRET is required in production');
   }
 
-  console.warn('[security] JWT_SECRET missing — using insecure dev fallback. Set JWT_SECRET.');
+  logger.warn('[security] JWT_SECRET missing — using insecure dev fallback. Set JWT_SECRET.');
   return 'dev_jwt_secret';
 }
 

@@ -339,6 +339,6 @@ Good screenshots for documentation:
 
 Testo çdo feature me kujdes dhe shëno çfarë punon dhe çfarë duhet përmirësuar!
 
-**Remember:** Features currently work best with page refresh. For true real-time updates, Socket.IO integration is needed (documented in COMPLETION_SUMMARY.md).
+**Remember:** Real-time chat and notifications go through Socket.IO. The early write-up is in `docs/archive/COMPLETION_SUMMARY.md`.
 
 ⚽️ **Enjoy testing FootballPro!** 🚀
