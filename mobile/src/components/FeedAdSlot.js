@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import OptimizedImage from './media/OptimizedImage';
 import { ResizeMode } from 'expo-av';
 import { ManagedVideo, VideoPoster } from './media/LazyVideo';
 
@@ -7,7 +8,7 @@ import { ManagedVideo, VideoPoster } from './media/LazyVideo';
  * Shfaq një karusel reklamash.
  * Çdo ad ka displaySeconds (video = gjatësia; foto = 3s). Çmimi: €1 / 3s / ditë.
  */
-export default function FeedAdSlot({ ads = [], isDark, isVisible = false }) {
+function FeedAdSlot({ ads = [], isDark, isVisible = false }) {
   const safeAds = Array.isArray(ads) ? ads : [];
   const [active, setActive] = useState(0);
 
@@ -68,7 +69,7 @@ export default function FeedAdSlot({ ads = [], isDark, isVisible = false }) {
           </View>
         ) : imageUri ? (
           <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
+            <OptimizedImage uri={imageUri} style={styles.image} width={600} contentFit="contain" />
           </View>
         ) : null}
         <View style={[styles.colorBar, { backgroundColor: accent }]} />
@@ -95,6 +96,8 @@ export default function FeedAdSlot({ ads = [], isDark, isVisible = false }) {
     </View>
   );
 }
+
+export default React.memo(FeedAdSlot);
 
 const styles = StyleSheet.create({
   wrap: {

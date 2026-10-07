@@ -10,12 +10,13 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRenderLog } from '../utils/perfLog';
 import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../components/UserAvatar';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import CreateGroupModal from '../components/messaging/CreateGroupModal';
 import { conversationsRequest, extractErrorMessage } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL } from '../config/constants';
 import { openUserProfile } from '../utils/openUserProfile';
@@ -131,7 +132,9 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
 }
 
 export default function MessagingScreen({ navigation }) {
-  const { user, getSocket, socketConnected } = useAuth();
+  useRenderLog('MessagingScreen');
+  const { user } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const { colors, isDark } = useTheme();
   const [conversations, setConversations] = useState([]);
   const [query, setQuery] = useState('');

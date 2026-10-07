@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
+import { StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
+import OptimizedImage from '../media/OptimizedImage';
 import { absoluteBackendUrl } from '../../config/constants';
 import { formatTournamentTitle } from '../../utils/footballSeason';
 import { formatTotalsPoints } from '../../utils/tournamentPoints';
@@ -212,7 +213,7 @@ function competitionLabel(cat) {
 
 function AvatarCircle({ uri, initials, theme }) {
   if (uri && typeof uri === 'string') {
-    return <Image source={{ uri }} style={styles.avatar} />;
+    return <OptimizedImage uri={uri} style={styles.avatar} width={160} contentFit="cover" />;
   }
   return (
     <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.border }]}>
@@ -656,7 +657,7 @@ export default function PublicProfileOverviewTab({
                       activeOpacity={0.85}
                     >
                       {poster ? (
-                        <Image source={{ uri: poster }} style={styles.highlightImg} resizeMode="cover" />
+                        <OptimizedImage uri={poster} style={styles.highlightImg} width={400} contentFit="cover" />
                       ) : (
                         <View style={[styles.highlightImg, styles.highlightFallback]}>
                           <Text style={{ color: '#9A6B12', fontSize: 22 }}>▶</Text>

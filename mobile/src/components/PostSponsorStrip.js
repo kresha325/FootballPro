@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
+import { Linking, Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
+import OptimizedImage from './media/OptimizedImage';
 import { BACKEND_URL } from '../config/constants';
 
 function sponsorImageUri(s) {
@@ -67,7 +68,7 @@ export default function PostSponsorStrip({ sponsors, isDark, variant = 'inline' 
       accessibilityLabel={`Sponsor: ${sponsor?.name || ''}`}
     >
       {uri ? (
-        <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+        <OptimizedImage uri={uri} style={styles.thumb} width={200} contentFit="cover" />
       ) : (
         <View style={[styles.thumbFallback, isDark && styles.thumbFallbackDark]}>
           <Text style={styles.thumbEmoji}>🎯</Text>

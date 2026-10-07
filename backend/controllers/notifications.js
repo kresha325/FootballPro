@@ -20,6 +20,40 @@ function http(handler) {
 
 exports.getNotifications = http(async (req) => notifications.list(req.user.id, req.query || {}));
 
+exports.getTournamentBadge = http(async (req) => {
+  const { Op, literal } = require('sequelize');
+  const Notification = require('../models/Notification');
+  const now = new Date();
+  try {
+    const count = await Notification.count({
+      where: {
+        userId: req.user.id,
+        isRead: false,
+        type: { [Op.ne]: 'message' },
+        [Op.and]: [
+          { [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: now } }] },
+          {
+            [Op.or]: [
+              { entityType: 'tournament', entityId: { [Op.ne]: null } },
+              { type: 'tournament', entityId: { [Op.ne]: null } },
+              { link: { [Op.iLike]: '%tournamentId=%' } },
+              { link: { [Op.iLike]: '%/tournaments/%' } },
+              literal(`COALESCE("metadata"->>'tournamentId', '') ~ '^[0-9]+$'`),
+            ],
+          },
+        ],
+      },
+    });
+    return { count: Number(count) || 0 };
+  } catch (err) {
+    const message = err?.original?.message || err?.message || '';
+    if (message.includes('does not exist') || message.includes('metadata')) {
+      return { count: 0 };
+    }
+    throw err;
+  }
+});
+
 exports.getUnreadCount = http(async (req) => {
   try {
     return await notifications.unread(req.user.id, req.query?.category);

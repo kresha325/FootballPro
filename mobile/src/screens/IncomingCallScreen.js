@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { WebView } from 'react-native-webview';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';
 import { consumePendingIncomingCall } from '../utils/incomingCallPayload';
 import { endVideoCallRequest } from '../api/client';
@@ -9,7 +9,8 @@ import NativeCallRoom from '../livekit/NativeCallRoom';
 import { ensureLiveKitNative } from '../livekit/register';
 
 export default function IncomingCallScreen({ navigation }) {
-  const { token, user, getSocket } = useAuth();
+  const { token, user } = useAuth();
+  const { getSocket } = useSocket();
   const payload = useMemo(() => consumePendingIncomingCall(), []);
   const [forceWeb, setForceWeb] = useState(false);
   const [answered, setAnswered] = useState(false);

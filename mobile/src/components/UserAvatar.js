@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
+import { Pressable, StyleSheet, Text, View } from '../theme/nativeComponents';
+import OptimizedImage from './media/OptimizedImage';
 
 export function resolveUserPhotoUri(userOrProfile) {
   if (!userOrProfile) return null;
@@ -50,7 +51,12 @@ export default function UserAvatar({
   const fontSize = Math.max(12, Math.round(size * 0.38));
 
   const content = photoUri ? (
-    <Image source={{ uri: photoUri }} style={avatarStyle} />
+    <OptimizedImage
+      uri={photoUri}
+      style={avatarStyle}
+      width={Math.min(200, Math.max(120, size * 2))}
+      contentFit="cover"
+    />
   ) : (
     <View style={fallbackStyle}>
       <Text style={[styles.initials, { fontSize }, textStyle]}>{initials}</Text>

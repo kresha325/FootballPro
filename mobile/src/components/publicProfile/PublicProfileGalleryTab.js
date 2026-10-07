@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  Image,
+  FlatList,
   Modal,
   Pressable,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from '../../theme/nativeComponents';
+import OptimizedImage from '../media/OptimizedImage';
+import { profileRowFrame } from './profileListFrame';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResizeMode } from 'expo-av';
 import { ManagedVideo, VideoPoster } from '../media/LazyVideo';
@@ -35,68 +37,94 @@ function isVideoItem(item) {
   return false;
 }
 
-export default function PublicProfileGalleryTab({ items = [], theme }) {
+export default function PublicProfileGalleryTab({
+  items = [],
+  theme,
+  listHeader = null,
+  refreshControl,
+  pageStyle,
+  contentContainerStyle,
+  frame = null,
+  showEmpty = true,
+}) {
   const [modalUri, setModalUri] = useState(null);
   const insets = useSafeAreaInsets();
 
   const closeModal = () => setModalUri(null);
 
-  if (!items.length) {
-    return (
-      <View style={styles.emptyWrap}>
-        <Text style={styles.emptyEmoji}>📸</Text>
-        <Text style={[styles.emptyTitle, { color: theme.muted }]}>No gallery items yet</Text>
-      </View>
-    );
-  }
+  const renderItem = useCallback(
+    ({ item }) => {
+      const photo = isPhotoItem(item);
+      const video = isVideoItem(item);
+      const imgUri = photo ? item.imageUrl : null;
+      const vidUri = video ? item.videoUrl || item.imageUrl : null;
+      return (
+        <TouchableOpacity
+          style={[styles.tile, frame && styles.tileFramed, { backgroundColor: theme.chipBg, borderColor: theme.border }]}
+          activeOpacity={0.9}
+          onPress={() => {
+            if (imgUri) setModalUri({ type: 'image', uri: imgUri });
+            else if (vidUri) setModalUri({ type: 'video', uri: vidUri });
+          }}
+        >
+          {imgUri ? (
+            <OptimizedImage uri={imgUri} style={styles.thumb} width={400} contentFit="cover" />
+          ) : vidUri ? (
+            <VideoPoster style={styles.thumb} />
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]}>
+              <Text style={{ fontSize: 28 }}>📁</Text>
+            </View>
+          )}
+          {item.title ? (
+            <View style={styles.tileFooter}>
+              <Text style={[styles.tileTitle, { color: theme.text }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={[styles.tileDate, { color: theme.muted }]}>
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.tileFooter}>
+              <Text style={[styles.tileDate, { color: theme.muted }]}>
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [frame, theme]
+  );
 
   return (
-    <View>
-      <View style={styles.grid}>
-        {items.map((item) => {
-          const photo = isPhotoItem(item);
-          const video = isVideoItem(item);
-          const imgUri = photo ? item.imageUrl : null;
-          const vidUri = video ? item.videoUrl || item.imageUrl : null;
-          return (
-            <TouchableOpacity
-              key={String(item.id)}
-              style={[styles.tile, { backgroundColor: theme.chipBg, borderColor: theme.border }]}
-              activeOpacity={0.9}
-              onPress={() => {
-                if (imgUri) setModalUri({ type: 'image', uri: imgUri });
-                else if (vidUri) setModalUri({ type: 'video', uri: vidUri });
-              }}
-            >
-              {imgUri ? (
-                <Image source={{ uri: imgUri }} style={styles.thumb} resizeMode="cover" />
-              ) : vidUri ? (
-                <VideoPoster style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                  <Text style={{ fontSize: 28 }}>📁</Text>
-                </View>
-              )}
-              {item.title ? (
-                <View style={styles.tileFooter}>
-                  <Text style={[styles.tileTitle, { color: theme.text }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.tileDate, { color: theme.muted }]}>
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.tileFooter}>
-                  <Text style={[styles.tileDate, { color: theme.muted }]}>
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+    <>
+      <FlatList
+        style={pageStyle}
+        data={items}
+        keyExtractor={(item) => String(item.id)}
+        numColumns={2}
+        renderItem={renderItem}
+        columnWrapperStyle={frame ? [profileRowFrame(frame), styles.columnRow, styles.columnInset] : styles.columnRow}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={<View style={profileRowFrame(frame, 'end')} />}
+        ListEmptyComponent={
+          showEmpty ? (
+            <View style={profileRowFrame(frame)}>
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyEmoji}>📸</Text>
+                <Text style={[styles.emptyTitle, { color: theme.muted }]}>No gallery items yet</Text>
+              </View>
+            </View>
+          ) : null
+        }
+        refreshControl={refreshControl}
+        contentContainerStyle={contentContainerStyle}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+      />
 
       <Modal visible={!!modalUri} transparent animationType="fade" onRequestClose={closeModal}>
         <View style={styles.modalRoot}>
@@ -118,7 +146,7 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
             </Pressable>
             {modalUri?.type === 'image' ? (
               <View style={styles.modalImgWrap} pointerEvents="auto">
-                <Image source={{ uri: modalUri.uri }} style={styles.modalImg} resizeMode="contain" />
+                <OptimizedImage uri={modalUri.uri} style={styles.modalImg} contentFit="contain" />
               </View>
             ) : modalUri?.type === 'video' ? (
               <View style={styles.modalImgWrap} pointerEvents="auto">
@@ -133,8 +161,8 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
             ) : null}
           </View>
         </View>
-      </Modal>
-    </View>
+        </Modal>
+    </>
   );
 }
 
@@ -143,6 +171,8 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: 8 },
   emptyTitle: { fontSize: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  columnRow: { justifyContent: 'space-between' },
+  columnInset: { paddingHorizontal: 10 },
   tile: {
     width: '48%',
     borderRadius: 10,
@@ -150,6 +180,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     overflow: 'hidden',
   },
+  tileFramed: { width: '46%' },
   thumb: { width: '100%', aspectRatio: 16 / 10, backgroundColor: '#0f172a' },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   playBadge: {

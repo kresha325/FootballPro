@@ -43,7 +43,7 @@ import {
   userOnlineStatusRequest,
 } from '../api/client';
 import ReportSheet from '../components/ReportSheet';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import {
@@ -317,7 +317,8 @@ export default function ConversationScreen({ route, navigation }) {
     isGroup: paramIsGroup,
     title: paramTitle,
   } = route.params || {};
-  const { user, getSocket, socketConnected } = useAuth();
+  const { user } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const { colors, isDark } = useTheme();
   const [otherUserId, setOtherUserId] = useState(paramOtherUserId ?? null);
   const [isGroup, setIsGroup] = useState(!!paramIsGroup);

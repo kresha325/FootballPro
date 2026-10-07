@@ -8,7 +8,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { WebView } from 'react-native-webview';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { WEB_APP_URL } from '../config/constants';
 import {
   endVideoCallRequest,
@@ -40,7 +40,8 @@ function WebOutgoingFallback({ uri, injectedBefore, navigation }) {
 
 export default function OutgoingCallScreen({ route, navigation }) {
   const { targetUserId, audioOnly = false } = route.params || {};
-  const { token, user, getSocket, socketConnected } = useAuth();
+  const { token, user } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const [forceWeb, setForceWeb] = useState(false);
   const [phase, setPhase] = useState('boot'); // boot | ringing | connected | error
   const [callId, setCallId] = useState(null);

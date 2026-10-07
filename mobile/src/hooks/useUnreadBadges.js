@@ -20,6 +20,20 @@ let appStateSub = null;
 let pushSub = null;
 let bumpTimer = null;
 
+let lastUnreadDebug = '';
+
+function logUnreadDebug(reason) {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) return;
+  const line = `${listeners.size}|${pollId ? 1 : 0}|${socketBound ? 1 : 0}`;
+  if (line === lastUnreadDebug) return;
+  lastUnreadDebug = line;
+  console.log('[UNREAD]', reason, {
+    activeUnreadListeners: listeners.size,
+    activeUnreadPollers: pollId ? 1 : 0,
+    activeSocketListeners: socketBound ? 1 : 0,
+  });
+}
+
 function emit() {
   listeners.forEach((listener) => listener(snapshot));
 }
@@ -93,6 +107,7 @@ function ensureStarted(getSocket) {
     pushSub = DeviceEventEmitter.addListener('notifications-refresh', () => scheduleBump());
   }
   if (!lastRefreshAt) refreshUnread();
+  logUnreadDebug('started');
 }
 
 function stopIfIdle() {
@@ -122,6 +137,7 @@ function stopIfIdle() {
   }
   socketBound = null;
   socketBump = null;
+  logUnreadDebug('stopped');
 }
 
 export function useUnreadBadges(getSocket, socketConnected = false) {
@@ -131,9 +147,11 @@ export function useUnreadBadges(getSocket, socketConnected = false) {
     listeners.add(setCounts);
     setCounts(snapshot);
     ensureStarted(getSocket);
+    logUnreadDebug('subscribe');
     return () => {
       listeners.delete(setCounts);
       stopIfIdle();
+      logUnreadDebug('unsubscribe');
     };
   }, [getSocket]);
 
