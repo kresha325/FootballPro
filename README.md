@@ -255,7 +255,7 @@ Detailed documentation available in `/docs`:
 - **EMAIL_SETUP.md** - Gmail configuration and email templates
 - **STRIPE_SETUP.md** - Stripe integration guide
 - **VIDEO_CALLS.md** - WebRTC implementation details
-- **COMPLETION_SUMMARY.md** - Full feature summary
+- **docs/archive/COMPLETION_SUMMARY.md** - Early feature snapshot, kept for history
 
 ---
 

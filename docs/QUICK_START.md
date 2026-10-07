@@ -372,7 +372,7 @@ curl http://192.168.100.57:5098/api/posts \
 
 ## 📞 Need Help?
 
-1. Check `/docs/COMPLETION_SUMMARY.md` for feature details
+1. Check `/docs/archive/COMPLETION_SUMMARY.md` for the early feature snapshot
 2. Check `/docs/EMAIL_SETUP.md` for email issues
 3. Check `/docs/STRIPE_SETUP.md` for payment issues
 4. Check `/docs/VIDEO_CALLS.md` for video call issues
