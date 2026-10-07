@@ -28,8 +28,14 @@ function modulesFor(role, { hasProducts }) {
 
 async function personalDashboard(user, range) {
   const [products, sales] = await Promise.all([
-    Product.count({ where: { sellerId: user.id } }),
-    Order.count({ where: { sellerId: user.id } }),
+    Product.count({ where: { sellerId: user.id } }).catch((err) => {
+      console.error('analytics home products:', err?.message || err);
+      return 0;
+    }),
+    Order.count({ where: { sellerId: user.id } }).catch((err) => {
+      console.error('analytics home orders:', err?.message || err);
+      return 0;
+    }),
   ]);
   const modules = modulesFor(user.role, { hasProducts: products > 0 || sales > 0 });
   const socialAllowed = hasTier(user, 'basic');
@@ -56,30 +62,22 @@ async function personalDashboard(user, range) {
   };
 
   const jobs = [];
-  if (modules.includes('player')) {
-    jobs.push(playerAnalytics(user.id, range).then((value) => { payload.player = value; }));
-  }
-  if (modules.includes('social') && socialAllowed) {
-    jobs.push(socialTotals(user.id, range).then((value) => { payload.social = value; }));
-  }
-  if (modules.includes('video')) {
-    jobs.push(videoAnalytics(user.id, range).then((value) => { payload.video = value; }));
-  }
-  if (modules.includes('scouting')) {
-    jobs.push(scoutAnalytics(user.id, range).then((value) => { payload.scouting = value; }));
-  }
-  if (modules.includes('scoutingInterest')) {
-    jobs.push(playerScoutingInterest(user.id, range).then((value) => { payload.scoutingInterest = value; }));
-  }
-  if (modules.includes('club')) {
-    jobs.push(clubAnalytics(user.id, range).then((value) => { payload.club = value; }));
-  }
-  if (modules.includes('marketplace')) {
-    jobs.push(marketplaceAnalytics(user.id, range).then((value) => { payload.marketplace = value; }));
-  }
-  if (modules.includes('wallet')) {
-    jobs.push(walletAnalytics(user.id, range).then((value) => { payload.wallet = value; }));
-  }
+  const run = (name, loader) => jobs.push(
+    loader().then((value) => {
+      payload[name] = value;
+    }).catch((err) => {
+      console.error(`analytics home ${name}:`, err?.message || err);
+      payload[name] = null;
+    })
+  );
+  if (modules.includes('player')) run('player', () => playerAnalytics(user.id, range));
+  if (modules.includes('social') && socialAllowed) run('social', () => socialTotals(user.id, range));
+  if (modules.includes('video')) run('video', () => videoAnalytics(user.id, range));
+  if (modules.includes('scouting')) run('scouting', () => scoutAnalytics(user.id, range));
+  if (modules.includes('scoutingInterest')) run('scoutingInterest', () => playerScoutingInterest(user.id, range));
+  if (modules.includes('club')) run('club', () => clubAnalytics(user.id, range));
+  if (modules.includes('marketplace')) run('marketplace', () => marketplaceAnalytics(user.id, range));
+  if (modules.includes('wallet')) run('wallet', () => walletAnalytics(user.id, range));
   await Promise.all(jobs);
   return payload;
 }

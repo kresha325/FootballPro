@@ -101,6 +101,7 @@ async function clubAnalytics(clubId, filters = {}) {
     const season = filters.season || null;
     const participants = await TournamentParticipant.findAll({
       where: { userId: id },
+      attributes: ['id', 'userId', 'tournamentId', 'status'],
       include: [{ model: Tournament, attributes: ['id', 'name', 'season', 'lifecycle', 'status'], required: true }],
       limit: 8,
     });
