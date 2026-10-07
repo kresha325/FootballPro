@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +10,7 @@ import {
   View,
 } from '../../theme/nativeComponents';
 import { VideoPlayerModal, VideoPoster } from '../media/LazyVideo';
+import OptimizedImage from '../media/OptimizedImage';
 import {
   createCommentRequest,
   extractErrorMessage,
@@ -18,13 +19,119 @@ import {
   unlikePostRequest,
 } from '../../api/client';
 import PostSponsorStrip, { SponsoredLabel } from '../PostSponsorStrip';
+import { profileRowFrame } from './profileListFrame';
 
 function postSponsors(p) {
   const raw = p?.sponsors ?? p?.Sponsors;
   return Array.isArray(raw) ? raw : [];
 }
 
-export default function PublicProfilePostsTab({ posts = [], theme, hasMore = false, loadingMore = false, onLoadMore }) {
+const ProfilePostRow = React.memo(function ProfilePostRow({
+  post,
+  theme,
+  expanded,
+  comments,
+  loadingComments,
+  draft,
+  sending,
+  onLike,
+  onToggleComments,
+  onChangeDraft,
+  onSend,
+  onPlay,
+}) {
+  const sponsors = postSponsors(post);
+  const hasSponsors = sponsors.length > 0;
+  return (
+    <View
+      style={[
+        styles.postCard,
+        { backgroundColor: theme.card, borderColor: hasSponsors ? '#86efac' : theme.border },
+      ]}
+    >
+      {hasSponsors ? (
+        <View style={styles.sponsorBlock}>
+          <SponsoredLabel isDark={theme.isDark} />
+          <PostSponsorStrip sponsors={sponsors} isDark={theme.isDark} />
+        </View>
+      ) : null}
+      {post.content ? (
+        <Text style={[styles.postContent, { color: theme.text }]}>{post.content}</Text>
+      ) : null}
+      {post.imageUrl ? (
+        <OptimizedImage uri={post.imageUrl} style={styles.postMedia} width={600} contentFit="cover" />
+      ) : null}
+      {post.videoUrl ? (
+        <VideoPoster
+          style={styles.video}
+          onPress={() => onPlay(post.videoUrl)}
+          accessibilityLabel="Luaj videon e postimit"
+        />
+      ) : null}
+      <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
+        <TouchableOpacity
+          style={[styles.actionBtn, post.isLiked && styles.actionBtnLiked]}
+          onPress={() => onLike(post)}
+        >
+          <Text style={styles.actionEmoji}>👍</Text>
+          <Text style={[styles.actionMeta, { color: theme.text }]}>{post.likes || 0}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onToggleComments(post.id)}>
+          <Text style={styles.actionEmoji}>💬</Text>
+          <Text style={[styles.actionMeta, { color: theme.text }]}>{post.comments || 0}</Text>
+        </TouchableOpacity>
+        <Text style={[styles.date, { color: theme.muted }]}>
+          {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}
+        </Text>
+      </View>
+      {expanded ? (
+        <View style={[styles.commentsBox, { borderTopColor: theme.border }]}>
+          {loadingComments ? <ActivityIndicator color="#9A6B12" /> : null}
+          <View style={styles.commentInputRow}>
+            <TextInput
+              style={[styles.commentInput, { color: theme.text, borderColor: theme.border }]}
+              placeholder="Write a comment..."
+              placeholderTextColor={theme.muted}
+              value={draft}
+              onChangeText={(value) => onChangeDraft(post.id, value)}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, { marginLeft: 8 }, sending && { opacity: 0.6 }]}
+              onPress={() => onSend(post.id)}
+              disabled={!!sending}
+            >
+              <Text style={styles.sendBtnText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+          {(comments || []).map((c) => {
+            const u = c.User;
+            const name = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : 'User';
+            return (
+              <View key={String(c.id)} style={styles.commentRow}>
+                <Text style={[styles.commentAuthor, { color: theme.text }]}>{name}</Text>
+                <Text style={[styles.commentBody, { color: theme.muted }]}>{c.content}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+});
+
+export default function PublicProfilePostsTab({
+  posts = [],
+  theme,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
+  listHeader = null,
+  refreshControl,
+  pageStyle,
+  contentContainerStyle,
+  frame = null,
+  showEmpty = true,
+}) {
   const [localPosts, setLocalPosts] = useState(posts);
   const [expanded, setExpanded] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
@@ -37,22 +144,32 @@ export default function PublicProfilePostsTab({ posts = [], theme, hasMore = fal
     setLocalPosts(Array.isArray(posts) ? posts : []);
   }, [posts]);
 
-  const toggleExpand = async (postId) => {
-    setExpanded((prev) => ({ ...prev, [postId]: !prev[postId] }));
-    if (!commentsByPost[postId] && !expanded[postId]) {
-      setLoadingComments((l) => ({ ...l, [postId]: true }));
-      try {
-        const res = await postCommentsRequest(postId);
-        setCommentsByPost((c) => ({ ...c, [postId]: Array.isArray(res.data) ? res.data : [] }));
-      } catch (_e) {
-        setCommentsByPost((c) => ({ ...c, [postId]: [] }));
-      } finally {
-        setLoadingComments((l) => ({ ...l, [postId]: false }));
-      }
-    }
-  };
+  const expandedRef = useRef(expanded);
+  const commentsRef = useRef(commentsByPost);
+  const draftsRef = useRef(drafts);
+  expandedRef.current = expanded;
+  commentsRef.current = commentsByPost;
+  draftsRef.current = drafts;
 
-  const onLike = async (post) => {
+  const onToggleComments = useCallback(async (postId) => {
+    const opening = !expandedRef.current[postId];
+    setExpanded((prev) => ({ ...prev, [postId]: !prev[postId] }));
+    if (!opening || commentsRef.current[postId]) return;
+    setLoadingComments((loading) => ({ ...loading, [postId]: true }));
+    try {
+      const res = await postCommentsRequest(postId);
+      setCommentsByPost((comments) => ({
+        ...comments,
+        [postId]: Array.isArray(res.data) ? res.data : [],
+      }));
+    } catch (_err) {
+      setCommentsByPost((comments) => ({ ...comments, [postId]: [] }));
+    } finally {
+      setLoadingComments((loading) => ({ ...loading, [postId]: false }));
+    }
+  }, []);
+
+  const onLike = useCallback(async (post) => {
     const id = post.id;
     const was = !!post.isLiked;
     setLocalPosts((prev) =>
@@ -65,7 +182,7 @@ export default function PublicProfilePostsTab({ posts = [], theme, hasMore = fal
     try {
       if (was) await unlikePostRequest(id);
       else await likePostRequest(id);
-    } catch (err) {
+    } catch (_err) {
       setLocalPosts((prev) =>
         prev.map((p) =>
           p.id === id
@@ -74,143 +191,109 @@ export default function PublicProfilePostsTab({ posts = [], theme, hasMore = fal
         )
       );
     }
-  };
+  }, []);
 
-  const sendComment = async (postId) => {
-    const text = (drafts[postId] || '').trim();
+  const onChangeDraft = useCallback((postId, value) => {
+    setDrafts((current) => ({ ...current, [postId]: value }));
+  }, []);
+
+  const onSend = useCallback(async (postId) => {
+    const text = (draftsRef.current[postId] || '').trim();
     if (!text) return;
-    setSending((s) => ({ ...s, [postId]: true }));
+    setSending((current) => ({ ...current, [postId]: true }));
     try {
       await createCommentRequest(postId, text);
-      setDrafts((d) => ({ ...d, [postId]: '' }));
+      setDrafts((current) => ({ ...current, [postId]: '' }));
       const res = await postCommentsRequest(postId);
-      setCommentsByPost((c) => ({ ...c, [postId]: Array.isArray(res.data) ? res.data : [] }));
+      setCommentsByPost((current) => ({ ...current, [postId]: Array.isArray(res.data) ? res.data : [] }));
       setLocalPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, comments: (p.comments || 0) + 1 } : p))
       );
     } catch (err) {
       Alert.alert('Comment', extractErrorMessage(err, 'Could not post comment'));
     } finally {
-      setSending((s) => ({ ...s, [postId]: false }));
+      setSending((current) => ({ ...current, [postId]: false }));
     }
-  };
+  }, []);
 
-  if (!localPosts.length) {
-    return (
-      <View style={styles.emptyWrap}>
-        <Text style={[styles.empty, { color: theme.muted }]}>No posts yet</Text>
+  const onPlay = useCallback((uri) => setPlayingUri(uri), []);
+
+  const renderItem = useCallback(
+    ({ item }) => (
+      <View style={profileRowFrame(frame)}>
+        <ProfilePostRow
+          post={item}
+          theme={theme}
+          expanded={!!expanded[item.id]}
+          comments={commentsByPost[item.id]}
+          loadingComments={!!loadingComments[item.id]}
+          draft={drafts[item.id] || ''}
+          sending={!!sending[item.id]}
+          onLike={onLike}
+          onToggleComments={onToggleComments}
+          onChangeDraft={onChangeDraft}
+          onSend={onSend}
+          onPlay={onPlay}
+        />
       </View>
-    );
-  }
+    ),
+    [commentsByPost, drafts, expanded, frame, loadingComments, onChangeDraft, onLike, onPlay, onSend, onToggleComments, sending, theme]
+  );
 
-  return (
-    <View style={styles.list}>
-      {localPosts.map((post) => {
-        const sponsors = postSponsors(post);
-        const hasSponsors = sponsors.length > 0;
-        return (
-          <View
-            key={String(post.id)}
-            style={[
-              styles.postCard,
-              { backgroundColor: theme.card, borderColor: hasSponsors ? '#86efac' : theme.border },
-            ]}
-          >
-            {hasSponsors ? (
-              <View style={styles.sponsorBlock}>
-                <SponsoredLabel isDark={theme.isDark} />
-                <PostSponsorStrip sponsors={sponsors} isDark={theme.isDark} />
-              </View>
-            ) : null}
-            {post.content ? (
-              <Text style={[styles.postContent, { color: theme.text }]}>{post.content}</Text>
-            ) : null}
-            {post.imageUrl ? (
-              <Image source={{ uri: post.imageUrl }} style={styles.postMedia} resizeMode="cover" />
-            ) : null}
-            {post.videoUrl ? (
-              <VideoPoster
-                style={styles.video}
-                onPress={() => setPlayingUri(post.videoUrl)}
-                accessibilityLabel="Luaj videon e postimit"
-              />
-            ) : null}
-            <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
-              <TouchableOpacity
-                style={[styles.actionBtn, post.isLiked && styles.actionBtnLiked]}
-                onPress={() => onLike(post)}
-              >
-                <Text style={styles.actionEmoji}>👍</Text>
-                <Text style={[styles.actionMeta, { color: theme.text }]}>{post.likes || 0}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => toggleExpand(post.id)}>
-                <Text style={styles.actionEmoji}>💬</Text>
-                <Text style={[styles.actionMeta, { color: theme.text }]}>{post.comments || 0}</Text>
-              </TouchableOpacity>
-              <Text style={[styles.date, { color: theme.muted }]}>
-                {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}
-              </Text>
-            </View>
-            {expanded[post.id] ? (
-              <View style={[styles.commentsBox, { borderTopColor: theme.border }]}>
-                {loadingComments[post.id] ? <ActivityIndicator color="#9A6B12" /> : null}
-                <View style={styles.commentInputRow}>
-                  <TextInput
-                    style={[styles.commentInput, { color: theme.text, borderColor: theme.border }]}
-                    placeholder="Write a comment..."
-                    placeholderTextColor={theme.muted}
-                    value={drafts[post.id] || ''}
-                    onChangeText={(v) => setDrafts((d) => ({ ...d, [post.id]: v }))}
-                  />
-                  <TouchableOpacity
-                    style={[styles.sendBtn, { marginLeft: 8 }, sending[post.id] && { opacity: 0.6 }]}
-                    onPress={() => sendComment(post.id)}
-                    disabled={!!sending[post.id]}
-                  >
-                    <Text style={styles.sendBtnText}>Send</Text>
-                  </TouchableOpacity>
-                </View>
-                {(commentsByPost[post.id] || []).map((c) => {
-                  const u = c.User;
-                  const name = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : 'User';
-                  return (
-                    <View key={String(c.id)} style={styles.commentRow}>
-                      <Text style={[styles.commentAuthor, { color: theme.text }]}>{name}</Text>
-                      <Text style={[styles.commentBody, { color: theme.muted }]}>{c.content}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
+  const footer = (
+    <View style={profileRowFrame(frame, 'end')}>
       {hasMore ? (
         <TouchableOpacity
           onPress={onLoadMore}
           disabled={loadingMore}
-          style={{ alignItems: 'center', paddingVertical: 14 }}
+          style={styles.moreBtn}
           accessibilityRole="button"
           accessibilityLabel="Ngarko postime të tjera"
         >
-          {loadingMore ? <ActivityIndicator color="#9A6B12" /> : <Text style={{ color: '#9A6B12', fontWeight: '700' }}>Më shumë</Text>}
+          {loadingMore ? <ActivityIndicator color="#9A6B12" /> : <Text style={styles.moreText}>Më shumë</Text>}
         </TouchableOpacity>
       ) : null}
-      <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
     </View>
+  );
+
+  return (
+    <>
+      <FlatList
+        style={pageStyle}
+        data={localPosts}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={frame || hasMore ? footer : null}
+        ListEmptyComponent={
+          showEmpty ? (
+            <View style={profileRowFrame(frame)}>
+              <View style={styles.emptyWrap}>
+                <Text style={[styles.empty, { color: theme.muted }]}>No posts yet</Text>
+              </View>
+            </View>
+          ) : null
+        }
+        refreshControl={refreshControl}
+        contentContainerStyle={contentContainerStyle}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={7}
+        keyboardShouldPersistTaps="handled"
+      />
+      <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {},
   emptyWrap: { paddingVertical: 32, alignItems: 'center' },
   empty: { fontSize: 15 },
   postCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 12 },
   sponsorBlock: { marginBottom: 8 },
   postContent: { fontSize: 15, marginBottom: 8 },
   postMedia: { width: '100%', height: 200, borderRadius: 8, marginTop: 4 },
-  videoWrap: { marginTop: 8, borderRadius: 8, overflow: 'hidden', backgroundColor: '#000' },
-  video: { width: '100%', height: 220 },
+  video: { width: '100%', height: 220, marginTop: 8, borderRadius: 8, overflow: 'hidden', backgroundColor: '#000' },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,4 +328,6 @@ const styles = StyleSheet.create({
   commentRow: { marginBottom: 10 },
   commentAuthor: { fontWeight: '700', fontSize: 13 },
   commentBody: { fontSize: 13, marginTop: 2 },
+  moreBtn: { alignItems: 'center', paddingVertical: 14 },
+  moreText: { color: '#9A6B12', fontWeight: '700' },
 });

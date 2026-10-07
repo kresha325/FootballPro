@@ -36,6 +36,8 @@ import PostSponsorStrip, { SponsoredLabel } from '../components/PostSponsorStrip
 import SharePostPanel from '../components/SharePostPanel';
 import { absoluteBackendUrl } from '../config/constants';
 import { useAuth } from '../context/AuthContext';
+import { readFeedPagerSession } from '../navigation/feedPagerStore';
+import { useRenderLog } from '../utils/perfLog';
 
 function normalizePostSponsors(p) {
   if (!p || typeof p !== 'object') return p;
@@ -381,6 +383,7 @@ function FeedPagerPage({
 }
 
 export default function FeedPostPagerScreen() {
+  useRenderLog('FeedPostPagerScreen');
   const { user } = useAuth();
   const route = useRoute();
   const navigation = useNavigation();
@@ -392,12 +395,15 @@ export default function FeedPostPagerScreen() {
     posts: routePosts = [],
     initialIndex = 0,
     initialPostId = null,
-    onPostUpdated,
+    onPostUpdated: routeOnPostUpdated,
   } = route.params || {};
+  const pagerSession = readFeedPagerSession();
+  const sourcePosts = Array.isArray(routePosts) && routePosts.length ? routePosts : pagerSession.posts;
+  const onPostUpdated = routeOnPostUpdated || pagerSession.onUpdated;
 
   const resolvedPosts = useMemo(
-    () => (Array.isArray(routePosts) ? routePosts : []).map((p) => normalizePostSponsors(p)),
-    [routePosts]
+    () => (Array.isArray(sourcePosts) ? sourcePosts : []).map((p) => normalizePostSponsors(p)),
+    [sourcePosts]
   );
 
   const resolveStartIndex = useCallback(

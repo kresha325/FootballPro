@@ -275,6 +275,7 @@ export const userOnlineStatusRequest = (userId) => api.get(`/api/users/${userId}
 
 export const notificationsRequest = (params = {}) => api.get('/api/notifications', { params });
 export const unreadNotificationsCountRequest = () => api.get('/api/notifications/unread-count');
+export const tournamentBadgeRequest = () => api.get('/api/notifications/tournament-badge');
 export const markNotificationReadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/read`);
 export const markNotificationUnreadRequest = (notificationId) => api.put(`/api/notifications/${notificationId}/unread`);
 export const markAllNotificationsReadRequest = () => api.put('/api/notifications/mark-all-read');

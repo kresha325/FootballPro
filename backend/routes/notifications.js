@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const {
   getNotifications,
   getUnreadCount,
+  getTournamentBadge,
   markAsRead,
   markAsUnread,
   markAllAsRead,
@@ -14,6 +15,7 @@ const {
 
 router.get('/', auth, getNotifications);
 router.get('/unread-count', auth, getUnreadCount);
+router.get('/tournament-badge', auth, getTournamentBadge);
 router.get('/preferences', auth, getPreferences);
 router.put('/preferences', auth, updatePreferences);
 

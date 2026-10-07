@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   addCartItemRequest,
@@ -11,6 +11,30 @@ import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'footballpro_marketplace_cart_v1';
 const CartContext = createContext(null);
+
+let cartSnapshot = { items: [], serverTotal: null, ready: false };
+const cartSubscribers = new Set();
+
+function subscribeCart(listener) {
+  cartSubscribers.add(listener);
+  return () => cartSubscribers.delete(listener);
+}
+
+function readCart() {
+  return cartSnapshot;
+}
+
+function publishCart(next) {
+  if (
+    next.items === cartSnapshot.items &&
+    next.serverTotal === cartSnapshot.serverTotal &&
+    next.ready === cartSnapshot.ready
+  ) {
+    return;
+  }
+  cartSnapshot = next;
+  cartSubscribers.forEach((listener) => listener());
+}
 
 function mapServer(data) {
   const items = Array.isArray(data?.items) ? data.items.map((item) => ({
@@ -27,14 +51,10 @@ function mapServer(data) {
 
 export function CartProvider({ children }) {
   const { token } = useAuth();
-  const [items, setItems] = useState([]);
-  const [serverTotal, setServerTotal] = useState(null);
-  const [ready, setReady] = useState(false);
 
   const apply = useCallback(async (data) => {
     const mapped = mapServer(data);
-    setItems(mapped.items);
-    setServerTotal(mapped.total);
+    publishCart({ items: mapped.items, serverTotal: mapped.total, ready: true });
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mapped.items));
     } catch (_e) {
@@ -54,13 +74,13 @@ export function CartProvider({ children }) {
           const raw = await AsyncStorage.getItem(STORAGE_KEY);
           if (!cancelled && raw) {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) setItems(parsed);
+            if (Array.isArray(parsed)) publishCart({ ...readCart(), items: parsed });
           }
         } catch (_err) {
           /* ignore */
         }
       } finally {
-        if (!cancelled) setReady(true);
+        if (!cancelled) publishCart({ ...readCart(), ready: true });
       }
     })();
     return () => { cancelled = true; };
@@ -100,31 +120,31 @@ export function CartProvider({ children }) {
       const res = await clearCartRequest();
       await apply(res.data);
     } catch (_e) {
-      setItems([]);
-      setServerTotal(null);
+      publishCart({ items: [], serverTotal: null, ready: true });
       AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
     }
   }, [apply]);
 
-  const totalPieces = useMemo(() => items.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0), [items]);
-  const orderPayload = useMemo(
-    () => items.map((item) => ({ productId: Number(item.productId), quantity: parseInt(item.quantity, 10) || 1 })),
-    [items]
+  const value = useMemo(
+    () => ({ addItem, setLineQuantity, removeItem, clearCart }),
+    [addItem, setLineQuantity, removeItem, clearCart]
   );
-  const subtotalJonCoin = useMemo(() => {
-    if (serverTotal != null) return Number(serverTotal) || 0;
-    return items.reduce((sum, item) => sum + (Number(item.price) || 0) * (parseInt(item.quantity, 10) || 0), 0);
-  }, [items, serverTotal]);
-
-  const value = useMemo(() => ({
-    items, ready, addItem, setLineQuantity, removeItem, clearCart, totalPieces, orderPayload, subtotalJonCoin,
-  }), [items, ready, addItem, setLineQuantity, removeItem, clearCart, totalPieces, orderPayload, subtotalJonCoin]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart outside CartProvider');
-  return ctx;
+  const actions = useContext(CartContext);
+  const snapshot = useSyncExternalStore(subscribeCart, readCart, readCart);
+  if (!actions) throw new Error('useCart outside CartProvider');
+  const { items, serverTotal, ready } = snapshot;
+  const totalPieces = items.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0);
+  const orderPayload = items.map((item) => ({
+    productId: Number(item.productId),
+    quantity: parseInt(item.quantity, 10) || 1,
+  }));
+  const subtotalJonCoin = serverTotal != null
+    ? Number(serverTotal) || 0
+    : items.reduce((sum, item) => sum + (Number(item.price) || 0) * (parseInt(item.quantity, 10) || 0), 0);
+  return { ...actions, items, ready, totalPieces, orderPayload, subtotalJonCoin };
 }

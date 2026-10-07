@@ -2,40 +2,26 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/AuthContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 
 export default function NotificationHeaderButton() {
   const navigation = useNavigation();
-  const { getSocket, socketConnected } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const { notificationsCount: count } = useUnreadBadges(getSocket, socketConnected);
 
   const openNotifications = () => {
+    const started = Date.now();
     const state = navigation.getState?.();
     const names = state?.routeNames;
-    // Already inside More stack — push with MoreHome underneath for a reliable back target.
-    if (Array.isArray(names) && names.includes('Notifications') && names.includes('MoreHome')) {
-      navigation.navigate({
-        name: 'Notifications',
-        // Keep stack: MoreHome → Notifications (so back / More tab return to burger menu)
-      });
-      return;
+    if (Array.isArray(names) && names.includes('Notifications')) {
+      navigation.navigate('Notifications');
+    } else {
+      const parent = navigation.getParent?.();
+      const nav = parent?.navigate ? parent : navigation;
+      nav.navigate('More', { screen: 'Notifications' });
     }
-    const parent = navigation.getParent?.();
-    const openInMore = (nav) => {
-      // Explicit stack so opening from Feed/Messages never leaves Notifications without back.
-      nav.navigate('More', {
-        state: {
-          routes: [{ name: 'MoreHome' }, { name: 'Notifications' }],
-          index: 1,
-        },
-      });
-    };
-    if (parent?.navigate) {
-      openInMore(parent);
-      return;
-    }
-    openInMore(navigation);
+    if (__DEV__) console.log(`[NAV PERF] Notifications: ${Date.now() - started}ms`);
   };
 
   return (

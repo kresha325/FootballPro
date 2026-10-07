@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import io from 'socket.io-client';
@@ -17,6 +17,49 @@ import { showXpNotification } from '../utils/xpNotifications';
 const AuthContext = createContext(null);
 const ONBOARDING_PENDING_KEY = 'onboarding_pending';
 
+let socketConnectedFlag = false;
+const socketSubscribers = new Set();
+let getSocketImpl = () => null;
+
+function subscribeSocket(listener) {
+  socketSubscribers.add(listener);
+  return () => socketSubscribers.delete(listener);
+}
+
+function readSocketConnected() {
+  return socketConnectedFlag;
+}
+
+function setSocketConnected(next) {
+  const value = typeof next === 'function' ? next(socketConnectedFlag) : next;
+  if (value === socketConnectedFlag) return;
+  socketConnectedFlag = value;
+  socketSubscribers.forEach((listener) => listener());
+}
+
+const socketStats = { active: 0, connects: 0, disconnects: 0 };
+
+function logSocket(event) {
+  if (!__DEV__) return;
+  console.log(
+    `[SOCKET] ${event} active=${socketStats.active} connects=${socketStats.connects} disconnects=${socketStats.disconnects}`
+  );
+}
+
+function releaseSocket(socket) {
+  if (!socket) return;
+  try {
+    socket.io?.reconnection(false);
+  } catch (_e) {
+    // ignore
+  }
+  socket.removeAllListeners();
+  socket.disconnect();
+  socketStats.active = Math.max(0, socketStats.active - 1);
+  socketStats.disconnects += 1;
+  logSocket('released');
+}
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -24,20 +67,30 @@ export const AuthProvider = ({ children }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingOnboarding, setPendingOnboarding] = useState(false);
   const [requiresParentVerification, setRequiresParentVerification] = useState(false);
-  const [socketConnected, setSocketConnected] = useState(false);
   const socketRef = useRef(null);
   const loggingOutRef = useRef(false);
 
   const disconnectSocket = () => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-    setSocketConnected(false);
+    const existing = socketRef.current;
+    socketRef.current = null;
+    if (existing) releaseSocket(existing);
+    setSocketConnected((current) => (current ? false : current));
   };
 
   const connectSocket = (authToken, userData) => {
-    disconnectSocket();
+    const existing = socketRef.current;
+    const sameAuth =
+      existing &&
+      String(existing.auth?.token || '') === String(authToken || '') &&
+      String(existing.auth?.userId || '') === String(userData?.id || '');
+    if (sameAuth) {
+      if (!existing.connected) existing.connect();
+      return;
+    }
+    if (existing) {
+      socketRef.current = null;
+      releaseSocket(existing);
+    }
 
     const socket = io(BACKEND_URL, {
       auth: {
@@ -52,17 +105,29 @@ export const AuthProvider = ({ children }) => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000,
     });
+    socketStats.active += 1;
+    logSocket('created');
 
     socket.on('connect', () => {
-      setSocketConnected(true);
+      if (socketRef.current !== socket) return;
+      socketStats.connects += 1;
+      logSocket('connect');
+      setSocketConnected((current) => (current ? current : true));
       socket.emit('join');
     });
 
     socket.on('disconnect', () => {
-      setSocketConnected(false);
+      if (socketRef.current !== socket) return;
+      socketStats.disconnects += 1;
+      logSocket('disconnect');
+      setSocketConnected((current) => (current ? false : current));
     });
 
+    let lastSocketWarn = 0;
     socket.on('connect_error', (err) => {
+      const now = Date.now();
+      if (now - lastSocketWarn < 10000) return;
+      lastSocketWarn = now;
       console.warn('Socket connection error:', err.message);
     });
 
@@ -75,6 +140,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getSocket = useCallback(() => socketRef.current, []);
+  getSocketImpl = getSocket;
 
   const logout = async () => {
     if (loggingOutRef.current) return;
@@ -346,8 +412,6 @@ export const AuthProvider = ({ children }) => {
     () => ({
       token,
       user,
-      getSocket,
-      socketConnected,
       isBootstrapping,
       isSubmitting,
       login,
@@ -373,7 +437,7 @@ export const AuthProvider = ({ children }) => {
         return me;
       },
     }),
-    [token, user, getSocket, socketConnected, isBootstrapping, isSubmitting, pendingOnboarding, requiresParentVerification]
+    [token, user, isBootstrapping, isSubmitting, pendingOnboarding, requiresParentVerification]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -385,4 +449,9 @@ export const useAuth = () => {
     throw new Error('useAuth must be used inside AuthProvider');
   }
   return ctx;
+};
+
+export const useSocket = () => {
+  const socketConnected = useSyncExternalStore(subscribeSocket, readSocketConnected, readSocketConnected);
+  return { getSocket: getSocketImpl, socketConnected };
 };

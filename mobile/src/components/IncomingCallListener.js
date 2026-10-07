@@ -7,13 +7,14 @@ import {
   View,
   Vibration,
 } from '../theme/nativeComponents';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { navigateRoot } from '../navigation/navigationRef';
 import { setPendingIncomingCall } from '../utils/incomingCallPayload';
 import { profileByIdRequest } from '../api/client';
 
 export default function IncomingCallListener() {
-  const { user, getSocket, socketConnected } = useAuth();
+  const { user } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const [incoming, setIncoming] = useState(null);
   const vibrateRef = useRef(null);
 

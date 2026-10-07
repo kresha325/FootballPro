@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
@@ -59,7 +59,7 @@ import LiveViewerScreen from '../screens/LiveViewerScreen';
 import LegalScreen from '../screens/LegalScreen';
 import StreamsScreen from '../screens/StreamsScreen';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { APP_BRAND_NAME } from '../config/branding';
 import { absoluteBackendUrl } from '../config/constants';
@@ -126,18 +126,32 @@ function tabProfilePhotoUri(user, imgErr) {
   return absoluteBackendUrl(s);
 }
 
-function useThemedStackOptions(extra = {}) {
+function HeaderNotifications() {
+  return <NotificationHeaderButton />;
+}
+
+function HeaderNone() {
+  return null;
+}
+
+const screenWithNotifications = { title: APP_BRAND_NAME, headerRight: HeaderNotifications };
+
+function useThemedStackOptions(headerRight) {
   const { colors, isDark } = useTheme();
-  return {
-    headerTitle: APP_BRAND_NAME,
-    headerTitleAlign: 'center',
-    headerStyle: { backgroundColor: colors.header },
-    headerTintColor: colors.text,
-    headerTitleStyle: { color: colors.text, fontWeight: '700' },
-    headerShadowVisible: !isDark,
-    contentStyle: { backgroundColor: colors.bg },
-    ...extra,
-  };
+  return useMemo(
+    () => ({
+      headerTitle: APP_BRAND_NAME,
+      headerTitleAlign: 'center',
+      headerStyle: { backgroundColor: colors.header },
+      headerTintColor: colors.text,
+      headerTitleStyle: { color: colors.text, fontWeight: '700' },
+      headerShadowVisible: !isDark,
+      contentStyle: { backgroundColor: colors.bg },
+      freezeOnBlur: true,
+      ...(headerRight ? { headerRight } : null),
+    }),
+    [colors, isDark, headerRight]
+  );
 }
 
 function ProfileTabBarIcon({ user, focused, size = 26 }) {
@@ -224,9 +238,7 @@ const profileTabStyles = StyleSheet.create({
 });
 
 function MessagingNavigator() {
-  const themed = useThemedStackOptions({
-    headerRight: () => <NotificationHeaderButton />,
-  });
+  const themed = useThemedStackOptions(HeaderNotifications);
   return (
     <MessagingStack.Navigator screenOptions={themed}>
       <MessagingStack.Screen name="MessagingHome" component={MessagingScreen} options={{ title: APP_BRAND_NAME }} />
@@ -236,7 +248,7 @@ function MessagingNavigator() {
         options={{
           title: 'Bisedë',
           headerTitle: 'Bisedë',
-          headerRight: () => null,
+          headerRight: HeaderNone,
         }}
       />
       <MessagingStack.Screen
@@ -262,12 +274,12 @@ function FeedNavigator() {
       <FeedStack.Screen
         name="CreatePost"
         component={CreatePostScreen}
-        options={{ title: APP_BRAND_NAME, headerRight: () => <NotificationHeaderButton /> }}
+        options={screenWithNotifications}
       />
       <FeedStack.Screen
         name="Gallery"
         component={GalleryScreen}
-        options={{ title: APP_BRAND_NAME, headerRight: () => <NotificationHeaderButton /> }}
+        options={screenWithNotifications}
       />
       <FeedStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
       <FeedStack.Screen name="PublicCv" component={PublicCvScreen} options={{ title: 'CV dixhitale' }} />
@@ -277,13 +289,15 @@ function FeedNavigator() {
 
 function MarketplaceNavigator() {
   const themed = useThemedStackOptions();
+  const screenOptions = useCallback(
+    ({ route }) => ({
+      ...themed,
+      ...(route.name !== 'MarketplaceHome' ? { headerRight: HeaderNotifications } : null),
+    }),
+    [themed]
+  );
   return (
-    <MarketplaceStack.Navigator
-      screenOptions={({ route }) => ({
-        ...themed,
-        ...(route.name !== 'MarketplaceHome' ? { headerRight: () => <NotificationHeaderButton /> } : {}),
-      })}
-    >
+    <MarketplaceStack.Navigator screenOptions={screenOptions}>
       <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Tregu' }} />
       <MarketplaceStack.Screen
         name="CreateProduct"
@@ -346,9 +360,7 @@ function ProfileNavigator() {
 }
 
 function MoreNavigator() {
-  const themed = useThemedStackOptions({
-    headerRight: () => <NotificationHeaderButton />,
-  });
+  const themed = useThemedStackOptions(HeaderNotifications);
   return (
     <MoreStack.Navigator screenOptions={themed}>
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
@@ -394,99 +406,111 @@ function MoreNavigator() {
   );
 }
 
-function AppTabs() {
-  const { getSocket, socketConnected } = useAuth();
+const TAB_ICONS = {
+  Feed: 'home-outline',
+  Marketplace: 'cart-outline',
+  Messages: 'chatbubble-ellipses-outline',
+  More: 'grid-outline',
+};
+
+const feedTabOptions = { headerShown: false, tabBarLabel: 'Lajmet' };
+const marketplaceTabOptions = { headerShown: false, tabBarLabel: 'Tregu' };
+const messagesTabOptions = { headerShown: false, tabBarLabel: 'Bisedat' };
+const moreTabOptions = { headerShown: false };
+
+const profileTabOptions = {
+  headerShown: false,
+  tabBarShowLabel: false,
+  tabBarAccessibilityLabel: 'Me',
+  tabBarIcon: ({ focused, size }) => <ProfileTabBarIconConnected focused={focused} size={size} />,
+};
+
+function profileTabListeners({ navigation }) {
+  return {
+    tabPress: (e) => {
+      const state = navigation.getState();
+      const profileRoute = state?.routes?.find((r) => r.name === 'Profile');
+      const nestedIndex = profileRoute?.state?.index ?? 0;
+      if (nestedIndex > 0) {
+        e.preventDefault();
+        navigation.navigate('Profile', { screen: 'MyProfile' });
+      }
+    },
+  };
+}
+
+function moreTabListeners({ navigation }) {
+  return {
+    tabPress: (e) => {
+      const state = navigation.getState();
+      const moreRoute = state?.routes?.find((r) => r.name === 'More');
+      const nestedIndex = moreRoute?.state?.index ?? 0;
+      if (nestedIndex > 0) {
+        e.preventDefault();
+        navigation.navigate('More', { screen: 'MoreHome' });
+      }
+    },
+  };
+}
+
+function BadgeAwareTabBar(props) {
+  const { getSocket, socketConnected } = useSocket();
+  const { notificationsCount, messagesCount } = useUnreadBadges(getSocket, socketConnected);
   const { totalPieces } = useCart();
+  const descriptors = useMemo(() => {
+    const next = {};
+    for (const route of props.state.routes) {
+      const desc = props.descriptors[route.key];
+      let tabBarBadge;
+      if (route.name === 'Messages') tabBarBadge = formatBadge(messagesCount);
+      else if (route.name === 'More') tabBarBadge = formatBadge(notificationsCount);
+      else if (route.name === 'Marketplace') tabBarBadge = formatBadge(totalPieces);
+      if (desc.options.tabBarBadge === tabBarBadge) next[route.key] = desc;
+      else next[route.key] = { ...desc, options: { ...desc.options, tabBarBadge } };
+    }
+    return next;
+  }, [props.state.routes, props.descriptors, notificationsCount, messagesCount, totalPieces]);
+  return <BottomTabBar {...props} descriptors={descriptors} />;
+}
+
+function AppTabs() {
   const { colors, isDark } = useTheme();
-  const { notificationsCount, messagesCount } = useUnreadBadges(
-    getSocket,
-    socketConnected
+  const screenOptions = useCallback(
+    ({ route }) => ({
+      headerTitle: APP_BRAND_NAME,
+      headerTitleAlign: 'center',
+      headerStyle: { backgroundColor: colors.header },
+      headerTintColor: colors.text,
+      headerTitleStyle: { color: colors.text, fontWeight: '700' },
+      headerShadowVisible: !isDark,
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.muted,
+      tabBarStyle: {
+        backgroundColor: colors.tabBar,
+        borderTopColor: colors.tabBarBorder,
+      },
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      tabBarHideOnKeyboard: true,
+      freezeOnBlur: true,
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name={TAB_ICONS[route.name] || 'ellipse-outline'} size={size} color={color} />
+      ),
+    }),
+    [colors, isDark]
   );
 
   return (
-    <Tabs.Navigator
-        screenOptions={({ route }) => ({
-          headerTitle: APP_BRAND_NAME,
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: colors.header },
-          headerTintColor: colors.text,
-          headerTitleStyle: { color: colors.text, fontWeight: '700' },
-          headerShadowVisible: !isDark,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.muted,
-          tabBarStyle: {
-            backgroundColor: colors.tabBar,
-            borderTopColor: colors.tabBarBorder,
-          },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-          tabBarHideOnKeyboard: true,
-          tabBarIcon: ({ color, size }) => {
-            const iconMap = {
-              Feed: 'home-outline',
-              Marketplace: 'cart-outline',
-              Messages: 'chatbubble-ellipses-outline',
-              More: 'grid-outline',
-            };
-            const iconName = iconMap[route.name] || 'ellipse-outline';
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-        })}
-      >
-      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ headerShown: false, tabBarLabel: 'Lajmet' }} />
-      <Tabs.Screen
-        name="Marketplace"
-        component={MarketplaceNavigator}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Tregu',
-          tabBarBadge: formatBadge(totalPieces),
-        }}
-      />
+    <Tabs.Navigator screenOptions={screenOptions} tabBar={BadgeAwareTabBar}>
+      <Tabs.Screen name="Feed" component={FeedNavigator} options={feedTabOptions} />
+      <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={marketplaceTabOptions} />
       <Tabs.Screen
         name="Profile"
         component={ProfileNavigator}
-        options={{
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarAccessibilityLabel: 'Me',
-          tabBarIcon: ({ focused, size }) => <ProfileTabBarIconConnected focused={focused} size={size} />,
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('Profile', { screen: 'MyProfile' });
-          },
-        })}
+        options={profileTabOptions}
+        listeners={profileTabListeners}
       />
-      <Tabs.Screen
-        name="Messages"
-        component={MessagingNavigator}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Bisedat',
-          tabBarBadge: formatBadge(messagesCount),
-        }}
-      />
-      <Tabs.Screen
-        name="More"
-        component={MoreNavigator}
-        options={{
-          headerShown: false,
-          tabBarBadge: formatBadge(notificationsCount),
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            const state = navigation.getState();
-            const moreRoute = state?.routes?.find((r) => r.name === 'More');
-            const nestedIndex = moreRoute?.state?.index ?? 0;
-            // Second tap / when nested (e.g. Notifications) → return to burger menu
-            if (nestedIndex > 0) {
-              e.preventDefault();
-              navigation.navigate('More', { screen: 'MoreHome' });
-            }
-          },
-        })}
-      />
+      <Tabs.Screen name="Messages" component={MessagingNavigator} options={messagesTabOptions} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={moreTabOptions} listeners={moreTabListeners} />
     </Tabs.Navigator>
   );
 }
@@ -530,6 +554,28 @@ export default function AppNavigator() {
     };
   }, [isDark, colors]);
 
+  const stackScreenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      freezeOnBlur: true,
+      headerStyle: { backgroundColor: colors.header },
+      headerTintColor: colors.text,
+      headerTitleStyle: { color: colors.text },
+      contentStyle: { backgroundColor: colors.bg },
+    }),
+    [colors]
+  );
+
+  const lastNavAt = useRef(0);
+  const onNavStateChange = useCallback(() => {
+    if (!__DEV__) return;
+    const now = Date.now();
+    const route = navigationRef.getCurrentRoute?.();
+    const gap = lastNavAt.current ? now - lastNavAt.current : 0;
+    lastNavAt.current = now;
+    console.log(`[NAV PERF] ${route?.name || '?'} stateGap=${gap}ms`);
+  }, []);
+
   if (isBootstrapping || !welcomeReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
@@ -540,16 +586,14 @@ export default function AppNavigator() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <NavigationContainer ref={navigationRef} linking={linking} theme={navTheme} style={{ flex: 1 }}>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-            headerStyle: { backgroundColor: colors.header },
-            headerTintColor: colors.text,
-            headerTitleStyle: { color: colors.text },
-            contentStyle: { backgroundColor: colors.bg },
-          }}
-        >
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        theme={navTheme}
+        style={{ flex: 1 }}
+        onStateChange={onNavStateChange}
+      >
+        <Stack.Navigator screenOptions={stackScreenOptions}>
           {!token ? (
             showWelcome ? (
               <Stack.Screen name="WelcomeOnboarding">

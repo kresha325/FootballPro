@@ -1,7 +1,13 @@
 import 'fast-text-encoding';
 import 'react-native-gesture-handler';
+import { enableFreeze } from 'react-native-screens';
 import { registerRootComponent } from 'expo';
 import { ensureLiveKitNative } from './src/livekit/register';
+
+// Blurred screens stop re-rendering. Without this, every tab visit leaves another
+// heavy screen in the tree and later taps get slower. react-native-screens
+// leaves this off unless it is turned on before the first screen renders.
+enableFreeze(true);
 
 // Hermes may lack WeakRef / FinalizationRegistry — livekit-client needs them.
 if (typeof global.WeakRef === 'undefined') {

@@ -12,7 +12,7 @@ import {
   markNotificationReadRequest,
   notificationsRequest,
 } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/AuthContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { getNotificationIcon, navigateFromNotification } from '../utils/navigateFromNotification';
 
@@ -48,7 +48,7 @@ function NotificationRow({ item, onPress, onDelete, deleting }) {
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
-  const { getSocket, socketConnected } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const { notificationsCount, refresh: refreshBadges } = useUnreadBadges(getSocket, socketConnected);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);

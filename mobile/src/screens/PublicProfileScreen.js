@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { InteractionManager } from 'react-native';
 import {
   ActivityIndicator,
   Alert,
-  Image,
-  ImageBackground,
   Linking,
   Modal,
   Pressable,
@@ -70,10 +69,35 @@ import { useAuth } from '../context/AuthContext';
 import { openTournamentDetail, openUserProfile } from '../utils/openUserProfile';
 import { APP_BRAND_NAME } from '../config/branding';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
-import { perfStart } from '../utils/perfLog';
+import { perfStart, useRenderLog } from '../utils/perfLog';
+import OptimizedImage from '../components/media/OptimizedImage';
 
 const COVER_HEIGHT = 168;
 const AVATAR_SIZE = 96;
+
+function ProfileChip({ icon, imageUri, onPress, children, theme, accent }) {
+  if (!children) return null;
+  const body = (
+    <View style={[styles.chip, { backgroundColor: theme.chipBg, borderColor: accent, borderWidth: 1 }]}>
+      {imageUri ? (
+        <OptimizedImage uri={imageUri} style={styles.chipLogo} width={120} contentFit="cover" />
+      ) : icon ? (
+        <Ionicons name={icon} size={14} color={theme.chipText} style={{ marginRight: 4 }} />
+      ) : null}
+      <Text style={[styles.chipText, { color: theme.chipText }]} numberOfLines={2}>
+        {children}
+      </Text>
+    </View>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.75}>
+        {body}
+      </TouchableOpacity>
+    );
+  }
+  return body;
+}
 
 function roleLabel(role) {
   const r = String(role || '').toLowerCase();
@@ -83,6 +107,7 @@ function roleLabel(role) {
 }
 
 export default function PublicProfileScreen({ route, navigation }) {
+  useRenderLog('PublicProfileScreen');
   const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user: me, logout } = useAuth();
@@ -119,6 +144,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const requestGen = useRef(0);
   const coreAbort = useRef(null);
   const appliedReload = useRef(0);
+  const overviewDeferUsed = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [following, setFollowing] = useState(false);
@@ -177,16 +203,22 @@ export default function PublicProfileScreen({ route, navigation }) {
     return publicProfileName(profile) || 'Përdorues';
   }, [profile]);
 
+  const profileRef = useRef(profile);
+  const logoutRef = useRef(logout);
+  const headerReady = !!profile;
+  profileRef.current = profile;
+  logoutRef.current = logout;
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: ownProfileRoot && !profile ? 'Profili im' : displayName,
-      headerTitle: ownProfileRoot && !profile ? 'Profili im' : displayName,
-      headerRight: profile && isSelf
+      title: ownProfileRoot && !headerReady ? 'Profili im' : displayName,
+      headerTitle: ownProfileRoot && !headerReady ? 'Profili im' : displayName,
+      headerRight: headerReady && isSelf
         ? () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
               <NotificationHeaderButton />
               <TouchableOpacity
-                onPress={() => promptShareProfileCv(profile, { navigation })}
+                onPress={() => promptShareProfileCv(profileRef.current, { navigation })}
                 style={{ paddingHorizontal: 8 }}
                 accessibilityLabel="CV dixhitale"
               >
@@ -196,7 +228,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                 onPress={() => {
                   Alert.alert('Dil', 'Dal nga llogaria?', [
                     { text: 'Anulo', style: 'cancel' },
-                    { text: 'Dil', style: 'destructive', onPress: () => logout() },
+                    { text: 'Dil', style: 'destructive', onPress: () => logoutRef.current() },
                   ]);
                 }}
                 style={{ paddingHorizontal: 6 }}
@@ -253,12 +285,11 @@ export default function PublicProfileScreen({ route, navigation }) {
     navigation,
     colors.primary,
     ownProfileRoot,
-    profile,
+    headerReady,
     displayName,
     isSelf,
     userId,
     iBlocked,
-    logout,
   ]);
 
   useEffect(() => {
@@ -272,6 +303,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   }, [userId, isSelf]);
 
   useEffect(() => {
+    overviewDeferUsed.current = false;
     setProfile(null);
     setPosts([]);
     setPostsHasMore(false);
@@ -516,6 +548,14 @@ export default function PublicProfileScreen({ route, navigation }) {
     if (!profile) return undefined;
     const force = appliedReload.current !== sectionReload;
     appliedReload.current = sectionReload;
+    const deferOverview = profileTab === 'overview' && !overviewDeferUsed.current;
+    overviewDeferUsed.current = true;
+    if (deferOverview) {
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadSection('overview', profile, { force });
+      });
+      return () => task.cancel();
+    }
     loadSection(profileTab, profile, { force });
     return undefined;
   }, [loadSection, profile, profileTab, sectionReload]);
@@ -804,49 +844,23 @@ export default function PublicProfileScreen({ route, navigation }) {
   const themeAccent =
     PROFILE_THEMES.find((t) => t.id === (profile.profileTheme || 'default'))?.accent || '#9A6B12';
 
-  const Chip = ({ icon, imageUri, onPress, children }) => {
-    if (!children) return null;
-    const body = (
-      <View style={[styles.chip, { backgroundColor: theme.chipBg, borderColor: themeAccent, borderWidth: 1 }]}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.chipLogo} />
-        ) : icon ? (
-          <Ionicons name={icon} size={14} color={theme.chipText} style={{ marginRight: 4 }} />
-        ) : null}
-        <Text style={[styles.chipText, { color: theme.chipText }]} numberOfLines={2}>
-          {children}
-        </Text>
-      </View>
-    );
-    if (onPress) {
-      return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.75}>
-          {body}
-        </TouchableOpacity>
-      );
-    }
-    return body;
-  };
-
   const closeHeaderPreview = () => setHeaderImagePreview(null);
   const tabReady = !!sectionsReady[profileTab];
-
-  return (
-    <>
-    <ScrollView
-      style={[styles.root, { backgroundColor: theme.bg }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            loadProfile({ silent: true });
-          }}
-          colors={[theme.primary]}
-        />
-      }
-    >
+  const mediaTab = profileTab === 'posts' || profileTab === 'gallery' || profileTab === 'videos';
+  const listFrame = mediaTab && tabReady ? { backgroundColor: theme.card, borderColor: theme.border } : null;
+  const pageStyle = [styles.root, { backgroundColor: theme.bg }];
+  const pagePad = { paddingBottom: insets.bottom + 24 };
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        loadProfile({ silent: true });
+      }}
+      colors={[theme.primary]}
+    />
+  );
+  const renderChrome = (panel) => (
       <View style={{ paddingTop: insets.top ? 0 : 0 }}>
         {coverUri ? (
           <TouchableOpacity
@@ -855,9 +869,10 @@ export default function PublicProfileScreen({ route, navigation }) {
             accessibilityRole="imagebutton"
             accessibilityLabel="Shiko foton e kopertinës"
           >
-            <ImageBackground source={{ uri: coverUri }} style={styles.cover} imageStyle={styles.coverImage}>
+            <View style={styles.cover}>
+              <OptimizedImage uri={coverUri} style={StyleSheet.absoluteFill} width={1200} contentFit="cover" />
               <View style={styles.coverTint} />
-            </ImageBackground>
+            </View>
           </TouchableOpacity>
         ) : (
           <View
@@ -884,7 +899,7 @@ export default function PublicProfileScreen({ route, navigation }) {
               ]}
             >
               {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.avatarImg} />
+                <OptimizedImage uri={photoUri} style={styles.avatarImg} width={200} contentFit="cover" />
               ) : (
                 <View style={[styles.avatarFallback, { backgroundColor: theme.primary }]}>
                   <Text style={styles.avatarFallbackText}>{initials}</Text>
@@ -902,6 +917,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           <View
             style={[
               styles.card,
+              listFrame && styles.cardOpenBottom,
               {
                 backgroundColor: theme.card,
                 borderColor: theme.border,
@@ -927,20 +943,20 @@ export default function PublicProfileScreen({ route, navigation }) {
             <View style={styles.chipRow}>
               {isOrgProfileRole(profile.role) ? (
                 (profile.foundingYear || getFoundingYear(profile)) ? (
-                  <Chip icon="flag-outline">
+                  <ProfileChip theme={theme} accent={themeAccent} icon="flag-outline">
                     Themeluar {profile.foundingYear || getFoundingYear(profile)}
-                  </Chip>
+                  </ProfileChip>
                 ) : null
               ) : profile.age != null && profile.ageGroup ? (
-                <Chip icon="calendar-outline">
+                <ProfileChip theme={theme} accent={themeAccent} icon="calendar-outline">
                   {profile.age} vjeç ({profile.ageGroup})
-                </Chip>
+                </ProfileChip>
               ) : null}
               {profile.position && !isOrgProfileRole(profile.role) ? (
-                <Chip icon="football-outline">{profile.position}</Chip>
+                <ProfileChip theme={theme} accent={themeAccent} icon="football-outline">{profile.position}</ProfileChip>
               ) : null}
               {profile.club && !isOrgProfileRole(profile.role) ? (
-                <Chip
+                <ProfileChip theme={theme} accent={themeAccent}
                   icon="business-outline"
                   imageUri={
                     profile.clubLogo && typeof profile.clubLogo === 'string' ? profile.clubLogo : null
@@ -952,17 +968,17 @@ export default function PublicProfileScreen({ route, navigation }) {
                   }
                 >
                   {profile.club}
-                </Chip>
+                </ProfileChip>
               ) : null}
               {stats.jerseyNumber != null &&
               String(stats.jerseyNumber) !== '' &&
               !isOrgProfileRole(profile.role) ? (
-                <Chip icon="shirt-outline">#{stats.jerseyNumber}</Chip>
+                <ProfileChip theme={theme} accent={themeAccent} icon="shirt-outline">#{stats.jerseyNumber}</ProfileChip>
               ) : null}
               {profile.city || profile.country ? (
-                <Chip icon="location-outline">
+                <ProfileChip theme={theme} accent={themeAccent} icon="location-outline">
                   {[profile.city, profile.country].filter(Boolean).join(', ')}
-                </Chip>
+                </ProfileChip>
               ) : null}
             </View>
 
@@ -1079,7 +1095,14 @@ export default function PublicProfileScreen({ route, navigation }) {
             )}
 
             <PublicProfileTabBar tabs={tabs} activeKey={profileTab} onChange={setProfileTab} theme={theme} />
-            <View style={styles.tabPanel}>
+            {panel}
+          </View>
+        </View>
+      </View>
+  );
+
+  const staticPanel = (
+    <View style={styles.tabPanel}>
               {!tabReady ? (
                 <ActivityIndicator color={theme.primary} style={{ marginVertical: 28 }} />
               ) : null}
@@ -1096,15 +1119,6 @@ export default function PublicProfileScreen({ route, navigation }) {
                   videos={videos}
                   onPressUser={(uid) => navigation.push('PublicProfile', { userId: uid })}
                   onOpenTab={setProfileTab}
-                />
-              ) : null}
-              {tabReady && profileTab === 'posts' ? (
-                <PublicProfilePostsTab
-                  posts={posts}
-                  theme={theme}
-                  hasMore={postsHasMore}
-                  loadingMore={postsLoadingMore}
-                  onLoadMore={loadMoreProfilePosts}
                 />
               ) : null}
               {tabReady && profileTab === 'matches' && isAthlete ? (
@@ -1125,22 +1139,6 @@ export default function PublicProfileScreen({ route, navigation }) {
                   platformAchievements={platformAchievements}
                   isSelf={isSelf}
                   onOpenInsights={isSelf ? onOpenInsights : undefined}
-                />
-              ) : null}
-              {tabReady && profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
-              {tabReady && profileTab === 'videos' ? (
-                <PublicProfileVideosTab
-                  videos={videos}
-                  liveVideos={Array.isArray(profile?.liveVideos) ? profile.liveVideos : []}
-                  youtubeMedia={youtubeMedia}
-                  theme={theme}
-                  canManage={isSelf}
-                  mediaDefaults={{
-                    playerId: String(profile?.role || '').toLowerCase() === 'athlete' ? userId : undefined,
-                    clubId: String(profile?.role || '').toLowerCase() === 'club' ? userId : undefined,
-                    category: 'profile',
-                  }}
-                  onMediaSaved={(item) => setYoutubeMedia((prev) => [item, ...prev])}
                 />
               ) : null}
               {tabReady && profileTab === 'about' ? (
@@ -1165,11 +1163,56 @@ export default function PublicProfileScreen({ route, navigation }) {
               {tabReady && profileTab === 'sponsors' && isSelf ? (
                 <PublicProfileSponsorsTab sponsors={sponsors} theme={theme} />
               ) : null}
-            </View>
-          </View>
-        </View>
-      </View>
+    </View>
+  );
+
+  const listProps = {
+    listHeader: renderChrome(tabReady ? null : staticPanel),
+    refreshControl,
+    pageStyle,
+    contentContainerStyle: pagePad,
+    frame: listFrame,
+    showEmpty: tabReady,
+  };
+
+  return (
+    <>
+    {profileTab === 'posts' ? (
+      <PublicProfilePostsTab
+        posts={tabReady ? posts : []}
+        theme={theme}
+        hasMore={postsHasMore}
+        loadingMore={postsLoadingMore}
+        onLoadMore={loadMoreProfilePosts}
+        {...listProps}
+      />
+    ) : profileTab === 'gallery' ? (
+      <PublicProfileGalleryTab items={tabReady ? gallery : []} theme={theme} {...listProps} />
+    ) : profileTab === 'videos' ? (
+      <PublicProfileVideosTab
+        videos={tabReady ? videos : []}
+        liveVideos={Array.isArray(profile?.liveVideos) ? profile.liveVideos : []}
+        youtubeMedia={tabReady ? youtubeMedia : []}
+        theme={theme}
+        canManage={isSelf}
+        mediaDefaults={{
+          playerId: String(profile?.role || '').toLowerCase() === 'athlete' ? userId : undefined,
+          clubId: String(profile?.role || '').toLowerCase() === 'club' ? userId : undefined,
+          category: 'profile',
+        }}
+        onMediaSaved={(item) => setYoutubeMedia((prev) => [item, ...prev])}
+        {...listProps}
+      />
+    ) : (
+    <ScrollView
+      style={pageStyle}
+      contentContainerStyle={pagePad}
+      refreshControl={refreshControl}
+    >
+      {renderChrome(staticPanel)}
     </ScrollView>
+    )}
+
 
     <Modal visible={transferModalOpen} transparent animationType="slide" onRequestClose={() => setTransferModalOpen(false)}>
       <View style={styles.transferModalBackdrop}>
@@ -1253,7 +1296,7 @@ export default function PublicProfileScreen({ route, navigation }) {
           </Pressable>
           {headerImagePreview ? (
             <View style={styles.previewModalImgWrap} pointerEvents="auto">
-              <Image source={{ uri: headerImagePreview }} style={styles.previewModalImg} resizeMode="contain" />
+              <OptimizedImage uri={headerImagePreview} style={styles.previewModalImg} contentFit="contain" />
             </View>
           ) : null}
         </View>
@@ -1297,7 +1340,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                     }}
                   >
                     {photo ? (
-                      <Image source={{ uri: photo }} style={styles.followAvatar} />
+                      <OptimizedImage uri={photo} style={styles.followAvatar} width={120} contentFit="cover" />
                     ) : (
                       <View style={[styles.followAvatar, styles.followAvatarPh]}>
                         <Text style={styles.followAvatarText}>
@@ -1381,6 +1424,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
+  },
+  cardOpenBottom: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingBottom: 8,
   },
   name: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
   roleLine: {

@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useRenderLog } from '../utils/perfLog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { extractErrorMessage, joncoinBalanceRequest, productsRequest } from '../api/client';
@@ -21,6 +21,7 @@ import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
+import OptimizedImage from '../components/media/OptimizedImage';
 
 const PAGE_SIZE = 8;
 
@@ -41,7 +42,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
 
   return (
     <View style={styles.card}>
-      {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" /> : null}
+      {imageUri ? <OptimizedImage uri={imageUri} style={styles.image} width={600} contentFit="cover" /> : null}
       <TouchableOpacity onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}>
         <Text style={styles.name}>{item?.name || 'Product'}</Text>
       </TouchableOpacity>
@@ -95,6 +96,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
 }
 
 export default function MarketplaceScreen() {
+  useRenderLog('MarketplaceScreen');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

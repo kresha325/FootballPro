@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
+import { useRenderLog } from '../utils/perfLog';
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -29,7 +30,9 @@ function MenuButton({ title, subtitle, onPress, badge, colors }) {
 }
 
 export default function MoreScreen({ navigation }) {
-  const { user, getSocket, socketConnected, logout } = useAuth();
+  useRenderLog('MoreScreen');
+  const { user, logout } = useAuth();
+  const { getSocket, socketConnected } = useSocket();
   const { colors } = useTheme();
   const { notificationsCount, messagesCount } = useUnreadBadges(getSocket, socketConnected);
 

@@ -4,7 +4,6 @@ import {
   Alert,
   AppState,
   FlatList,
-  Image,
   Linking,
   Modal,
   Pressable,
@@ -16,10 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from '../theme/nativeComponents';
+import { InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { VideoPoster } from '../components/media/LazyVideo';
+import OptimizedImage from '../components/media/OptimizedImage';
 import {
   adsRequest,
   createCommentRequest,
@@ -27,10 +28,10 @@ import {
   deletePostRequest,
   extractErrorMessage,
   likePostRequest,
-  notificationsRequest,
   postCommentsRequest,
   postsRequest,
   streamsRequest,
+  tournamentBadgeRequest,
   unlikePostRequest,
   updatePostRequest,
 } from '../api/client';
@@ -44,8 +45,12 @@ import PostSponsorStrip from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { tournamentIdFromNotification } from '../utils/navigateFromNotification';
-import { perfStart } from '../utils/perfLog';
+import { logNav, perfStart, useRenderLog } from '../utils/perfLog';
+import { publishFeedPagerSession } from '../navigation/feedPagerStore';
+
+function FeedHeaderNotifications() {
+  return <NotificationHeaderButton />;
+}
 
 const FEED_PAGE_SIZE = 20;
 const FEED_STALE_MS = 90 * 1000;
@@ -60,7 +65,7 @@ function postAuthorId(item) {
 }
 
 const FEED_CACHE_KEY_PREFIX = 'mobile_feed_cache_v2';
-const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
+const FEED_CACHE_MAX_CHARS = 750000;
 const FEED_FILTER_KEY = 'feed_followed_only';
 
 function feedCacheKey(scope, userId) {
@@ -95,7 +100,7 @@ function postSponsorsList(item) {
   return Array.isArray(raw) ? raw : [];
 }
 
-function PostCard({
+const PostCard = React.memo(function PostCard({
   item,
   onToggleLike,
   onToggleComments,
@@ -103,7 +108,7 @@ function PostCard({
   commentsData,
   loadingComments,
   newComment,
-  setNewComment,
+  onChangeComment,
   onAddComment,
   isSendingComment,
   isDark,
@@ -174,7 +179,7 @@ function PostCard({
         <View style={styles.authorHeaderRow}>
           <View style={styles.authorHeaderLeft}>
             {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+              <OptimizedImage uri={avatarUrl} style={styles.avatar} width={160} contentFit="cover" />
             ) : (
               <View style={[styles.avatarFallback, isDark && styles.avatarFallbackDark]}>
                 <Text style={styles.avatarFallbackText}>
@@ -234,7 +239,7 @@ function PostCard({
         {item?.content ? (
           <Text style={[styles.content, isDark && styles.textBodyDark]}>{item.content}</Text>
         ) : null}
-        {hasImage ? <Image source={{ uri: imageUrl }} style={styles.media} resizeMode="cover" /> : null}
+        {hasImage ? <OptimizedImage uri={imageUrl} style={styles.media} width={600} contentFit="cover" /> : null}
       </TouchableOpacity>
 
       {item?.location ? (
@@ -348,7 +353,7 @@ function PostCard({
             <TextInput
               style={[styles.commentInput, isDark && styles.inputDark]}
               value={newComment}
-              onChangeText={setNewComment}
+              onChangeText={(value) => onChangeComment(item.id, value)}
               placeholder="Write a comment"
               placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
             />
@@ -360,7 +365,7 @@ function PostCard({
       ) : null}
     </View>
   );
-}
+});
 
 function FeedSkeleton({ isDark }) {
   return (
@@ -381,6 +386,7 @@ function FeedSkeleton({ isDark }) {
 }
 
 export default function FeedScreen({ navigation }) {
+  useRenderLog('FeedScreen');
   const { user } = useAuth();
   const { isDark } = useTheme();
   const navigateToMoreScreen = useCallback(
@@ -441,30 +447,23 @@ export default function FeedScreen({ navigation }) {
       return undefined;
     }
     let cancelled = false;
-    const loadBadge = async () => {
+    const loadBadge = () => {
       if (Date.now() - lastTournamentBadgeAt.current < TOURNAMENT_BADGE_STALE_MS) return;
-      try {
-        const res = await notificationsRequest({ limit: 50 });
-        const list = res?.data?.notifications || res?.data || [];
-        let count = 0;
-        (Array.isArray(list) ? list : []).forEach((n) => {
-          if (n?.isRead) return;
-          const type = String(n?.type || '').toLowerCase();
-          if (type !== 'tournament' && type !== 'match' && n?.entityType !== 'tournament') return;
-          if (tournamentIdFromNotification(n)) count += 1;
-        });
-        if (!cancelled) {
+      tournamentBadgeRequest()
+        .then((res) => {
+          if (cancelled) return;
           lastTournamentBadgeAt.current = Date.now();
-          setMyTournamentsBadge(count);
-        }
-      } catch {
-        if (!cancelled) setMyTournamentsBadge(0);
-      }
+          setMyTournamentsBadge(Number(res?.data?.count) || 0);
+        })
+        .catch(() => {
+          if (!cancelled) setMyTournamentsBadge(0);
+        });
     };
-    loadBadge();
+    const task = InteractionManager.runAfterInteractions(loadBadge);
     const sub = navigation.addListener?.('focus', loadBadge);
     return () => {
       cancelled = true;
+      task.cancel();
       if (typeof sub === 'function') sub();
     };
   }, [user?.id, navigation]);
@@ -488,39 +487,51 @@ export default function FeedScreen({ navigation }) {
 
   const feedListData = useMemo(() => mergePostsWithAdSlots(filteredPosts), [filteredPosts]);
 
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
+  const loggedFeedRender = useRef(false);
+  const loggedFeedList = useRef(false);
+
+  const onPagerUpdated = useCallback((postId, updates) => {
+    if (updates?.deleted) {
+      setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+      return;
+    }
+    setPosts((prev) =>
+      prev.map((p) => (String(p.id) === String(postId) ? { ...p, ...updates } : p))
+    );
+  }, []);
+
   const openPostFullscreen = useCallback(
     (post) => {
+      const started = Date.now();
       if (!post?.id) return;
-      const index = posts.findIndex((p) => String(p.id) === String(post.id));
+      const list = postsRef.current;
+      const index = list.findIndex((p) => String(p.id) === String(post.id));
+      publishFeedPagerSession(list, onPagerUpdated);
       navigation.navigate('FeedPostPager', {
-        posts,
         initialPostId: post.id,
         initialIndex: index >= 0 ? index : 0,
-        onPostUpdated: (postId, updates) => {
-          if (updates?.deleted) {
-            setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
-            return;
-          }
-          setPosts((prev) =>
-            prev.map((p) => (String(p.id) === String(postId) ? { ...p, ...updates } : p))
-          );
-        },
       });
+      logNav('Feed -> Post', started);
     },
-    [navigation, posts]
+    [navigation, onPagerUpdated]
   );
 
   const openAuthorProfile = useCallback(
     (authorId) => {
+      const started = Date.now();
       if (authorId == null) return;
       const parent = navigation.getParent?.();
       if (!parent?.navigate) return;
       const mine = user?.id != null && String(authorId) === String(user.id);
       if (mine) {
         parent.navigate('Profile', { screen: 'MyProfile' });
+        logNav('Feed -> MyProfile', started);
         return;
       }
       parent.navigate('Profile', { screen: 'PublicProfile', params: { userId: authorId } });
+      logNav('Feed -> Profile', started);
     },
     [navigation, user?.id]
   );
@@ -534,22 +545,23 @@ export default function FeedScreen({ navigation }) {
     const selectedScope = scope || feedScope;
     const cacheKey = feedCacheKey(selectedScope, user?.id);
     const nextPage = append ? (page || feedPageRef.current + 1) : 1;
-    if (!silent) {
-      setLoading(true);
-    }
     setError('');
-
-    if (useCache) {
+    let showedCache = false;
+    if (useCache && !append) {
       try {
         const cachedRaw = await AsyncStorage.getItem(cacheKey);
-        if (cachedRaw) {
+        if (cachedRaw && cachedRaw.length < FEED_CACHE_MAX_CHARS) {
           const cached = JSON.parse(cachedRaw);
-          if (cached?.ts && Array.isArray(cached?.data) && Date.now() - cached.ts < FEED_CACHE_TTL_MS) {
+          if (Array.isArray(cached?.data) && cached.data.length) {
             setPosts(cached.data);
             setLoading(false);
+            showedCache = true;
           }
         }
       } catch (_e) {}
+    }
+    if (!silent && !showedCache && !append) {
+      setLoading(true);
     }
 
     if (!append) {
@@ -560,7 +572,7 @@ export default function FeedScreen({ navigation }) {
     const requestGen = feedRequestGen.current;
     const controller = new AbortController();
     feedAbortRef.current = controller;
-    const done = perfStart(append ? 'Feed page' : 'Feed load');
+    const done = perfStart(append ? 'Feed page' : 'Feed API');
 
     try {
       const postsRes = await postsRequest(
@@ -602,25 +614,27 @@ export default function FeedScreen({ navigation }) {
       }
     }
 
-    if (postsOnly || controller.signal.aborted) return;
+    if (postsOnly || controller.signal.aborted || requestGen !== feedRequestGen.current) return;
     if (Date.now() - lastExtrasAt.current < FEED_EXTRAS_STALE_MS && lastExtrasAt.current > 0) return;
 
-    try {
-      const adsRes = await adsRequest();
-      const raw = Array.isArray(adsRes?.data) ? adsRes.data : [];
-      setFeedAds(shuffleAds(raw));
-    } catch (_err) {
-      setFeedAds([]);
-    }
-
-    try {
-      const liveRes = await streamsRequest({ isLive: true, limit: 12 });
-      const liveData = Array.isArray(liveRes.data) ? liveRes.data : [];
-      setLiveStreams(liveData);
-    } catch (_err) {
-      setLiveStreams([]);
-    }
-    lastExtrasAt.current = Date.now();
+    InteractionManager.runAfterInteractions(() => {
+      if (requestGen !== feedRequestGen.current) return;
+      Promise.all([
+        adsRequest()
+          .then((adsRes) => {
+            const raw = Array.isArray(adsRes?.data) ? adsRes.data : [];
+            setFeedAds(shuffleAds(raw));
+          })
+          .catch(() => setFeedAds([])),
+        streamsRequest({ isLive: true, limit: 12 })
+          .then((liveRes) => {
+            setLiveStreams(Array.isArray(liveRes.data) ? liveRes.data : []);
+          })
+          .catch(() => setLiveStreams([])),
+      ]).finally(() => {
+        lastExtrasAt.current = Date.now();
+      });
+    });
   }, [feedScope, user?.id]);
 
   useEffect(() => {
@@ -657,7 +671,7 @@ export default function FeedScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       ),
-      headerRight: () => <NotificationHeaderButton />,
+      headerRight: FeedHeaderNotifications,
     });
   }, [feedScope, navigation]);
 
@@ -689,7 +703,16 @@ export default function FeedScreen({ navigation }) {
     return () => subscription.remove();
   }, [loadPosts]);
 
-  const onToggleLike = async (post) => {
+  const openCommentsRef = useRef(openCommentsPostId);
+  const draftsRef = useRef(commentDraftByPostId);
+  const deletingPostRef = useRef(deletingPostId);
+  const deletingCommentRef = useRef(deletingCommentId);
+  openCommentsRef.current = openCommentsPostId;
+  draftsRef.current = commentDraftByPostId;
+  deletingPostRef.current = deletingPostId;
+  deletingCommentRef.current = deletingCommentId;
+
+  const onToggleLike = useCallback(async (post) => {
     const targetId = post.id;
     const currentlyLiked = !!post.isLiked;
 
@@ -725,9 +748,9 @@ export default function FeedScreen({ navigation }) {
       );
       setError(extractErrorMessage(err, 'Could not update like'));
     }
-  };
+  }, []);
 
-  const loadComments = async (postId) => {
+  const loadComments = useCallback(async (postId) => {
     setCommentsLoadingPostId(postId);
     try {
       const response = await postCommentsRequest(postId);
@@ -738,19 +761,23 @@ export default function FeedScreen({ navigation }) {
     } finally {
       setCommentsLoadingPostId(null);
     }
-  };
+  }, []);
 
-  const onToggleComments = async (postId) => {
-    if (openCommentsPostId === postId) {
+  const onToggleComments = useCallback(async (postId) => {
+    if (openCommentsRef.current === postId) {
       setOpenCommentsPostId(null);
       return;
     }
     setOpenCommentsPostId(postId);
     await loadComments(postId);
-  };
+  }, [loadComments]);
 
-  const onAddComment = async (postId) => {
-    const content = (commentDraftByPostId[postId] || '').trim();
+  const onChangeComment = useCallback((postId, value) => {
+    setCommentDraftByPostId((prev) => ({ ...prev, [postId]: value }));
+  }, []);
+
+  const onAddComment = useCallback(async (postId) => {
+    const content = (draftsRef.current[postId] || '').trim();
     if (!content) {
       return;
     }
@@ -766,14 +793,14 @@ export default function FeedScreen({ navigation }) {
     } finally {
       setSendingCommentPostId(null);
     }
-  };
+  }, [loadComments]);
 
-  const onEditPost = (post) => {
+  const onEditPost = useCallback((post) => {
     if (!post?.id) return;
     setEditingPost(post);
     setEditContent(post.content || '');
     setEditLocation(post.location || '');
-  };
+  }, []);
 
   const onSaveEditPost = async () => {
     if (!editingPost?.id || savingEdit) return;
@@ -809,8 +836,8 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  const onDeletePost = (post) => {
-    if (!post?.id || deletingPostId) return;
+  const onDeletePost = useCallback((post) => {
+    if (!post?.id || deletingPostRef.current) return;
     Alert.alert('Fshi postimin', 'Je i sigurt?', [
       { text: 'Anulo', style: 'cancel' },
       {
@@ -821,7 +848,7 @@ export default function FeedScreen({ navigation }) {
           try {
             await deletePostRequest(post.id);
             setPosts((prev) => prev.filter((p) => p.id !== post.id));
-            if (openCommentsPostId === post.id) setOpenCommentsPostId(null);
+            if (openCommentsRef.current === post.id) setOpenCommentsPostId(null);
           } catch (err) {
             setError(extractErrorMessage(err, 'Could not delete post'));
           } finally {
@@ -830,10 +857,10 @@ export default function FeedScreen({ navigation }) {
         },
       },
     ]);
-  };
+  }, []);
 
-  const onDeleteComment = (comment, postId) => {
-    if (!comment?.id || deletingCommentId) return;
+  const onDeleteComment = useCallback((comment, postId) => {
+    if (!comment?.id || deletingCommentRef.current) return;
     Alert.alert('Delete comment', 'Remove this comment?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -860,7 +887,19 @@ export default function FeedScreen({ navigation }) {
         },
       },
     ]);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (loggedFeedRender.current || loading) return;
+    loggedFeedRender.current = true;
+    if (__DEV__) console.log('[PERF] Feed first render');
+  }, [loading]);
+
+  useEffect(() => {
+    if (loggedFeedList.current || loading || !posts.length) return;
+    loggedFeedList.current = true;
+    if (__DEV__) console.log('[PERF] Feed image/list render');
+  }, [loading, posts.length]);
 
   if (loading) {
     return <FeedSkeleton isDark={isDark} />;
@@ -886,9 +925,10 @@ export default function FeedScreen({ navigation }) {
       style={styles.feedList}
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
       extraData={activeAdKey}
-      initialNumToRender={4}
-      maxToRenderPerBatch={4}
-      windowSize={7}
+      initialNumToRender={5}
+      maxToRenderPerBatch={5}
+      windowSize={8}
+      updateCellsBatchingPeriod={50}
       viewabilityConfig={feedViewabilityConfig}
       onViewableItemsChanged={onFeedViewableItemsChanged}
       ListHeaderComponent={
@@ -920,7 +960,7 @@ export default function FeedScreen({ navigation }) {
                       onPress={() => navigateToMoreScreen('LiveViewer', { streamId: stream.id })}
                     >
                       {photo ? (
-                        <Image source={{ uri: photo }} style={styles.liveAvatar} />
+                        <OptimizedImage uri={photo} style={styles.liveAvatar} width={160} contentFit="cover" />
                       ) : (
                         <View style={styles.liveAvatarFallback}>
                           <Text style={styles.liveAvatarText}>{name.charAt(0).toUpperCase()}</Text>
@@ -974,7 +1014,7 @@ export default function FeedScreen({ navigation }) {
             commentsData={commentsByPostId[item.post.id]}
             loadingComments={commentsLoadingPostId === item.post.id}
             newComment={commentDraftByPostId[item.post.id] || ''}
-            setNewComment={(value) => setCommentDraftByPostId((prev) => ({ ...prev, [item.post.id]: value }))}
+            onChangeComment={onChangeComment}
             onAddComment={onAddComment}
             isSendingComment={sendingCommentPostId === item.post.id}
             isDark={isDark}

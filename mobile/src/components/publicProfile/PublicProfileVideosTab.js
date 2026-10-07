@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Image,
+  FlatList,
   Linking,
   Modal,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from '../../theme/nativeComponents';
+import OptimizedImage from '../media/OptimizedImage';
+import { profileRowFrame } from './profileListFrame';
 import { VideoPlayerModal, VideoPoster } from '../media/LazyVideo';
 import { youtubeThumbnailUrl } from '../../utils/youtubeVideo';
 import YouTubeWebPlayer from '../media/YouTubeWebPlayer';
@@ -45,7 +47,7 @@ function YoutubeCard({ item, theme, onOpen }) {
     >
       <View style={styles.videoWrap}>
         {thumb ? (
-          <Image source={{ uri: thumb }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <OptimizedImage uri={thumb} style={StyleSheet.absoluteFillObject} width={400} contentFit="cover" />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0f172a' }]} />
         )}
@@ -72,6 +74,12 @@ export default function PublicProfileVideosTab({
   canManage = false,
   mediaDefaults = {},
   onMediaSaved,
+  listHeader = null,
+  refreshControl,
+  pageStyle,
+  contentContainerStyle,
+  frame = null,
+  showEmpty = true,
 }) {
   const [watching, setWatching] = useState(null);
   const [playing, setPlaying] = useState(null);
@@ -86,87 +94,118 @@ export default function PublicProfileVideosTab({
     setWatching(item);
   };
 
-  if (!hasLive && !hasUploads && !hasYt && !canManage) {
-    return (
-      <View style={styles.emptyWrap}>
-        <Text style={styles.emptyEmoji}>🎬</Text>
-        <Text style={[styles.emptyTitle, { color: theme.muted }]}>No videos yet</Text>
-      </View>
-    );
-  }
+  const rows = useMemo(() => {
+    const out = [];
+    if (canManage) out.push({ type: 'add', key: 'add' });
+    if (hasYt) {
+      out.push({ type: 'heading', key: 'yt-head', title: 'YouTube' });
+      out.push({ type: 'yt-filter', key: 'yt-filter' });
+      youtubeMedia
+        .filter((item) => !highlightsOnly || HIGHLIGHT_CATEGORIES.has(item.category) || item.featured)
+        .forEach((item) => out.push({ type: 'youtube', key: `yt-${item.id}`, item }));
+    } else if (canManage) {
+      out.push({ type: 'yt-empty', key: 'yt-empty' });
+    }
+    if (hasLive) {
+      out.push({ type: 'heading', key: 'live-head', title: 'Live Videos' });
+      liveVideos.forEach((item, idx) => {
+        out.push({ type: 'live', key: item.streamId ? `live-${item.streamId}` : `live-${idx}`, item });
+      });
+    }
+    if (hasUploads) {
+      out.push({ type: 'heading', key: 'upload-head', title: 'Uploaded Videos' });
+      videos.forEach((item) => out.push({ type: 'upload', key: `upload-${item.id}`, item }));
+    }
+    return out;
+  }, [canManage, hasLive, hasUploads, hasYt, highlightsOnly, liveVideos, videos, youtubeMedia]);
 
-  return (
-    <View style={styles.list}>
-      {canManage ? (
+  const renderRow = ({ item }) => {
+    if (item.type === 'add') {
+      return (
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)}>
           <Text style={styles.addBtnText}>+ Shto video YouTube</Text>
         </TouchableOpacity>
-      ) : null}
-
-      {hasYt ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>YouTube</Text>
-          <TouchableOpacity onPress={() => setHighlightsOnly((value) => !value)}>
-            <Text style={[styles.sectionTitle, { color: theme.muted }]}>
-              {highlightsOnly ? 'Show all videos' : 'Highlights only'}
-            </Text>
-          </TouchableOpacity>
-          {youtubeMedia
-            .filter((item) => !highlightsOnly || HIGHLIGHT_CATEGORIES.has(item.category) || item.featured)
-            .map((v) => (
-            <YoutubeCard key={`yt-${v.id}`} item={v} theme={theme} onOpen={openYt} />
-          ))}
-        </View>
-      ) : canManage ? (
+      );
+    }
+    if (item.type === 'heading') {
+      return <Text style={[styles.sectionTitle, { color: theme.text }]}>{item.title}</Text>;
+    }
+    if (item.type === 'yt-filter') {
+      return (
+        <TouchableOpacity onPress={() => setHighlightsOnly((value) => !value)}>
+          <Text style={[styles.sectionTitle, { color: theme.muted }]}>
+            {highlightsOnly ? 'Show all videos' : 'Highlights only'}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+    if (item.type === 'yt-empty') {
+      return (
         <View style={styles.emptyWrap}>
           <Text style={[styles.emptyTitle, { color: theme.muted }]}>
             Nuk ka video YouTube ende. Ngarko në YouTube dhe shto linkun.
           </Text>
         </View>
-      ) : null}
+      );
+    }
+    if (item.type === 'youtube') return <YoutubeCard item={item.item} theme={theme} onOpen={openYt} />;
+    if (item.type === 'live') {
+      return (
+        <LiveVideoCard
+          item={item.item}
+          theme={theme}
+          onPlay={(uri, title) => setPlaying({ uri, title })}
+        />
+      );
+    }
+    const video = item.item;
+    return (
+      <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <VideoPoster
+          style={styles.videoWrap}
+          onPress={() => setPlaying({ uri: absoluteBackendUrl(video.videoUrl) || video.videoUrl, title: video.title })}
+          accessibilityLabel="Luaj videon"
+        />
+        {video.title ? (
+          <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
+            {video.title}
+          </Text>
+        ) : null}
+        {video.description ? (
+          <Text style={[styles.desc, { color: theme.muted }]} numberOfLines={3}>
+            {video.description}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
 
-      {hasLive ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Live Videos</Text>
-          {liveVideos.map((v, idx) => (
-            <LiveVideoCard
-              key={v.streamId ? `live-${v.streamId}` : `live-${idx}`}
-              item={v}
-              theme={theme}
-              onPlay={(uri, title) => setPlaying({ uri, title })}
-            />
-          ))}
-        </View>
-      ) : null}
-
-      {hasUploads ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Uploaded Videos</Text>
-          {videos.map((v) => (
-            <View
-              key={String(v.id)}
-              style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <VideoPoster
-                style={styles.videoWrap}
-                onPress={() => setPlaying({ uri: absoluteBackendUrl(v.videoUrl) || v.videoUrl, title: v.title })}
-                accessibilityLabel="Luaj videon"
-              />
-              {v.title ? (
-                <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
-                  {v.title}
-                </Text>
-              ) : null}
-              {v.description ? (
-                <Text style={[styles.desc, { color: theme.muted }]} numberOfLines={3}>
-                  {v.description}
-                </Text>
-              ) : null}
+  return (
+    <>
+      <FlatList
+        style={pageStyle}
+        data={rows}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => <View style={profileRowFrame(frame)}>{renderRow({ item })}</View>}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={frame ? <View style={profileRowFrame(frame, 'end')} /> : null}
+        ListEmptyComponent={
+          showEmpty && !canManage ? (
+            <View style={profileRowFrame(frame)}>
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyEmoji}>🎬</Text>
+                <Text style={[styles.emptyTitle, { color: theme.muted }]}>No videos yet</Text>
+              </View>
             </View>
-          ))}
-        </View>
-      ) : null}
-
+          ) : null
+        }
+        refreshControl={refreshControl}
+        contentContainerStyle={contentContainerStyle}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={7}
+        keyboardShouldPersistTaps="handled"
+      />
       <VideoPlayerModal
         uri={playing?.uri}
         visible={!!playing?.uri}
@@ -201,7 +240,7 @@ export default function PublicProfileVideosTab({
         defaults={mediaDefaults}
         onSaved={(item) => onMediaSaved?.(item)}
       />
-    </View>
+    </>
   );
 }
 
