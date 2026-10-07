@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { extractErrorMessage, resetPasswordRequest } from '../api/client';
+import { passwordPolicyMessage } from '../utils/passwordPolicy';
 
 export default function ResetPasswordScreen({ route, navigation }) {
   const token = route?.params?.token || '';
@@ -15,8 +16,9 @@ export default function ResetPasswordScreen({ route, navigation }) {
       setError('Linku i rivendosjes është i pavlefshëm ose mungon.');
       return;
     }
-    if (password.length < 6) {
-      setError('Fjalëkalimi duhet të ketë të paktën 6 karaktere.');
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (password !== confirm) {

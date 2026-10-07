@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { authAPI } from '../services/api';
+import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ResetPassword = () => {
@@ -21,8 +22,9 @@ const ResetPassword = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Fjalëkalimi duhet të jetë së paku 6 karaktere');
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 

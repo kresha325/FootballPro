@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { issueOAuthCode, consumeOAuthCode, oauthCallbackUrl } = require('../utils/oauthExchange');
 
 /** Plain /me JSON; URL e fotos sipas host-it të kërkesës (mobile LAN, prod, etj.). */
 function meJsonWithAbsolutePhoto(plain, req) {
@@ -194,23 +195,28 @@ function oauthFailureRedirect(req, reason) {
   return `${front}/login?error=oauth_failed${detail}`;
 }
 
-function oauthSuccessRedirect(req, token) {
-  const isMobile = oauthState(req) === 'mobile';
-  if (isMobile) {
-    return `xtalenti://auth/callback?token=${encodeURIComponent(token)}`;
-  }
-  const front = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
-  return `${front}/auth/callback?token=${encodeURIComponent(token)}`;
-}
-
 function issueOAuthJwtRedirect(req, res) {
   const token = jwt.sign(
     { user: { id: req.user.id, tv: Number(req.user.tokenVersion || 0) } },
     require('../utils/jwtSecret').getJwtSecret(),
     { expiresIn: '7d' }
   );
-  res.redirect(oauthSuccessRedirect(req, token));
+  const code = issueOAuthCode(token);
+  const front = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
+  res.redirect(oauthCallbackUrl({
+    mobile: oauthState(req) === 'mobile',
+    frontendUrl: front,
+    code,
+  }));
 }
+
+router.post('/oauth/exchange', maybeLimit(authWriteLimiter), (req, res) => {
+  const token = consumeOAuthCode(req.body?.code);
+  if (!token) {
+    return res.status(400).json({ msg: 'Kodi i hyrjes është i pavlefshëm ose i skaduar' });
+  }
+  return res.json({ token });
+});
 
 function authenticateOAuth(provider) {
   return (req, res, next) => {

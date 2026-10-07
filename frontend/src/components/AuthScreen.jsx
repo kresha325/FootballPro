@@ -6,6 +6,7 @@ import { APP_BRAND_WORDMARK } from '../config/branding';
 import { setOnboardingPending } from './RegisterOnboarding';
 import { safeNextPath } from '../utils/safeNextPath';
 import { isOrgProfileRole } from '../utils/orgProfile';
+import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import { BACKEND_URL } from '../config/api';
 
 const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
@@ -229,9 +230,12 @@ export default function AuthScreen({ initialMode }) {
       setInlineError('Vendos fjalëkalimin.');
       return;
     }
-    if (mode !== 'forgot' && password.length < 6) {
-      setInlineError('Fjalëkalimi: të paktën 6 karaktere.');
-      return;
+    if (mode === 'register') {
+      const passwordError = passwordPolicyMessage(password);
+      if (passwordError) {
+        setInlineError(passwordError);
+        return;
+      }
     }
     if (mode === 'register' && password !== confirmPassword) {
       setInlineError('Fjalëkalimet nuk përputhen.');

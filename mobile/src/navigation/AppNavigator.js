@@ -88,7 +88,7 @@ const linking = {
       AuthCallback: {
         path: 'auth/callback',
         parse: {
-          token: (token) => token,
+          code: (code) => code,
           error: (error) => error,
         },
       },

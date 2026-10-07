@@ -92,6 +92,7 @@ export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-passw
 export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
 export const meRequest = () => api.get('/api/auth/me');
 export const oauthProvidersRequest = () => api.get('/api/auth/providers');
+export const exchangeOAuthCodeRequest = (code) => api.post('/api/auth/oauth/exchange', { code });
 export const adminMediaListRequest = (params = {}) => api.get('/api/media/admin', { params });
 export const adminMediaDeleteRequest = (id) => api.delete(`/api/media/${id}`);
 export const postsRequest = (params = {}) => api.get('/api/posts', { params });

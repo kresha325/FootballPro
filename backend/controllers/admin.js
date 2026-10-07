@@ -17,6 +17,7 @@ const { writeAudit } = require('../services/admin/audit');
 const { requireReason } = require('../services/admin/policy');
 const accounts = require('../services/admin/accounts');
 const bcrypt = require('bcryptjs');
+const { passwordPolicyMessage } = require('../utils/passwordPolicy');
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
@@ -518,8 +519,9 @@ exports.resetUserPassword = async (req, res) => {
     const { userId } = req.params;
     const { newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ msg: 'Password must be at least 6 characters' });
+    const passwordError = passwordPolicyMessage(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ msg: passwordError });
     }
 
     const user = await User.findByPk(userId);

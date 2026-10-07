@@ -27,6 +27,7 @@ import { useTheme } from '../context/ThemeContext';
 import { APP_BRAND_WORDMARK } from '../config/branding';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import { isOrgProfileRole } from '../utils/orgProfile';
+import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import { oauthProvidersRequest } from '../api/client';
 
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
@@ -257,8 +258,9 @@ export default function LoginScreen() {
         setInlineError('Fjalëkalimet nuk përputhen.');
         return;
       }
-      if (password.length < 6) {
-        setInlineError('Fjalëkalimi duhet të ketë të paktën 6 karaktere.');
+      const passwordError = passwordPolicyMessage(password);
+      if (passwordError) {
+        setInlineError(passwordError);
         return;
       }
       onRegister();
