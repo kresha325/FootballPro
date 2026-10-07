@@ -76,7 +76,10 @@ const Feed = () => {
     postComments, 
     loading: postsLoading,
     error: postsError,
-    fetchPosts, 
+    fetchPosts,
+    loadMorePosts,
+    hasMorePosts,
+    loadingMore,
     toggleLike, 
     fetchComments, 
     addComment,
@@ -1202,6 +1205,11 @@ const Feed = () => {
             )}
           </div>
         ))}
+        {hasMorePosts ? (
+          <button type="button" className="btn btn-outline w-full" onClick={() => loadMorePosts?.()} disabled={loadingMore}>
+            {loadingMore ? 'Duke ngarkuar...' : 'Më shumë'}
+          </button>
+        ) : null}
       </div>
       </section>
 

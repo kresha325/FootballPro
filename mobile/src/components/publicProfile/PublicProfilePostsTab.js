@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from '../../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPlayerModal, VideoPoster } from '../media/LazyVideo';
 import {
   createCommentRequest,
   extractErrorMessage,
@@ -24,13 +24,14 @@ function postSponsors(p) {
   return Array.isArray(raw) ? raw : [];
 }
 
-export default function PublicProfilePostsTab({ posts = [], theme }) {
+export default function PublicProfilePostsTab({ posts = [], theme, hasMore = false, loadingMore = false, onLoadMore }) {
   const [localPosts, setLocalPosts] = useState(posts);
   const [expanded, setExpanded] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
   const [loadingComments, setLoadingComments] = useState({});
   const [drafts, setDrafts] = useState({});
   const [sending, setSending] = useState({});
+  const [playingUri, setPlayingUri] = useState(null);
 
   useEffect(() => {
     setLocalPosts(Array.isArray(posts) ? posts : []);
@@ -128,17 +129,11 @@ export default function PublicProfilePostsTab({ posts = [], theme }) {
               <Image source={{ uri: post.imageUrl }} style={styles.postMedia} resizeMode="cover" />
             ) : null}
             {post.videoUrl ? (
-              <View style={styles.videoWrap}>
-                <Video
-                  source={{ uri: post.videoUrl }}
-                  style={styles.video}
-                  useNativeControls
-                  resizeMode={ResizeMode.CONTAIN}
-                  isLooping={false}
-                  isMuted={false}
-                  volume={1}
-                />
-              </View>
+              <VideoPoster
+                style={styles.video}
+                onPress={() => setPlayingUri(post.videoUrl)}
+                accessibilityLabel="Luaj videon e postimit"
+              />
             ) : null}
             <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
               <TouchableOpacity
@@ -190,6 +185,18 @@ export default function PublicProfilePostsTab({ posts = [], theme }) {
           </View>
         );
       })}
+      {hasMore ? (
+        <TouchableOpacity
+          onPress={onLoadMore}
+          disabled={loadingMore}
+          style={{ alignItems: 'center', paddingVertical: 14 }}
+          accessibilityRole="button"
+          accessibilityLabel="Ngarko postime të tjera"
+        >
+          {loadingMore ? <ActivityIndicator color="#9A6B12" /> : <Text style={{ color: '#9A6B12', fontWeight: '700' }}>Më shumë</Text>}
+        </TouchableOpacity>
+      ) : null}
+      <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
     </View>
   );
 }

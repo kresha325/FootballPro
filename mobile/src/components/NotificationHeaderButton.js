@@ -1,20 +1,14 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 
 export default function NotificationHeaderButton() {
   const navigation = useNavigation();
   const { getSocket, socketConnected } = useAuth();
-  const { notificationsCount: count, refresh } = useUnreadBadges(getSocket, socketConnected);
-
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh])
-  );
+  const { notificationsCount: count } = useUnreadBadges(getSocket, socketConnected);
 
   const openNotifications = () => {
     const state = navigation.getState?.();

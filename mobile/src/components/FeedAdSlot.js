@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { Video, ResizeMode } from 'expo-av';
+import { ResizeMode } from 'expo-av';
+import { ManagedVideo, VideoPoster } from './media/LazyVideo';
 
 /**
  * Shfaq një karusel reklamash.
  * Çdo ad ka displaySeconds (video = gjatësia; foto = 3s). Çmimi: €1 / 3s / ditë.
  */
-export default function FeedAdSlot({ ads = [], isDark }) {
+export default function FeedAdSlot({ ads = [], isDark, isVisible = false }) {
   const safeAds = Array.isArray(ads) ? ads : [];
   const [active, setActive] = useState(0);
 
@@ -49,9 +50,9 @@ export default function FeedAdSlot({ ads = [], isDark }) {
         <Text style={[styles.meta, isDark && styles.metaDark]}>{displaySec}s</Text>
       </View>
       <View style={[styles.cardInner, { borderColor: accent }]}>
-        {videoUri ? (
+        {videoUri && isVisible ? (
           <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>
-            <Video
+            <ManagedVideo
               source={{ uri: videoUri }}
               style={styles.video}
               resizeMode={ResizeMode.CONTAIN}
@@ -60,6 +61,10 @@ export default function FeedAdSlot({ ads = [], isDark }) {
               isMuted
               useNativeControls={false}
             />
+          </View>
+        ) : videoUri ? (
+          <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>
+            <VideoPoster posterUri={imageUri} style={styles.video} />
           </View>
         ) : imageUri ? (
           <View style={[styles.mediaBox, isDark && styles.mediaBoxDark]}>

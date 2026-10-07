@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode } from 'expo-av';
+import { ManagedVideo } from '../components/media/LazyVideo';
 import * as ImagePicker from 'expo-image-picker';
 import { createPostRequest, extractErrorMessage, setPostSponsorsRequest, sponsorsByUserRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -126,7 +127,7 @@ export default function CreatePostScreen({ navigation }) {
       {media?.kind === 'image' ? <Image source={{ uri: media.uri }} style={styles.previewImage} resizeMode="cover" /> : null}
       {media?.kind === 'video' ? (
         <View style={styles.videoWrap}>
-          <Video source={{ uri: media.uri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+          <ManagedVideo source={{ uri: media.uri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
         </View>
       ) : null}
 

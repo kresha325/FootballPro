@@ -135,6 +135,7 @@ const corsOptions = {
   origin: dynamicOrigin,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['X-Page', 'X-Limit', 'X-Has-More'],
   credentials: true,
   optionsSuccessStatus: 200,
 };

@@ -100,6 +100,7 @@ export default function MarketplaceScreen() {
   const { user } = useAuth();
   const { addItem, totalPieces } = useCart();
   const focusSkipRef = useRef(true);
+  const loadedAt = useRef(0);
   const [products, setProducts] = useState([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -124,6 +125,7 @@ export default function MarketplaceScreen() {
       setProducts(Array.isArray(payload) ? payload : (Array.isArray(payload?.products) ? payload.products : []));
       setBalance(Number(balanceRes?.data?.balance || 0));
       setVisibleCount(PAGE_SIZE);
+      loadedAt.current = Date.now();
     } catch (err) {
       setError(extractErrorMessage(err, 'Could not load marketplace'));
     } finally {
@@ -173,6 +175,7 @@ export default function MarketplaceScreen() {
         focusSkipRef.current = false;
         return;
       }
+      if (Date.now() - loadedAt.current < 60000) return;
       loadData({ silent: true });
     }, [loadData])
   );

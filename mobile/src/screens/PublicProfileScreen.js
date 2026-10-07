@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -70,6 +70,7 @@ import { useAuth } from '../context/AuthContext';
 import { openTournamentDetail, openUserProfile } from '../utils/openUserProfile';
 import { APP_BRAND_NAME } from '../config/branding';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
+import { perfStart } from '../utils/perfLog';
 
 const COVER_HEIGHT = 168;
 const AVATAR_SIZE = 96;
@@ -89,6 +90,9 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [profile, setProfile] = useState(null);
   const [postCount, setPostCount] = useState(0);
   const [posts, setPosts] = useState([]);
+  const [postsHasMore, setPostsHasMore] = useState(false);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const postsPageRef = useRef(1);
   const [gallery, setGallery] = useState([]);
   const [videos, setVideos] = useState([]);
   const [youtubeMedia, setYoutubeMedia] = useState([]);
@@ -107,6 +111,14 @@ export default function PublicProfileScreen({ route, navigation }) {
   /** Profile tab key (avoid name `activeTab` — clashes with some tooling / stale bundles). */
   const [profileTab, setProfileTab] = useState('overview');
   const [loading, setLoading] = useState(true);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [sectionsReady, setSectionsReady] = useState({});
+  const [sectionReload, setSectionReload] = useState(0);
+  const coreAt = useRef({ id: '', ts: 0 });
+  const sectionCache = useRef(new Map());
+  const requestGen = useRef(0);
+  const coreAbort = useRef(null);
+  const appliedReload = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [following, setFollowing] = useState(false);
@@ -259,119 +271,168 @@ export default function PublicProfileScreen({ route, navigation }) {
       .catch(() => setIBlocked(false));
   }, [userId, isSelf]);
 
-  const loadProfile = useCallback(
-    async ({ silent } = { silent: false }) => {
-      if (!silent) setLoading(true);
-      setError('');
-      try {
-        const profileRes = await profileByIdRequest(userId);
-        const p = profileRes.data || null;
-        setProfile(p);
-        const role = String(p?.role || '').toLowerCase();
+  useEffect(() => {
+    setProfile(null);
+    setPosts([]);
+    setPostsHasMore(false);
+    postsPageRef.current = 1;
+    setGallery([]);
+    setVideos([]);
+    setYoutubeMedia([]);
+    setTransfers([]);
+    setClubPendingTransfers([]);
+    setStaffAssignments([]);
+    setClubMembers([]);
+    setClubStaff([]);
+    setSponsors([]);
+    setPlatformAchievements([]);
+    setTournamentSummary({ tournaments: [], totals: null });
+    setSectionsReady({});
+    setPostCount(0);
+    sectionCache.current.clear();
+    return () => {
+      requestGen.current += 1;
+      coreAbort.current?.abort();
+    };
+  }, [userId]);
 
-        const clubId = p?.id ?? p?.userId ?? userId;
-        const [
-          followRes,
-          postsRes,
-          galleryRes,
-          videosRes,
-          ytMediaRes,
-          transferRes,
-          staffRes,
-          sponsorsRes,
-          membersRes,
-          clubStaffRes,
-          rosterRes,
-          balanceRes,
-          gamificationRes,
-          tournamentSummaryRes,
-        ] = await Promise.all([
-          isSelf ? Promise.resolve({ data: {} }) : followStatusRequest(userId),
-          userPostsRequest(userId).catch(() => ({ data: [] })),
-          userGalleryRequest(userId).catch(() => ({ data: [] })),
-          userVideosRequest(userId).catch(() => ({ data: [] })),
-          role === 'club'
-            ? clubMediaRequest(clubId, { limit: 24 }).catch(() => ({ data: { items: [] } }))
-            : playerMediaRequest(userId, { limit: 24 }).catch(() => ({ data: { items: [] } })),
-          role === 'athlete' || role === 'coach' || role === 'trajner'
-            ? transferHistoryByUserRequest(userId).catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          role === 'coach' || role === 'trajner'
-            ? clubStaffAssignmentsRequest(userId).catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          isSelf ? sponsorsByUserRequest(userId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-          role === 'club'
-            ? clubMembersByClubRequest(clubId, 'approved').catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          role === 'club'
-            ? clubStaffByClubRequest(clubId, { status: 'active' }).catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          role === 'club'
-            ? clubRosterByClubRequest(clubId).catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          isSelf ? joncoinBalanceRequest().catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
-          isSelf && role === 'athlete'
-            ? gamificationAchievementsRequest().catch(() => ({ data: [] }))
-            : Promise.resolve({ data: [] }),
-          role === 'athlete'
-            ? profileTournamentSummaryRequest(userId).catch(() => ({ data: { tournaments: [], totals: null } }))
-            : Promise.resolve({ data: { tournaments: [], totals: null } }),
-        ]);
-
-        if (!isSelf) {
-          setFollowing(!!(followRes?.data?.isFollowing || followRes?.data?.following));
-        }
-        const postsData = Array.isArray(postsRes?.data) ? postsRes.data : [];
-        setPosts(postsData);
-        setPostCount(postsData.length);
-        setGallery(Array.isArray(galleryRes?.data) ? galleryRes.data : []);
-        setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
-        setYoutubeMedia(Array.isArray(ytMediaRes?.data?.items) ? ytMediaRes.data.items : []);
-        setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
-        setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
-        setSponsors(Array.isArray(sponsorsRes?.data) ? sponsorsRes.data : []);
-
-        if (String(me?.role || '').toLowerCase() === 'club') {
-          try {
-            const pendingRes = await transferHistoryPendingForClubRequest();
-            setClubPendingTransfers(Array.isArray(pendingRes?.data) ? pendingRes.data : []);
-          } catch {
-            setClubPendingTransfers([]);
-          }
-        } else {
-          setClubPendingTransfers([]);
-        }
-
-        if (isSelf) {
-          const fromProfile = p?.joncoinBalance;
-          const fromApi = balanceRes?.data?.balance;
+  const loadCore = useCallback(async ({ silent } = {}) => {
+    if (userId == null || userId === '') return null;
+    const gen = requestGen.current;
+    coreAbort.current?.abort();
+    const controller = new AbortController();
+    coreAbort.current = controller;
+    if (!silent) setLoading(true);
+    setError('');
+    const done = perfStart('Profile core');
+    const followPromise = isSelf ? null : followStatusRequest(userId).catch(() => null);
+    const balancePromise = isSelf ? joncoinBalanceRequest().catch(() => null) : null;
+    try {
+      const profileRes = await profileByIdRequest(userId, { signal: controller.signal });
+      if (gen !== requestGen.current || controller.signal.aborted) return null;
+      const p = profileRes.data || null;
+      setProfile(p);
+      setPostCount(Number(p?.postsCount) || 0);
+      coreAt.current = { id: String(userId), ts: Date.now() };
+      if (isSelf) {
+        const fromProfile = p?.joncoinBalance;
+        const applyBalance = (fromApi) => {
           const n =
             fromProfile != null && fromProfile !== ''
               ? Number(fromProfile)
               : fromApi != null && fromApi !== ''
                 ? Number(fromApi)
                 : null;
-          setJoncoinBalance(Number.isFinite(n) ? n : 0);
-        } else {
-          setJoncoinBalance(null);
+          if (gen === requestGen.current) setJoncoinBalance(Number.isFinite(n) ? n : 0);
+        };
+        if (fromProfile != null && fromProfile !== '') applyBalance(null);
+        else if (balancePromise) balancePromise.then((res) => applyBalance(res?.data?.balance));
+        else applyBalance(null);
+      } else {
+        setJoncoinBalance(null);
+        if (followPromise) {
+          followPromise.then((followRes) => {
+            if (gen !== requestGen.current || !followRes) return;
+            setFollowing(!!(followRes?.data?.isFollowing || followRes?.data?.following));
+          });
         }
+      }
+      return p;
+    } catch (err) {
+      if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return null;
+      if (gen === requestGen.current) {
+        setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i profilit'));
+      }
+      return null;
+    } finally {
+      done();
+      if (gen === requestGen.current && !controller.signal.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, [isSelf, userId]);
 
-        if (isSelf && role === 'athlete') {
-          setPlatformAchievements(Array.isArray(gamificationRes?.data) ? gamificationRes.data : []);
-        } else {
-          setPlatformAchievements([]);
-        }
-
+  const loadSection = useCallback(async (section, profileSnapshot, { force } = {}) => {
+    const gen = requestGen.current;
+    const uid = userId;
+    if (!uid || !section || !profileSnapshot) return;
+    if (section === 'matches' || section === 'contact') {
+      setSectionsReady((prev) => (prev[section] ? prev : { ...prev, [section]: true }));
+      return;
+    }
+    const cacheKey = `${uid}:${section}`;
+    const cachedAt = sectionCache.current.get(cacheKey) || 0;
+    if (!force && cachedAt && Date.now() - cachedAt < 90000) {
+      setSectionsReady((prev) => (prev[section] ? prev : { ...prev, [section]: true }));
+      return;
+    }
+    setSectionLoading(true);
+    const done = perfStart(`Profile ${section}`);
+    const role = String(profileSnapshot.role || '').toLowerCase();
+    const clubId = profileSnapshot.id ?? profileSnapshot.userId ?? uid;
+    const needsTransfers = role === 'athlete' || role === 'coach' || role === 'trajner';
+    try {
+      if (section === 'posts') {
+        const postsRes = await userPostsRequest(uid, { page: 1, limit: 20 }).catch(() => ({ data: [] }));
+        if (gen !== requestGen.current) return;
+        const postsData = Array.isArray(postsRes?.data) ? postsRes.data : [];
+        setPosts(postsData);
+        postsPageRef.current = 1;
+        setPostsHasMore(String(postsRes?.headers?.['x-has-more'] || '0') === '1');
+        setPostCount(Number(profileSnapshot.postsCount) || postsData.length);
+      } else if (section === 'gallery') {
+        const galleryRes = await userGalleryRequest(uid).catch(() => ({ data: [] }));
+        if (gen !== requestGen.current) return;
+        setGallery(Array.isArray(galleryRes?.data) ? galleryRes.data : []);
+      } else if (section === 'videos') {
+        const [videosRes, ytMediaRes] = await Promise.all([
+          userVideosRequest(uid).catch(() => ({ data: [] })),
+          role === 'club'
+            ? clubMediaRequest(clubId, { limit: 24 }).catch(() => ({ data: { items: [] } }))
+            : playerMediaRequest(uid, { limit: 24 }).catch(() => ({ data: { items: [] } })),
+        ]);
+        if (gen !== requestGen.current) return;
+        setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
+        setYoutubeMedia(Array.isArray(ytMediaRes?.data?.items) ? ytMediaRes.data.items : []);
+      } else if (section === 'overview') {
+        const [staffRes, membersRes, clubStaffRes, rosterRes, transferRes, tournamentSummaryRes, galleryRes, videosRes] =
+          await Promise.all([
+            role === 'coach' || role === 'trajner'
+              ? clubStaffAssignmentsRequest(uid).catch(() => ({ data: [] }))
+              : Promise.resolve({ data: [] }),
+            role === 'club'
+              ? clubMembersByClubRequest(clubId, 'approved').catch(() => ({ data: [] }))
+              : Promise.resolve({ data: [] }),
+            role === 'club'
+              ? clubStaffByClubRequest(clubId, { status: 'active' }).catch(() => ({ data: [] }))
+              : Promise.resolve({ data: [] }),
+            role === 'club'
+              ? clubRosterByClubRequest(clubId).catch(() => ({ data: [] }))
+              : Promise.resolve({ data: [] }),
+            needsTransfers
+              ? transferHistoryByUserRequest(uid).catch(() => ({ data: [] }))
+              : Promise.resolve({ data: [] }),
+            role === 'athlete'
+              ? profileTournamentSummaryRequest(uid).catch(() => ({ data: { tournaments: [], totals: null } }))
+              : Promise.resolve({ data: { tournaments: [], totals: null } }),
+            userGalleryRequest(uid).catch(() => ({ data: [] })),
+            userVideosRequest(uid).catch(() => ({ data: [] })),
+          ]);
+        if (gen !== requestGen.current) return;
+        setStaffAssignments(Array.isArray(staffRes?.data) ? staffRes.data : []);
+        setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
+        setGallery(Array.isArray(galleryRes?.data) ? galleryRes.data : []);
+        setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
+        sectionCache.current.set(`${uid}:gallery`, Date.now());
         if (role === 'athlete') {
           const tData = tournamentSummaryRes?.data || {};
           setTournamentSummary({
             tournaments: Array.isArray(tData.tournaments) ? tData.tournaments : [],
             totals: tData.totals || null,
           });
-        } else {
-          setTournamentSummary({ tournaments: [], totals: null });
+          sectionCache.current.set(`${uid}:tournaments`, Date.now());
         }
-
         if (role === 'club') {
           let members = Array.isArray(membersRes?.data) ? membersRes.data : [];
           if (members.length === 0) {
@@ -384,26 +445,101 @@ export default function PublicProfileScreen({ route, navigation }) {
           setClubMembers([]);
           setClubStaff([]);
         }
-      } catch (err) {
-        setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i profilit'));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+      } else if (section === 'about') {
+        const [transferRes, pendingRes] = await Promise.all([
+          needsTransfers
+            ? transferHistoryByUserRequest(uid).catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+          isClubViewer
+            ? transferHistoryPendingForClubRequest().catch(() => ({ data: [] }))
+            : Promise.resolve({ data: [] }),
+        ]);
+        if (gen !== requestGen.current) return;
+        setTransfers(Array.isArray(transferRes?.data) ? transferRes.data : []);
+        setClubPendingTransfers(Array.isArray(pendingRes?.data) ? pendingRes.data : []);
+      } else if (section === 'achievements') {
+        if (isSelf && role === 'athlete') {
+          const res = await gamificationAchievementsRequest().catch(() => ({ data: [] }));
+          if (gen !== requestGen.current) return;
+          setPlatformAchievements(Array.isArray(res?.data) ? res.data : []);
+        } else if (gen === requestGen.current) {
+          setPlatformAchievements([]);
+        }
+      } else if (section === 'sponsors') {
+        if (isSelf) {
+          const res = await sponsorsByUserRequest(uid).catch(() => ({ data: [] }));
+          if (gen !== requestGen.current) return;
+          setSponsors(Array.isArray(res?.data) ? res.data : []);
+        }
+      } else if (section === 'tournaments') {
+        if (role === 'athlete') {
+          const res = await profileTournamentSummaryRequest(uid).catch(() => ({ data: { tournaments: [], totals: null } }));
+          if (gen !== requestGen.current) return;
+          const tData = res?.data || {};
+          setTournamentSummary({
+            tournaments: Array.isArray(tData.tournaments) ? tData.tournaments : [],
+            totals: tData.totals || null,
+          });
+        }
       }
-    },
-    [userId, isSelf, me?.role]
-  );
+      if (gen !== requestGen.current) return;
+      sectionCache.current.set(cacheKey, Date.now());
+      setSectionsReady((prev) => ({ ...prev, [section]: true, ...(section === 'overview' ? { gallery: true, tournaments: role === 'athlete' ? true : prev.tournaments } : {}) }));
+    } finally {
+      done();
+      if (gen === requestGen.current) setSectionLoading(false);
+    }
+  }, [isClubViewer, isSelf, userId]);
+
+  const loadProfile = useCallback(async ({ silent } = {}) => {
+    sectionCache.current.clear();
+    await loadCore({ silent });
+    setSectionReload((n) => n + 1);
+  }, [loadCore]);
 
   useFocusEffect(
     useCallback(() => {
       if (userId == null || userId === '') {
         setError('Mungon përdoruesi');
         setLoading(false);
-        return;
+        return undefined;
       }
-      loadProfile();
-    }, [loadProfile, userId])
+      const fresh = coreAt.current.id === String(userId) && Date.now() - coreAt.current.ts < 60000;
+      if (!fresh) loadCore({ silent: coreAt.current.id === String(userId) });
+      return () => {
+        coreAbort.current?.abort();
+      };
+    }, [loadCore, userId])
   );
+
+  useEffect(() => {
+    if (!profile) return undefined;
+    const force = appliedReload.current !== sectionReload;
+    appliedReload.current = sectionReload;
+    loadSection(profileTab, profile, { force });
+    return undefined;
+  }, [loadSection, profile, profileTab, sectionReload]);
+
+  const loadMoreProfilePosts = useCallback(async () => {
+    if (!userId || postsLoadingMore || !postsHasMore) return;
+    const nextPage = postsPageRef.current + 1;
+    setPostsLoadingMore(true);
+    try {
+      const postsRes = await userPostsRequest(userId, { page: nextPage, limit: 20 });
+      const postsData = Array.isArray(postsRes?.data) ? postsRes.data : [];
+      setPosts((prev) => {
+        const seen = new Set(prev.map((item) => String(item.id)));
+        const extra = postsData.filter((item) => !seen.has(String(item.id)));
+        return extra.length ? [...prev, ...extra] : prev;
+      });
+      postsPageRef.current = nextPage;
+      setPostsHasMore(String(postsRes?.headers?.['x-has-more'] || '0') === '1');
+    } catch (_err) {
+      /* keep the posts already shown */
+    } finally {
+      setPostsLoadingMore(false);
+    }
+  }, [postsHasMore, postsLoadingMore, userId]);
 
   const onAddTransfer = () => {
     setTransferForm({
@@ -693,6 +829,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   };
 
   const closeHeaderPreview = () => setHeaderImagePreview(null);
+  const tabReady = !!sectionsReady[profileTab];
 
   return (
     <>
@@ -943,7 +1080,10 @@ export default function PublicProfileScreen({ route, navigation }) {
 
             <PublicProfileTabBar tabs={tabs} activeKey={profileTab} onChange={setProfileTab} theme={theme} />
             <View style={styles.tabPanel}>
-              {profileTab === 'overview' ? (
+              {!tabReady ? (
+                <ActivityIndicator color={theme.primary} style={{ marginVertical: 28 }} />
+              ) : null}
+              {tabReady && profileTab === 'overview' ? (
                 <PublicProfileOverviewTab
                   profile={profile}
                   theme={theme}
@@ -958,11 +1098,19 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onOpenTab={setProfileTab}
                 />
               ) : null}
-              {profileTab === 'posts' ? <PublicProfilePostsTab posts={posts} theme={theme} /> : null}
-              {profileTab === 'matches' && isAthlete ? (
+              {tabReady && profileTab === 'posts' ? (
+                <PublicProfilePostsTab
+                  posts={posts}
+                  theme={theme}
+                  hasMore={postsHasMore}
+                  loadingMore={postsLoadingMore}
+                  onLoadMore={loadMoreProfilePosts}
+                />
+              ) : null}
+              {tabReady && profileTab === 'matches' && isAthlete ? (
                 <PublicProfileMatchHistoryTab profile={profile} theme={theme} />
               ) : null}
-              {profileTab === 'tournaments' && isAthlete ? (
+              {tabReady && profileTab === 'tournaments' && isAthlete ? (
                 <PublicProfileTournamentsTab
                   tournaments={tournamentSummary.tournaments}
                   totals={tournamentSummary.totals}
@@ -970,7 +1118,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onPressTournament={(tournamentId) => openTournamentDetail(navigation, tournamentId)}
                 />
               ) : null}
-              {profileTab === 'achievements' && isAthlete ? (
+              {tabReady && profileTab === 'achievements' && isAthlete ? (
                 <PublicProfileAchievementsTab
                   profile={profile}
                   theme={theme}
@@ -979,8 +1127,8 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onOpenInsights={isSelf ? onOpenInsights : undefined}
                 />
               ) : null}
-              {profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
-              {profileTab === 'videos' ? (
+              {tabReady && profileTab === 'gallery' ? <PublicProfileGalleryTab items={gallery} theme={theme} /> : null}
+              {tabReady && profileTab === 'videos' ? (
                 <PublicProfileVideosTab
                   videos={videos}
                   liveVideos={Array.isArray(profile?.liveVideos) ? profile.liveVideos : []}
@@ -995,7 +1143,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onMediaSaved={(item) => setYoutubeMedia((prev) => [item, ...prev])}
                 />
               ) : null}
-              {profileTab === 'about' ? (
+              {tabReady && profileTab === 'about' ? (
                 <PublicProfileAboutTab
                   profile={profile}
                   transfers={transfers}
@@ -1013,8 +1161,8 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onPressAthlete={(uid) => navigation.push('PublicProfile', { userId: uid })}
                 />
               ) : null}
-              {profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
-              {profileTab === 'sponsors' && isSelf ? (
+              {tabReady && profileTab === 'contact' ? <PublicProfileContactTab profile={profile} theme={theme} /> : null}
+              {tabReady && profileTab === 'sponsors' && isSelf ? (
                 <PublicProfileSponsorsTab sponsors={sponsors} theme={theme} />
               ) : null}
             </View>

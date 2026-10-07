@@ -20,138 +20,53 @@ exports.setPostSponsors = async (req, res) => {
 const Post = require('../models/Post');
 const Gallery = require('../models/Gallery');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
+const { parsePageLimit, setPostListHeaders, loadPostPage, hydratePosts } = require('../utils/postFeed');
 // ...existing code...
 
 exports.getPosts = async (req, res) => {
   try {
-    const User = require('../models/User');
-    const Profile = require('../models/Profile');
-    const Like = require('../models/Like');
-    const Comment = require('../models/Comment');
-
-    const Sponsor = require('../models/Sponsor');
-    const PostSponsor = require('../models/PostSponsor');
     const Follow = require('../models/Follow');
     const { Op } = require('sequelize');
     const { getBlockedPeerIds } = require('../utils/blocks');
+    const { page, limit } = parsePageLimit(req.query);
 
     const blockedIds = req.user?.id ? await getBlockedPeerIds(req.user.id) : [];
-    const notBlockedWhere =
-      blockedIds.length > 0 ? { userId: { [Op.notIn]: blockedIds } } : {};
-
+    const notBlockedWhere = blockedIds.length > 0 ? { userId: { [Op.notIn]: blockedIds } } : {};
     const wantFollowed = req.query && (req.query.followed === 'true' || req.query.followed === '1' || req.query.followed === true);
-    let posts;
+
+    let where = notBlockedWhere;
     if (wantFollowed) {
       if (!req.user || !req.user.id) {
         return res.status(401).json({ msg: 'Unauthorized' });
       }
-      // Get list of following user IDs
-      const follows = await Follow.findAll({ where: { followerId: req.user.id, status: 'accepted' } });
-      let followingIds = follows.map(f => f.followingId);
+      const follows = await Follow.findAll({
+        where: { followerId: req.user.id, status: 'accepted' },
+        attributes: ['followingId'],
+        raw: true,
+      });
+      let followingIds = follows.map((row) => row.followingId);
       if (blockedIds.length) {
         const blocked = new Set(blockedIds.map(Number));
         followingIds = followingIds.filter((id) => !blocked.has(Number(id)));
       }
-      if (followingIds.length === 0) {
-        posts = [];
-      } else {
-        posts = await Post.findAll({
-          where: { userId: followingIds },
-          include: [
-            { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
-            { model: Sponsor, through: { attributes: [] } }
-          ],
-          order: [['createdAt', 'DESC']]
-        });
+      if (!followingIds.length) {
+        setPostListHeaders(res, { page, limit, hasMore: false });
+        return res.json([]);
       }
-    } else {
-      posts = await Post.findAll({
-        where: notBlockedWhere,
-        include: [
-          { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
-          { model: Sponsor, through: { attributes: [] } }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
+      where = { userId: { [Op.in]: followingIds } };
     }
-    // Add like, comment counts, userLiked, and sponsors for each post
-    const postsWithCounts = await Promise.all(posts.map(async (post) => {
-      let likesCount = 0;
-      let commentsCount = 0;
-      let userLiked = null;
-      try {
-        likesCount = await Like.count({ where: { postId: post.id } });
-      } catch (e) {
-        console.warn('Could not count likes for post', post.id, e.message);
-        likesCount = 0;
-      }
-      try {
-        commentsCount = await Comment.count({ where: { postId: post.id } });
-      } catch (e) {
-        console.warn('Could not count comments for post', post.id, e.message);
-        commentsCount = 0;
-      }
-      try {
-        if (req.user) {
-          userLiked = await Like.findOne({ 
-            where: { postId: post.id, userId: req.user.id },
-            attributes: ['id','userId','postId','createdAt']
-          });
-        }
-      } catch (e) {
-        console.warn('Could not fetch user like for post', post.id, e.message);
-        userLiked = null;
-      }
-      // Get sponsors linked to this post
-      const postSponsors = post.Sponsors || [];
-      // Get all sponsors of the user
-      const userSponsors = await Sponsor.findAll({ where: { userId: post.userId } });
-      // Bashko pa duplikate
-      const allSponsors = [
-        ...postSponsors,
-        ...userSponsors.filter(us => !postSponsors.some(ps => ps.id === us.id))
-      ];
-      // Standardizo path-in për imazhe dhe video të postimeve
-      const postObj = post.toJSON();
-      if (postObj.imageUrl) {
-        postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
-      }
-      if (postObj.videoUrl) {
-        postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
-      }
-      // Standardizo path-in e profilePhoto të author-it në çdo post
-      if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
-        postObj.author.profilePhoto = toAbsoluteUploadsUrl(req, postObj.author.Profile.profilePhoto);
-      } else {
-        postObj.author = postObj.author || {};
-        postObj.author.profilePhoto = null;
-      }
-      const normalizedSponsors = allSponsors.map(s => {
-        const sponsorObj = s.toJSON ? s.toJSON() : s;
-        if (sponsorObj.image) {
-          const img = String(sponsorObj.image);
-          // Drop broken OS-temp paths saved before Cloudinary URL fix
-          if (
-            img.startsWith('/tmp/') ||
-            img.includes('/var/folders/') ||
-            (img.startsWith('/') && !img.startsWith('/uploads/') && !/^https?:\/\//i.test(img))
-          ) {
-            sponsorObj.image = null;
-          } else {
-            sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
-          }
-        }
-        return sponsorObj;
-      });
-      return {
-        ...postObj,
-        likes: likesCount,
-        comments: commentsCount,
-        isLiked: !!userLiked,
-        sponsors: normalizedSponsors
-      };
-    }));
-    res.json(postsWithCounts);
+
+    const pageResult = await loadPostPage({ where, page, limit });
+    const hydrated = await hydratePosts(pageResult.posts, {
+      userId: req.user?.id || null,
+      req,
+      includeAuthorSponsors: true,
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PERF] GET /api/posts page=${page} limit=${limit} posts=${hydrated.posts.length} bulkQueries=${pageResult.queries + hydrated.queries}`);
+    }
+    setPostListHeaders(res, { page, limit, hasMore: pageResult.hasMore });
+    res.json(hydrated.posts);
   } catch (err) {
     console.error('Get posts error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -160,92 +75,19 @@ exports.getPosts = async (req, res) => {
 
 exports.getUserPosts = async (req, res) => {
   try {
-    const User = require('../models/User');
-    const Profile = require('../models/Profile');
-    const Like = require('../models/Like');
-    const Comment = require('../models/Comment');
     const { userId } = req.params;
-    
-    const Sponsor = require('../models/Sponsor');
-    const PostSponsor = require('../models/PostSponsor');
-    const posts = await Post.findAll({ 
-      where: { userId },
-      include: [
-        { model: User, as: 'author', attributes: ['id', 'firstName', 'lastName', 'email', 'verified'], include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }] },
-        { model: Sponsor, through: { attributes: [] } }
-      ],
-      order: [['createdAt', 'DESC']]
+    const { page, limit } = parsePageLimit(req.query);
+    const pageResult = await loadPostPage({ where: { userId }, page, limit });
+    const hydrated = await hydratePosts(pageResult.posts, {
+      userId: req.user?.id || null,
+      req,
+      includeAuthorSponsors: false,
     });
-    // Add like, comment counts, userLiked, and sponsors for each post
-    const postsWithCounts = await Promise.all(posts.map(async (post) => {
-      let likesCount = 0;
-      let commentsCount = 0;
-      let userLiked = null;
-      try {
-        likesCount = await Like.count({ where: { postId: post.id } });
-      } catch (e) {
-        console.warn('Could not count likes for post', post.id, e.message);
-        likesCount = 0;
-      }
-      try {
-        commentsCount = await Comment.count({ where: { postId: post.id } });
-      } catch (e) {
-        console.warn('Could not count comments for post', post.id, e.message);
-        commentsCount = 0;
-      }
-      try {
-        if (req.user) {
-          userLiked = await Like.findOne({
-            where: { postId: post.id, userId: req.user.id },
-            attributes: ['id','userId','postId','createdAt']
-          });
-        }
-      } catch (e) {
-        console.warn('Could not fetch user like for post', post.id, e.message);
-        userLiked = null;
-      }
-      // Get sponsors linked to this post
-      const sponsors = post.Sponsors || [];
-      // Standardizo path-in për imazhe dhe video të postimeve
-      const postObj = post.toJSON();
-      if (postObj.imageUrl) {
-        postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
-      }
-      if (postObj.videoUrl) {
-        postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
-      }
-      // Standardizo path-in e profilePhoto të author-it në çdo post
-      if (postObj.author && postObj.author.Profile && postObj.author.Profile.profilePhoto) {
-        postObj.author.profilePhoto = toAbsoluteUploadsUrl(req, postObj.author.Profile.profilePhoto);
-      } else {
-        postObj.author = postObj.author || {};
-        postObj.author.profilePhoto = null;
-      }
-      const normalizedSponsors = sponsors.map(s => {
-        const sponsorObj = s.toJSON ? s.toJSON() : s;
-        if (sponsorObj.image) {
-          const img = String(sponsorObj.image);
-          if (
-            img.startsWith('/tmp/') ||
-            img.includes('/var/folders/') ||
-            (img.startsWith('/') && !img.startsWith('/uploads/') && !/^https?:\/\//i.test(img))
-          ) {
-            sponsorObj.image = null;
-          } else {
-            sponsorObj.image = toAbsoluteUploadsUrl(req, sponsorObj.image);
-          }
-        }
-        return sponsorObj;
-      });
-      return {
-        ...postObj,
-        likes: likesCount,
-        comments: commentsCount,
-        isLiked: !!userLiked,
-        sponsors: normalizedSponsors
-      };
-    }));
-    res.json(postsWithCounts);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PERF] GET /api/posts/user page=${page} limit=${limit} posts=${hydrated.posts.length} bulkQueries=${pageResult.queries + hydrated.queries}`);
+    }
+    setPostListHeaders(res, { page, limit, hasMore: pageResult.hasMore });
+    res.json(hydrated.posts);
   } catch (err) {
     console.error('Get user posts error:', err);
     res.status(500).json({ msg: 'Server error' });

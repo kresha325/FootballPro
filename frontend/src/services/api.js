@@ -161,7 +161,7 @@ export const verificationAPI = {
 ========================= */
 export const postsAPI = {
   getPosts: (params) => API.get('/posts', { params }),
-  getUserPosts: (userId) => API.get(`/posts/user/${userId}`),
+  getUserPosts: (userId, config = {}) => API.get(`/posts/user/${userId}`, config),
   createPost: (data) => {
     // Check if data is FormData (for file uploads) or regular object
     if (data instanceof FormData) {

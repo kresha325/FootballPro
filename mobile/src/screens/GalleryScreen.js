@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
 import { deleteGalleryItemRequest, extractErrorMessage, myGalleryRequest } from '../api/client';
+import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
 
-function GalleryCard({ item, onDelete }) {
+function GalleryCard({ item, onDelete, onPlay }) {
   const isVideo = !!item?.videoUrl;
 
   return (
@@ -13,7 +13,7 @@ function GalleryCard({ item, onDelete }) {
 
       {isVideo ? (
         <View style={styles.videoWrap}>
-          <Video source={{ uri: item.videoUrl }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />
+          <VideoPoster style={styles.video} onPress={() => onPlay(item.videoUrl)} />
         </View>
       ) : (
         <Image source={{ uri: item?.imageUrl }} style={styles.image} resizeMode="cover" />
@@ -31,6 +31,7 @@ export default function GalleryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [playingUri, setPlayingUri] = useState(null);
 
   const loadGallery = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -85,11 +86,16 @@ export default function GalleryScreen() {
   }
 
   return (
+    <>
     <FlatList
       data={items}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.listContent}
-      renderItem={({ item }) => <GalleryCard item={item} onDelete={onDelete} />}
+      initialNumToRender={5}
+      maxToRenderPerBatch={4}
+      windowSize={5}
+      removeClippedSubviews
+      renderItem={({ item }) => <GalleryCard item={item} onDelete={onDelete} onPlay={setPlayingUri} />}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -102,6 +108,8 @@ export default function GalleryScreen() {
       }
       ListEmptyComponent={<Text style={styles.empty}>Your gallery is empty.</Text>}
     />
+    <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
+    </>
   );
 }
 

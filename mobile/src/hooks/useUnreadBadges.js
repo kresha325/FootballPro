@@ -1,18 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, DeviceEventEmitter } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { messagingUnreadCountRequest, unreadNotificationsCountRequest } from '../api/client';
 
 /**
- * Unread counts: notifications (bell / More tab) vs messages (Chats tab).
- * Matches web Navbar burger (notifications on icon) + separate Messages link.
- * Also syncs iOS/Android app-icon badge when counts change.
+ * One process-wide unread manager.
+ * Every header and tab reads the same counts. Mounting another header does not
+ * start another poll or another pair of requests.
  */
-export function useUnreadBadges(getSocket, socketConnected = false) {
-  const [notificationsCount, setNotificationsCount] = useState(0);
-  const [messagesCount, setMessagesCount] = useState(0);
+const POLL_MS = 45000;
+const listeners = new Set();
+let snapshot = { notificationsCount: 0, messagesCount: 0 };
+let pollId = null;
+let inFlight = null;
+let lastRefreshAt = 0;
+let socketBound = null;
+let socketBump = null;
+let appStateSub = null;
+let pushSub = null;
+let bumpTimer = null;
 
-  const refresh = useCallback(async () => {
+function emit() {
+  listeners.forEach((listener) => listener(snapshot));
+}
+
+async function refreshUnread() {
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
     try {
       const [notifRes, msgRes] = await Promise.all([
         unreadNotificationsCountRequest(),
@@ -22,48 +36,110 @@ export function useUnreadBadges(getSocket, socketConnected = false) {
       const nextMsg = Number(
         msgRes?.data?.count ?? msgRes?.data?.unreadCount ?? msgRes?.data?.unread ?? 0
       );
-      setNotificationsCount(nextNotif);
-      setMessagesCount(nextMsg);
+      snapshot = { notificationsCount: nextNotif, messagesCount: nextMsg };
+      lastRefreshAt = Date.now();
+      emit();
       const badgeTotal = Math.max(0, nextNotif + nextMsg);
-      try {
-        await Notifications.setBadgeCountAsync(badgeTotal);
-      } catch (_badgeErr) {
-        /* simulator / permission */
-      }
+      Notifications.setBadgeCountAsync(badgeTotal).catch(() => {});
     } catch (_err) {
-      // Keep previous values on failure.
+      /* keep the last counts */
+    } finally {
+      inFlight = null;
     }
-  }, []);
+  })();
+  return inFlight;
+}
 
-  useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 30000);
-    const sub = DeviceEventEmitter.addListener('notifications-refresh', () => {
-      refresh();
+function scheduleBump() {
+  if (bumpTimer) return;
+  bumpTimer = setTimeout(() => {
+    bumpTimer = null;
+    refreshUnread();
+  }, 400);
+}
+
+function bindSocket(getSocket) {
+  const socket = getSocket?.();
+  if (!socket || socket === socketBound) return;
+  if (socketBound && socketBump) {
+    socketBound.off('newMessage', socketBump);
+    socketBound.off('messageUpdated', socketBump);
+    socketBound.off('messageDeleted', socketBump);
+    socketBound.off('notification:new', socketBump);
+    socketBound.off('notification:unread', socketBump);
+  }
+  socketBound = socket;
+  socketBump = () => scheduleBump();
+  socket.on('newMessage', socketBump);
+  socket.on('messageUpdated', socketBump);
+  socket.on('messageDeleted', socketBump);
+  socket.on('notification:new', socketBump);
+  socket.on('notification:unread', socketBump);
+}
+
+function ensureStarted(getSocket) {
+  bindSocket(getSocket);
+  if (!pollId) {
+    pollId = setInterval(() => {
+      if (AppState.currentState === 'active') refreshUnread();
+    }, POLL_MS);
+  }
+  if (!appStateSub) {
+    appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && Date.now() - lastRefreshAt > 15000) refreshUnread();
     });
-    return () => {
-      clearInterval(id);
-      sub.remove();
-    };
-  }, [refresh]);
+  }
+  if (!pushSub) {
+    pushSub = DeviceEventEmitter.addListener('notifications-refresh', () => scheduleBump());
+  }
+  if (!lastRefreshAt) refreshUnread();
+}
+
+function stopIfIdle() {
+  if (listeners.size > 0) return;
+  if (pollId) {
+    clearInterval(pollId);
+    pollId = null;
+  }
+  if (bumpTimer) {
+    clearTimeout(bumpTimer);
+    bumpTimer = null;
+  }
+  if (appStateSub) {
+    appStateSub.remove();
+    appStateSub = null;
+  }
+  if (pushSub) {
+    pushSub.remove();
+    pushSub = null;
+  }
+  if (socketBound && socketBump) {
+    socketBound.off('newMessage', socketBump);
+    socketBound.off('messageUpdated', socketBump);
+    socketBound.off('messageDeleted', socketBump);
+    socketBound.off('notification:new', socketBump);
+    socketBound.off('notification:unread', socketBump);
+  }
+  socketBound = null;
+  socketBump = null;
+}
+
+export function useUnreadBadges(getSocket, socketConnected = false) {
+  const [counts, setCounts] = useState(snapshot);
 
   useEffect(() => {
-    const socket = getSocket?.();
-    if (!socket) return undefined;
-    const bump = () => refresh();
-    socket.on('newMessage', bump);
-    socket.on('messageUpdated', bump);
-    socket.on('messageDeleted', bump);
-    socket.on('notification:new', bump);
-    socket.on('notification:unread', bump);
+    listeners.add(setCounts);
+    setCounts(snapshot);
+    ensureStarted(getSocket);
     return () => {
-      socket.off('newMessage', bump);
-      socket.off('messageUpdated', bump);
-      socket.off('messageDeleted', bump);
-      socket.off('notification:new', bump);
-      socket.off('notification:unread', bump);
+      listeners.delete(setCounts);
+      stopIfIdle();
     };
-  }, [getSocket, socketConnected, refresh]);
+  }, [getSocket]);
 
-  return { notificationsCount, messagesCount, refresh };
+  useEffect(() => {
+    if (listeners.size > 0) bindSocket(getSocket);
+  }, [getSocket, socketConnected]);
+
+  return { ...counts, refresh: refreshUnread };
 }

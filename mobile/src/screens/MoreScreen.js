@@ -1,6 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
@@ -32,13 +31,7 @@ function MenuButton({ title, subtitle, onPress, badge, colors }) {
 export default function MoreScreen({ navigation }) {
   const { user, getSocket, socketConnected, logout } = useAuth();
   const { colors } = useTheme();
-  const { notificationsCount, messagesCount, refresh } = useUnreadBadges(getSocket, socketConnected);
-
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh])
-  );
+  const { notificationsCount, messagesCount } = useUnreadBadges(getSocket, socketConnected);
 
   const alertLines = useMemo(() => {
     const parts = [];
