@@ -33,11 +33,12 @@ function logSocketEvent(socket, event, details) {
     console.log('Logger error:', e && e.message);
   }
 }
-// When behind a proxy (Render, Heroku, etc.) trust the proxy so req.ip is correct
-// This avoids many clients appearing to come from the same IP and hitting the rate limiter
-
 const app = express();
-// trust proxy must be set after app is created
+// Render sits one proxy in front of this process. `1` keeps req.ip as the
+// address that proxy appended (the rightmost X-Forwarded-For hop). Extra hops
+// a client adds on the left are ignored, so they cannot rotate the address
+// and skip the rate limiter. Do not set this to `true`: that trusts the
+// leftmost hop, which the client can choose.
 app.set('trust proxy', 1);
 
 // OG share images FIRST — before Helmet/rate-limit (Facebook crawler needs a plain JPEG)
@@ -129,8 +130,8 @@ app.use(helmet({
 // by spreading requests. A shared store is intentionally not added in this phase.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
-  standardHeaders: true,
+  limit: 500,
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
   handler: (req, res) => {
     console.warn(`Rate limit exceeded for IP ${req.ip} on ${req.originalUrl}`);

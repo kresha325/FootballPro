@@ -34,16 +34,16 @@ function maybeLimit(limiter) {
 
 const authWriteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
+  limit: 20,
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
   message: { msg: 'Shumë përpjekje. Provo përsëri më vonë.' },
 });
 
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 8,
-  standardHeaders: true,
+  limit: 8,
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
   message: { msg: 'Shumë përpjekje. Provo përsëri më vonë.' },
 });
@@ -54,8 +54,8 @@ const ME_CACHE_TTL = 5 * 1000; // 5 seconds
 
 const meLimiter = rateLimit({
   windowMs: 15 * 1000, // 15s window
-  max: 20, // allow bursty requests but limit repeated hits
-  standardHeaders: true,
+  limit: 20, // allow bursty requests but limit repeated hits
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
 });
 
@@ -320,3 +320,4 @@ router.get('/apple/callback', (req, res) => {
 });
 
 module.exports = router;
+module.exports.authWriteLimiter = authWriteLimiter;

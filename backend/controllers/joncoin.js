@@ -138,18 +138,34 @@ exports.purchase = async (req, res) => {
     if (amountCents == null || amountCents <= 0) return res.status(400).json({ error: 'Shuma e pavlefshme' });
     const idempotencyKey = String(req.get('Idempotency-Key') || req.body?.idempotencyKey || '').trim();
     if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
-    const result = await sequelize.transaction(async (transaction) => postLedgerEntry(
-      {
-        userId: req.user.id,
-        type: 'purchase',
-        amountCents,
-        status: 'pending',
-        idempotencyKey: idempotencyKey ? `deposit:${req.user.id}:${idempotencyKey}` : null,
-        description: 'Blerje XCoin (në pritje të pagesës së verifikuar)',
-        relatedEntityType: 'deposit',
-      },
-      transaction
-    ));
+    const result = await sequelize.transaction(async (transaction) => {
+      const pendingOthers = await JonCoinTransaction.count({
+        where: {
+          userId: req.user.id,
+          type: 'purchase',
+          status: 'pending',
+          idempotencyKey: { [Op.ne]: `deposit:${req.user.id}:${idempotencyKey}` },
+        },
+        transaction,
+      });
+      if (pendingOthers >= 5) {
+        const err = new Error('Ke shumë kërkesa blerjeje në pritje. Prit konfirmimin para se të dërgosh një tjetër.');
+        err.status = 429;
+        throw err;
+      }
+      return postLedgerEntry(
+        {
+          userId: req.user.id,
+          type: 'purchase',
+          amountCents,
+          status: 'pending',
+          idempotencyKey: idempotencyKey ? `deposit:${req.user.id}:${idempotencyKey}` : null,
+          description: 'Blerje XCoin (në pritje të pagesës së verifikuar)',
+          relatedEntityType: 'deposit',
+        },
+        transaction
+      );
+    });
     await safeWallet(result.entry);
     return res.json({ success: true, transaction: publicTransaction(result.entry), autoCompleted: false, duplicate: result.duplicate });
   } catch (err) {
