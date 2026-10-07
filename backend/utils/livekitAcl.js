@@ -45,6 +45,9 @@ async function authorizeLiveKitRoom(userId, roomName, { canPublish = false } = {
       return { ok: false, status: 404, msg: 'Transmetimi nuk u gjet' };
     }
     const isOwner = Number(stream.streamerId) === uid;
+    if (!isOwner && (stream.visibility || 'public') === 'private') {
+      return { ok: false, status: 403, msg: 'Transmetimi është privat' };
+    }
     if (canPublish && !isOwner) {
       return { ok: false, status: 403, msg: 'Vetëm streamer-i mund të publikoje në këtë dhomë' };
     }

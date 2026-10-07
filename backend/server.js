@@ -707,8 +707,8 @@ io.on('connection', (socket) => {
 
   // Handle notifications
   socket.on('notificationRead', async (notificationId) => {
-    // Broadcast to other devices of same user
-    socket.broadcast.to(socket.userId).emit('notificationRead', notificationId);
+    if (!authenticatedUserId) return;
+    socket.broadcast.to(authenticatedUserId).emit('notificationRead', notificationId);
   });
 
   // Messages are persisted and broadcast by the HTTP API. Ignore client-supplied payloads.
@@ -891,83 +891,98 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:answer', (data) => {
+    if (!authenticatedUserId) {
+      socket.emit('call:failed', { reason: 'Unauthorized' });
+      return;
+    }
     (async () => {
-      let { to, answer, callId } = data;
-      logSocketEvent(socket, 'call:answer-received', { from: socket.userId, to, callId });
+      const payload = data || {};
+      let { to, answer, callId } = payload;
+      logSocketEvent(socket, 'call:answer-received', { from: authenticatedUserId, to, callId });
 
-      // If 'to' is missing but callId is present, try to resolve the recipient from DB
-      if ((!to || String(to) === 'undefined') && callId) {
+      let callRecord = null;
+      if (callId) {
         try {
-          const vc = await VideoCall.findByPk(callId);
-          if (vc) {
-            // If current socket is receiver, forward to caller; otherwise forward to receiver
-            to = (socket.userId && socket.userId === String(vc.receiverId)) ? vc.callerId : vc.receiverId;
-            logSocketEvent(socket, 'call:answer-resolved-recipient', { callId, resolvedTo: to });
-          }
+          callRecord = await VideoCall.findByPk(callId);
         } catch (resolveErr) {
           console.warn('Failed to resolve call recipient for answer:', resolveErr && resolveErr.message);
+          socket.emit('call:failed', { reason: 'Server error' });
+          return;
+        }
+        if (!callRecord) {
+          socket.emit('call:failed', { reason: 'Recipient not found for answer' });
+          return;
+        }
+        const uid = Number(authenticatedUserId);
+        const party = uid === Number(callRecord.callerId) || uid === Number(callRecord.receiverId);
+        if (!party) {
+          socket.emit('call:failed', { reason: 'Unauthorized' });
+          return;
+        }
+        if (!to || String(to) === 'undefined') {
+          to = uid === Number(callRecord.receiverId) ? callRecord.callerId : callRecord.receiverId;
+          logSocketEvent(socket, 'call:answer-resolved-recipient', { callId, resolvedTo: to });
         }
       }
 
       if (!to) {
-        logSocketEvent(socket, 'call:answer-no-recipient', { from: socket.userId, callId });
+        logSocketEvent(socket, 'call:answer-no-recipient', { from: authenticatedUserId, callId });
         socket.emit('call:failed', { reason: 'Recipient not found for answer' });
         return;
       }
 
-      logSocketEvent(socket, 'call:answer-forwarding', { from: socket.userId, to, callId });
+      logSocketEvent(socket, 'call:answer-forwarding', { from: authenticatedUserId, to, callId });
       io.to(String(to)).emit('call:answered', {
-        from: socket.userId,
+        from: authenticatedUserId,
         answer,
         callId,
       });
 
-      // If a callId was provided, mark the VideoCall as connected
-      if (callId) {
+      if (!callRecord) return;
+      try {
+        callRecord.status = 'connected';
+        callRecord.connectedAt = new Date();
+        await callRecord.save();
         try {
-          const vc = await VideoCall.findByPk(callId);
-          if (vc) {
-            vc.status = 'connected';
-            vc.connectedAt = new Date();
-            await vc.save();
-            // Notify participants that call is confirmed connected in DB
-            try {
-              io.to(String(vc.callerId)).emit('call:connected', { callId: vc.id });
-              io.to(String(vc.receiverId)).emit('call:connected', { callId: vc.id });
-            } catch (emitErr) {
-              console.warn('Failed to emit call:connected:', emitErr.message);
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to update VideoCall on answer:', e.message);
+          io.to(String(callRecord.callerId)).emit('call:connected', { callId: callRecord.id });
+          io.to(String(callRecord.receiverId)).emit('call:connected', { callId: callRecord.id });
+        } catch (emitErr) {
+          console.warn('Failed to emit call:connected:', emitErr.message);
         }
+      } catch (e) {
+        console.warn('Failed to update VideoCall on answer:', e.message);
       }
     })();
   });
 
   socket.on('call:ice-candidate', (data) => {
-    const { to, candidate } = data;
+    if (!authenticatedUserId) return;
+    const { to, candidate } = data || {};
+    if (!to) return;
     logSocketEvent(socket, 'call:ice-candidate', { to, hasCandidate: !!candidate });
     io.to(String(to)).emit('call:ice-candidate', {
-      from: socket.userId,
+      from: authenticatedUserId,
       candidate,
     });
   });
 
   socket.on('call:reject', (data) => {
-    const { to } = data;
+    if (!authenticatedUserId) return;
+    const { to } = data || {};
+    if (!to) return;
     logSocketEvent(socket, 'call:reject', { to });
     io.to(String(to)).emit('call:rejected', {
-      from: socket.userId,
+      from: authenticatedUserId,
     });
   });
 
   socket.on('call:end', async (data) => {
-    const { to } = data;
+    if (!authenticatedUserId) return;
+    const { to } = data || {};
     logSocketEvent(socket, 'call:end', { to });
     if (to) {
       io.to(String(to)).emit('call:ended', {
-        from: socket.userId,
+        from: authenticatedUserId,
       });
     }
     // Mark call as ended in DB (for all rooms this user is in)
