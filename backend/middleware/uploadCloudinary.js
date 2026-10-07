@@ -4,6 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const cloudinary = require('../utils/cloudinary');
 const { MEDIA_EXTS, storedFilename, BLOCKED_EXT } = require('../utils/uploadNames');
+const { inspectUpload, collectUploads, discardUploads } = require('../utils/uploadMagic');
+const { uploadByteLimits } = require('../utils/uploadLimits');
 
 const isCloudinaryEnabled = !!(
   process.env.CLOUDINARY_CLOUD_NAME &&
@@ -42,13 +44,8 @@ const localStorage = multer.diskStorage({
 	}
 });
 
-// Images default 10MB; videos 100MB (same as /api/videos). Multer limit = max of both.
-const MAX_IMAGE_SIZE = parseInt(process.env.UPLOAD_MAX_IMAGE_BYTES || '10485760', 10);
-const MAX_VIDEO_SIZE = parseInt(
-  process.env.UPLOAD_MAX_VIDEO_BYTES || process.env.CLOUDINARY_MAX_FILE_SIZE || String(100 * 1024 * 1024),
-  10
-);
-const MAX_FILE_SIZE = Math.max(MAX_IMAGE_SIZE, MAX_VIDEO_SIZE);
+// Images default 8MB; videos 100MB. Both follow UPLOAD_MAX_*_BYTES.
+const { maxImage: MAX_IMAGE_SIZE, maxVideo: MAX_VIDEO_SIZE, maxFile: MAX_FILE_SIZE } = uploadByteLimits();
 
 function fileFilter(req, file, cb) {
 	const ext = path.extname(file.originalname || '').toLowerCase();
@@ -57,9 +54,11 @@ function fileFilter(req, file, cb) {
 		return cb(new Error('Invalid image file'));
 	}
 	if (!storedFilename(file, MEDIA_EXTS)) return cb(new Error('Invalid image file'));
-	if (/^image\//.test(file.mimetype) || /^video\//.test(file.mimetype)) return cb(null, true);
-	if (String(file.mimetype || '').toLowerCase() === 'image/jpg') return cb(null, true);
-	if (String(file.mimetype || '').toLowerCase() === 'application/octet-stream') return cb(null, true);
+	const mime = String(file.mimetype || '').toLowerCase();
+	if (/^image\//.test(mime) || /^video\//.test(mime) || mime === 'image/jpg') return cb(null, true);
+	// octet-stream is not an allowed type. A known extension may reach disk so the
+	// magic-byte check can accept a real image/video or delete the temp file.
+	if (mime === 'application/octet-stream') return cb(null, true);
 	cb(new Error('Invalid image file'));
 }
 
@@ -112,6 +111,15 @@ function cloudinaryFields(fields) {
 							max: cap,
 						});
 					}
+				}
+			}
+
+			const uploaded = collectUploads(req);
+			for (const file of uploaded) {
+				const magic = await inspectUpload(file, MEDIA_EXTS);
+				if (!magic.ok) {
+					discardUploads(uploaded);
+					return res.status(400).json({ msg: magic.msg });
 				}
 			}
 
