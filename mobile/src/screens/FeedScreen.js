@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,9 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from '../theme/nativeComponents';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPoster } from '../components/media/LazyVideo';
 import {
   adsRequest,
   createCommentRequest,
@@ -44,6 +45,12 @@ import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { tournamentIdFromNotification } from '../utils/navigateFromNotification';
+import { perfStart } from '../utils/perfLog';
+
+const FEED_PAGE_SIZE = 20;
+const FEED_STALE_MS = 90 * 1000;
+const FEED_EXTRAS_STALE_MS = 3 * 60 * 1000;
+const TOURNAMENT_BADGE_STALE_MS = 120 * 1000;
 
 function postAuthorId(item) {
   if (!item || typeof item !== 'object') return null;
@@ -241,14 +248,10 @@ function PostCard({
 
       {hasVideo || imageIsVideo ? (
         <View style={[styles.videoWrap, isDark && styles.videoWrapDark]}>
-          <Video
-            source={{ uri: hasVideo ? videoUri : imageUrl }}
+          <VideoPoster
             style={styles.videoPlayer}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            isLooping={false}
-            isMuted={false}
-            volume={1}
+            onPress={() => onOpenPost?.(item)}
+            accessibilityLabel="Hap videon"
           />
           {onOpenPost ? (
             <TouchableOpacity
@@ -409,6 +412,24 @@ export default function FeedScreen({ navigation }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [liveStreams, setLiveStreams] = useState([]);
   const [feedAds, setFeedAds] = useState([]);
+  const [activeAdKey, setActiveAdKey] = useState(null);
+  const feedViewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
+  const onFeedViewableItemsChanged = useRef(({ viewableItems }) => {
+    const ad = (viewableItems || []).find((entry) => entry?.isViewable && entry?.item?.type === 'ad');
+    const next = ad?.item?.key || null;
+    setActiveAdKey((prev) => (prev === next ? prev : next));
+  }).current;
+  const lastFeedAt = useRef(0);
+  const loadedScope = useRef(feedScope);
+  const lastExtrasAt = useRef(0);
+  const lastTournamentBadgeAt = useRef(0);
+  const feedAbortRef = useRef(null);
+  const feedFocusedRef = useRef(false);
+  const feedPageRef = useRef(1);
+  const feedHasMoreRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const feedRequestGen = useRef(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [feedScope, setFeedScope] = useState('all');
   const [sharingPostId, setSharingPostId] = useState(null);
   const [feedSearch, setFeedSearch] = useState('');
@@ -421,6 +442,7 @@ export default function FeedScreen({ navigation }) {
     }
     let cancelled = false;
     const loadBadge = async () => {
+      if (Date.now() - lastTournamentBadgeAt.current < TOURNAMENT_BADGE_STALE_MS) return;
       try {
         const res = await notificationsRequest({ limit: 50 });
         const list = res?.data?.notifications || res?.data || [];
@@ -431,7 +453,10 @@ export default function FeedScreen({ navigation }) {
           if (type !== 'tournament' && type !== 'match' && n?.entityType !== 'tournament') return;
           if (tournamentIdFromNotification(n)) count += 1;
         });
-        if (!cancelled) setMyTournamentsBadge(count);
+        if (!cancelled) {
+          lastTournamentBadgeAt.current = Date.now();
+          setMyTournamentsBadge(count);
+        }
       } catch {
         if (!cancelled) setMyTournamentsBadge(0);
       }
@@ -500,9 +525,15 @@ export default function FeedScreen({ navigation }) {
     [navigation, user?.id]
   );
 
-  const loadPosts = useCallback(async ({ silent, useCache, scope } = { silent: false, useCache: false, scope: feedScope }) => {
+  const loadPosts = useCallback(async ({ silent, useCache, scope, postsOnly, append, page } = { silent: false, useCache: false, scope: feedScope, postsOnly: false }) => {
+    if (append) {
+      if (loadingMoreRef.current || !feedHasMoreRef.current) return;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+    }
     const selectedScope = scope || feedScope;
     const cacheKey = feedCacheKey(selectedScope, user?.id);
+    const nextPage = append ? (page || feedPageRef.current + 1) : 1;
     if (!silent) {
       setLoading(true);
     }
@@ -521,17 +552,58 @@ export default function FeedScreen({ navigation }) {
       } catch (_e) {}
     }
 
-    try {
-      const postsRes = await postsRequest({ followed: selectedScope === 'my' ? true : undefined });
-      const data = Array.isArray(postsRes.data) ? postsRes.data : [];
-      setPosts(data);
-      await AsyncStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
-    } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to load feed'));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    if (!append) {
+      feedHasMoreRef.current = false;
+      feedAbortRef.current?.abort();
+      feedRequestGen.current += 1;
     }
+    const requestGen = feedRequestGen.current;
+    const controller = new AbortController();
+    feedAbortRef.current = controller;
+    const done = perfStart(append ? 'Feed page' : 'Feed load');
+
+    try {
+      const postsRes = await postsRequest(
+        {
+          followed: selectedScope === 'my' ? true : undefined,
+          page: nextPage,
+          limit: FEED_PAGE_SIZE,
+        },
+        { signal: controller.signal }
+      );
+      if (controller.signal.aborted || requestGen !== feedRequestGen.current) return;
+      const data = Array.isArray(postsRes.data) ? postsRes.data : [];
+      const hasMore = String(postsRes.headers?.['x-has-more'] || '0') === '1';
+      feedHasMoreRef.current = hasMore;
+      feedPageRef.current = nextPage;
+      if (append) {
+        setPosts((prev) => {
+          const seen = new Set(prev.map((item) => String(item.id)));
+          const extra = data.filter((item) => !seen.has(String(item.id)));
+          return extra.length ? [...prev, ...extra] : prev;
+        });
+      } else {
+        setPosts(data);
+        lastFeedAt.current = Date.now();
+        loadedScope.current = selectedScope;
+        await AsyncStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));
+      }
+    } catch (err) {
+      if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
+      if (!append) setError(extractErrorMessage(err, 'Failed to load feed'));
+    } finally {
+      done();
+      if (append) {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      } else if (!controller.signal.aborted && requestGen === feedRequestGen.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+
+    if (postsOnly || controller.signal.aborted) return;
+    if (Date.now() - lastExtrasAt.current < FEED_EXTRAS_STALE_MS && lastExtrasAt.current > 0) return;
 
     try {
       const adsRes = await adsRequest();
@@ -548,6 +620,7 @@ export default function FeedScreen({ navigation }) {
     } catch (_err) {
       setLiveStreams([]);
     }
+    lastExtrasAt.current = Date.now();
   }, [feedScope, user?.id]);
 
   useEffect(() => {
@@ -588,41 +661,32 @@ export default function FeedScreen({ navigation }) {
     });
   }, [feedScope, navigation]);
 
-  useEffect(() => {
-    loadPosts({ useCache: true });
-  }, [loadPosts]);
-
-  useEffect(() => {
-    let intervalId = null;
-
-    const startAutoRefresh = () => {
-      if (intervalId) return;
-      intervalId = setInterval(() => {
-        loadPosts({ silent: true });
-      }, 45000);
-    };
-
-    const stopAutoRefresh = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
+  useFocusEffect(
+    useCallback(() => {
+      feedFocusedRef.current = true;
+      const scopeChanged = loadedScope.current !== feedScope;
+      const stale = scopeChanged || Date.now() - lastFeedAt.current > FEED_STALE_MS;
+      if (scopeChanged || lastFeedAt.current === 0 || stale) {
+        loadPosts({
+          silent: !scopeChanged && lastFeedAt.current > 0,
+          useCache: scopeChanged || lastFeedAt.current === 0,
+        });
       }
-    };
+      return () => {
+        feedFocusedRef.current = false;
+        feedAbortRef.current?.abort();
+      };
+    }, [feedScope, loadPosts])
+  );
 
-    startAutoRefresh();
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        loadPosts({ silent: true });
-        startAutoRefresh();
-      } else {
-        stopAutoRefresh();
+      if (state !== 'active' || !feedFocusedRef.current) return;
+      if (Date.now() - lastFeedAt.current > FEED_STALE_MS) {
+        loadPosts({ silent: true, postsOnly: true });
       }
     });
-
-    return () => {
-      stopAutoRefresh();
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [loadPosts]);
 
   const onToggleLike = async (post) => {
@@ -821,6 +885,12 @@ export default function FeedScreen({ navigation }) {
       keyExtractor={(item) => item.key}
       style={styles.feedList}
       contentContainerStyle={[styles.listContent, isDark && styles.screenDark]}
+      extraData={activeAdKey}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={7}
+      viewabilityConfig={feedViewabilityConfig}
+      onViewableItemsChanged={onFeedViewableItemsChanged}
       ListHeaderComponent={
         <View>
           <HomeCompetitionShortcuts
@@ -894,7 +964,7 @@ export default function FeedScreen({ navigation }) {
       }
       renderItem={({ item }) =>
         item.type === 'ad' ? (
-          <FeedAdSlot ads={feedAds} isDark={isDark} />
+          <FeedAdSlot ads={feedAds} isDark={isDark} isVisible={item.key === activeAdKey} />
         ) : (
           <PostCard
             item={item.post}
@@ -932,6 +1002,12 @@ export default function FeedScreen({ navigation }) {
         />
       }
       ListEmptyComponent={<Text style={styles.empty}>No posts yet.</Text>}
+      ListFooterComponent={loadingMore ? <ActivityIndicator color="#9A6B12" style={{ marginVertical: 16 }} /> : null}
+      onEndReachedThreshold={0.4}
+      onEndReached={() => {
+        if (!feedHasMoreRef.current || loadingMoreRef.current) return;
+        loadPosts({ silent: true, postsOnly: true, append: true, page: feedPageRef.current + 1 });
+      }}
     />
     </View>
     <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>

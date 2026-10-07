@@ -17,7 +17,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserAvatar from '../components/UserAvatar';
@@ -136,7 +136,7 @@ function MessageStatusTicks({ status, mine }) {
   return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" style={styles.statusIcon} />;
 }
 
-function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStatus, onOpenSenderProfile, isDark, onReact, onOpenReply, highlighted }) {
+function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo, outboundStatus, onOpenSenderProfile, isDark, onReact, onOpenReply, highlighted }) {
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
@@ -213,13 +213,11 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, outboundStat
                   </TouchableOpacity>
                 ) : null}
                 {fileUri && message.type === 'video' ? (
-                  <Video
-                    source={{ uri: fileUri }}
+                  <VideoPoster
                     style={styles.msgVideo}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                    isMuted={false}
-                    volume={1}
+                    onPress={() => onOpenVideo?.(fileUri)}
+                    onLongPress={openActions}
+                    accessibilityLabel="Luaj videon e mesazhit"
                   />
                 ) : null}
                 {fileUri && message.type === 'file' ? (
@@ -347,6 +345,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [previewImageUri, setPreviewImageUri] = useState(null);
+  const [previewVideoUri, setPreviewVideoUri] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
   const [forwardMessage, setForwardMessage] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
@@ -1306,6 +1305,7 @@ export default function ConversationScreen({ route, navigation }) {
             outboundStatus={outboundMessageStatus(item, othersRead, user?.id)}
             onOpenActions={() => openMessageActions(item)}
             onOpenImage={setPreviewImageUri}
+            onOpenVideo={setPreviewVideoUri}
             onOpenSenderProfile={(uid) => openUserProfile(navigation, uid)}
             onReact={(emoji) => toggleReaction(item, emoji)}
             onOpenReply={openReplyTarget}
@@ -1477,6 +1477,7 @@ export default function ConversationScreen({ route, navigation }) {
           if (msg?.id != null) confirmDelete(msg.id);
         }}
       />
+      <VideoPlayerModal uri={previewVideoUri} visible={!!previewVideoUri} onClose={() => setPreviewVideoUri(null)} />
       <Modal visible={!!previewImageUri} transparent animationType="fade" onRequestClose={() => setPreviewImageUri(null)}>
         <TouchableOpacity style={styles.imageModalBackdrop} activeOpacity={1} onPress={() => setPreviewImageUri(null)}>
           {previewImageUri ? (

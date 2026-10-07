@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { DarkTheme, DefaultTheme, NavigationContainer, useFocusEffect } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -398,24 +398,13 @@ function AppTabs() {
   const { getSocket, socketConnected } = useAuth();
   const { totalPieces } = useCart();
   const { colors, isDark } = useTheme();
-  const { notificationsCount, messagesCount, refresh: refreshBadges } = useUnreadBadges(
+  const { notificationsCount, messagesCount } = useUnreadBadges(
     getSocket,
     socketConnected
   );
 
-  useFocusEffect(
-    React.useCallback(() => {
-      refreshBadges();
-    }, [refreshBadges])
-  );
-
   return (
     <Tabs.Navigator
-        screenListeners={{
-          state: () => {
-            refreshBadges();
-          },
-        }}
         screenOptions={({ route }) => ({
           headerTitle: APP_BRAND_NAME,
           headerTitleAlign: 'center',

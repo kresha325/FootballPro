@@ -9,7 +9,8 @@ import {
   View,
 } from '../../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode } from 'expo-av';
+import { ManagedVideo, VideoPoster } from '../media/LazyVideo';
 import { Ionicons } from '@expo/vector-icons';
 
 function isVideoUrl(url) {
@@ -70,18 +71,7 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
               {imgUri ? (
                 <Image source={{ uri: imgUri }} style={styles.thumb} resizeMode="cover" />
               ) : vidUri ? (
-                <View style={styles.thumb}>
-                  <Video
-                    source={{ uri: vidUri }}
-                    style={StyleSheet.absoluteFillObject}
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay={false}
-                    useNativeControls={false}
-                  />
-                  <View style={styles.playBadge}>
-                    <Ionicons name="play" size={22} color="#fff" />
-                  </View>
-                </View>
+                <VideoPoster style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]}>
                   <Text style={{ fontSize: 28 }}>📁</Text>
@@ -132,7 +122,7 @@ export default function PublicProfileGalleryTab({ items = [], theme }) {
               </View>
             ) : modalUri?.type === 'video' ? (
               <View style={styles.modalImgWrap} pointerEvents="auto">
-                <Video
+                <ManagedVideo
                   source={{ uri: modalUri.uri }}
                   style={styles.modalImg}
                   useNativeControls

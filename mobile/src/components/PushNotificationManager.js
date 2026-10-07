@@ -18,13 +18,12 @@ export default function PushNotificationManager() {
 
     let cancelled = false;
 
-    (async () => {
-      try {
-        await registerPushWithBackend();
-      } catch (error) {
+    const registerTimer = setTimeout(() => {
+      if (cancelled) return;
+      registerPushWithBackend().catch((error) => {
         console.warn('push register failed:', error?.message || error);
-      }
-    })();
+      });
+    }, 2000);
 
     const tokenSub = Notifications.addPushTokenListener(() => {
       getExpoPushTokenString()
@@ -59,6 +58,7 @@ export default function PushNotificationManager() {
 
     return () => {
       cancelled = true;
+      clearTimeout(registerTimer);
       tokenSub.remove();
       receivedSub.remove();
       responseSub.remove();

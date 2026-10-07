@@ -7,6 +7,7 @@ import {
   removeCartItemRequest,
   updateCartItemRequest,
 } from '../api/client';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'footballpro_marketplace_cart_v1';
 const CartContext = createContext(null);
@@ -25,6 +26,7 @@ function mapServer(data) {
 }
 
 export function CartProvider({ children }) {
+  const { token } = useAuth();
   const [items, setItems] = useState([]);
   const [serverTotal, setServerTotal] = useState(null);
   const [ready, setReady] = useState(false);
@@ -41,6 +43,7 @@ export function CartProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!token) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -61,7 +64,7 @@ export function CartProvider({ children }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [apply]);
+  }, [apply, token]);
 
   const addItem = useCallback(async (product, quantity) => {
     if (!product?.id) return;

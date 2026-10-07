@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import ListSearchBar from '../components/ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
 import * as ImagePicker from 'expo-image-picker';
 import { absoluteBackendUrl } from '../config/constants';
 import {
@@ -23,7 +23,7 @@ function VideosSkeleton() {
   );
 }
 
-function VideoCard({ item, onLike }) {
+function VideoCard({ item, onLike, onPlay }) {
   const author = item?.User ? `${item.User.firstName || ''} ${item.User.lastName || ''}`.trim() : 'Unknown';
   const videoUri = absoluteBackendUrl(item?.videoUrl) || item?.videoUrl;
 
@@ -34,15 +34,7 @@ function VideoCard({ item, onLike }) {
       <Text style={styles.author}>By: {author}</Text>
       {videoUri ? (
         <View style={styles.videoWrap}>
-          <Video
-            source={{ uri: videoUri }}
-            style={styles.video}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            isLooping={false}
-            isMuted={false}
-            volume={1}
-          />
+          <VideoPoster style={styles.video} onPress={() => onPlay(videoUri)} />
         </View>
       ) : null}
       <View style={styles.rowBetween}>
@@ -69,6 +61,7 @@ export default function VideosScreen() {
   const [description, setDescription] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [playingUri, setPlayingUri] = useState(null);
 
   const loadVideos = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
@@ -148,10 +141,15 @@ export default function VideosScreen() {
   }
 
   return (
+    <>
     <FlatList
       data={displayVideos}
       keyExtractor={(item, idx) => String(item?.id || idx)}
       contentContainerStyle={styles.listContent}
+      initialNumToRender={5}
+      maxToRenderPerBatch={4}
+      windowSize={5}
+      removeClippedSubviews
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -187,9 +185,11 @@ export default function VideosScreen() {
           />
         </View>
       }
-      renderItem={({ item }) => <VideoCard item={item} onLike={onLike} />}
+      renderItem={({ item }) => <VideoCard item={item} onLike={onLike} onPlay={setPlayingUri} />}
       ListEmptyComponent={<Text style={styles.empty}>No videos yet.</Text>}
     />
+    <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
+    </>
   );
 }
 

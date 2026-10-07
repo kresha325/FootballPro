@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   RefreshControl,
   ScrollView,
@@ -9,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from '../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ListSearchBar from '../components/ListSearchBar';
@@ -42,6 +43,7 @@ export default function StreamsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [listSearch, setListSearch] = useState('');
+  const [playingUri, setPlayingUri] = useState(null);
 
   const theme = useMemo(
     () => ({
@@ -55,12 +57,15 @@ export default function StreamsScreen({ navigation }) {
     [colors, isDark]
   );
 
+  const loadedAt = useRef(0);
+
   const load = useCallback(async ({ silent } = { silent: false }) => {
     if (!silent) setLoading(true);
     setError('');
     try {
       const res = await streamsRequest({ limit: 50 });
       setStreams(Array.isArray(res.data) ? res.data : []);
+      loadedAt.current = Date.now();
     } catch (err) {
       setStreams([]);
       setError(extractErrorMessage(err, 'Nuk u ngarkuan stream-et'));
@@ -72,7 +77,8 @@ export default function StreamsScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      load({ silent: true });
+      if (Date.now() - loadedAt.current < 45000) return;
+      load({ silent: loadedAt.current > 0 });
     }, [load])
   );
 
@@ -112,9 +118,16 @@ export default function StreamsScreen({ navigation }) {
   };
 
   return (
-    <ScrollView
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <FlatList
+      data={recorded}
+      keyExtractor={(stream, idx) => String(stream?.id || idx)}
       style={{ flex: 1, backgroundColor: theme.bg }}
       contentContainerStyle={{ paddingBottom: insets.bottom + 28, paddingTop: 12 }}
+      initialNumToRender={5}
+      maxToRenderPerBatch={4}
+      windowSize={5}
+      removeClippedSubviews
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -125,7 +138,8 @@ export default function StreamsScreen({ navigation }) {
           tintColor={theme.gold}
         />
       }
-    >
+      ListHeaderComponent={
+        <>
       <View style={styles.headerPad}>
         <Text style={[styles.h1, { color: theme.text }]}>Streams</Text>
         <Text style={[styles.sub, { color: theme.muted }]}>
@@ -200,39 +214,35 @@ export default function StreamsScreen({ navigation }) {
       <View style={styles.headerPad}>
         <Text style={[styles.h2, { color: theme.text }]}>Regjistrime</Text>
       </View>
-
-      {recorded.length === 0 && !loading ? (
-        <Text style={[styles.emptyRec, { color: theme.muted }]}>Nuk ka regjistrime ende.</Text>
-      ) : (
-        recorded.map((stream) => {
-          const uri = recordingUri(stream.videoUrl);
-          return (
-            <View
-              key={String(stream.id)}
-              style={[styles.recCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <Text style={[styles.recTitle, { color: theme.text }]}>{stream.title || 'Stream'}</Text>
-              {stream.description ? (
-                <Text style={{ color: theme.muted, marginTop: 4 }}>{stream.description}</Text>
-              ) : null}
-              <Text style={[styles.recMeta, { color: theme.muted }]}>
-                {streamerName(stream)} · Recorded
-              </Text>
-              {uri ? (
-                <View style={styles.videoWrap}>
-                  <Video
-                    source={{ uri }}
-                    style={styles.video}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                  />
-                </View>
-              ) : null}
-            </View>
-          );
-        })
-      )}
-    </ScrollView>
+        </>
+      }
+      renderItem={({ item: stream }) => {
+        const uri = recordingUri(stream.videoUrl);
+        return (
+          <View style={[styles.recCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.recTitle, { color: theme.text }]}>{stream.title || 'Stream'}</Text>
+            {stream.description ? (
+              <Text style={{ color: theme.muted, marginTop: 4 }}>{stream.description}</Text>
+            ) : null}
+            <Text style={[styles.recMeta, { color: theme.muted }]}>
+              {streamerName(stream)} · Recorded
+            </Text>
+            {uri ? (
+              <View style={styles.videoWrap}>
+                <VideoPoster style={styles.video} onPress={() => setPlayingUri(uri)} />
+              </View>
+            ) : null}
+          </View>
+        );
+      }}
+      ListEmptyComponent={
+        !loading ? (
+          <Text style={[styles.emptyRec, { color: theme.muted }]}>Nuk ka regjistrime ende.</Text>
+        ) : null
+      }
+    />
+    <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
+    </View>
   );
 }
 

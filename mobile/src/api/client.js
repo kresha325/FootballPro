@@ -3,11 +3,11 @@ import { BACKEND_URL } from '../config/constants';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 20000,
+  timeout: 12000,
 });
 
-const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
-const MAX_GET_RETRIES = 2;
+const RETRYABLE_STATUS = new Set([408, 500, 502, 503, 504]);
+const MAX_GET_RETRIES = 1;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -64,8 +64,9 @@ api.interceptors.response.use(
     const config = error?.config;
     const method = String(config?.method || '').toLowerCase();
     const isNetworkError = !error?.response;
+    const canceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError' || config?.signal?.aborted;
 
-    if (!config || method !== 'get') {
+    if (!config || method !== 'get' || canceled || config.skipRetry) {
       return Promise.reject(error);
     }
 
@@ -112,9 +113,9 @@ export const oauthProvidersRequest = () => api.get('/api/auth/providers');
 export const exchangeOAuthCodeRequest = (code) => api.post('/api/auth/oauth/exchange', { code });
 export const adminMediaListRequest = (params = {}) => api.get('/api/media/admin', { params });
 export const adminMediaDeleteRequest = (id) => api.delete(`/api/media/${id}`);
-export const postsRequest = (params = {}) => api.get('/api/posts', { params });
+export const postsRequest = (params = {}, config = {}) => api.get('/api/posts', { params, ...config });
 export const getPostRequest = (postId) => api.get(`/api/posts/${postId}`);
-export const userPostsRequest = (userId) => api.get(`/api/posts/user/${userId}`);
+export const userPostsRequest = (userId, params = {}, config = {}) => api.get(`/api/posts/user/${userId}`, { params, ...config });
 export const createPostRequest = (payload = {}) => {
   const form = new FormData();
   if (payload.content) {
@@ -133,7 +134,7 @@ export const createPostRequest = (payload = {}) => {
 export const setPostSponsorsRequest = (postId, sponsorIds = []) =>
   api.post(`/api/posts/${postId}/sponsors`, { sponsorIds });
 export const myProfileRequest = () => api.get('/api/profiles/me');
-export const profileByIdRequest = (userId) => api.get(`/api/profiles/${userId}`);
+export const profileByIdRequest = (userId, config = {}) => api.get(`/api/profiles/${userId}`, config);
 export const publicProfileCvRequest = (userId) => api.get(`/api/profiles/cv/${userId}`);
 export const profileTournamentSummaryRequest = (userId) =>
   api.get(`/api/profiles/${userId}/tournament-summary`);

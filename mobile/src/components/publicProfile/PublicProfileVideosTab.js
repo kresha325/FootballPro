@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from '../../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoPlayerModal, VideoPoster } from '../media/LazyVideo';
 import { youtubeThumbnailUrl } from '../../utils/youtubeVideo';
 import YouTubeWebPlayer from '../media/YouTubeWebPlayer';
 import AddMediaSheet from '../media/AddMediaSheet';
@@ -17,22 +17,14 @@ import { absoluteBackendUrl } from '../../config/constants';
 
 const HIGHLIGHT_CATEGORIES = new Set(['match_highlight', 'goal', 'assist', 'save', 'skills', 'tackle']);
 
-function LiveVideoCard({ item, theme }) {
+function LiveVideoCard({ item, theme, onPlay }) {
   const uri = item?.url;
   if (!uri) return null;
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <VideoPoster style={styles.videoWrap} onPress={() => onPlay(uri, item.title)} accessibilityLabel="Luaj videon live" />
       <View style={styles.badgeWrap}>
         <Text style={styles.liveBadge}>LIVE</Text>
-      </View>
-      <View style={styles.videoWrap}>
-        <Video
-          source={{ uri }}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode={ResizeMode.CONTAIN}
-          useNativeControls
-          shouldPlay={false}
-        />
       </View>
       {item.title ? (
         <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
@@ -82,6 +74,7 @@ export default function PublicProfileVideosTab({
   onMediaSaved,
 }) {
   const [watching, setWatching] = useState(null);
+  const [playing, setPlaying] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [highlightsOnly, setHighlightsOnly] = useState(false);
   const hasLive = Array.isArray(liveVideos) && liveVideos.length > 0;
@@ -136,7 +129,12 @@ export default function PublicProfileVideosTab({
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Live Videos</Text>
           {liveVideos.map((v, idx) => (
-            <LiveVideoCard key={v.streamId ? `live-${v.streamId}` : `live-${idx}`} item={v} theme={theme} />
+            <LiveVideoCard
+              key={v.streamId ? `live-${v.streamId}` : `live-${idx}`}
+              item={v}
+              theme={theme}
+              onPlay={(uri, title) => setPlaying({ uri, title })}
+            />
           ))}
         </View>
       ) : null}
@@ -149,17 +147,11 @@ export default function PublicProfileVideosTab({
               key={String(v.id)}
               style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
-              <View style={styles.videoWrap}>
-                <Video
-                  source={{ uri: absoluteBackendUrl(v.videoUrl) || v.videoUrl }}
-                  style={StyleSheet.absoluteFillObject}
-                  resizeMode={ResizeMode.CONTAIN}
-                  useNativeControls
-                  shouldPlay={false}
-                  isMuted={false}
-                  volume={1}
-                />
-              </View>
+              <VideoPoster
+                style={styles.videoWrap}
+                onPress={() => setPlaying({ uri: absoluteBackendUrl(v.videoUrl) || v.videoUrl, title: v.title })}
+                accessibilityLabel="Luaj videon"
+              />
               {v.title ? (
                 <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>
                   {v.title}
@@ -174,6 +166,12 @@ export default function PublicProfileVideosTab({
           ))}
         </View>
       ) : null}
+
+      <VideoPlayerModal
+        uri={playing?.uri}
+        visible={!!playing?.uri}
+        onClose={() => setPlaying(null)}
+      />
 
       <Modal visible={!!watching} animationType="slide" onRequestClose={() => setWatching(null)}>
         <View style={styles.watchWrap}>
@@ -223,7 +221,7 @@ const styles = StyleSheet.create({
   videoWrap: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
   title: { fontSize: 15, fontWeight: '700', paddingHorizontal: 12, paddingTop: 10 },
   desc: { fontSize: 13, paddingHorizontal: 12, paddingBottom: 12, paddingTop: 4 },
-  badgeWrap: { position: 'absolute', top: 8, left: 8 },
+  badgeWrap: { position: 'absolute', top: 8, left: 8, zIndex: 2 },
   liveBadge: {
     backgroundColor: '#dc2626',
     color: '#fff',

@@ -16,7 +16,8 @@ import {
 } from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode } from 'expo-av';
+import { ManagedVideo, VideoPoster } from '../components/media/LazyVideo';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -159,18 +160,22 @@ function FeedPagerPage({
     <View style={[styles.page, { width: pageW, height: pageH, backgroundColor: isDark ? '#020617' : '#0f172a' }]}>
       <View style={styles.mediaTapLayer} pointerEvents="box-none">
         <Pressable style={StyleSheet.absoluteFillObject} onPress={toggleChrome}>
-          {hasVideo ? (
+          {hasVideo && isActive ? (
             <View pointerEvents="none" style={styles.mediaFrame}>
-              <Video
+              <ManagedVideo
                 source={{ uri: videoUri }}
                 style={styles.mediaFill}
                 resizeMode={ResizeMode.CONTAIN}
                 isLooping
-                shouldPlay={isActive}
-                isMuted={!isActive || userMuted}
+                shouldPlay
+                isMuted={userMuted}
                 volume={userMuted ? 0 : 1}
                 useNativeControls={false}
               />
+            </View>
+          ) : hasVideo ? (
+            <View pointerEvents="none" style={styles.mediaFrame}>
+              <VideoPoster style={styles.mediaFill} />
             </View>
           ) : hasImage ? (
             <View pointerEvents="none" style={styles.mediaFrame}>
@@ -851,6 +856,7 @@ export default function FeedPostPagerScreen() {
         }}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        windowSize={3}
         keyboardShouldPersistTaps="handled"
         extraData={`${viewport.h}-${viewport.w}-${activeIndex}`}
       />

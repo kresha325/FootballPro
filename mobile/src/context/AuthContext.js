@@ -270,20 +270,34 @@ export const AuthProvider = ({ children }) => {
         const onboardingFlag = await SecureStore.getItemAsync(ONBOARDING_PENDING_KEY);
         setPendingOnboarding(onboardingFlag === '1');
 
+        let showedCachedUser = false;
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setToken(storedToken);
+            setUser(parsedUser);
+            connectSocket(storedToken, parsedUser);
+            setIsBootstrapping(false);
+            showedCachedUser = true;
+          } catch (_parseErr) {
+            showedCachedUser = false;
+          }
+        }
+
         try {
           const meResponse = await meRequest({ skipUnauthorized: true });
           const me = meResponse.data;
           setToken(storedToken);
           setUser(me);
           await SecureStore.setItemAsync('user', JSON.stringify(me));
-          connectSocket(storedToken, me);
+          if (!showedCachedUser) connectSocket(storedToken, me);
         } catch (error) {
           const status = error?.response?.status;
           if (status === 401) {
             await logout();
             return;
           }
-          if (storedUser) {
+          if (!showedCachedUser && storedUser) {
             try {
               const parsedUser = JSON.parse(storedUser);
               setAuthToken(storedToken);

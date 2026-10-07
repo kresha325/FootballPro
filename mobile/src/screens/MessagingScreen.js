@@ -140,6 +140,7 @@ export default function MessagingScreen({ navigation }) {
   const [error, setError] = useState('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const hasFocusedOnce = useRef(false);
+  const conversationsLoadedAt = useRef(0);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -165,6 +166,7 @@ export default function MessagingScreen({ navigation }) {
     try {
       const response = await conversationsRequest();
       setConversations(Array.isArray(response.data) ? response.data : []);
+      conversationsLoadedAt.current = Date.now();
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load conversations'));
     } finally {
@@ -177,6 +179,7 @@ export default function MessagingScreen({ navigation }) {
     useCallback(() => {
       const silent = hasFocusedOnce.current;
       hasFocusedOnce.current = true;
+      if (silent && Date.now() - conversationsLoadedAt.current < 30000) return;
       loadConversations({ silent });
     }, [loadConversations])
   );

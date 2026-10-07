@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode } from 'expo-av';
+import { ManagedVideo } from '../components/media/LazyVideo';
 import { WebView } from 'react-native-webview';
 import { absoluteBackendUrl, WEB_APP_URL } from '../config/constants';
 import { extractErrorMessage, getStreamRequest, joinStreamRequest, leaveStreamRequest } from '../api/client';
@@ -146,7 +147,7 @@ export default function LiveViewerScreen({ route, navigation }) {
   if (mode === 'recording' && recordingUri) {
     return (
       <View style={styles.container}>
-        <Video
+        <ManagedVideo
           source={{ uri: recordingUri }}
           style={StyleSheet.absoluteFillObject}
           useNativeControls
