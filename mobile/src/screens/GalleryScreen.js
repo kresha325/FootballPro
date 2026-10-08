@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { deleteGalleryItemRequest, extractErrorMessage, myGalleryRequest } from '../api/client';
 import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
+import OptimizedImage from '../components/media/OptimizedImage';
+import { absoluteBackendUrl } from '../config/constants';
 
 function GalleryCard({ item, onDelete, onPlay }) {
   const isVideo = !!item?.videoUrl;
@@ -16,7 +18,12 @@ function GalleryCard({ item, onDelete, onPlay }) {
           <VideoPoster style={styles.video} onPress={() => onPlay(item.videoUrl)} />
         </View>
       ) : (
-        <Image source={{ uri: item?.imageUrl }} style={styles.image} resizeMode="cover" />
+        <OptimizedImage
+          uri={absoluteBackendUrl(item?.imageUrl)}
+          style={styles.image}
+          width={700}
+          contentFit="cover"
+        />
       )}
 
       <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(item)}>
