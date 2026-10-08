@@ -3,6 +3,9 @@ const IapPurchase = require('../models/IapPurchase');
 const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
+const { verifyAppleSignedPayload } = require('../utils/appleJws');
+
+const APPLE_BUNDLE_ID = 'com.kresha325.xtalenti';
 
 /** Store product catalog — must match App Store Connect / Play Console. */
 const PRODUCT_CATALOG = {
@@ -91,17 +94,17 @@ async function verifyAppleReceipt(receiptData) {
   return { ok: true, raw: result };
 }
 
-/** StoreKit 2 often sends JWS in purchaseToken — decode payload (sig verify TODO via App Store Server API). */
-function decodeAppleJwsPayload(jws) {
-  try {
-    const parts = String(jws || '').split('.');
-    if (parts.length < 2) return null;
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const json = Buffer.from(b64, 'base64').toString('utf8');
-    return JSON.parse(json);
-  } catch {
-    return null;
+/**
+ * StoreKit 2 sends a signed JWS in purchaseToken (jwsRepresentation). This
+ * verifies the x5c certificate chain against Apple's Root CA and the ES256
+ * signature before trusting the decoded payload — see utils/appleJws.js.
+ */
+function decodeAndVerifyAppleJws(jws) {
+  const result = verifyAppleSignedPayload(jws);
+  if (!result.ok) {
+    return { payload: null, verified: false, msg: result.msg };
   }
+  return { payload: result.payload, verified: true };
 }
 
 async function verifyApplePurchase({ transactionReceipt, purchaseToken, productId, transactionId }) {
@@ -114,25 +117,30 @@ async function verifyApplePurchase({ transactionReceipt, purchaseToken, productI
   }
 
   if (purchaseToken && String(purchaseToken).includes('.')) {
-    const payload = decodeAppleJwsPayload(purchaseToken);
-    const jwsProduct =
-      payload?.productId || payload?.product_id || payload?.bundleId || null;
+    const { payload, verified, msg } = decodeAndVerifyAppleJws(purchaseToken);
+    if (!verified) {
+      if (unverifiedIapAllowed()) {
+        // Dev/sandbox-only escape hatch; never reachable in production (see iapPolicy.js).
+        return { ok: true, jws: true, unverified: true };
+      }
+      return { ok: false, msg: msg || 'Verifikimi i JWS nga Apple dështoi' };
+    }
+
+    const jwsProduct = payload?.productId || payload?.product_id || null;
+    const jwsBundle = payload?.bundleId || payload?.bundle_id || null;
     const jwsTx =
       payload?.transactionId ||
       payload?.originalTransactionId ||
       payload?.transaction_id ||
       null;
     const productOk = !jwsProduct || jwsProduct === productId;
+    const bundleOk = !jwsBundle || jwsBundle === APPLE_BUNDLE_ID;
     const txOk = !transactionId || !jwsTx || String(jwsTx) === String(transactionId);
-    if (payload && productOk && txOk) {
-      if (unverifiedIapAllowed()) {
-        return { ok: true, jws: true, unverified: true };
-      }
-      return {
-        ok: false,
-        msg: 'Apple JWS nuk verifikohet. Konfiguro App Store Server API para se blerjet të pranohen.',
-      };
+
+    if (!productOk || !bundleOk || !txOk) {
+      return { ok: false, msg: 'JWS i verifikuar nuk përputhet me produktin/transaksionin e kërkuar' };
     }
+    return { ok: true, jws: true, verified: true, raw: payload };
   }
 
   if (allowUnverifiedIap() && process.env.NODE_ENV !== 'production') {
