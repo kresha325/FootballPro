@@ -147,7 +147,6 @@ function useThemedStackOptions(headerRight) {
       headerTitleStyle: { color: colors.text, fontWeight: '700' },
       headerShadowVisible: !isDark,
       contentStyle: { backgroundColor: colors.bg },
-      freezeOnBlur: true,
       ...(headerRight ? { headerRight } : null),
     }),
     [colors, isDark, headerRight]
@@ -461,6 +460,10 @@ function BadgeAwareTabBar(props) {
     const next = {};
     for (const route of props.state.routes) {
       const desc = props.descriptors[route.key];
+      if (!desc?.options) {
+        next[route.key] = desc;
+        continue;
+      }
       let tabBarBadge;
       if (route.name === 'Messages') tabBarBadge = formatBadge(messagesCount);
       else if (route.name === 'More') tabBarBadge = formatBadge(notificationsCount);
@@ -491,7 +494,6 @@ function AppTabs() {
       },
       tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       tabBarHideOnKeyboard: true,
-      freezeOnBlur: true,
       tabBarIcon: ({ color, size }) => (
         <Ionicons name={TAB_ICONS[route.name] || 'ellipse-outline'} size={size} color={color} />
       ),
@@ -500,7 +502,10 @@ function AppTabs() {
   );
 
   return (
-    <Tabs.Navigator screenOptions={screenOptions} tabBar={BadgeAwareTabBar}>
+    <Tabs.Navigator
+      screenOptions={screenOptions}
+      tabBar={(props) => <BadgeAwareTabBar {...props} />}
+    >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={feedTabOptions} />
       <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={marketplaceTabOptions} />
       <Tabs.Screen
@@ -557,7 +562,6 @@ export default function AppNavigator() {
   const stackScreenOptions = useMemo(
     () => ({
       headerShown: false,
-      freezeOnBlur: true,
       headerStyle: { backgroundColor: colors.header },
       headerTintColor: colors.text,
       headerTitleStyle: { color: colors.text },

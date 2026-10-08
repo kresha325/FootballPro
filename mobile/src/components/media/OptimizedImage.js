@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Image } from 'expo-image';
-import { StyleSheet, View } from '../../theme/nativeComponents';
+import { Image, StyleSheet, View } from '../../theme/nativeComponents';
 import { getOptimizedImageUrl } from '../../utils/imageUrl';
 
 /**
- * Cached list/feed image. Missing URIs and load errors render an empty box
- * instead of throwing. Full-screen previews should omit width/height so the
- * original URL is kept.
+ * List and feed image. URLs are sized before they are requested. Missing URIs
+ * and load errors render an empty box. Full-screen previews should omit
+ * width and height so the original URL is kept.
  */
 export default function OptimizedImage({
   uri,
   source,
   style,
   contentFit = 'cover',
-  cachePolicy = 'memory-disk',
   width,
   height,
   quality,
   format,
-  recyclingKey,
   placeholderColor = '#e2e8f0',
   onError,
   accessibilityLabel,
@@ -36,13 +33,13 @@ export default function OptimizedImage({
 
   const optimized = getOptimizedImageUrl(raw, { width, height, quality, format });
 
+  const resizeMode = contentFit === 'contain' ? 'contain' : contentFit === 'fill' ? 'stretch' : 'cover';
+
   return (
     <Image
       source={{ uri: optimized }}
       style={style}
-      contentFit={contentFit}
-      cachePolicy={cachePolicy}
-      recyclingKey={recyclingKey || optimized}
+      resizeMode={resizeMode}
       accessibilityLabel={accessibilityLabel}
       onError={(event) => {
         setFailed(true);
