@@ -4,22 +4,25 @@ import { useAuth } from './contexts/AuthContext';
 import PostsProvider from './contexts/PostsContext';
 import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/Navbar';
-import Login from './components/Login';
-import Register from './components/Register';
-import ForgotPassword from './components/ForgotPassword';
-import ResetPassword from './components/ResetPassword';
-import ParentVerification from './components/ParentVerification';
-import ParentVerified from './components/ParentVerified';
-import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
-import WelcomeOnboarding, { isWelcomeOnboardingDone } from './components/WelcomeOnboarding';
-import LandingPage from './components/LandingPage';
 import BottomNav from "./components/BottomNav";
-import Settings from './components/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
 import { lazyWithReload } from './utils/lazyWithReload';
 import { PlatformProvider, MaintenanceBanner, FeatureGate } from './components/admin/platformState';
+// These two export plain functions (isOnboardingPending/isWelcomeOnboardingDone)
+// that are called synchronously during render, so their modules stay eagerly
+// imported here; lazy-loading the component would not avoid bundling the module.
+import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
+import WelcomeOnboarding, { isWelcomeOnboardingDone } from './components/WelcomeOnboarding';
 
 // Lazy-loaded route components to reduce initial bundle size
+const Login = lazyWithReload(() => import('./components/Login'));
+const Register = lazyWithReload(() => import('./components/Register'));
+const ForgotPassword = lazyWithReload(() => import('./components/ForgotPassword'));
+const ResetPassword = lazyWithReload(() => import('./components/ResetPassword'));
+const ParentVerification = lazyWithReload(() => import('./components/ParentVerification'));
+const ParentVerified = lazyWithReload(() => import('./components/ParentVerified'));
+const LandingPage = lazyWithReload(() => import('./components/LandingPage'));
+const Settings = lazyWithReload(() => import('./components/Settings'));
 const Profile = lazyWithReload(() => import('./components/Profile'));
 const BrowseProfiles = lazyWithReload(() => import('./components/BrowseProfiles'));
 const Gallery = lazyWithReload(() => import('./components/Gallery'));
@@ -59,7 +62,8 @@ const EmbedIncomingCall = lazyWithReload(() => import('./components/EmbedIncomin
 const EmbedGoLive = lazyWithReload(() => import('./components/EmbedGoLive'));
 // Duplicate direct imports removed — components are lazy-loaded above
 import XPNotificationManager from './components/XPNotificationManager';
-import VideoCallManager from './components/VideoCallManager';
+// Lazy: pulls in livekit-client (large) via VideoCallSimple; not needed for first paint.
+const VideoCallManager = lazyWithReload(() => import('./components/VideoCallManager'));
 import AuthCallback from './components/AuthCallback';
 import OAuthCodeRelay from './components/OAuthCodeRelay';
 import { APP_BRAND_NAME } from './config/branding';
@@ -102,7 +106,11 @@ function App() {
           <MaintenanceBanner />
           {user && !isFullscreenRoute && <BottomNav />}
           {user && <XPNotificationManager />}
-          {user && <VideoCallManager />}
+          {user && (
+            <Suspense fallback={null}>
+              <VideoCallManager />
+            </Suspense>
+          )}
 
           <main
             className={

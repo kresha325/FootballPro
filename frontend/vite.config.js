@@ -33,7 +33,9 @@ export default defineConfig(({ mode }) => ({
     // VitePWA plugin temporarily removed for Vercel build compatibility
   ],
   build: {
-    chunkSizeWarningLimit: 2000, // default është 500kb, rritet në 2000kb
+    // Default (500kb) kept intentionally — code-splitting (manual lazy routes +
+    // lazy VideoCallManager/livekit-client) now keeps every chunk under the limit,
+    // so a future warning here means a real regression, not noise to silence.
   },
   test: {
     environment: 'jsdom',
