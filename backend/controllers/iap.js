@@ -4,6 +4,7 @@ const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 const { verifyAppleSignedPayload } = require('../utils/appleJws');
+const { verifyGooglePlayPurchase, getServiceAccount: getGoogleServiceAccount } = require('../utils/googlePlay');
 
 const APPLE_BUNDLE_ID = 'com.kresha325.xtalenti';
 
@@ -150,12 +151,18 @@ async function verifyApplePurchase({ transactionReceipt, purchaseToken, productI
 }
 
 /**
- * Google Play verification via Android Publisher API requires a service account.
- * When unset in non-production, allow with IAP_ALLOW_UNVERIFIED=true for sandbox wiring.
+ * Google Play verification via the Android Publisher API — see utils/googlePlay.js.
+ * Falls back to the dev-only unverified path (IAP_ALLOW_UNVERIFIED=true, never
+ * reachable in production per iapPolicy.js) only when no service account is
+ * configured at all; a configured-but-failed verification is always rejected.
  */
-async function verifyGooglePurchase({ productId, purchaseToken }) {
+async function verifyGooglePurchase({ productId, purchaseToken, isSubscription }) {
   if (!purchaseToken || !productId) {
     return { ok: false, msg: 'purchaseToken / productId mungojnë' };
+  }
+
+  if (getGoogleServiceAccount()) {
+    return verifyGooglePlayPurchase({ productId, purchaseToken, isSubscription });
   }
 
   if (unverifiedIapAllowed()) {
@@ -227,6 +234,7 @@ exports.verifyAndFulfill = async (req, res) => {
       const verified = await verifyGooglePurchase({
         productId,
         purchaseToken,
+        isSubscription: catalog.kind === 'premium',
       });
       if (!verified.ok) {
         return res.status(400).json({ msg: verified.msg || 'Verifikimi Google dështoi' });

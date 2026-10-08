@@ -14,7 +14,7 @@ Last updated: November 2026 (post full-platform audit). Goal: **feature-complete
 | Marketplace | ✅ | ✅ | ✅ | **JonCoin only** (Stripe shop disabled); cart + orders |
 | Wallet / JonCoin | ✅ | ✅ | ✅ | Balance, orders, withdrawals, IAP top-ups |
 | Premium | ✅ | ✅ | ✅ | Demo-mode web checkout; **mobile IAP (Apple) is live and verified** |
-| In-app purchases (IAP) | — | ✅ (iOS) / ❌ (Android) | ✅ | Apple StoreKit 2 JWS fully verified (chain + signature) against Apple's root CA; Google Play verification is **not implemented** — Android purchases are rejected server-side until a Play Developer API service account is wired up |
+| In-app purchases (IAP) | — | ✅ (iOS) / ✅ (Android) | ✅ | Apple StoreKit 2 JWS fully verified (chain + signature) against Apple's root CA; Google Play purchases verified against the Android Publisher API (`backend/utils/googlePlay.js`) once `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` is configured — without it, Android purchases are still rejected server-side in production |
 | Streams / Go Live | ✅ | ✅ | ✅ | LiveKit, YouTube parallel stream, scheduled streams, replay, guest co-host, live chat + moderation, donations, reactions |
 | Scouting | ✅ | ✅ | ✅ | Dedicated scout role workflows, gated by `SCOUTING` admin feature flag |
 | Analytics | ✅ | — | ✅ | Player/club analytics hub, gated by `ANALYTICS` admin feature flag |
@@ -28,7 +28,7 @@ Last updated: November 2026 (post full-platform audit). Goal: **feature-complete
 ## Payments policy
 
 - **Card payments (Stripe)**: `PAYMENTS_ENABLED` defaults to **false** — Stripe never used even if keys exist. Premium activates in **demo mode** via `POST /api/premium/checkout` on web. To go live: set `PAYMENTS_ENABLED=true` + valid `STRIPE_SECRET_KEY` on Render.
-- **Mobile IAP (real money)**: live for iOS. `POST /api/iap/verify` requires full Apple StoreKit 2 JWS verification (`backend/utils/appleJws.js`) — the x5c certificate chain is validated up to Apple's embedded Root CA G3 and the ES256 signature is checked before any purchase is fulfilled; unverified/legacy receipts are rejected in production (`backend/utils/iapPolicy.js`). **Android IAP is not yet wired** — `verifyGooglePurchase` always returns unverified and purchases are rejected server-side in production.
+- **Mobile IAP (real money)**: live for iOS and Android. `POST /api/iap/verify` requires full Apple StoreKit 2 JWS verification (`backend/utils/appleJws.js`) — the x5c certificate chain is validated up to Apple's embedded Root CA G3 and the ES256 signature is checked before any purchase is fulfilled. Android purchases are verified against the Android Publisher API (`backend/utils/googlePlay.js`) via a Google Cloud service account (JWT-bearer OAuth2 flow). Unverified/legacy receipts, and Android purchases when no service account is configured, are rejected in production (`backend/utils/iapPolicy.js`).
 - **Marketplace**: **JonCoin** only via `POST /api/orders`, no card processing involved.
 
 Public config: `GET /api/config/public`
@@ -74,13 +74,14 @@ See `mobile/RELEASE_QA.md` and `mobile/scripts/smoke-checklist.js`.
 2. **Push notifications on mobile** — API ready (`POST /api/profiles/me/push-token`); requires `expo-notifications` in EAS build.
 3. **Dual live APIs** — `/api/streams` (primary) + legacy `/api/live-stream` (web profile); unified long-term.
 4. **i18n** — Web has locales; mobile English/Albanian mix in UI strings.
-5. **Android IAP not implemented** — `backend/controllers/iap.js`'s `verifyGooglePurchase` has no Google Play Developer API wiring yet; Android in-app purchases fail verification and are rejected in production. Needs a Play service account + `googleapis`/Play Developer API integration mirroring the Apple JWS work.
-6. **One remaining moderate `npm audit` finding (backend)** — `file-type`'s DoS CVE and the `nodemailer`/`cloudinary` HIGH CVEs are fixed; the only item left is `uuid`'s buffer-bounds advisory, pulled in transitively by `sequelize@6` (reported against both `sequelize` and `uuid` in the audit output, same root cause). Not exploitable here (we never call `uuid.v3/v5/v6` with a custom buffer — sequelize only uses `v4()` internally) and the only upstream fix requires a `sequelize` v6→v7+ major upgrade across the whole ORM layer. Accepted risk, tracked here instead of forced.
+5. **One remaining moderate `npm audit` finding (backend)** — `file-type`'s DoS CVE and the `nodemailer`/`cloudinary` HIGH CVEs are fixed; the only item left is `uuid`'s buffer-bounds advisory, pulled in transitively by `sequelize@6` (reported against both `sequelize` and `uuid` in the audit output, same root cause). Not exploitable here (we never call `uuid.v3/v5/v6` with a custom buffer — sequelize only uses `v4()` internally) and the only upstream fix requires a `sequelize` v6→v7+ major upgrade across the whole ORM layer. Accepted risk, tracked here instead of forced.
+6. **Google Play IAP requires production secret wiring** — verification code is implemented (`backend/utils/googlePlay.js`), but needs `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` set in the deploy environment (a Play Console service account with "View financial data" permission) before Android purchases will be accepted in production.
 
 ## Recent hardening (November 2026 audit pass)
 
 - **Production DB migrations now auto-apply on every deploy/restart** — previously the GitHub Actions migration workflow had been silently failing for a long time (missing secrets), so 38+ migrations (including a critical `hot-query-indexes` migration) had never been applied in production.
 - **Apple StoreKit 2 purchases are now cryptographically verified** (`backend/utils/appleJws.js`) — previously the JWS payload was only decoded, never signature-checked, and was rejected outright in production, meaning real iOS purchases were never fulfilled. Now the full x5c chain + ES256 signature is verified against Apple's Root CA before crediting JonCoin/Premium.
+- **Google Play (Android) purchases are now verified against the Android Publisher API** (`backend/utils/googlePlay.js`) — previously `verifyGooglePurchase` had no Google integration at all and Android purchases simply failed in production. Now a Google Cloud service account signs a short-lived OAuth2 JWT assertion (RFC 7523) to call `purchases.products.get`/`purchases.subscriptions.get` directly (no `googleapis` dependency needed), checking `purchaseState`/`paymentState` and subscription expiry before fulfilling. Requires `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` to be set in production.
 - **nodemailer 7→10 and cloudinary 1→2** upgraded, resolving HIGH severity CVEs (SMTP/CRLF injection family, jsonTransport bypass; arbitrary argument injection). No breaking API changes for this codebase's usage.
 - **file-type 16→21** upgraded, resolving a moderate ASF-parser DoS; migrated to the library's new ESM-only API via dynamic `import()`.
 - **Mobile performance** — resized 3 oversized (386-513KB) Home-screen icons down ~94%, and switched `GalleryScreen` to the app's `OptimizedImage` component instead of a raw unoptimized `Image`.
@@ -106,7 +107,6 @@ See `mobile/RELEASE_QA.md` and `mobile/scripts/smoke-checklist.js`.
 ## Next polish (optional, post-launch)
 
 - EAS production build with push notifications
-- Google Play IAP verification (Android currently rejected server-side)
 - Consolidate live-stream APIs
 - Dark mode persistence (mobile)
 - E2E tests (Detox / Playwright)
