@@ -1,6 +1,25 @@
-# GitHub Actions: Production Migrations Workflow
+# Production Migrations
 
-This workflow allows running DB migrations against your production database via GitHub Actions.
+## Automatic (recommended, always on)
+
+As of this change, `backend/package.json`'s `start` script runs
+`npm run migrate:deploy` (i.e. `sequelize-cli db:migrate --env production`)
+before starting the server (`node server.js`). Render (or any host) already
+provides `DATABASE_URL` to the running process, so this requires **no extra
+secrets or configuration** — every deploy/restart now applies any pending
+migrations automatically before the server starts accepting traffic. If a
+migration fails, the deploy fails loudly instead of running against a
+stale/broken schema.
+
+This is the primary safety net going forward. The GitHub Actions workflow
+below is now optional/secondary.
+
+## GitHub Actions: Production Migrations Workflow (optional)
+
+This workflow allows running DB migrations against your production database via GitHub Actions,
+independently of a deploy. It has been failing on every push because the required repository
+Secrets were never configured — either configure the secrets below, or disable/remove the
+workflow since the `start` script above now covers this automatically.
 
 What it does
 - Runs `npm ci` in `backend/` and executes `npx sequelize-cli db:migrate --env production` with DB credentials from Secrets.
