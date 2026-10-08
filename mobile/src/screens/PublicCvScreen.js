@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { absoluteBackendUrl } from '../config/constants';
 import { APP_BRAND_NAME } from '../config/branding';
-import { extractErrorMessage, publicProfileCvRequest } from '../api/client';
+import { extractErrorMessage, profileTournamentSummaryRequest, publicProfileCvRequest } from '../api/client';
 import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import { openUserProfile } from '../utils/openUserProfile';
 import { promptShareProfileCv } from '../utils/shareProfile';
@@ -101,8 +101,19 @@ export default function PublicCvScreen({ route, navigation }) {
       if (!silent) setLoading(true);
       setError('');
       try {
-        const res = await publicProfileCvRequest(userId);
-        setProfile(res.data || null);
+        const [res, tournamentRes] = await Promise.all([
+          publicProfileCvRequest(userId),
+          profileTournamentSummaryRequest(userId).catch(() => null),
+        ]);
+        const data = res.data || null;
+        const played = tournamentRes?.data?.totals?.tournamentsPlayed;
+        if (data && Number.isFinite(Number(played))) {
+          data.tournamentTotals = {
+            ...(data.tournamentTotals || {}),
+            tournamentsPlayed: Number(played),
+          };
+        }
+        setProfile(data);
       } catch (err) {
         setProfile(null);
         setError(extractErrorMessage(err, 'Profili nuk u gjet ose nuk është publik.'));

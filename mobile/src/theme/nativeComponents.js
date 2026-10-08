@@ -118,6 +118,11 @@ function withTheme(Component, options = {}) {
     if (options.thumbColor && props.thumbColor) {
       nextProps.thumbColor = resolveColor(props.thumbColor, 'backgroundColor', colors);
     }
+    if (options.ensureReadableText) {
+      const flat = ReactNative.StyleSheet.flatten(nextProps.style) || {};
+      if (flat.color == null) nextProps.style = [nextProps.style, { color: colors.text }];
+      if (nextProps.placeholderTextColor == null) nextProps.placeholderTextColor = colors.muted;
+    }
     return <Component {...nextProps} />;
   });
   ThemedComponent.displayName = `XTalenti${Component.displayName || Component.name || 'Native'}`;
@@ -128,6 +133,7 @@ export const View = withTheme(ReactNative.View);
 export const Text = withTheme(ReactNative.Text, { colorProps: ['selectionColor'] });
 export const TextInput = withTheme(ReactNative.TextInput, {
   colorProps: ['placeholderTextColor', 'selectionColor', 'cursorColor', 'underlineColorAndroid'],
+  ensureReadableText: true,
 });
 export const TouchableOpacity = withTheme(ReactNative.TouchableOpacity);
 export const TouchableHighlight = withTheme(ReactNative.TouchableHighlight);

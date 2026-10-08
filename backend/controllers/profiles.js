@@ -918,10 +918,18 @@ exports.getPublicProfileCv = async (req, res) => {
       try {
         const participations = await TournamentParticipant.findAll({
           where: { userId, status: { [Op.in]: ['accepted', 'pending'] } },
-          attributes: ['points', 'goalsFor'],
+          attributes: ['tournamentId', 'points', 'goalsFor'],
         });
+        const squadRows = await TournamentSquadMember.findAll({
+          where: { athleteUserId: userId },
+          attributes: ['tournamentId'],
+        });
+        const tournamentIds = new Set(
+          [...participations.map((row) => row.tournamentId), ...squadRows.map((row) => row.tournamentId)]
+            .filter(Boolean)
+        );
         tournamentTotals = {
-          tournamentsPlayed: participations.length,
+          tournamentsPlayed: tournamentIds.size,
           points: participations.reduce((s, p) => s + (Number(p.points) || 0), 0),
           goalsFor: participations.reduce((s, p) => s + (Number(p.goalsFor) || 0), 0),
         };

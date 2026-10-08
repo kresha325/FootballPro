@@ -293,6 +293,13 @@ PODS:
   - ExpoIap (3.0.2):
     - ExpoModulesCore
     - openiap (= 1.1.9)
+  - ExpoImage (2.4.1):
+    - ExpoModulesCore
+    - libavif/libdav1d
+    - SDWebImage (~> 5.21.0)
+    - SDWebImageAVIFCoder (~> 0.11.0)
+    - SDWebImageSVGCoder (~> 1.7.0)
+    - SDWebImageWebPCoder (~> 0.14.6)
   - ExpoImagePicker (16.1.4):
     - ExpoModulesCore
   - ExpoModulesCore (2.5.0):
@@ -333,6 +340,23 @@ PODS:
   - hermes-engine (0.79.6):
     - hermes-engine/Pre-built (= 0.79.6)
   - hermes-engine/Pre-built (0.79.6)
+  - libavif/core (1.0.0)
+  - libavif/libdav1d (1.0.0):
+    - libavif/core
+    - libdav1d (>= 0.6.0)
+  - libdav1d (1.2.0)
+  - libwebp (1.6.0):
+    - libwebp/demux (= 1.6.0)
+    - libwebp/mux (= 1.6.0)
+    - libwebp/sharpyuv (= 1.6.0)
+    - libwebp/webp (= 1.6.0)
+  - libwebp/demux (1.6.0):
+    - libwebp/webp
+  - libwebp/mux (1.6.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.6.0)
+  - libwebp/webp (1.6.0):
+    - libwebp/sharpyuv
   - livekit-react-native (2.12.0):
     - DoubleConversion
     - glog
@@ -2089,6 +2113,17 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - SDWebImage (5.21.7):
+    - SDWebImage/Core (= 5.21.7)
+  - SDWebImage/Core (5.21.7)
+  - SDWebImageAVIFCoder (0.11.1):
+    - libavif/core (>= 0.11.0)
+    - SDWebImage (~> 5.10)
+  - SDWebImageSVGCoder (1.7.0):
+    - SDWebImage/Core (~> 5.6)
+  - SDWebImageWebPCoder (0.14.6):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.1)
   - WebRTC-SDK (144.7559.10)
   - Yoga (0.0.0)
@@ -2115,6 +2150,7 @@ DEPENDENCIES:
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoIap (from `../node_modules/expo-iap/ios`)
+  - ExpoImage (from `../node_modules/expo-image/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
@@ -2201,7 +2237,14 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - libavif
+    - libdav1d
+    - libwebp
     - openiap
+    - SDWebImage
+    - SDWebImageAVIFCoder
+    - SDWebImageSVGCoder
+    - SDWebImageWebPCoder
     - SocketRocket
     - WebRTC-SDK
 
@@ -2248,6 +2291,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-font/ios"
   ExpoIap:
     :path: "../node_modules/expo-iap/ios"
+  ExpoImage:
+    :path: "../node_modules/expo-image/ios"
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoModulesCore:
@@ -2434,6 +2479,7 @@ SPEC CHECKSUMS:
   ExpoFileSystem: 7f92f7be2f5c5ed40a7c9efc8fa30821181d9d63
   ExpoFont: cf508bc2e6b70871e05386d71cab927c8524cc8e
   ExpoIap: 20516a64f79b4c48869ecc30ec2930bc668c427f
+  ExpoImage: b0b4a838c62bb9d5438bb475cccc85619a5f59dc
   ExpoImagePicker: 0963da31800c906e01c03e25d7c849f16ebf02a2
   ExpoModulesCore: f55e7872391bae03ee5547c83152c81750d89508
   ExpoSecureStore: 3f1b632d6d40bcc62b4983ef9199cd079592a50a
@@ -2444,6 +2490,9 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: 44bb6fe76a6eb400d3a992e2d0b21946ae999fa9
+  libavif: 5f8e715bea24debec477006f21ef9e95432e254d
+  libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
+  libwebp: af5937a13536ef73f3784d69cc342b98961acf33
   livekit-react-native: 5f1f2d8422e0be5cd2f96304a4f3f0a8d20276a8
   livekit-react-native-webrtc: 5ff3e8d229a3fcd34f99fe4cb1c2c93f92017b0c
   LiveKitExpoPlugin: 244fe0ae6c8226121a2257a2408749ea10c5e11c
@@ -2515,6 +2564,10 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: b9f5f78da5d16a853fe3dc22e8268d932fc45a83
   RNGestureHandler: ce4a87dba81030b374d7f1993c4376f5c230da2e
   RNScreens: 62fdbbc4c984150b34c36f095c6ba2510ca9b6a5
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
+  SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
+  SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
+  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   WebRTC-SDK: 1d7fc2ae91da6edd63e25f3882ff24f86a8d9d8b
   Yoga: dc7c21200195acacb62fa920c588e7c2106de45e

@@ -1,6 +1,7 @@
 import 'fast-text-encoding';
 import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
+import * as SplashScreen from 'expo-splash-screen';
 import { ensureLiveKitNative } from './src/livekit/register';
 
 // Hermes may lack WeakRef / FinalizationRegistry — livekit-client needs them.
@@ -24,6 +25,8 @@ if (typeof global.FinalizationRegistry === 'undefined') {
     unregister() {}
   };
 }
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Must run before App (and livekit-client) loads — Hermes has no TextEncoder.
 ensureLiveKitNative();
