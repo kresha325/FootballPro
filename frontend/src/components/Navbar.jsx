@@ -34,6 +34,7 @@ function Navbar() {
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
   const [unreadCount, setUnreadCount] = useState(0); // notifications (pa DM)
   const [messagesUnread, setMessagesUnread] = useState(0);
   const [showLiveModal, setShowLiveModal] = useState(false);
@@ -261,14 +262,19 @@ function Navbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const closeMenu = useCallback(() => {
+    menuButtonRef.current?.focus();
+    setIsMenuOpen(false);
+  }, []);
+
   useEffect(() => {
     if (!isMenuOpen) return undefined;
     const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setIsMenuOpen(false);
+      if (event.key === 'Escape') closeMenu();
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, closeMenu]);
 
 
 
@@ -368,9 +374,11 @@ function Navbar() {
           <NotificationBell unreadCount={unreadCount} />
 
           <button
+            ref={menuButtonRef}
             onClick={() => {
               const next = !isMenuOpen;
-              setIsMenuOpen(next);
+              if (next) setIsMenuOpen(true);
+              else closeMenu();
               if (next) void fetchHeaderBadges();
             }}
             className="relative grid h-11 w-11 place-items-center rounded-lg text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--xt-color-gold-bright)]"
@@ -408,7 +416,7 @@ function Navbar() {
             <div className="hidden md:block space-y-2 pb-4 mb-2 border-b border-white/10">
               <Link
                 to="/feed"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <HomeIcon className="h-5 w-5" aria-hidden="true" />
@@ -417,7 +425,7 @@ function Navbar() {
 
               <Link
                 to="/marketplace"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
@@ -431,7 +439,7 @@ function Navbar() {
 
               <Link
                 to="/tournaments"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <TrophyIcon className="h-5 w-5" aria-hidden="true" />
@@ -441,7 +449,7 @@ function Navbar() {
               <button
                 type="button"
                 onClick={() => {
-                  setIsMenuOpen(false);
+                  closeMenu();
                   window.dispatchEvent(new CustomEvent('open-live-modal', { detail: { openCameraFirst: true } }));
                 }}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
@@ -454,7 +462,7 @@ function Navbar() {
             {/* Tournaments — mobile (desktop: seksioni më sipër) */}
             <Link
               to="/tournaments"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="md:hidden xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
@@ -464,7 +472,7 @@ function Navbar() {
             {/* Notifications */}
             <Link 
               to="/notifications" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <BellIcon className="h-5 w-5" aria-hidden="true" />
@@ -479,7 +487,7 @@ function Navbar() {
             {/* Messages */}
             <Link 
               to="/messaging" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
@@ -494,7 +502,7 @@ function Navbar() {
             {/* Browse Profiles */}
             <Link 
               to="/profiles" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
@@ -504,7 +512,7 @@ function Navbar() {
             {/* Insights (Analitika + Gamifikim) */}
             <Link 
               to="/insights" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
@@ -514,7 +522,7 @@ function Navbar() {
             {/* Videos */}
             <Link 
               to="/videos" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <VideoCameraIcon className="h-6 w-6" />
@@ -524,7 +532,7 @@ function Navbar() {
             {/* Matches */}
             <Link 
               to="/matches" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
@@ -532,7 +540,7 @@ function Navbar() {
             </Link>
             <Link
               to="/competitions"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
@@ -540,7 +548,7 @@ function Navbar() {
             </Link>
             <Link
               to="/calendar"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
@@ -551,7 +559,7 @@ function Navbar() {
             {(user?.role === 'scout' || user?.role === 'club' || user?.role === 'manager') && (
               <Link 
                 to="/scouting" 
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
@@ -563,7 +571,7 @@ function Navbar() {
             {user?.role === 'club' && (
               <Link 
                 to="/club-roster" 
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
               >
                 <BuildingOffice2Icon className="h-5 w-5" aria-hidden="true" />
@@ -575,7 +583,7 @@ function Navbar() {
             {user?.role === 'admin' && (
               <Link 
                 to="/admin" 
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 rounded-lg border border-red-400/40 bg-white/5 p-3 text-red-300 transition-colors hover:bg-white/10"
               >
                 <LockClosedIcon className="h-5 w-5" aria-hidden="true" />
@@ -587,7 +595,7 @@ function Navbar() {
             {/* Premium */}
             <Link 
               to="/premium" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
             >
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
@@ -597,7 +605,7 @@ function Navbar() {
             {/* Sponsorë */}
             <Link
               to="/sponsors"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <GiftIcon className="h-5 w-5" aria-hidden="true" />
@@ -607,7 +615,7 @@ function Navbar() {
             {/* Reklama */}
             <Link
               to="/ads"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <MegaphoneIcon className="h-5 w-5" aria-hidden="true" />
@@ -617,7 +625,7 @@ function Navbar() {
             {/* Settings */}
             <Link 
               to="/settings" 
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
@@ -626,7 +634,7 @@ function Navbar() {
 
             <Link
               to="/help"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => closeMenu()}
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
@@ -637,7 +645,7 @@ function Navbar() {
             <button
               onClick={() => {
                 logout();
-                setIsMenuOpen(false);
+                closeMenu();
                 navigate('/login');
               }}
               className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
@@ -656,7 +664,7 @@ function Navbar() {
           type="button"
           className="fixed inset-0 top-16 z-40 cursor-default bg-black/50"
           aria-label="Mbyll menunë"
-          onClick={() => setIsMenuOpen(false)}
+          onClick={() => closeMenu()}
         />
       )}
 

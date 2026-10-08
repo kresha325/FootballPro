@@ -30,7 +30,9 @@ export const SocketProvider = ({ children }) => {
       : BACKEND_URL;
     console.log('🔗 Connecting to Socket.IO:', socketUrl);
 
-    // Use polling-first transport to improve reliability behind some proxies/load-balancers
+    // Keep the connection on polling when the deployment proxy cannot complete
+    // WebSocket upgrades. Socket.IO still provides real-time events without the
+    // failed upgrade/reconnect noise in the browser console.
     const newSocket = io(socketUrl, {
       auth: {
         token: localStorage.getItem('token') || user.token || '',
@@ -39,7 +41,8 @@ export const SocketProvider = ({ children }) => {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
-      transports: ['polling', 'websocket'], // try polling first, then upgrade
+      transports: ['polling'],
+      upgrade: false,
       path: '/socket.io',
       withCredentials: true,
     });
