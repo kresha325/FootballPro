@@ -62,7 +62,7 @@ See `mobile/RELEASE_QA.md` and `mobile/scripts/smoke-checklist.js`.
 ## Deploy checklist (Render)
 
 1. Push `main` → auto deploy backend
-2. **Migrations now run automatically on boot** — `npm start` runs `migrate:deploy` (`sequelize-cli db:migrate --env production`) before `node server.js`, using the same `DATABASE_URL` the app already connects with. The legacy GitHub Actions workflow (`run-migrations-prod.yml`) is optional/secondary now; see `docs/GITHUB_ACTIONS_MIGRATE.md`.
+2. **Migrations now run automatically on boot** — `npm start` runs `migrate:deploy` (`sequelize-cli db:migrate --env production`) before `node server.js`, using the same `DATABASE_URL` Render already injects (Neon Postgres). The legacy GitHub Actions workflow (`run-migrations-prod.yml`) was removed — it required a separate, never-configured set of `PROD_PG*` secrets and only duplicated what Render already does on every deploy.
 3. Env vars: `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `WEB_APP_URL` (mobile calls)
 4. **Do not set** `PAYMENTS_ENABLED=true` until Stripe card payments are ready to go live
 5. Verify: `curl https://footballpro.onrender.com/api/config/public`
