@@ -2,7 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const FileType = require('file-type');
+
+// file-type is ESM-only since v17, so it must be loaded via dynamic import()
+// even from this CommonJS module. Cached after the first load.
+let fileTypePromise;
+function loadFileType() {
+  if (!fileTypePromise) fileTypePromise = import('file-type');
+  return fileTypePromise;
+}
 
 const MISMATCH = 'Përmbajtja e skedarit nuk përputhet me llojin e lejuar';
 
@@ -58,8 +65,9 @@ async function inspectUpload(file, allowed) {
   }
   let detected = null;
   try {
-    if (file?.path) detected = await FileType.fromFile(file.path);
-    else if (file?.buffer) detected = await FileType.fromBuffer(file.buffer);
+    const { fileTypeFromFile, fileTypeFromBuffer } = await loadFileType();
+    if (file?.path) detected = await fileTypeFromFile(file.path);
+    else if (file?.buffer) detected = await fileTypeFromBuffer(file.buffer);
   } catch {
     return { ok: false, msg: 'Skedari nuk u lexua' };
   }
