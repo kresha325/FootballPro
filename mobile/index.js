@@ -1,8 +1,13 @@
 import 'fast-text-encoding';
 import 'react-native-gesture-handler';
+import { enableFreeze } from 'react-native-screens';
 import { registerRootComponent } from 'expo';
 import * as SplashScreen from 'expo-splash-screen';
 import { ensureLiveKitNative } from './src/livekit/register';
+
+// Pause screens that are not visible. The tab bar stays a component so this
+// does not repeat the launch crash from calling it as a function.
+enableFreeze(true);
 
 // Hermes may lack WeakRef / FinalizationRegistry — livekit-client needs them.
 if (typeof global.WeakRef === 'undefined') {

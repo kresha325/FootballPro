@@ -147,6 +147,7 @@ function useThemedStackOptions(headerRight) {
       headerTitleStyle: { color: colors.text, fontWeight: '700' },
       headerShadowVisible: !isDark,
       contentStyle: { backgroundColor: colors.bg },
+      freezeOnBlur: true,
       ...(headerRight ? { headerRight } : null),
     }),
     [colors, isDark, headerRight]
@@ -494,6 +495,7 @@ function AppTabs() {
       },
       tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       tabBarHideOnKeyboard: true,
+      freezeOnBlur: true,
       tabBarIcon: ({ color, size }) => (
         <Ionicons name={TAB_ICONS[route.name] || 'ellipse-outline'} size={size} color={color} />
       ),
@@ -562,6 +564,7 @@ export default function AppNavigator() {
   const stackScreenOptions = useMemo(
     () => ({
       headerShown: false,
+      freezeOnBlur: true,
       headerStyle: { backgroundColor: colors.header },
       headerTintColor: colors.text,
       headerTitleStyle: { color: colors.text },
