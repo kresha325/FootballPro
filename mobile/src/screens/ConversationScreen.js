@@ -547,10 +547,30 @@ export default function ConversationScreen({ route, navigation }) {
     });
   }, [isGroup, groupMembers, typingByUserId, user?.id, otherUserId, peerOnline, peerLastSeen]);
 
+  const leaveConversation = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('MessagingHome');
+  }, [navigation]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: headerName,
+      headerBackVisible: false,
       headerTitleAlign: 'center',
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={leaveConversation}
+          accessibilityRole="button"
+          accessibilityLabel="Kthehu te mesazhet"
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 12 }}
+          style={styles.headerBackBtn}
+        >
+          <Ionicons name="chevron-back" size={28} color={colors.text} />
+        </TouchableOpacity>
+      ),
       headerTitle: () => (
         <TouchableOpacity
           activeOpacity={isGroup || otherUserId ? 0.7 : 1}
@@ -631,6 +651,7 @@ export default function ConversationScreen({ route, navigation }) {
     });
   }, [
     navigation,
+    leaveConversation,
     isGroup,
     otherUserId,
     conversationId,
@@ -1686,10 +1707,11 @@ export default function ConversationScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  headerBackBtn: { marginLeft: 4, paddingVertical: 4, paddingRight: 6 },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   headerIconBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   headerTitleWrap: {
-    maxWidth: 220,
+    maxWidth: 150,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
