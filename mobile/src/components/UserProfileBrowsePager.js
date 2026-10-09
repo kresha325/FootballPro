@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
-  ImageBackground,
   RefreshControl,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   useWindowDimensions,
 } from '../theme/nativeComponents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import OptimizedImage from './media/OptimizedImage';
 import { Ionicons } from '@expo/vector-icons';
 
 export function useBrowseColors(isDark) {
@@ -119,17 +119,13 @@ function ProfileBrowseCard({ item, onPress, colors }) {
       activeOpacity={0.95}
     >
       {photo ? (
-        <ImageBackground
-          source={{ uri: photo }}
-          style={styles.cardFill}
-          imageStyle={styles.cardCoverImage}
-          resizeMode="cover"
-        >
+        <View style={styles.cardFill}>
+          <OptimizedImage uri={photo} style={StyleSheet.absoluteFillObject} width={800} contentFit="cover" />
           <View style={styles.cardFillInner}>
             <View style={styles.scrim} />
             <View style={styles.overlayPanel}>{overlayContent}</View>
           </View>
-        </ImageBackground>
+        </View>
       ) : (
         <View style={[styles.cardFill, styles.cardFallbackBg]}>
           <View style={styles.fallbackInitialsWrap}>
@@ -246,6 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     minHeight: 0,
+    overflow: 'hidden',
   },
   cardCoverImage: {
     borderRadius: 14,

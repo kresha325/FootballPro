@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -185,11 +186,12 @@ function ProfileTabBarIcon({ user, focused, size = 26 }) {
       ]}
     >
       {uri ? (
-        <Image
+        <OptimizedImage
           key={uri}
-          source={{ uri }}
+          uri={uri}
           style={{ width: dim, height: dim, borderRadius: dim / 2 }}
-          resizeMode="cover"
+          width={80}
+          contentFit="cover"
           onError={() => setImgErr(true)}
         />
       ) : (

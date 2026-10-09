@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
-  ImageBackground,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -18,6 +16,7 @@ import { getFoundingYear, isOrgProfileRole } from '../utils/orgProfile';
 import { openUserProfile } from '../utils/openUserProfile';
 import { promptShareProfileCv } from '../utils/shareProfile';
 import { useTheme } from '../context/ThemeContext';
+import OptimizedImage from '../components/media/OptimizedImage';
 
 const ROLE_LABELS = {
   athlete: 'Futbollist',
@@ -239,15 +238,16 @@ export default function PublicCvScreen({ route, navigation }) {
     >
       <View style={[styles.heroCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
         {cover ? (
-          <ImageBackground source={{ uri: cover }} style={styles.cover} imageStyle={{ opacity: 0.9 }}>
+          <View style={styles.cover}>
+            <OptimizedImage uri={cover} style={StyleSheet.absoluteFillObject} width={1200} contentFit="cover" />
             <View style={styles.coverShade} />
-          </ImageBackground>
+          </View>
         ) : (
           <View style={[styles.cover, { backgroundColor: '#60491f' }]} />
         )}
         <View style={styles.heroBody}>
           {photo ? (
-            <Image source={{ uri: photo }} style={styles.avatar} />
+            <OptimizedImage uri={photo} style={styles.avatar} width={240} contentFit="cover" />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 28 }}>
@@ -324,7 +324,7 @@ export default function PublicCvScreen({ route, navigation }) {
                 item.imageUrl;
               return (
                 <View key={String(item.id)} style={[styles.galleryCell, { backgroundColor: theme.chipBg }]}>
-                  {uri ? <Image source={{ uri }} style={styles.galleryImg} /> : null}
+                  {uri ? <OptimizedImage uri={uri} style={styles.galleryImg} width={400} contentFit="cover" /> : null}
                 </View>
               );
             })}
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  cover: { height: 140, width: '100%' },
+  cover: { height: 140, width: '100%', overflow: 'hidden' },
   coverShade: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)' },
   heroBody: { padding: 16, alignItems: 'center', marginTop: -40 },
   avatar: {

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { extractErrorMessage, productByIdRequest } from '../api/client';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
@@ -40,7 +41,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const imageUri = absoluteBackendUrl(product.imageUrl);
   return (
     <View style={styles.wrap}>
-      {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} /> : null}
+      {imageUri ? <OptimizedImage uri={imageUri} style={styles.image} width={800} contentFit="cover" /> : null}
       <Text style={styles.name}>{product.name}</Text>
       <Text style={styles.meta}>{product.category} · {product.condition || 'new'} · {product.status}</Text>
       <Text>{product.description || 'Pa përshkrim.'}</Text>

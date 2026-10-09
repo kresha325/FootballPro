@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
+import OptimizedImage from '../components/media/OptimizedImage';
 import {
   deleteProductRequest,
   extractErrorMessage,
@@ -208,9 +208,9 @@ export default function EditProductScreen({ route, navigation }) {
         <Text style={styles.imageBtnText}>{image ? 'Ndrysho foton e zgjedhur' : 'Zgjidh foto të re'}</Text>
       </TouchableOpacity>
       {image ? (
-        <Image source={{ uri: image.uri }} style={styles.preview} resizeMode="cover" />
+        <OptimizedImage uri={image.uri} style={styles.preview} width={600} contentFit="cover" />
       ) : existingImageUrl ? (
-        <Image source={{ uri: existingImageUrl }} style={styles.preview} resizeMode="cover" />
+        <OptimizedImage uri={existingImageUrl} style={styles.preview} width={600} contentFit="cover" />
       ) : null}
       <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={saving || deleting}>
         {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Ruaj ndryshimet</Text>}

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
+import OptimizedImage from '../components/media/OptimizedImage';
 import {
   dashboardAnalyticsRequest,
   engagementRateAnalyticsRequest,
@@ -504,7 +504,7 @@ export default function InsightsScreen() {
                       <Text style={[styles.lbRankText, rank > 3 && styles.lbRankTextDark]}>#{rank}</Text>
                     </View>
                     {photo ? (
-                      <Image source={{ uri: photo }} style={styles.lbAvatar} />
+                      <OptimizedImage uri={photo} style={styles.lbAvatar} width={80} contentFit="cover" />
                     ) : (
                       <View style={[styles.lbAvatar, styles.lbAvatarFallback, { backgroundColor: colors.bgElevated }]}>
                         <Ionicons name="person" size={16} color={colors.muted} />

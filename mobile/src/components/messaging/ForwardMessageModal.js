@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import {
 } from '../../api/client';
 import { BACKEND_URL } from '../../config/constants';
 import ReplyPreview from './ReplyPreview';
+import OptimizedImage from '../media/OptimizedImage';
 
 function mediaBaseUrl() {
   return String(BACKEND_URL || '').replace(/\/$/, '');
@@ -135,7 +135,7 @@ export default function ForwardMessageModal({ visible, message, currentUserId, o
                     disabled={!!forwardingId}
                   >
                     {photo ? (
-                      <Image source={{ uri: photo }} style={styles.avatar} />
+                      <OptimizedImage uri={photo} style={styles.avatar} width={80} contentFit="cover" />
                     ) : (
                       <View style={styles.avatarFallback}>
                         <Text style={styles.avatarLetter}>{title.charAt(0).toUpperCase()}</Text>

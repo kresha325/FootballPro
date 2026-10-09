@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
 import { useTheme } from '../context/ThemeContext';
+import OptimizedImage from '../components/media/OptimizedImage';
 
 export const WELCOME_ONBOARDING_KEY = 'welcome_onboarding_done';
 
@@ -94,7 +94,7 @@ export default function WelcomeOnboardingScreen({ onDone }) {
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: PAGE_W }]}>
             <View style={[styles.imageWrap, { width: IMAGE_W, height: IMAGE_H, backgroundColor: colors.primarySoft }]}>
-              <Image source={item.image} style={styles.image} resizeMode="cover" />
+              <OptimizedImage source={item.image} style={styles.image} contentFit="cover" />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
             <Text style={[styles.body, { color: colors.muted }]}>{item.body}</Text>

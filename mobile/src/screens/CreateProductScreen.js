@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { createProductRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -139,7 +139,7 @@ export default function CreateProductScreen({ navigation }) {
         <Text style={styles.imageBtnText}>{image ? 'Ndrysho foton' : 'Zgjidh nga galeria'}</Text>
       </TouchableOpacity>
       {image ? (
-        <Image source={{ uri: image.uri }} style={styles.preview} resizeMode="cover" />
+        <OptimizedImage uri={image.uri} style={styles.preview} width={600} contentFit="cover" />
       ) : null}
       <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={saving}>
         {saving ? (

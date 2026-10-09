@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from '../../theme/nativeComponents';
+import OptimizedImage from '../media/OptimizedImage';
 
 export default function PublicProfileSponsorsTab({ sponsors = [], theme }) {
   if (!sponsors.length) {
@@ -19,7 +20,7 @@ export default function PublicProfileSponsorsTab({ sponsors = [], theme }) {
         >
           <View style={[styles.thumb, { backgroundColor: theme.chipBg }]}>
             {s.image ? (
-              <Image source={{ uri: s.image }} style={styles.thumbImg} resizeMode="cover" />
+              <OptimizedImage uri={s.image} style={styles.thumbImg} width={160} contentFit="cover" />
             ) : (
               <Text style={{ fontSize: 28 }}>🎯</Text>
             )}

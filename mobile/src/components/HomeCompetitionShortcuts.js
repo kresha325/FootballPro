@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import { StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
+import OptimizedImage from './media/OptimizedImage';
 import { useNavigation } from '@react-navigation/native';
 
 const ICON_MATCHES = require('../../assets/home/icon-matches.png');
@@ -65,10 +66,10 @@ export default function HomeCompetitionShortcuts({
           }
         >
           <View style={styles.iconWrap}>
-            <Image
+            <OptimizedImage
               source={item.icon}
               style={{ width: iconSize, height: iconSize, backgroundColor: 'transparent' }}
-              resizeMode="contain"
+              contentFit="contain"
             />
             {item.badge > 0 ? (
               <View style={styles.badge}>

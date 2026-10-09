@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import {
 } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import { createOrderRequest, extractErrorMessage, joncoinBalanceRequest } from '../api/client';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
 
@@ -161,7 +161,7 @@ export default function CartScreen({ navigation }) {
           const q = parseInt(String(item.quantity), 10) || 1;
           return (
             <View style={styles.row}>
-              {uri ? <Image source={{ uri }} style={styles.thumb} /> : <View style={[styles.thumb, styles.thumbPh]} />}
+              {uri ? <OptimizedImage uri={uri} style={styles.thumb} width={200} contentFit="cover" /> : <View style={[styles.thumb, styles.thumbPh]} />}
               <View style={styles.rowBody}>
                 <Text style={styles.rowName} numberOfLines={2}>
                   {item.name}

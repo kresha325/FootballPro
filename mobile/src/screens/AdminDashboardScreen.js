@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import OptimizedImage from '../components/media/OptimizedImage';
 import {
   Alert,
   FlatList,
-  Image,
   Linking,
   RefreshControl,
   ScrollView,
@@ -585,7 +585,7 @@ export default function AdminDashboardScreen() {
       return (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {item?.photo ? (
-            <Image source={{ uri: item.photo }} style={styles.stadiumThumb} resizeMode="cover" />
+            <OptimizedImage uri={item.photo} style={styles.stadiumThumb} width={200} contentFit="cover" />
           ) : null}
           <Text style={[styles.name, { color: colors.text }]}>{item?.name || `Stadium #${item?.id}`}</Text>
           <Text style={[styles.meta, { color: colors.muted }]}>
@@ -1010,11 +1010,7 @@ export default function AdminDashboardScreen() {
                   ) : null}
 
                   {stadiumPhotoPreview ? (
-                    <Image
-                      source={{ uri: stadiumPhotoPreview }}
-                      style={styles.stadiumPreview}
-                      resizeMode="cover"
-                    />
+                    <OptimizedImage uri={stadiumPhotoPreview} style={styles.stadiumPreview} width={600} contentFit="cover" />
                   ) : null}
                   <View style={styles.row}>
                     <TouchableOpacity style={[styles.action, styles.role]} onPress={pickStadiumPhoto}>

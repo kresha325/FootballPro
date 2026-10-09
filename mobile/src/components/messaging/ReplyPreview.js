@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from '../../theme/nativeComponents';
+import { StyleSheet, Text, View } from '../../theme/nativeComponents';
+import OptimizedImage from '../media/OptimizedImage';
 import { Ionicons } from '@expo/vector-icons';
 import { BACKEND_URL } from '../../config/constants';
 import { messageHasMedia, replyPreviewText, resolveMessageFileUrl } from '../../utils/messageActions';
@@ -45,11 +46,11 @@ export default function ReplyPreview({ message, mine = false, compact = false })
       {hasMedia ? (
         <View style={[styles.thumbWrap, compact && styles.thumbWrapCompact]}>
           {isImage || isMediaFile ? (
-            <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+            <OptimizedImage uri={uri} style={styles.thumb} width={120} contentFit="cover" />
           ) : (
             <View style={styles.thumbVideo}>
               {uri ? (
-                <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                <OptimizedImage uri={uri} style={styles.thumb} width={120} contentFit="cover" />
               ) : null}
               <View style={styles.videoBadge}>
                 <Ionicons name="videocam" size={compact ? 14 : 18} color="#fff" />

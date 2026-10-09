@@ -8,6 +8,7 @@ import { radius } from './tokens';
 export * from 'react-native';
 
 const styleCache = new WeakMap();
+const styleIdCache = new WeakMap();
 
 const surfaceBg = new Map([
   ['#fff', 'card'], ['#ffffff', 'card'], ['white', 'card'],
@@ -62,21 +63,7 @@ function resolveColor(value, property, colors) {
   return token && colors[token] ? colors[token] : value;
 }
 
-function themeStyle(style, colors) {
-  if (style == null) return style;
-  if (typeof style === 'function') return (...args) => themeStyle(style(...args), colors);
-  if (Array.isArray(style)) return style.map((item) => themeStyle(item, colors));
-  let source = style;
-  if (typeof source === 'number') source = ReactNative.StyleSheet.flatten(source);
-  if (!source || typeof source !== 'object') return source;
-
-  let byStyle = styleCache.get(colors);
-  if (!byStyle) {
-    byStyle = new WeakMap();
-    styleCache.set(colors, byStyle);
-  }
-  if (typeof style === 'object' && byStyle.has(style)) return byStyle.get(style);
-
+function remapFlatStyle(source, colors) {
   const output = { ...source };
   Object.keys(output).forEach((property) => {
     const value = output[property];
@@ -86,7 +73,45 @@ function themeStyle(style, colors) {
       output[property] = resolveColor(value, property, colors);
     }
   });
-  if (typeof style === 'object') byStyle.set(style, output);
+  return output;
+}
+
+function themeStyle(style, colors) {
+  if (style == null) return style;
+  if (typeof style === 'function') return (...args) => themeStyle(style(...args), colors);
+  if (Array.isArray(style)) {
+    let changed = false;
+    const next = style.map((item) => {
+      const mapped = themeStyle(item, colors);
+      if (mapped !== item) changed = true;
+      return mapped;
+    });
+    return changed ? next : style;
+  }
+  if (typeof style === 'number') {
+    let byId = styleIdCache.get(colors);
+    if (!byId) {
+      byId = new Map();
+      styleIdCache.set(colors, byId);
+    }
+    const cached = byId.get(style);
+    if (cached) return cached;
+    const flat = ReactNative.StyleSheet.flatten(style);
+    const output = flat && typeof flat === 'object' ? remapFlatStyle(flat, colors) : flat;
+    byId.set(style, output);
+    return output;
+  }
+  if (!style || typeof style !== 'object') return style;
+
+  let byStyle = styleCache.get(colors);
+  if (!byStyle) {
+    byStyle = new WeakMap();
+    styleCache.set(colors, byStyle);
+  }
+  if (byStyle.has(style)) return byStyle.get(style);
+
+  const output = remapFlatStyle(style, colors);
+  byStyle.set(style, output);
   return output;
 }
 

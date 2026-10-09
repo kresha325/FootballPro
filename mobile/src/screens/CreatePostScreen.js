@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { ResizeMode } from 'expo-av';
 import { ManagedVideo } from '../components/media/LazyVideo';
 import * as ImagePicker from 'expo-image-picker';
@@ -124,7 +125,7 @@ export default function CreatePostScreen({ navigation }) {
         <Text style={styles.secondaryButtonText}>{media ? 'Change Media' : 'Choose Image/Video'}</Text>
       </TouchableOpacity>
 
-      {media?.kind === 'image' ? <Image source={{ uri: media.uri }} style={styles.previewImage} resizeMode="cover" /> : null}
+      {media?.kind === 'image' ? <OptimizedImage uri={media.uri} style={styles.previewImage} width={800} contentFit="cover" /> : null}
       {media?.kind === 'video' ? (
         <View style={styles.videoWrap}>
           <ManagedVideo source={{ uri: media.uri }} style={styles.video} useNativeControls resizeMode={ResizeMode.CONTAIN} isLooping={false} />

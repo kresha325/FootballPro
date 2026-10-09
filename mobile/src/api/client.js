@@ -71,6 +71,7 @@ api.interceptors.response.use(
     }
 
     config.__retryCount = config.__retryCount || 0;
+    const timedOut = error?.code === 'ECONNABORTED' || /timeout of \d+ms exceeded/i.test(String(error?.message || ''));
     const canRetry =
       config.__retryCount < MAX_GET_RETRIES &&
       (isNetworkError || RETRYABLE_STATUS.has(status));
@@ -80,6 +81,8 @@ api.interceptors.response.use(
     }
 
     config.__retryCount += 1;
+    // The first attempt often wakes a sleeping server and dies at 12s. Give the retry time to finish.
+    if (timedOut) config.timeout = 45000;
     const delayMs = 300 * Math.pow(2, config.__retryCount - 1);
     await sleep(delayMs);
     return api.request(config);
@@ -95,6 +98,8 @@ export const setAuthToken = (token) => {
 };
 
 export const extractErrorMessage = (error, fallback = 'Ndodhi një gabim') => {
+  const timedOut = error?.code === 'ECONNABORTED' || /timeout of \d+ms exceeded/i.test(String(error?.message || ''));
+  if (timedOut) return 'Serveri nuk u përgjigj në kohë. Provo përsëri.';
   return (
     error?.response?.data?.msg ||
     error?.response?.data?.message ||

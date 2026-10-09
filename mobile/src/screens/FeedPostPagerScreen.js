@@ -4,7 +4,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { ResizeMode } from 'expo-av';
 import { ManagedVideo, VideoPoster } from '../components/media/LazyVideo';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -181,7 +181,7 @@ function FeedPagerPage({
             </View>
           ) : hasImage ? (
             <View pointerEvents="none" style={styles.mediaFrame}>
-              <Image source={{ uri: imageUri }} style={styles.mediaFill} resizeMode="contain" />
+              <OptimizedImage uri={imageUri} style={styles.mediaFill} contentFit="contain" />
             </View>
           ) : (
             <View style={[styles.noMedia, { backgroundColor: isDark ? '#0f172a' : '#1e293b' }]}>
@@ -290,7 +290,7 @@ function FeedPagerPage({
           accessibilityLabel="Hap profilin e autorit"
         >
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            <OptimizedImage uri={avatarUrl} style={styles.avatar} width={160} contentFit="cover" />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarFallbackText}>{(author || 'U').charAt(0).toUpperCase()}</Text>

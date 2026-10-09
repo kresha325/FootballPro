@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
+import OptimizedImage from '../components/media/OptimizedImage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ListSearchBar from '../components/ListSearchBar';
@@ -187,7 +187,7 @@ export default function StreamsScreen({ navigation }) {
                   activeOpacity={0.85}
                 >
                   {photo ? (
-                    <Image source={{ uri: photo }} style={styles.liveAvatar} />
+                    <OptimizedImage uri={photo} style={styles.liveAvatar} width={120} contentFit="cover" />
                   ) : (
                     <View style={[styles.liveAvatar, styles.liveAvatarFallback]}>
                       <Text style={styles.liveAvatarLetter}>{name.charAt(0).toUpperCase()}</Text>

@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -18,6 +17,7 @@ import {
 } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
 import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
+import OptimizedImage from '../components/media/OptimizedImage';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserAvatar from '../components/UserAvatar';
@@ -208,7 +208,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
                     {mediaBroken ? (
                       <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
                     ) : (
-                      <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" onError={() => setMediaBroken(true)} />
+                      <OptimizedImage uri={fileUri} style={styles.msgImage} width={400} contentFit="cover" onError={() => setMediaBroken(true)} />
                     )}
                   </TouchableOpacity>
                 ) : null}
@@ -244,7 +244,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
                     {mediaBroken ? (
                       <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
                     ) : (
-                      <Image source={{ uri: fileUri }} style={styles.msgImage} resizeMode="cover" onError={() => setMediaBroken(true)} />
+                      <OptimizedImage uri={fileUri} style={styles.msgImage} width={400} contentFit="cover" onError={() => setMediaBroken(true)} />
                     )}
                   </TouchableOpacity>
                 ) : null}
@@ -1354,7 +1354,7 @@ export default function ConversationScreen({ route, navigation }) {
                 <Ionicons name="videocam" size={28} color="#9A6B12" />
               </View>
             ) : (
-              <Image source={{ uri: pendingAttachment.uri }} style={styles.attachmentThumb} />
+              <OptimizedImage uri={pendingAttachment.uri} style={styles.attachmentThumb} width={200} contentFit="cover" />
             )}
             <Text style={styles.attachmentName} numberOfLines={1}>
               {pendingAttachment.name}
@@ -1482,7 +1482,7 @@ export default function ConversationScreen({ route, navigation }) {
       <Modal visible={!!previewImageUri} transparent animationType="fade" onRequestClose={() => setPreviewImageUri(null)}>
         <TouchableOpacity style={styles.imageModalBackdrop} activeOpacity={1} onPress={() => setPreviewImageUri(null)}>
           {previewImageUri ? (
-            <Image source={{ uri: previewImageUri }} style={styles.imageModalImage} resizeMode="contain" />
+            <OptimizedImage uri={previewImageUri} style={styles.imageModalImage} contentFit="contain" />
           ) : null}
         </TouchableOpacity>
       </Modal>

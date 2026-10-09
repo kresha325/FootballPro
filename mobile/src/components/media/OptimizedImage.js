@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from '../../theme/nativeComponents';
+import { StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 import { getOptimizedImageUrl } from '../../utils/imageUrl';
 
 /**
- * List and feed image. URLs are sized before they are requested. Missing URIs
- * and load errors render an empty box. Full-screen previews should omit
- * width and height so the original URL is kept.
+ * List and feed image. URLs are sized before they are requested. The phone
+ * decodes and caches the bitmap, so scrolling does not do that work in JS.
  */
 export default function OptimizedImage({
   uri,
@@ -20,12 +20,27 @@ export default function OptimizedImage({
   onError,
   accessibilityLabel,
 }) {
-  const raw = uri || source?.uri || (typeof source === 'string' ? source : '');
+  const bundled = typeof source === 'number' ? source : null;
+  const raw = bundled ? '' : uri || source?.uri || (typeof source === 'string' ? source : '');
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setFailed(false);
   }, [raw]);
+
+  const fit = contentFit === 'contain' || contentFit === 'fill' ? contentFit : 'cover';
+
+  if (bundled) {
+    return (
+      <Image
+        source={bundled}
+        style={style}
+        contentFit={fit}
+        cachePolicy="memory-disk"
+        accessibilityLabel={accessibilityLabel}
+      />
+    );
+  }
 
   if (!raw || failed) {
     return <View style={[styles.fallback, { backgroundColor: placeholderColor }, style]} />;
@@ -33,13 +48,13 @@ export default function OptimizedImage({
 
   const optimized = getOptimizedImageUrl(raw, { width, height, quality, format });
 
-  const resizeMode = contentFit === 'contain' ? 'contain' : contentFit === 'fill' ? 'stretch' : 'cover';
-
   return (
     <Image
       source={{ uri: optimized }}
       style={style}
-      resizeMode={resizeMode}
+      contentFit={fit}
+      cachePolicy="memory-disk"
+      recyclingKey={optimized}
       accessibilityLabel={accessibilityLabel}
       onError={(event) => {
         setFailed(true);

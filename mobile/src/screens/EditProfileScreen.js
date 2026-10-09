@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
+import OptimizedImage from '../components/media/OptimizedImage';
 import {
   clubMembersRequestMembership,
   createMyProfileRequest,
@@ -580,9 +580,9 @@ export default function EditProfileScreen({ navigation }) {
         <Text style={styles.secondaryButtonText}>{profilePhotoFile ? 'Change photo' : 'Choose photo'}</Text>
       </TouchableOpacity>
       {profilePhotoFile ? (
-        <Image source={{ uri: profilePhotoFile.uri }} style={styles.avatarPreview} />
+        <OptimizedImage uri={profilePhotoFile.uri} style={styles.avatarPreview} width={240} contentFit="cover" />
       ) : existingPhotoUrl ? (
-        <Image source={{ uri: existingPhotoUrl }} style={styles.avatarPreview} />
+        <OptimizedImage uri={existingPhotoUrl} style={styles.avatarPreview} width={240} contentFit="cover" />
       ) : null}
 
       {editRole === 'athlete' && (

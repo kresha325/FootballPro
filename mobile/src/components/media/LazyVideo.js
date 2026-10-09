@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from '../../theme/nativeComponents';
+import { Modal, Pressable, StyleSheet, TouchableOpacity, View } from '../../theme/nativeComponents';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +38,7 @@ export function VideoPoster({
   const body = (
     <>
       {posterUri ? (
-        <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+        <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject} contentFit="cover" cachePolicy="memory-disk" />
       ) : null}
       <View style={styles.playBadge} pointerEvents="none">
         <Ionicons name="play" size={22} color="#fff" />
