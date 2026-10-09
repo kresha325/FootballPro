@@ -75,10 +75,51 @@ export async function ensurePushPermissions() {
   return { granted: status === 'granted', status };
 }
 
-export async function getExpoPushTokenString() {
+export async function getExpoPushTokenString(devicePushToken) {
   const projectId = getEasProjectId();
-  const result = await Notifications.getExpoPushTokenAsync({ projectId });
+  const options = devicePushToken?.data ? { projectId, devicePushToken } : { projectId };
+  const result = await Notifications.getExpoPushTokenAsync(options);
   return result?.data || null;
+}
+
+let syncInFlight = null;
+let lastSyncedToken = null;
+let cooldownUntil = 0;
+const PUSH_FAIL_COOLDOWN_MS = 60_000;
+
+/** Drop the in-memory token so the next account can register its own. */
+export function resetPushSyncMemory() {
+  lastSyncedToken = null;
+  cooldownUntil = 0;
+}
+
+/**
+ * One registration at a time.
+ * Passing the native token avoids getDevicePushTokenAsync, which emits the
+ * listener again and was starting a new request on every event.
+ */
+export function syncDevicePushToken(devicePushToken) {
+  if (syncInFlight) return syncInFlight;
+  if (Date.now() < cooldownUntil) return Promise.resolve(lastSyncedToken);
+
+  syncInFlight = (async () => {
+    try {
+      const pref = await getPushPreference();
+      if (!pref) return null;
+      const next = await getExpoPushTokenString(devicePushToken);
+      if (!next || next === lastSyncedToken) return next;
+      await syncPushTokenToBackend(next);
+      lastSyncedToken = next;
+      return next;
+    } catch (error) {
+      cooldownUntil = Date.now() + PUSH_FAIL_COOLDOWN_MS;
+      throw error;
+    } finally {
+      syncInFlight = null;
+    }
+  })();
+
+  return syncInFlight;
 }
 
 export async function getOrCreateDeviceId() {
@@ -109,6 +150,7 @@ export async function clearPushTokenFromBackend() {
     const deviceId = await getOrCreateDeviceId();
     await registerPushTokenRequest(null, 'mobile', deviceId);
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+    resetPushSyncMemory();
   } catch (error) {
     console.warn('clear push token failed:', error?.message || error);
   }
@@ -122,11 +164,7 @@ export async function registerPushWithBackend() {
   const { granted } = await ensurePushPermissions();
   if (!granted) return null;
 
-  const token = await getExpoPushTokenString();
-  if (!token) return null;
-
-  await syncPushTokenToBackend(token);
-  return token;
+  return syncDevicePushToken();
 }
 
 export async function enablePushNotifications() {

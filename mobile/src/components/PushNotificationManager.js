@@ -3,11 +3,7 @@ import { DeviceEventEmitter } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import { handlePushOpen } from '../notifications/handlePushOpen';
-import {
-  getExpoPushTokenString,
-  registerPushWithBackend,
-  syncPushTokenToBackend,
-} from '../notifications/push';
+import { registerPushWithBackend, resetPushSyncMemory, syncDevicePushToken } from '../notifications/push';
 
 export default function PushNotificationManager() {
   const { token, user } = useAuth();
@@ -17,6 +13,7 @@ export default function PushNotificationManager() {
     if (!token || !user?.id) return undefined;
 
     let cancelled = false;
+    resetPushSyncMemory();
 
     const registerTimer = setTimeout(() => {
       if (cancelled) return;
@@ -25,12 +22,10 @@ export default function PushNotificationManager() {
       });
     }, 2000);
 
-    const tokenSub = Notifications.addPushTokenListener(() => {
-      getExpoPushTokenString()
-        .then((next) => (next ? syncPushTokenToBackend(next) : null))
-        .catch((error) => {
-          console.warn('push token refresh failed:', error?.message || error);
-        });
+    const tokenSub = Notifications.addPushTokenListener((deviceToken) => {
+      syncDevicePushToken(deviceToken).catch((error) => {
+        console.warn('push token refresh failed:', error?.message || error);
+      });
     });
 
     const receivedSub = Notifications.addNotificationReceivedListener(() => {
