@@ -139,9 +139,9 @@ describe('JWT expiration and banned users', () => {
 });
 
 describe('role escalation and mass assignment', () => {
-  it('does not allow self-registration as admin', () => {
+  it('allows public league registration but not admin self-registration', () => {
     assert.equal(ALLOWED_REGISTER_ROLES.includes('admin'), false);
-    assert.equal(ALLOWED_REGISTER_ROLES.includes('liga'), false);
+    assert.equal(ALLOWED_REGISTER_ROLES.includes('liga'), true);
   });
 
   it('strips password and reset tokens from user responses', () => {

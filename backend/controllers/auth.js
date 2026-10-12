@@ -110,8 +110,8 @@ exports.register = async (req, res) => {
         city: city ? String(city).trim() : null,
         country: country ? String(country).trim() : null,
       };
-      // Org accounts store the public name on profile.club for club discovery/display.
-      if (normalizedRole === 'club') {
+      // Organization accounts store their public name for consistent discovery and display.
+      if (isOrg) {
         profilePayload.club = [trimmedFirst, trimmedLast].filter(Boolean).join(' ').trim() || trimmedFirst;
       }
       await Profile.create(profilePayload);

@@ -8,6 +8,7 @@ const ALLOWED_REGISTER_ROLES = [
   'referee',
   'club',
   'federation',
+  'liga',
   'media',
   'business',
 ];
