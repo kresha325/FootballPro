@@ -27,8 +27,8 @@ const POST_INCLUDES = [
   {
     model: User,
     as: 'author',
-    attributes: ['id', 'firstName', 'lastName', 'email', 'verified'],
-    include: [{ model: Profile, attributes: ['country', 'profilePhoto'] }],
+    attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
+    include: [{ model: Profile, attributes: ['country', 'club', 'profilePhoto'] }],
   },
   { model: Sponsor, through: { attributes: [] } },
 ];
@@ -180,6 +180,9 @@ async function hydratePosts(posts, { userId, req, includeAuthorSponsors, Like, C
     } else {
       postObj.author = postObj.author || {};
       postObj.author.profilePhoto = null;
+    }
+    if (postObj.author.Profile?.club) {
+      postObj.author.club = postObj.author.Profile.club;
     }
 
     const postSponsors = Array.isArray(post.Sponsors) ? post.Sponsors : (postObj.Sponsors || []);
