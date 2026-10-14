@@ -19,7 +19,7 @@
     "framer-motion": "^11.0.0",
     "i18next": "^25.7.3",
     "i18next-http-backend": "^3.0.2",
-    "livekit-client": "^2.22.3",
+    "livekit-client": "^2.22.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-easy-crop": "^5.5.6",
