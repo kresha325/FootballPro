@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocale } from '../../../contexts/LocaleContext';
 
 function asObject(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -14,6 +15,7 @@ function asObject(value) {
 }
 
 const EditManagerProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const contact = asObject(user.contact);
   const [form, setForm] = useState({
     firstName: user.firstName || '',
@@ -72,73 +74,73 @@ const EditManagerProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Foto e profilit</label>
-        {preview ? <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" /> : null}
+        <label className="block text-sm font-medium mb-1">{t('Foto e profilit')}</label>
+        {preview ? <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" /> : null}
         <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Profili i Manager</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Profili i Manager')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Emri *</label>
+          <label className="block text-sm font-medium mb-1">{t('Emri')} *</label>
           <input name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Mbiemri *</label>
+          <label className="block text-sm font-medium mb-1">{t('Mbiemri')} *</label>
           <input name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Klubi</label>
+          <label className="block text-sm font-medium mb-1">{t('Klubi')}</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Qyteti</label>
+          <label className="block text-sm font-medium mb-1">{t('Qyteti')}</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Shteti</label>
+          <label className="block text-sm font-medium mb-1">{t('Shteti')}</label>
           <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Bio</label>
+        <label className="block text-sm font-medium mb-1">{t('Bio')}</label>
         <textarea name="bio" value={form.bio} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Historia e karrierës</label>
+        <label className="block text-sm font-medium mb-1">{t('Historia e karrierës')}</label>
         <textarea name="careerHistory" value={form.careerHistory} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <h4 className="text-sm font-semibold mb-2">Kontakt</h4>
+        <h4 className="text-sm font-semibold mb-2">{t('Kontakt')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Telefon</label>
+            <label className="block text-sm font-medium mb-1">{t('Telefon')}</label>
             <input name="phone" value={form.phone} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{t('Email')}</label>
             <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Website</label>
+            <label className="block text-sm font-medium mb-1">{t('Website')}</label>
             <input name="website" value={form.website} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Instagram</label>
+            <label className="block text-sm font-medium mb-1">{t('Instagram')}</label>
             <input name="instagram" value={form.instagram} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Facebook</label>
+            <label className="block text-sm font-medium mb-1">{t('Facebook')}</label>
             <input name="facebook" value={form.facebook} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Twitter / X</label>
+            <label className="block text-sm font-medium mb-1">{t('Twitter / X')}</label>
             <input name="twitter" value={form.twitter} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Duke ruajtur…' : 'Ruaj ndryshimet'}
+          {loading ? t('Duke ruajtur…') : t('Ruaj ndryshimet')}
         </button>
       </div>
       {errors?.general ? <div className="text-red-600 mt-2">{errors.general}</div> : null}

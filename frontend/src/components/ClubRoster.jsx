@@ -6,10 +6,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { clubMembersAPI, clubStaffAPI, profileAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
+import { useLocale } from '../contexts/LocaleContext';
 
 const VALID_ROSTER_TABS = new Set(['approved', 'pending', 'staff']);
 
 function ClubRoster() {
+  const { t } = useLocale();
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -429,7 +431,7 @@ function ClubRoster() {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6 text-center">
-          <p className="text-red-700 dark:text-red-400">This feature is only available for clubs</p>
+          <p className="text-red-700 dark:text-red-400">{t('This feature is only available for clubs')}</p>
         </div>
       </div>
     );
@@ -471,26 +473,26 @@ function ClubRoster() {
             {(clubProfile?.profilePhoto || clubProfile?.clubLogo) ? <img src={getFullUrl(clubProfile.profilePhoto || clubProfile.clubLogo)} alt={`${clubName} logo`} className="h-full w-full object-cover" /> : clubName.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · CLUB OPERATIONS</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Menaxhimi i klubit')}</p>
             <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{clubName}</h1>
             <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{clubLocation || 'Vendndodhja nuk është shtuar'}{clubProfile?.verified ? ' · Profil i verifikuar' : ''}</p>
             {clubProfile?.stats?.clubType && <span className="xt-badge mt-2">{clubProfile.stats.clubType}</span>}
           </div>
           <div className="flex flex-col gap-3 sm:min-w-56">
-            <Link className="btn btn-primary" to={`/profile/${user.id}`}>Profili publik</Link>
+            <Link className="btn btn-primary" to={`/profile/${user.id}`}>{t('Profili publik')}</Link>
             <div>
-              <div className="mb-1 flex justify-between text-xs text-[var(--xt-color-text-muted)]"><span>Plotësia e profilit</span><span>{profileCompletion}%</span></div>
+              <div className="mb-1 flex justify-between text-xs text-[var(--xt-color-text-muted)]"><span>{t('Plotësia e profilit')}</span><span>{profileCompletion}%</span></div>
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--xt-color-surface-raised)]" role="progressbar" aria-label="Plotësia e profilit të klubit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileCompletion}><div className="h-full rounded-full bg-[var(--xt-color-gold)]" style={{ width: `${profileCompletion}%` }} /></div>
             </div>
           </div>
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Përmbledhje e klubit">
+      <section className="grid gap-3 sm:grid-cols-3" aria-label={t('Përmbledhje e klubit')}>
         {[
-          ['Lojtarë aktivë', playerCount],
-          ['Kërkesa në pritje', pendingRequests.length],
-          ['Staf aktiv', staffMembers.length],
+          [t('Lojtarë aktivë'), playerCount],
+          [t('Kërkesa në pritje'), pendingRequests.length],
+          [t('Staf aktiv'), staffMembers.length],
         ].map(([label, value]) => <div className="xt-stat-card" key={label}><div className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{value}</div><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{label}</p></div>)}
       </section>
 
@@ -506,7 +508,7 @@ function ClubRoster() {
       {loadError && <div className="xt-error-state xt-card" role="alert"><p>{loadError}</p><button type="button" className="btn btn-outline" onClick={fetchRosterData}>Ringarko</button></div>}
 
       <section className="xt-card p-4 sm:p-5" aria-label="Menaxhimi i skuadrës">
-        <div className="xt-section-header mb-4"><div><h2 className="text-xl font-semibold">Skuadra dhe stafi</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Menaxho përbërjen, kategoritë dhe kërkesat e klubit.</p></div></div>
+        <div className="xt-section-header mb-4"><div><h2 className="text-xl font-semibold">{t('Skuadra dhe stafi')}</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{t('Menaxho përbërjen, kategoritë dhe kërkesat e klubit.')}</p></div></div>
       <div role="tablist" aria-label="Menaxhimi i klubit" className="flex gap-2 overflow-x-auto pb-1">
         <button
           role="tab"

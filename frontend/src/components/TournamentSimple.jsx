@@ -25,25 +25,25 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-function participantLabel(p, participantType) {
+function participantLabel(p, participantType, t) {
   const club = p.Profile?.club;
   const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim();
   const role = p.role;
   const uid = resolveParticipantUserId(p);
   const fallback = uid ? `#${uid}` : '';
   if (participantType === 'club') {
-    return name || club || (fallback ? `Klubi ${fallback}` : 'Klubi');
+    return name || club || (fallback ? `${t('Klubi')} ${fallback}` : t('Klubi'));
   }
   if (participantType === 'mixed') {
-    if (role === 'club') return name || club || (fallback ? `Klubi ${fallback}` : 'Klubi');
+    if (role === 'club') return name || club || (fallback ? `${t('Klubi')} ${fallback}` : t('Klubi'));
     if (role === 'athlete') {
       if (club && name) return `${name} (${club})`;
-      return name || (fallback ? `Atleti ${fallback}` : 'Atlet');
+      return name || (fallback ? `${t('Atleti')} ${fallback}` : t('Atlet'));
     }
-    return name || (fallback ? `Përdorues ${fallback}` : 'Përdorues');
+    return name || (fallback ? `${t('Përdorues')} ${fallback}` : t('Përdorues'));
   }
   if (club && name) return `${name} (${club})`;
-  return name || club || (fallback ? `Përdorues ${fallback}` : 'Përdorues');
+  return name || club || (fallback ? `${t('Përdorues')} ${fallback}` : t('Përdorues'));
 }
 
 function avatarUrl(photo) {
@@ -53,8 +53,8 @@ function avatarUrl(photo) {
   return `${base}${photo.startsWith('/') ? '' : '/'}${photo}`;
 }
 
-function scorerLine(row) {
-  const name = [row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `Lojtari #${row.userId}`;
+function scorerLine(row, t) {
+  const name = [row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `${t('Lojtari')} #${row.userId}`;
   const assistName = row.assistUser
     ? [row.assistUser.firstName, row.assistUser.lastName].filter(Boolean).join(' ')
     : null;
@@ -77,6 +77,7 @@ function MatchBroadcastModal({
   onSaveMatch,
   saving = false,
 }) {
+  const { t, language } = useLocale();
   const [scoreHomeInput, setScoreHomeInput] = useState('');
   const [scoreAwayInput, setScoreAwayInput] = useState('');
   const [goalEvents, setGoalEvents] = useState([]);
@@ -95,7 +96,7 @@ function MatchBroadcastModal({
   const away = m?.awayUser;
   const scH = data?.scorersBySide?.home || [];
   const scA = data?.scorersBySide?.away || [];
-  const tName = m?.Tournament?.name || 'Turneu';
+  const tName = m?.Tournament?.name || t('Turneu');
   const sh = m?.scoreHome;
   const sa = m?.scoreAway;
   const hasScore = sh != null && sa != null;
@@ -112,10 +113,10 @@ function MatchBroadcastModal({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/40 via-transparent to-transparent" />
           <div className="relative flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Ndeshje zyrtare</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t("Ndeshje zyrtare")}</p>
               <p className="text-sm text-slate-300 break-words">{tName}</p>
               <p className="mt-1 text-xs text-slate-400">
-                {m?.matchDate ? new Date(m.matchDate).toLocaleString() : '—'} · Raundi {m?.round ?? '—'}
+                {m?.matchDate ? new Date(m.matchDate).toLocaleString(language) : '—'} {t("· Raundi")} {m?.round ?? '—'}
               </p>
             </div>
             <button
@@ -123,7 +124,7 @@ function MatchBroadcastModal({
               onClick={onClose}
               className="shrink-0 rounded-lg btn btn-quiet min-h-10 px-3 text-sm"
             >
-              Mbyll
+              {t("Mbyll")}
             </button>
           </div>
         </div>
@@ -152,7 +153,7 @@ function MatchBroadcastModal({
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(home, participantType)}</p>
+                      <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(home, participantType, t)}</p>
                       {home?.Profile?.position && <p className="text-xs text-slate-400">{home.Profile.position}</p>}
                     </div>
                   </div>
@@ -168,14 +169,14 @@ function MatchBroadcastModal({
                           : 'bg-slate-600 text-slate-300'
                     }`}
                   >
-                    {m.status === 'finished' ? 'Përfunduar' : m.status === 'ongoing' ? 'Live' : 'Në program'}
+                    {m.status === 'finished' ? t('Përfunduar') : m.status === 'ongoing' ? 'Live' : 'Në program'}
                   </span>
                   <div className="flex items-baseline gap-2 font-mono text-4xl font-black tabular-nums tracking-tight sm:text-6xl">
                     <span className="text-white">{hasScore ? sh : '—'}</span>
                     <span className="text-slate-500">:</span>
                     <span className="text-white">{hasScore ? sa : '—'}</span>
                   </div>
-                  {m.minutesPlayed && <p className="mt-1 text-xs text-slate-400">Minuta: {m.minutesPlayed}</p>}
+                  {m.minutesPlayed && <p className="mt-1 text-xs text-slate-400">{t("Minuta:")} {m.minutesPlayed}</p>}
                 </div>
 
                 <div className="flex flex-1 flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-start sm:gap-4 sm:text-left min-w-0">
@@ -187,7 +188,7 @@ function MatchBroadcastModal({
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(away, participantType)}</p>
+                    <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(away, participantType, t)}</p>
                     {away?.Profile?.position && <p className="text-xs text-slate-400">{away.Profile.position}</p>}
                   </div>
                 </div>
@@ -196,14 +197,14 @@ function MatchBroadcastModal({
 
             <div className="grid gap-0 border-t border-white/10 sm:grid-cols-2">
               <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r sm:p-5">
-                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">Golashënues — vendas</h4>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">{t("Golashënues — vendas")}</h4>
                 {scH.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nuk ka të dhëna të detajuara.</p>
+                  <p className="text-sm text-slate-500">{t("Nuk ka të dhëna të detajuara.")}</p>
                 ) : (
                   <ul className="space-y-2">
                     {scH.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row, t)}</span>
                         <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}
@@ -211,14 +212,14 @@ function MatchBroadcastModal({
                 )}
               </div>
               <div className="p-4 sm:p-5">
-                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">Golashënues — mysafir</h4>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--xt-color-gold-bright)]">{t("Golashënues — mysafir")}</h4>
                 {scA.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nuk ka të dhëna të detajuara.</p>
+                  <p className="text-sm text-slate-500">{t("Nuk ka të dhëna të detajuara.")}</p>
                 ) : (
                   <ul className="space-y-2">
                     {scA.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row)}</span>
+                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row, t)}</span>
                         <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}
@@ -228,41 +229,41 @@ function MatchBroadcastModal({
             </div>
 
             <div className="border-t border-white/10 bg-black/20 px-4 py-4 sm:px-6">
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Përmbledhje & statistikë</h4>
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">{t("Përmbledhje & statistikë")}</h4>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Gola (tabela)</p>
+                  <p className="text-[10px] uppercase text-slate-500">{t("Gola (tabela)")}</p>
                   <p className="text-lg font-bold tabular-nums">
                     {sh ?? '—'} – {sa ?? '—'}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Gola (golashënues)</p>
+                  <p className="text-[10px] uppercase text-slate-500">{t("Gola (golashënues)")}</p>
                   <p className="text-lg font-bold tabular-nums text-[var(--xt-color-gold-bright)]">
                     {data?.scorerTotals?.home ?? '—'} – {data?.scorerTotals?.away ?? '—'}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Asiste (detaj)</p>
+                  <p className="text-[10px] uppercase text-slate-500">{t("Asiste (detaj)")}</p>
                   <p className="text-lg font-bold tabular-nums">
                     {[...(scH || []), ...(scA || [])].filter((row) => row.assistUserId).length}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-3 py-2 text-center">
-                  <p className="text-[10px] uppercase text-slate-500">Status</p>
+                  <p className="text-[10px] uppercase text-slate-500">{t("Status")}</p>
                   <p className="text-lg font-bold tabular-nums capitalize">{m.status || '—'}</p>
                 </div>
               </div>
               {hasScore && (data?.scorerTotals?.home !== sh || data?.scorerTotals?.away !== sa) && (
                 <p className="mt-3 text-xs text-amber-200/90">
-                  Shënim: rezultati në tabelë mund të mos përputhet me shumën e golashënuesve derisa të përditësohen të dhënat.
+                  {t("Shënim: rezultati në tabelë mund të mos përputhet me shumën e golashënuesve derisa të përditësohen të dhënat.")}
                 </p>
               )}
             </div>
 
             {canEdit ? (
               <div className="border-t border-white/10 bg-slate-950/80 px-4 py-5 sm:px-6">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">Raporto rezultatin</h4>
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">{t("Raporto rezultatin")}</h4>
                 <div className="mb-4 flex items-center justify-center gap-3">
                   <input
                     type="number"
@@ -271,7 +272,7 @@ function MatchBroadcastModal({
                     onChange={(e) => setScoreHomeInput(e.target.value)}
                     className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
-                    aria-label="Gola vendas"
+                    aria-label={t('Gola vendas')}
                   />
                   <span className="text-2xl font-bold text-slate-400">:</span>
                   <input
@@ -281,11 +282,11 @@ function MatchBroadcastModal({
                     onChange={(e) => setScoreAwayInput(e.target.value)}
                     className="input w-20 px-3 text-center text-xl font-bold"
                     placeholder="0"
-                    aria-label="Gola mysafir"
+                    aria-label={t('Gola mysafir')}
                   />
                 </div>
                 <p className="mb-3 text-center text-[11px] text-slate-400">
-                  Rezultati përditësohet automatikisht nga golat (Vendas / Mysafir).
+                  {t("Rezultati përditësohet automatikisht nga golat (Vendas / Mysafir).")}
                 </p>
                 <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-4 ring-1 ring-emerald-500/20">
                   <MatchGoalEventsForm
@@ -321,12 +322,12 @@ function MatchBroadcastModal({
                   }
                   className="mt-4 w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-500 disabled:opacity-60"
                 >
-                  {saving ? 'Duke ruajtur…' : 'Ruaj rezultatin & golat'}
+                  {saving ? 'Duke ruajtur…' : t('Ruaj rezultatin & golat')}
                 </button>
               </div>
             ) : (
               <p className="border-t border-white/10 px-4 py-4 text-center text-sm text-slate-400 sm:px-6">
-                Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
+                {t("Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.")}
               </p>
             )}
           </>
@@ -337,7 +338,7 @@ function MatchBroadcastModal({
 }
 
 export default function TournamentSimple() {
-  const { t } = useLocale();
+  const { t, language } = useLocale();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -432,7 +433,7 @@ export default function TournamentSimple() {
       setLoadError('');
     } catch (error) {
       console.error('Error fetching tournaments:', error);
-      setLoadError('Turnetë nuk mund të ngarkoheshin. Provo përsëri.');
+      setLoadError(t('Turnetë nuk mund të ngarkoheshin. Provo përsëri.'));
     } finally {
       setLoading(false);
     }
@@ -511,7 +512,7 @@ export default function TournamentSimple() {
       } catch (error) {
         if (!cancelled) {
           console.error('Tournament detail:', error);
-          setDetailError('Të dhënat e turneut nuk mund të ngarkoheshin.');
+          setDetailError(t('Të dhënat e turneut nuk mund të ngarkoheshin.'));
         }
       } finally {
         if (!cancelled) setDetailLoading(false);
@@ -570,9 +571,9 @@ export default function TournamentSimple() {
       const res = await API.get(`/tournaments/${tid}/matches/${matchId}`);
       setMatchModal((prev) => ({ ...prev, data: res.data }));
       await refreshTournamentDetail();
-      alert('Rezultati dhe golat u ruajtën.');
+      alert(t('Rezultati dhe golat u ruajtën.'));
     } catch (e) {
-      alert(e.response?.data?.msg || 'Nuk u ruajt dot rezultati.');
+      alert(e.response?.data?.msg || t('Nuk u ruajt dot rezultati.'));
     } finally {
       setSavingMatch(false);
     }
@@ -589,7 +590,7 @@ export default function TournamentSimple() {
       setMatchModal({
         open: true,
         loading: false,
-        error: e.response?.data?.msg || 'Nuk u ngarkuan të dhënat e ndeshjes',
+        error: e.response?.data?.msg || t('Nuk u ngarkuan të dhënat e ndeshjes'),
         data: null,
       });
     }
@@ -598,12 +599,12 @@ export default function TournamentSimple() {
   const createTournament = async (e) => {
     e.preventDefault();
     if (!canCreateTournament) {
-      alert('Vetëm liga, klubi ose scout mund të krijojnë turne.');
+      alert(t('Vetëm liga, klubi ose scout mund të krijojnë turne.'));
       return;
     }
     const maxN = parseInt(newTournament.maxParticipants, 10);
     if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
-      alert('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.');
+      alert(t('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.'));
       return;
     }
     try {
@@ -626,7 +627,7 @@ export default function TournamentSimple() {
       fetchTournaments();
     } catch (error) {
       console.error('Error creating tournament:', error);
-      alert(error.response?.data?.msg || 'Failed to create tournament');
+      alert(error.response?.data?.msg || t('Failed to create tournament'));
     }
   };
 
@@ -682,7 +683,7 @@ export default function TournamentSimple() {
     } catch (error) {
       console.error(error);
       setJoinSquadModal((s) => ({ ...s, open: false, loading: false }));
-      alert(error.response?.data?.msg || 'Nuk u ngarkua lista e lojtarëve.');
+      alert(error.response?.data?.msg || t('Nuk u ngarkua lista e lojtarëve.'));
     }
   };
 
@@ -710,7 +711,7 @@ export default function TournamentSimple() {
     if (!tournamentId) return;
     const youth = isYouthCategory(category);
     if (youth && !idsForSquad(joinSquadModal.members, category, squadGroup).length) {
-      alert(`Nuk ka atletë në ${String(category).toUpperCase()}/${squadGroup}. Caktoji te skuadra e klubit.`);
+      alert(`${t('Nuk ka atletë në')} ${String(category).toUpperCase()}/${squadGroup}. ${t('Caktoji te skuadra e klubit.')}`);
       return;
     }
     try {
@@ -722,7 +723,7 @@ export default function TournamentSimple() {
           athleteIds: selectedIds,
           squadGroup: youth ? squadGroup : null,
         });
-        alert('Skuadra e turneut u përditësua.');
+        alert(t('Skuadra e turneut u përditësua.'));
         fetchTournaments();
         if (selectedTournament?.id === tournamentId) {
           const detail = await API.get(`/tournaments/${tournamentId}`);
@@ -741,7 +742,7 @@ export default function TournamentSimple() {
       });
     } catch (error) {
       setJoinSquadModal((s) => ({ ...s, loading: false }));
-      alert(error.response?.data?.msg || 'Nuk u ruajt skuadra.');
+      alert(error.response?.data?.msg || t('Nuk u ruajt skuadra.'));
     }
   };
 
@@ -753,40 +754,40 @@ export default function TournamentSimple() {
       });
       alert(
         athleteIds?.length
-          ? `U bashkuat me ${athleteIds.length} lojtarë të caktuar.`
-          : 'Successfully joined tournament!'
+          ? `${t('U bashkuat me')} ${athleteIds.length} ${t('lojtarë të caktuar.')}`
+          : t('Successfully joined tournament!')
       );
       fetchTournaments();
     } catch (error) {
       console.error('Error joining tournament:', error);
-      alert(error.response?.data?.msg || 'Failed to join tournament');
+      alert(error.response?.data?.msg || t('Failed to join tournament'));
     }
   };
 
   const leaveTournament = async (tournamentId) => {
-    if (!window.confirm('Doni të largoheni nga ky turne?')) return;
+    if (!window.confirm(t('Doni të largoheni nga ky turne?'))) return;
     try {
       await API.delete(`/tournaments/${tournamentId}/leave`);
-      alert('U larguat nga turneu.');
+      alert(t('U larguat nga turneu.'));
       fetchTournaments();
       if (selectedTournament?.id === tournamentId) {
         setSelectedTournament(null);
       }
     } catch (error) {
-      alert(error.response?.data?.msg || 'Nuk u larguat dot nga turneu.');
+      alert(error.response?.data?.msg || t('Nuk u larguat dot nga turneu.'));
     }
   };
 
   const deleteTournament = async (tournamentId) => {
-    if (!window.confirm('Fshi këtë turne?')) return;
+    if (!window.confirm(t('Fshi këtë turne?'))) return;
     try {
       await API.delete(`/tournaments/${tournamentId}`);
-      alert('Turneu u fshi.');
+      alert(t('Turneu u fshi.'));
       if (selectedTournament?.id === tournamentId) setSelectedTournament(null);
       setEditTournament(null);
       fetchTournaments();
     } catch (error) {
-      alert(error.response?.data?.msg || error.response?.data?.error || 'Nuk u fshi turneu.');
+      alert(error.response?.data?.msg || error.response?.data?.error || t('Nuk u fshi turneu.'));
     }
   };
 
@@ -808,7 +809,7 @@ export default function TournamentSimple() {
     if (!editTournament?.id) return;
     const maxN = parseInt(editForm.maxParticipants, 10);
     if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
-      alert('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.');
+      alert(t('Vendos numrin e pjesëmarrësve (2–500), p.sh. 7.'));
       return;
     }
     try {
@@ -825,9 +826,9 @@ export default function TournamentSimple() {
       await API.put(`/tournaments/${editTournament.id}`, payload);
       setEditTournament(null);
       fetchTournaments();
-      alert('Turneu u përditësua.');
+      alert(t('Turneu u përditësua.'));
     } catch (error) {
-      alert(error.response?.data?.msg || 'Nuk u përditësua turneu.');
+      alert(error.response?.data?.msg || t('Nuk u përditësua turneu.'));
     }
   };
 
@@ -872,14 +873,14 @@ export default function TournamentSimple() {
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-[var(--xt-color-gold)]/5 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--xt-color-gold-bright)]">X TALENTI · Competition Center</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--xt-color-gold-bright)]">{t("X TALENTI · Competition Center")}</p>
             <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">{t('Turnetë')}</h1>
             <p className="mt-2 sm:mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
               {t('Turnetë, rezultatet, renditjet dhe performanca e regjistruar në platformë.')}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="xt-badge xt-badge-gold">{tournaments.length} {t('turne')}</span>
-              <span className="xt-badge">Liga · Kupa · Knockout</span>
+              <span className="xt-badge">{t("Liga · Kupa · Knockout")}</span>
             </div>
           </div>
           {canCreateTournament && (
@@ -928,7 +929,7 @@ export default function TournamentSimple() {
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-[var(--xt-color-text)] min-w-0 break-words">{formatTournamentTitle(tournament)}</h3>
                     <p className="text-sm text-[var(--xt-color-text-subtle)]">
-                      by {tournament.creator?.firstName} {tournament.creator?.lastName}
+                      {t("by")} {tournament.creator?.firstName} {tournament.creator?.lastName}
                     </p>
                   </div>
                 </div>
@@ -940,11 +941,11 @@ export default function TournamentSimple() {
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[var(--xt-color-text-muted)]">Lloji</span>
+                  <span className="text-[var(--xt-color-text-muted)]">{t("Lloji")}</span>
                   <span className="font-medium text-[var(--xt-color-text)] capitalize">{tournament.type}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[var(--xt-color-text-muted)]">Pjesëmarrja</span>
+                  <span className="text-[var(--xt-color-text-muted)]">{t("Pjesëmarrja")}</span>
                   <span
                     className={`font-medium rounded px-2 py-0.5 text-xs ${
                       pt === 'club'
@@ -958,7 +959,7 @@ export default function TournamentSimple() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[var(--xt-color-text-muted)]">Pjesëmarrës</span>
+                  <span className="text-[var(--xt-color-text-muted)]">{t("Pjesëmarrës")}</span>
                   <span className="font-medium text-[var(--xt-color-text)]">
                     {participantCount}/{tournament.maxParticipants}
                   </span>
@@ -971,7 +972,7 @@ export default function TournamentSimple() {
                 )}
                 {tournament.startDate && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-[var(--xt-color-text-muted)]">Fillimi</span>
+                    <span className="text-[var(--xt-color-text-muted)]">{t("Fillimi")}</span>
                     <span className="font-medium text-[var(--xt-color-text)]">
                       {new Date(tournament.startDate).toLocaleDateString()}
                     </span>
@@ -985,7 +986,7 @@ export default function TournamentSimple() {
                 </span>
                 {isCreator && (
                   <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold">
-                    CREATOR
+                    {t("CREATOR")}
                   </span>
                 )}
               </div>
@@ -1004,26 +1005,26 @@ export default function TournamentSimple() {
                       }
                       className="btn btn-primary min-h-11 w-full"
                     >
-                    {pt === 'club' ? 'Bashkohu si klub' : pt === 'mixed' ? 'Bashkohu (klub ose atlet)' : 'Bashkohu'}
+                    {pt === 'club' ? t('Bashkohu si klub') : pt === 'mixed' ? t('Bashkohu (klub ose atlet)') : t('Bashkohu')}
                   </button>
                 )}
                 {joinBlocked && tournament.status === 'open' && (
                   <p className="text-xs text-center text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg py-2 px-2">
                     {tournament.ligaId || tournament.sourceRole === 'liga'
                       ? user?.role === 'athlete'
-                        ? 'Atletët nuk bashkohen drejtpërdrejt — pjesëmarrja bëhet përmes klubit.'
-                        : 'Për turnet e ligës, klubi bashkohet dhe cakton lojtarët e skuadrës. Tabela mbetet vetëm për klube.'
+                        ? t('Atletët nuk bashkohen drejtpërdrejt — pjesëmarrja bëhet përmes klubit.')
+                        : t('Për turnet e ligës, klubi bashkohet dhe cakton lojtarët e skuadrës. Tabela mbetet vetëm për klube.')
                       : pt === 'club'
-                      ? 'Vetëm llogaria e klubit mund të regjistrohet.'
+                      ? t('Vetëm llogaria e klubit mund të regjistrohet.')
                       : pt === 'mixed'
-                        ? 'Vetëm llogaritë «club» ose «athlete» mund të bashkohen.'
-                        : 'Llogaritë «klub» përdorni turne «klub» ose «klub + athletë».'}
+                        ? t('Vetëm llogaritë «club» ose «athlete» mund të bashkohen.')
+                        : t('Llogaritë «klub» përdorni turne «klub» ose «klub + athletë».')}
                   </p>
                 )}
                 {isJoined && (
                   <div className="space-y-2">
                     <div className="w-full py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
-                      ✓ Në turne
+                      {t("✓ Në turne")}
                     </div>
                     {user?.role === 'club' && ['club', 'mixed'].includes(pt) ? (
                       <button
@@ -1031,7 +1032,7 @@ export default function TournamentSimple() {
                         onClick={() => openClubSquadPicker(tournament, 'edit')}
                         className="btn btn-quiet min-h-10 w-full text-sm"
                       >
-                        Cakto / ndrysho lojtarët
+                        {t("Cakto / ndrysho lojtarët")}
                       </button>
                     ) : null}
                     {tournament.status === 'open' && (
@@ -1040,7 +1041,7 @@ export default function TournamentSimple() {
                         onClick={() => leaveTournament(tournament.id)}
                         className="w-full py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
                       >
-                        Largohu
+                        {t("Largohu")}
                       </button>
                     )}
                   </div>
@@ -1051,20 +1052,20 @@ export default function TournamentSimple() {
                     onClick={async () => {
                       try {
                         await API.post(`/tournaments/${tournament.id}/start`, {});
-                        alert('Ndeshjet u gjeneruan dhe gara nisi.');
+                        alert(t('Ndeshjet u gjeneruan dhe gara nisi.'));
                         fetchTournaments();
                       } catch (error) {
-                        alert(error.response?.data?.msg || 'Gara nuk nisi.');
+                        alert(error.response?.data?.msg || t('Gara nuk nisi.'));
                       }
                     }}
                     className="btn btn-primary min-h-11 w-full"
                   >
-                    Gjenero ndeshjet dhe nise
+                    {t("Gjenero ndeshjet dhe nise")}
                   </button>
                 )}
                 {isCreator && (
                   <Link to={`/competitions/${tournament.id}`} className="btn btn-quiet min-h-10 w-full text-sm">
-                    Qendra e garës
+                    {t("Qendra e garës")}
                   </Link>
                 )}
                 {isCreator && (
@@ -1074,14 +1075,14 @@ export default function TournamentSimple() {
                       onClick={() => openEditTournament(tournament)}
                       className="py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 text-sm font-medium"
                     >
-                      Edito
+                      {t("Edito")}
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteTournament(tournament.id)}
                       className="py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
                     >
-                      Fshi
+                      {t("Fshi")}
                     </button>
                   </div>
                 )}
@@ -1091,14 +1092,14 @@ export default function TournamentSimple() {
                     onClick={() => openTournamentModal(tournament, 'overview')}
                     className="py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
                   >
-                    Përmbledhje
+                    {t("Përmbledhje")}
                   </button>
                   <button
                     type="button"
                     onClick={() => openTournamentModal(tournament, 'table')}
                     className="py-2 border border-emerald-600/40 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-100 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors text-sm font-semibold"
                   >
-                    Tabela · pikë
+                    {t("Tabela · pikë")}
                   </button>
                 </div>
               </div>
@@ -1113,8 +1114,8 @@ export default function TournamentSimple() {
           <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">{t('Nuk ka turne')}</h3>
           <p className="text-[var(--xt-color-text-muted)] mb-6">
             {canCreateTournament
-              ? 'Bëhu i pari që krijon një turne!'
-              : 'Turnetë krijohen nga ligat, klubet ose scoutët.'}
+              ? t('Bëhu i pari që krijon një turne!')
+              : t('Turnetë krijohen nga ligat, klubet ose scoutët.')}
           </p>
           {canCreateTournament && (
             <button
@@ -1122,7 +1123,7 @@ export default function TournamentSimple() {
               onClick={() => setShowCreateModal(true)}
               className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
             >
-              Krijo Turne
+              {t("Krijo Turne")}
             </button>
           )}
         </div>
@@ -1131,14 +1132,14 @@ export default function TournamentSimple() {
       {showCreateModal && canCreateTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-[var(--xt-color-text)] mb-4 sm:mb-6">Krijo Turne të Ri</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--xt-color-text)] mb-4 sm:mb-6">{t("Krijo Turne të Ri")}</h2>
 
             <form onSubmit={createTournament} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Emri</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Emri")}</label>
                 {isLigaCreator ? (
                   <p className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
-                    Turneu i ligës merr automatikisht emrin e ligës suaj.
+                    {t("Turneu i ligës merr automatikisht emrin e ligës suaj.")}
                   </p>
                 ) : (
                   <input
@@ -1147,13 +1148,13 @@ export default function TournamentSimple() {
                     onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
                     required
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={`p.sh. Kupa ${APP_BRAND_NAME} U15`}
+                    placeholder={`${t('p.sh. Kupa')} ${APP_BRAND_NAME} U15`}
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Përshkrimi</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Përshkrimi")}</label>
                 <textarea
                   value={newTournament.description}
                   onChange={(e) => setNewTournament({ ...newTournament, description: e.target.value })}
@@ -1163,60 +1164,60 @@ export default function TournamentSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kategoria (edicion)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Kategoria (edicion)")}</label>
                 <select
                   value={newTournament.category}
                   onChange={(e) => setNewTournament({ ...newTournament, category: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="open">Open</option>
-                  <option value="senior">Senior</option>
-                  <option value="u23">U23</option>
-                  <option value="u21">U21</option>
-                  <option value="u19">U19</option>
-                  <option value="u17">U17</option>
-                  <option value="u15">U15</option>
-                  <option value="u13">U13</option>
-                  <option value="u11">U11</option>
-                  <option value="u10">U10</option>
-                  <option value="u9">U9</option>
+                  <option value="open">{t("Open")}</option>
+                  <option value="senior">{t("Senior")}</option>
+                  <option value="u23">{t("U23")}</option>
+                  <option value="u21">{t("U21")}</option>
+                  <option value="u19">{t("U19")}</option>
+                  <option value="u17">{t("U17")}</option>
+                  <option value="u15">{t("U15")}</option>
+                  <option value="u13">{t("U13")}</option>
+                  <option value="u11">{t("U11")}</option>
+                  <option value="u10">{t("U10")}</option>
+                  <option value="u9">{t("U9")}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Pjesëmarrja</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Pjesëmarrja")}</label>
                 <select
                   value={newTournament.participantType}
                   onChange={(e) => setNewTournament({ ...newTournament, participantType: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="individual">Individë / talente</option>
-                  <option value="club">Vetëm klube</option>
-                  <option value="mixed">Klube + athletë</option>
+                  <option value="individual">{t("Individë / talente")}</option>
+                  <option value="club">{t("Vetëm klube")}</option>
+                  <option value="mixed">{t("Klube + athletë")}</option>
                 </select>
                 <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
-                  Zgjidh kush mund të bashkohet në turne: lojtarë, klube, ose të dyja.
+                  {t("Zgjidh kush mund të bashkohet në turne: lojtarë, klube, ose të dyja.")}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Lloji i turneut</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Lloji i turneut")}</label>
                 <select
                   value={newTournament.type}
                   onChange={(e) => setNewTournament({ ...newTournament, type: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="knockout">Knockout (⚔️)</option>
-                  <option value="league">Ligë — tabelë me pikë (🏆)</option>
-                  <option value="cup">Kupë (🏅)</option>
-                  <option value="group_knockout">Grupe + nokaut</option>
-                  <option value="tournament">Turne</option>
+                  <option value="knockout">{t("Knockout (⚔️)")}</option>
+                  <option value="league">{t("Ligë — tabelë me pikë (🏆)")}</option>
+                  <option value="cup">{t("Kupë (🏅)")}</option>
+                  <option value="group_knockout">{t("Grupe + nokaut")}</option>
+                  <option value="tournament">{t("Turne")}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Numri i pjesëmarrësve
+                  {t("Numri i pjesëmarrësve")}
                 </label>
                 <input
                   type="number"
@@ -1233,10 +1234,10 @@ export default function TournamentSimple() {
                   }}
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="p.sh. 7, 10, 12, 16…"
+                  placeholder={t('p.sh. 7, 10, 12, 16…')}
                 />
                 <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
-                  Vendos numrin e saktë (p.sh. 7 klube → shfaqet 0/7). Lejohet 2–500.
+                  {t("Vendos numrin e saktë (p.sh. 7 klube → shfaqet 0/7). Lejohet 2–500.")}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {[4, 6, 7, 8, 10, 12, 14, 16, 18, 20].map((n) => (
@@ -1257,7 +1258,7 @@ export default function TournamentSimple() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Data e fillimit</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Data e fillimit")}</label>
                 <input
                   type="date"
                   value={newTournament.startDate}
@@ -1267,8 +1268,8 @@ export default function TournamentSimple() {
                 <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   {seasonLabel(newTournament.type)}: {createSeasonPreview || '—'}
                   {newTournament.type === 'league'
-                    ? ' · sezon european (gusht–korrik, si FIFA)'
-                    : ' · viti i edicionit'}
+                    ? ` · ${t('sezon european (gusht–korrik, si FIFA)')}`
+                    : ` · ${t('viti i edicionit')}`}
                 </p>
               </div>
 
@@ -1278,10 +1279,10 @@ export default function TournamentSimple() {
                   onClick={() => setShowCreateModal(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                 >
-                  Anulo
+                  {t("Anulo")}
                 </button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                  Krijo
+                  {t("Krijo")}
                 </button>
               </div>
             </form>
@@ -1292,11 +1293,11 @@ export default function TournamentSimple() {
       {editTournament && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full max-h-[min(92dvh,900px)] overflow-y-auto p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-bold text-[var(--xt-color-text)] mb-4">Edito turneun</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-[var(--xt-color-text)] mb-4">{t("Edito turneun")}</h2>
             <form onSubmit={saveEditTournament} className="space-y-3">
               {!(editTournament.ligaId || editTournament.sourceRole === 'liga') ? (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Emri</label>
+                  <label className="block text-sm font-medium mb-1">{t("Emri")}</label>
                   <input
                     value={editForm.name}
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -1306,11 +1307,11 @@ export default function TournamentSimple() {
                 </div>
               ) : (
                 <p className="text-sm text-[var(--xt-color-text-muted)]">
-                  Emri i turneut të ligës mbetet emri i ligës.
+                  {t("Emri i turneut të ligës mbetet emri i ligës.")}
                 </p>
               )}
               <div>
-                <label className="block text-sm font-medium mb-1">Përshkrimi</label>
+                <label className="block text-sm font-medium mb-1">{t("Përshkrimi")}</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -1319,7 +1320,7 @@ export default function TournamentSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Kategoria</label>
+                <label className="block text-sm font-medium mb-1">{t("Kategoria")}</label>
                 <select
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
@@ -1331,19 +1332,19 @@ export default function TournamentSimple() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Pjesëmarrja</label>
+                <label className="block text-sm font-medium mb-1">{t("Pjesëmarrja")}</label>
                 <select
                   value={editForm.participantType}
                   onChange={(e) => setEditForm({ ...editForm, participantType: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
                 >
-                  <option value="individual">Individë / talente</option>
-                  <option value="club">Vetëm klube</option>
-                  <option value="mixed">Klube + athletë</option>
+                  <option value="individual">{t("Individë / talente")}</option>
+                  <option value="club">{t("Vetëm klube")}</option>
+                  <option value="mixed">{t("Klube + athletë")}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Numri i pjesëmarrësve</label>
+                <label className="block text-sm font-medium mb-1">{t("Numri i pjesëmarrësve")}</label>
                 <input
                   type="number"
                   min={2}
@@ -1359,20 +1360,20 @@ export default function TournamentSimple() {
                   }}
                   required
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
-                  placeholder="p.sh. 7"
+                  placeholder={t('p.sh. 7')}
                 />
-                <p className="mt-1 text-xs text-gray-500">Numër i saktë, p.sh. 7 për ligë me 7 klube (0/7).</p>
+                <p className="mt-1 text-xs text-gray-500">{t("Numër i saktë, p.sh. 7 për ligë me 7 klube (0/7).")}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Statusi</label>
+                <label className="block text-sm font-medium mb-1">{t("Statusi")}</label>
                 <select
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700"
                 >
-                  <option value="open">open</option>
-                  <option value="ongoing">ongoing</option>
-                  <option value="finished">finished</option>
+                  <option value="open">{t("open")}</option>
+                  <option value="ongoing">{t("ongoing")}</option>
+                  <option value="finished">{t("finished")}</option>
                 </select>
               </div>
               <div className="flex gap-2 pt-2">
@@ -1381,10 +1382,10 @@ export default function TournamentSimple() {
                   onClick={() => setEditTournament(null)}
                   className="flex-1 py-2 border rounded-lg"
                 >
-                  Anulo
+                  {t("Anulo")}
                 </button>
                 <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg">
-                  Ruaj
+                  {t("Ruaj")}
                 </button>
               </div>
             </form>
@@ -1403,10 +1404,10 @@ export default function TournamentSimple() {
                   <span className="capitalize">{selectedTournament.type}</span>
                   {selectedTournament.season ? ` · ${selectedTournament.season}` : ''} ·{' '}
                   {(selectedTournament.participantType || 'individual') === 'club'
-                    ? 'Pjesëmarrje: vetëm klube'
+                    ? t('Pjesëmarrje: vetëm klube')
                     : (selectedTournament.participantType || 'individual') === 'mixed'
-                      ? 'Pjesëmarrje: klube dhe athletë'
-                      : 'Pjesëmarrje: individë'}
+                      ? t('Pjesëmarrje: klube dhe athletë')
+                      : t('Pjesëmarrje: individë')}
                 </p>
               </div>
               <button
@@ -1423,21 +1424,21 @@ export default function TournamentSimple() {
             )}
 
             {detailLoading && (
-              <div className="space-y-3 py-4" aria-label="Po ngarkohen të dhënat"><div className="xt-skeleton h-12" /><div className="xt-skeleton h-24" /><div className="xt-skeleton h-40" /></div>
+              <div className="space-y-3 py-4" aria-label={t('Po ngarkohen të dhënat')}><div className="xt-skeleton h-12" /><div className="xt-skeleton h-24" /><div className="xt-skeleton h-40" /></div>
             )}
 
-            {detailError && !detailLoading && <div className="xt-error-state rounded-xl border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-danger)]/5" role="alert"><p>{detailError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => setDetailRetry((value) => value + 1)}>Provo përsëri</button></div>}
+            {detailError && !detailLoading && <div className="xt-error-state rounded-xl border border-[var(--xt-color-danger)]/30 bg-[var(--xt-color-danger)]/5" role="alert"><p>{detailError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => setDetailRetry((value) => value + 1)}>{t("Provo përsëri")}</button></div>}
 
             {!detailLoading && (
               <nav
                 className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1 sm:grid-cols-4"
-                aria-label="Seksione turneu"
+                aria-label={t('Seksione turneu')}
               >
                 {[
-                  { id: 'overview', label: 'Përmbledhje' },
-                  { id: 'table', label: 'Tabela · pikë' },
-                  { id: 'matches', label: 'Ndeshjet' },
-                  { id: 'squad', label: 'Pjesëmarrësit' },
+                  { id: 'overview', label: t('Përmbledhje') },
+                  { id: 'table', label: t('Tabela · pikë') },
+                  { id: 'matches', label: t('Ndeshjet') },
+                  { id: 'squad', label: t('Pjesëmarrësit') },
                 ].map(({ id, label }) => (
                   <button
                     key={id}
@@ -1458,37 +1459,37 @@ export default function TournamentSimple() {
             {detailTab === 'overview' && !detailLoading && detailExtras.stats && (
               <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="xt-stat-card p-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Ndeshje</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{t("Ndeshje")}</p>
                   <p className="text-xl font-bold text-[var(--xt-color-text)]">
                     {detailExtras.stats.finishedMatches}/{detailExtras.stats.totalMatches}
                   </p>
-                  <p className="text-[10px] text-gray-500">përfunduar</p>
+                  <p className="text-[10px] text-gray-500">{t("përfunduar")}</p>
                 </div>
                 <div className="xt-stat-card p-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Gola</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{t("Gola")}</p>
                   <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{detailExtras.stats.totalGoals}</p>
-                  <p className="text-[10px] text-gray-500">në turne</p>
+                  <p className="text-[10px] text-gray-500">{t("në turne")}</p>
                 </div>
                 <div className="xt-stat-card p-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Top golashënues</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{t("Top golashënues")}</p>
                   <p className="truncate text-sm font-bold text-[var(--xt-color-text)]" title={detailExtras.stats.topScorerName || ''}>
                     {detailExtras.stats.topScorerName || `#${detailExtras.stats.topScorerId || '—'}`}
                   </p>
-                  <p className="text-[10px] text-gray-500">{detailExtras.stats.topScorerGoals} gola</p>
+                  <p className="text-[10px] text-gray-500">{detailExtras.stats.topScorerGoals} {t("gola")}</p>
                 </div>
                 <div className="xt-stat-card p-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Kryesues pikësh</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{t("Kryesues pikësh")}</p>
                   <p className="truncate text-sm font-bold text-[var(--xt-color-text)]" title={detailExtras.stats.topTeamName || ''}>
                     {detailExtras.stats.topTeamName || `#${detailExtras.stats.topTeamId || '—'}`}
                   </p>
-                  <p className="text-[10px] text-gray-500">{detailExtras.stats.topTeamPoints} pikë</p>
+                  <p className="text-[10px] text-gray-500">{detailExtras.stats.topTeamPoints} {t("pikë")}</p>
                 </div>
               </div>
             )}
 
             {detailTab === 'overview' && !detailLoading && detailExtras.stats?.recentResults?.length > 0 && (
               <div className="mb-6">
-                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">Rezultatet e fundit</h3>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--xt-color-text-subtle)]">{t("Rezultatet e fundit")}</h3>
                 <div className="flex flex-wrap gap-2">
                   {detailExtras.stats.recentResults.map((r) => (
                     <button
@@ -1501,7 +1502,7 @@ export default function TournamentSimple() {
                         {r.scoreHome} – {r.scoreAway}
                       </span>
                       <span className="mt-0.5 block max-w-[140px] truncate text-gray-600 dark:text-gray-300">
-                        {r.homeName} vs {r.awayName}
+                        {r.homeName} {t("vs")} {r.awayName}
                       </span>
                     </button>
                   ))}
@@ -1511,24 +1512,24 @@ export default function TournamentSimple() {
 
             {detailTab === 'overview' && !detailLoading && detailExtras.stats && (
               <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-600 dark:bg-gray-900/40">
-                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">Përmbledhje turneu</h3>
+                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">{t("Përmbledhje turneu")}</h3>
                 <p className="text-[var(--xt-color-text-muted)]">
-                  Pjesëmarrës: {detailExtras.stats.totalParticipants} · Ndeshje gjithsej: {detailExtras.stats.totalMatches} · Në program:{' '}
-                  {detailExtras.stats.scheduledMatches ?? '—'} · Mesatarja e golave / ndeshje të përfunduar: {detailExtras.stats.avgGoalsPerMatch}
+                  {t("Pjesëmarrës:")} {detailExtras.stats.totalParticipants} {t("· Ndeshje gjithsej:")} {detailExtras.stats.totalMatches} {t("· Në program:")}{' '}
+                  {detailExtras.stats.scheduledMatches ?? '—'} {t("· Mesatarja e golave / ndeshje të përfunduar:")} {detailExtras.stats.avgGoalsPerMatch}
                 </p>
                 <p className="mt-2 text-xs text-[var(--xt-color-text-subtle)]">
-                  Për renditjen sipas pikëve (klube + të tjerë) hap skedën <strong>Tabela · pikë</strong>.
+                  {t("Për renditjen sipas pikëve (klube + të tjerë) hap skedën")} <strong>{t("Tabela · pikë")}</strong>.
                 </p>
               </div>
             )}
 
             {detailTab === 'table' && !detailLoading && (
               <div className="mb-8">
-                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">Tabela — renditja sipas pikëve</h3>
+                <h3 className="mb-2 text-lg font-bold text-[var(--xt-color-text)]">{t("Tabela — renditja sipas pikëve")}</h3>
                 <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">
                   {['club', 'mixed'].includes(selectedTournament.participantType || '')
-                    ? 'Klubet (dhe athletët në turne «mixed») renditen sipas pikëve në ligë (3-1-0, pastaj diferenca e golave). Në cup/knockout, tabela pasqyron përmbledhjen nga ndeshjet e përfunduara.'
-                    : 'Pjesëmarrësit renditen sipas pikëve në ligë; në cup/knockout sipas statistikave të nxjerra nga ndeshjet e përfunduara.'}
+                    ? t('Klubet (dhe athletët në turne «mixed») renditen sipas pikëve në ligë (3-1-0, pastaj diferenca e golave). Në cup/knockout, tabela pasqyron përmbledhjen nga ndeshjet e përfunduara.')
+                    : t('Pjesëmarrësit renditen sipas pikëve në ligë; në cup/knockout sipas statistikave të nxjerra nga ndeshjet e përfunduara.')}
                 </p>
                 {detailExtras.standings?.caption && (
                   <p className="mb-4 text-xs text-[var(--xt-color-text-subtle)] border-l-4 border-emerald-500 pl-3">{detailExtras.standings.caption}</p>
@@ -1539,21 +1540,21 @@ export default function TournamentSimple() {
                       <thead className="bg-gray-100 dark:bg-gray-700">
                         <tr>
                           <th className="px-3 py-2 text-left">#</th>
-                          <th className="px-3 py-2 text-left">Klubi / lojtari</th>
-                          <th className="px-3 py-2 text-center">Nd</th>
-                          <th className="px-3 py-2 text-center">Fit</th>
-                          <th className="px-3 py-2 text-center">Bar</th>
-                          <th className="px-3 py-2 text-center">Humb</th>
-                          <th className="px-3 py-2 text-center">GF</th>
-                          <th className="px-3 py-2 text-center">GA</th>
-                          <th className="px-3 py-2 text-center">DG</th>
-                          <th className="px-3 py-2 text-center font-semibold">Pkt</th>
+                          <th className="px-3 py-2 text-left">{t("Klubi / lojtari")}</th>
+                          <th className="px-3 py-2 text-center">{t("Nd")}</th>
+                          <th className="px-3 py-2 text-center">{t("Fit")}</th>
+                          <th className="px-3 py-2 text-center">{t("Bar")}</th>
+                          <th className="px-3 py-2 text-center">{t("Humb")}</th>
+                          <th className="px-3 py-2 text-center">{t("GF")}</th>
+                          <th className="px-3 py-2 text-center">{t("GA")}</th>
+                          <th className="px-3 py-2 text-center">{t("DG")}</th>
+                          <th className="px-3 py-2 text-center font-semibold">{t("Pkt")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {detailExtras.standings.rows.map((row) => {
                           const u = row.User;
-                          const label = u ? participantLabel(u, selectedTournament.participantType || 'individual') : `#${row.userId}`;
+                          const label = u ? participantLabel(u, selectedTournament.participantType || 'individual', t) : `#${row.userId}`;
                           return (
                             <tr key={row.userId} className="border-t border-gray-100 dark:border-gray-600">
                               <td className="px-3 py-2">{row.rank}</td>
@@ -1585,7 +1586,7 @@ export default function TournamentSimple() {
                   </div>
                 ) : (
                   <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400">
-                    Ende nuk ka rreshta në tabelë (p.sh. asnjë ndeshje e përfunduar ose turneu sapo filloi). Pas rezultateve, renditja me pikë do të shfaqet këtu.
+                    {t("Ende nuk ka rreshta në tabelë (p.sh. asnjë ndeshje e përfunduar ose turneu sapo filloi). Pas rezultateve, renditja me pikë do të shfaqet këtu.")}
                   </p>
                 )}
               </div>
@@ -1593,14 +1594,14 @@ export default function TournamentSimple() {
 
             {detailTab === 'matches' && !detailLoading && detailExtras.matches?.length > 0 && (
               <div className="mb-8">
-                <h3 className="mb-1 text-lg font-bold text-[var(--xt-color-text)]">Të gjitha ndeshjet</h3>
-                <p className="mb-3 text-xs text-[var(--xt-color-text-subtle)]">Kliko një rresht për statistika të plota si ndeshje profesionale.</p>
+                <h3 className="mb-1 text-lg font-bold text-[var(--xt-color-text)]">{t("Të gjitha ndeshjet")}</h3>
+                <p className="mb-3 text-xs text-[var(--xt-color-text-subtle)]">{t("Kliko një rresht për statistika të plota si ndeshje profesionale.")}</p>
                 <ul className="space-y-2">
                   {detailExtras.matches.map((m) => {
                     const when = m.matchDate ? new Date(m.matchDate) : null;
                     const dateLabel =
                       when && !Number.isNaN(when.getTime())
-                        ? when.toLocaleString('sq-AL', {
+                        ? when.toLocaleString(language, {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric',
@@ -1616,25 +1617,25 @@ export default function TournamentSimple() {
                         className="flex w-full flex-col gap-2 rounded-lg border border-gray-200 px-3 py-3 text-left text-sm transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-gray-700/80"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--xt-color-text-subtle)]">
-                          <span className="font-semibold shrink-0">R{m.round ?? '—'}</span>
+                          <span className="font-semibold shrink-0">{t("R")}{m.round ?? '—'}</span>
                           {dateLabel ? (
                             <span className="min-w-0 truncate">{dateLabel}</span>
                           ) : (
-                            <span className="italic">Pa datë/orë</span>
+                            <span className="italic">{t("Pa datë/orë")}</span>
                           )}
                           <span className="text-[10px] font-semibold uppercase tracking-wide">{m.status}</span>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)]">
-                            <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={participantLabel(m.homeUser, selectedTournament.participantType || 'individual')} />
-                            <span className="truncate">{participantLabel(m.homeUser, selectedTournament.participantType || 'individual')}</span>
+                            <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)} />
+                            <span className="truncate">{participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)}</span>
                           </span>
                           <span className="shrink-0 self-center font-mono text-base font-bold text-[var(--xt-color-text)]">
                             {m.scoreHome ?? '—'} : {m.scoreAway ?? '—'}
                           </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)] sm:justify-end">
-                            <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={participantLabel(m.awayUser, selectedTournament.participantType || 'individual')} />
-                            <span className="truncate">{participantLabel(m.awayUser, selectedTournament.participantType || 'individual')}</span>
+                            <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)} />
+                            <span className="truncate">{participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)}</span>
                           </span>
                         </div>
                       </button>
@@ -1646,15 +1647,15 @@ export default function TournamentSimple() {
             )}
 
             {detailTab === 'matches' && !detailLoading && (!detailExtras.matches || detailExtras.matches.length === 0) && (
-              <p className="mb-8 text-sm text-[var(--xt-color-text-muted)]">Nuk ka ndeshje të regjistruara për këtë turne.</p>
+              <p className="mb-8 text-sm text-[var(--xt-color-text-muted)]">{t("Nuk ka ndeshje të regjistruara për këtë turne.")}</p>
             )}
 
             {detailTab === 'squad' && !detailLoading && (
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-[var(--xt-color-text)]">Lista e pjesëmarrësve</h3>
+                <h3 className="text-lg font-bold text-[var(--xt-color-text)]">{t("Lista e pjesëmarrësve")}</h3>
                 {['club', 'mixed'].includes(selectedTournament.participantType || '') ? (
                   <p className="text-sm text-[var(--xt-color-text-muted)]">
-                    Klubet janë në tabelë. Kliko numrin e lojtarëve për të parë atletët e caktuar nga klubi për këtë turne.
+                    {t("Klubet janë në tabelë. Kliko numrin e lojtarëve për të parë atletët e caktuar nga klubi për këtë turne.")}
                   </p>
                 ) : null}
                 {selectedTournament.participants?.length > 0 ? (
@@ -1664,7 +1665,7 @@ export default function TournamentSimple() {
                       : selectedTournament.participants
                     ).map((participant) => {
                       const uid = resolveParticipantUserId(participant);
-                      const label = participantLabel(participant, selectedTournament.participantType || 'individual');
+                      const label = participantLabel(participant, selectedTournament.participantType || 'individual', t);
                       const squadAthletes = Array.isArray(participant.squadAthletes)
                         ? participant.squadAthletes
                         : [];
@@ -1700,7 +1701,7 @@ export default function TournamentSimple() {
                               {participant.Profile?.club &&
                                 ['individual', 'mixed'].includes(selectedTournament.participantType || 'individual') &&
                                 participant.role === 'athlete' && (
-                                  <p className="truncate text-xs text-gray-500">Klubi: {participant.Profile.club}</p>
+                                  <p className="truncate text-xs text-gray-500">{t("Klubi:")} {participant.Profile.club}</p>
                                 )}
                               {participant.squadGroup && isYouthCategory(selectedTournament.category) ? (
                                 <p className="text-xs font-semibold text-[var(--xt-color-gold-bright)]">
@@ -1710,7 +1711,7 @@ export default function TournamentSimple() {
                               {participant.participantStatus && participant.participantStatus !== 'accepted' ? (
                                 <p className="text-xs capitalize text-amber-600">{participant.participantStatus}</p>
                               ) : (
-                                <p className="text-xs text-emerald-600">Accepted</p>
+                                <p className="text-xs text-emerald-600">{t("Accepted")}</p>
                               )}
                             </div>
                             {isClubRow && ['club', 'mixed'].includes(selectedTournament.participantType || '') ? (
@@ -1725,7 +1726,7 @@ export default function TournamentSimple() {
                                   {squadCount}
                                 </span>
                                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--xt-color-text-muted)]">
-                                  lojtarë
+                                  {t("lojtarë")}
                                 </span>
                               </button>
                             ) : null}
@@ -1755,7 +1756,7 @@ export default function TournamentSimple() {
                                 })
                               ) : (
                                 <li className="text-xs text-[var(--xt-color-text-muted)]">
-                                  Klubi nuk ka caktuar ende lojtarë për këtë turne.
+                                  {t("Klubi nuk ka caktuar ende lojtarë për këtë turne.")}
                                 </li>
                               )}
                             </ul>
@@ -1765,7 +1766,7 @@ export default function TournamentSimple() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-[var(--xt-color-text-muted)]">Ende pa pjesëmarrës.</p>
+                  <p className="text-[var(--xt-color-text-muted)]">{t("Ende pa pjesëmarrës.")}</p>
                 )}
               </div>
             )}
@@ -1810,7 +1811,7 @@ export default function TournamentSimple() {
             ) : null}
             <div className="max-h-[50vh] overflow-y-auto px-4 py-3">
               {joinSquadModal.loading ? (
-                <p className="text-sm text-[var(--xt-color-text-muted)]">Duke ngarkuar…</p>
+                <p className="text-sm text-[var(--xt-color-text-muted)]">{t("Duke ngarkuar…")}</p>
               ) : (isYouthCategory(joinSquadModal.category)
                   ? joinSquadModal.members.filter(
                       (membership) =>
@@ -1877,7 +1878,7 @@ export default function TournamentSimple() {
                   })
                 }
               >
-                Anulo
+                {t("Anulo")}
               </button>
               <button
                 type="button"

@@ -11,6 +11,7 @@ import AdvancedSearchInput from '../components/AdvancedSearchInput';
 import UserProfileBrowsePager, { normalizeBrowseUser, useBrowseColors } from '../components/UserProfileBrowsePager';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 
 function mapFollowingRows(raw) {
   const list = Array.isArray(raw) ? raw : [];
@@ -28,6 +29,7 @@ const MODES = [
 ];
 
 export default function SearchScreen({ navigation, route }) {
+  const { t } = useLocale();
   const { isDark } = useTheme();
   const { user } = useAuth();
   const browseColors = useBrowseColors(isDark);
@@ -226,18 +228,18 @@ export default function SearchScreen({ navigation, route }) {
   const showInitialLoader = loadingList && !refreshing && !isSearching && browseItems.length === 0;
 
   const sectionLabel = isSearching
-    ? searching
-      ? 'Duke kërkuar…'
-      : `Rezultate${browseItems.length ? ` · ${browseItems.length}` : ''}`
+      ? searching
+      ? t('Duke kërkuar…')
+      : `${t('Rezultate')}${browseItems.length ? ` · ${browseItems.length}` : ''}`
     : mode === 'browse'
-      ? 'Shfleto · njerëz që nuk i ndjek'
-      : 'Duke ndjekur';
+      ? t('Shfleto · njerëz që nuk i ndjek')
+      : t('Duke ndjekur');
 
   const emptyMessage = isSearching
-    ? 'Asnjë rezultat për këtë kërkim.'
+    ? t('Asnjë rezultat për këtë kërkim.')
     : mode === 'browse'
-      ? 'Nuk ka përdorues të rinj për t’u shfletuar tani.'
-      : 'Nuk po ndjek askënd ende. Hap Shfleto ose kërko më sipër.';
+      ? t('Nuk ka përdorues të rinj për t’u shfletuar tani.')
+      : t('Nuk po ndjek askënd ende. Hap Shfleto ose kërko më sipër.');
 
   return (
     <View style={[styles.root, { backgroundColor: browseColors.bg }]}>
@@ -270,7 +272,7 @@ export default function SearchScreen({ navigation, route }) {
                 onPress={() => setMode(m.id)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.modeTxt, { color: active ? '#fff' : browseColors.muted }]}>{m.label}</Text>
+                <Text style={[styles.modeTxt, { color: active ? '#fff' : browseColors.muted }]}>{t(m.label)}</Text>
               </TouchableOpacity>
             );
           })}

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
 
+import { useLocale } from '../contexts/LocaleContext';
+
 const ContentManagement = () => {
+  const { t } = useLocale();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,12 +35,12 @@ const ContentManagement = () => {
   };
 
   if (loading) {
-    return <div className="text-center mt-10">Loading posts...</div>;
+    return <div className="text-center mt-10">{t('Loading posts...')}</div>;
   }
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-6">Content Management</h2>
+      <h2 className="text-2xl font-bold mb-6">{t('Content Management')}</h2>
       <div className="space-y-4">
         {posts.map((post) => (
           <div key={post.id} className="border dark:border-gray-600 rounded-lg p-4">

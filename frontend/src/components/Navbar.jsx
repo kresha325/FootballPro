@@ -518,7 +518,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChartBarIcon className="h-6 w-6" />
-              <span className="font-medium">Insights</span>
+              <span className="font-medium">{t('Insights')}</span>
             </Link>
 
             {/* Videos */}
@@ -528,7 +528,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <VideoCameraIcon className="h-6 w-6" />
-              <span className="font-medium">Videot</span>
+              <span className="font-medium">{t('Videot')}</span>
             </Link>
 
             {/* Matches */}
@@ -538,7 +538,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Ndeshjet</span>
+              <span className="font-medium">{t('Ndeshjet')}</span>
             </Link>
             <Link
               to="/competitions"
@@ -546,7 +546,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Garat</span>
+              <span className="font-medium">{t('Garat')}</span>
             </Link>
             <Link
               to="/calendar"
@@ -554,7 +554,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <CalendarDaysIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Kalendari</span>
+              <span className="font-medium">{t('Kalendari')}</span>
             </Link>
 
             {/* Scouting (scout + club) */}
@@ -565,7 +565,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Scouting</span>
+                <span className="font-medium">{t('Scouting')}</span>
               </Link>
             )}
 
@@ -577,7 +577,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
               >
                 <BuildingOffice2Icon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Formacioni i Klubit</span>
+                <span className="font-medium">{t('Formacioni i Klubit')}</span>
               </Link>
             )}
 
@@ -589,7 +589,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 rounded-lg border border-red-400/40 bg-white/5 p-3 text-red-300 transition-colors hover:bg-white/10"
               >
                 <LockClosedIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Paneli i Adminit</span>
+                <span className="font-medium">{t('Paneli i Adminit')}</span>
               </Link>
             )}
 
@@ -601,7 +601,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
             >
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Kalo në Premium</span>
+              <span className="font-medium">{t('Kalo në Premium')}</span>
             </Link>
 
             {/* Sponsorë */}
@@ -611,7 +611,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <GiftIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Sponsorë</span>
+              <span className="font-medium">{t('Sponsorë')}</span>
             </Link>
 
             {/* Reklama */}
@@ -621,7 +621,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <MegaphoneIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Reklama</span>
+              <span className="font-medium">{t('Reklama')}</span>
             </Link>
 
             {/* Settings */}
@@ -631,7 +631,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Cilësimet</span>
+              <span className="font-medium">{t('Cilësimet')}</span>
             </Link>
 
             <Link
@@ -640,7 +640,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <SparklesIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Ndihmë & Info</span>
+              <span className="font-medium">{t('Ndihmë & Info')}</span>
             </Link>
 
             {/* Logout */}
@@ -653,7 +653,7 @@ function Navbar() {
               className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
             >
               <ArrowRightOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Dil</span>
+              <span className="font-medium">{t('Dil')}</span>
             </button>
 
           </div>
@@ -676,18 +676,18 @@ function Navbar() {
       {user && showLiveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Nis transmetim live</h2>
+            <h2 className="text-xl font-bold mb-4">{t('Nis transmetim live')}</h2>
             <form onSubmit={handleStartLiveStream}>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Titulli</label>
+                <label className="block text-sm font-medium mb-1">{t('Titulli')}</label>
                 <input type="text" value={liveTitle} onChange={e => setLiveTitle(e.target.value)} required className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Përshkrimi</label>
+                <label className="block text-sm font-medium mb-1">{t('Përshkrimi')}</label>
                 <textarea value={liveDescription} onChange={e => setLiveDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-1">Publik</label>
+                <label className="block text-sm font-medium mb-1">{t('Publik')}</label>
                 <input type="checkbox" checked={liveIsPublic} onChange={e => setLiveIsPublic(e.target.checked)} />
               </div>
               <button

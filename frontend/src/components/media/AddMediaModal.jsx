@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import YouTubePlayer from './YouTubePlayer';
 import { mediaAPI, extractApiMessage } from '../../services/api';
+import { useLocale } from '../../contexts/LocaleContext';
 import {
   MEDIA_CATEGORIES,
   MEDIA_VISIBILITIES,
@@ -33,6 +34,7 @@ export default function AddMediaModal({
   defaults = {},
   lockFields = [],
 }) {
+  const { t } = useLocale();
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -106,7 +108,7 @@ export default function AddMediaModal({
         onSubmit={onSubmit}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[var(--xt-color-text,#0f172a)]">Shto video YouTube</h2>
+          <h2 className="text-lg font-bold text-[var(--xt-color-text,#0f172a)]">{t('Shto video YouTube')}</h2>
           <button type="button" className="btn btn-quiet min-h-9 px-3" onClick={onClose} aria-label="Mbyll">
             ✕
           </button>

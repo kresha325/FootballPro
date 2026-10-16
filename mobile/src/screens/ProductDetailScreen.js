@@ -4,8 +4,10 @@ import OptimizedImage from '../components/media/OptimizedImage';
 import { extractErrorMessage, productByIdRequest } from '../api/client';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
+import { useLocale } from '../context/LocaleContext';
 
 export default function ProductDetailScreen({ route, navigation }) {
+  const { t } = useLocale();
   const productId = route?.params?.productId;
   const { addItem } = useCart();
   const [product, setProduct] = useState(null);
@@ -20,11 +22,11 @@ export default function ProductDetailScreen({ route, navigation }) {
       const res = await productByIdRequest(productId);
       setProduct(res.data);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Produkti nuk u gjet'));
+      setError(extractErrorMessage(err, t('Product not found')));
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -32,8 +34,8 @@ export default function ProductDetailScreen({ route, navigation }) {
   if (error || !product) {
     return (
       <View style={styles.center}>
-        <Text>{error || 'Produkt bosh'}</Text>
-        <TouchableOpacity onPress={load}><Text style={styles.link}>Provo përsëri</Text></TouchableOpacity>
+        <Text>{error || t('Product unavailable')}</Text>
+        <TouchableOpacity onPress={load}><Text style={styles.link}>{t('Try again')}</Text></TouchableOpacity>
       </View>
     );
   }
@@ -43,10 +45,10 @@ export default function ProductDetailScreen({ route, navigation }) {
     <View style={styles.wrap}>
       {imageUri ? <OptimizedImage uri={imageUri} style={styles.image} width={800} contentFit="cover" /> : null}
       <Text style={styles.name}>{product.name}</Text>
-      <Text style={styles.meta}>{product.category} · {product.condition || 'new'} · {product.status}</Text>
-      <Text>{product.description || 'Pa përshkrim.'}</Text>
+      <Text style={styles.meta}>{t(product.category)} · {t(product.condition || 'new')} · {t(product.status)}</Text>
+      <Text>{product.description || t('No description.')}</Text>
       <Text style={styles.price}>{product.joncoinPrice || product.price} XCoin</Text>
-      <Text>Stok: {product.stock}</Text>
+      <Text>{t('Stock')}: {product.stock}</Text>
       {product.purchasable ? (
         <View style={styles.row}>
           <TextInput style={styles.input} value={qty} onChangeText={setQty} keyboardType="number-pad" />
@@ -57,10 +59,10 @@ export default function ProductDetailScreen({ route, navigation }) {
               navigation.navigate('Cart');
             }}
           >
-            <Text style={styles.buttonText}>Shto në shportë</Text>
+            <Text style={styles.buttonText}>{t('Add to cart')}</Text>
           </TouchableOpacity>
         </View>
-      ) : <Text>Ky produkt nuk është në shitje.</Text>}
+      ) : <Text>{t('This product is not for sale.')}</Text>}
     </View>
   );
 }

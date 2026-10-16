@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const RANGES = [
   { id: 'today', label: 'Sot' },
@@ -62,7 +63,7 @@ function PlayerPanel({ data }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Karriera (kumulative)</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('Karriera (kumulative)')}</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Ndeshje" value={career.appearances} />
           <Stat label="Startime" value={career.starts} />
@@ -75,7 +76,7 @@ function PlayerPanel({ data }) {
         </div>
       </div>
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Periudha e zgjedhur</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('Periudha e zgjedhur')}</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Ndeshje" value={window.appearances} hint={window.label} />
           <Stat label="Minuta" value={window.minutes} />
@@ -89,7 +90,7 @@ function PlayerPanel({ data }) {
         <Stat label="10 ndeshjet e fundit" value={`${data.form?.last10?.goals || 0} gola`} hint={`${data.form?.last10?.assists || 0} asiste · rating ${num(data.form?.last10?.rating)}`} />
       </div>
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-3 text-lg font-semibold">Trendi</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('Trendi')}</h2>
         {!trend.sufficient ? (
           <Empty text={trend.emptyReason === 'no_matches' ? 'Nuk ka ndeshje në këtë filtër.' : 'Duhet të paktën dy ndeshje për një vijë trendi.'} />
         ) : (
@@ -113,12 +114,12 @@ function PlayerPanel({ data }) {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500">
-                <th className="p-3">Gara</th>
-                <th className="p-3">Ndeshje</th>
-                <th className="p-3">Gola</th>
-                <th className="p-3">Asiste</th>
-                <th className="p-3">Minuta</th>
-                <th className="p-3">Rating</th>
+                <th className="p-3">{t('Gara')}</th>
+                <th className="p-3">{t('Ndeshje')}</th>
+                <th className="p-3">{t('Gola')}</th>
+                <th className="p-3">{t('Asiste')}</th>
+                <th className="p-3">{t('Minuta')}</th>
+                <th className="p-3">{t('Rating')}</th>
               </tr>
             </thead>
             <tbody>
@@ -141,6 +142,7 @@ function PlayerPanel({ data }) {
 }
 
 export default function AnalyticsCenter() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { section: sectionParam } = useParams();
   const navigate = useNavigate();
@@ -230,8 +232,8 @@ export default function AnalyticsCenter() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analitika</h1>
-          <p className="text-sm text-gray-500">Të dhëna nga ndeshjet, postimet, porositë dhe ledger-i. Pa numra të simuluara.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Analitika')}</h1>
+          <p className="text-sm text-gray-500">{t('Të dhëna nga ndeshjet, postimet, porositë dhe ledger-i. Pa numra të simuluara.')}</p>
         </div>
         <Link to="/insights" className="text-sm font-semibold text-[var(--xt-color-gold-bright,#9A6B12)]">
           Insights sociale →
@@ -273,21 +275,21 @@ export default function AnalyticsCenter() {
       {section === 'player' && playerFilters ? (
         <div className="mb-6 flex flex-wrap gap-2">
           <select value={season} onChange={(event) => setSeason(event.target.value)} className="rounded-lg border px-2 py-2 text-sm">
-            <option value="">Çdo sezon</option>
+            <option value="">{t('Çdo sezon')}</option>
             {(playerFilters.seasons || []).map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <select value={competitionId} onChange={(event) => setCompetitionId(event.target.value)} className="rounded-lg border px-2 py-2 text-sm">
-            <option value="">Çdo garë</option>
+            <option value="">{t('Çdo garë')}</option>
             {(playerFilters.competitions || []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
           <select value={clubId} onChange={(event) => setClubId(event.target.value)} className="rounded-lg border px-2 py-2 text-sm">
-            <option value="">Çdo klub</option>
+            <option value="">{t('Çdo klub')}</option>
             {(playerFilters.clubs || []).map((item) => <option key={item} value={item}>Klubi {item}</option>)}
           </select>
         </div>
       ) : null}
 
-      {loading ? <p className="text-sm text-gray-500">Duke ngarkuar…</p> : null}
+      {loading ? <p className="text-sm text-gray-500">{t('Duke ngarkuar…')}</p> : null}
       {error ? <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
       {!loading && section === 'overview' && home ? (
@@ -359,14 +361,14 @@ export default function AnalyticsCenter() {
               Krahaso me lojtarin
               <input value={otherId} onChange={(event) => setOtherId(event.target.value)} placeholder="ID e lojtarit" className="mt-1 block rounded-lg border px-3 py-2" />
             </label>
-            <button type="submit" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white">Krahaso</button>
+            <button type="submit" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white">{t('Krahaso')}</button>
           </form>
           {compare ? (
             <div className="overflow-x-auto rounded-xl border bg-white">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500">
-                    <th className="p-3">Metrika</th>
+                    <th className="p-3">{t('Metrika')}</th>
                     <th className="p-3">{compare.left?.name || 'A'}</th>
                     <th className="p-3">{compare.right?.name || 'B'}</th>
                   </tr>
@@ -396,7 +398,7 @@ export default function AnalyticsCenter() {
           </div>
           {detail.positions?.length ? (
             <div>
-              <h2 className="mb-2 font-semibold">Pozicioni në tabelë</h2>
+              <h2 className="mb-2 font-semibold">{t('Pozicioni në tabelë')}</h2>
               {detail.positions.map((row) => (
                 <p key={row.tournamentId} className="text-sm">{row.name} {row.season}: vendi {row.position} · {row.points} pikë</p>
               ))}
@@ -405,7 +407,7 @@ export default function AnalyticsCenter() {
           {detail.players?.length ? (
             <div className="overflow-x-auto rounded-xl border bg-white">
               <table className="min-w-full text-sm">
-                <thead><tr className="text-left text-gray-500"><th className="p-3">Lojtari</th><th className="p-3">Ndeshje</th><th className="p-3">Gola</th><th className="p-3">Asiste</th><th className="p-3">Minuta</th></tr></thead>
+                <thead><tr className="text-left text-gray-500"><th className="p-3">{t('Lojtari')}</th><th className="p-3">{t('Ndeshje')}</th><th className="p-3">{t('Gola')}</th><th className="p-3">{t('Asiste')}</th><th className="p-3">{t('Minuta')}</th></tr></thead>
                 <tbody>
                   {detail.players.map((row) => (
                     <tr key={row.userId} className="border-t">

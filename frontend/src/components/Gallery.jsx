@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { galleryAPI, profileAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { PLACEHOLDER_IMAGE_DATA_URL } from '../constants/placeholderImage';
+import { useLocale } from '../contexts/LocaleContext';
 
 const Gallery = () => {
+    const { t } = useLocale();
     const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
     const getFullUrl = (url) => {
       if (!url) return '';
@@ -23,10 +25,10 @@ const Gallery = () => {
       setSettingProfilePhoto(itemId);
       try {
         await profileAPI.updateProfile({ profilePhoto: imageUrl });
-        alert('Profile photo updated!');
+        alert(t('Fotoja e profilit u përditësua!'));
         // Optionally, refresh user context/profile here if needed
       } catch (error) {
-        alert('Failed to set profile photo');
+        alert(t('Dështoi përditësimi i fotos së profilit'));
         console.error(error);
       } finally {
         setSettingProfilePhoto(null);
@@ -106,12 +108,12 @@ const Gallery = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Loading gallery...</div>;
+    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">{t('Duke ngarkuar galerinë…')}</div>;
   }
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Gallery</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">{t('Galeria ime')}</h1>
       {/* Tabs for All/Photos/Videos */}
       <div className="flex gap-4 mb-6">
         <button
@@ -136,26 +138,26 @@ const Gallery = () => {
 
       {/* Upload Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Upload Media</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('Ngarko media')}</h2>
         
         <div className="space-y-4">
           {/* Type Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Type</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('Lloji')}</label>
             <select
               value={uploadType}
               onChange={(e) => setUploadType(e.target.value)}
               className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="photo">Photo</option>
-              <option value="video">Video</option>
-              <option value="highlight">Highlight</option>
+              <option value="photo">{t('Foto')}</option>
+              <option value="video">{t('Video')}</option>
+              <option value="highlight">{t('Momente kryesore')}</option>
             </select>
           </div>
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Title</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('Titulli')}</label>
             <input
               type="text"
               value={title}
@@ -167,7 +169,7 @@ const Gallery = () => {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Description</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('Përshkrimi')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -286,8 +288,8 @@ const Gallery = () => {
         }).length === 0 && (
           <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-12">
             <div className="text-6xl mb-4">📸</div>
-            <p className="text-lg">No items in gallery yet.</p>
-            <p className="text-sm mt-2">Upload your first photo or video above!</p>
+            <p className="text-lg">{t('Galeria është bosh.')}</p>
+            <p className="text-sm mt-2">{t('Ngarko foton ose videon e parë më sipër!')}</p>
           </div>
         )}
       </div>

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { getFullUrl } from '../../../utils/mediaUrl';
+import { useLocale } from '../../../contexts/LocaleContext';
 
 const EditFederationProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const contact = user.contact && typeof user.contact === 'object' ? user.contact : {};
   const [form, setForm] = useState({
     club: user.club || '',
@@ -60,67 +62,67 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        <label className="block text-sm font-medium mb-1">{t('Profile Photo')}</label>
         {preview && (
-          <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
+          <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
         <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Federation Profile</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Federation Profile')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Federation Name</label>
+          <label className="block text-sm font-medium mb-1">{t('Federation Name')}</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">City</label>
+          <label className="block text-sm font-medium mb-1">{t('City')}</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="block text-sm font-medium mb-1">{t('Country')}</label>
           <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Bio</label>
+        <label className="block text-sm font-medium mb-1">{t('Bio')}</label>
         <textarea name="bio" value={form.bio} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Career History</label>
+        <label className="block text-sm font-medium mb-1">{t('Career History')}</label>
         <textarea name="careerHistory" value={form.careerHistory} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <h4 className="text-sm font-semibold mb-2 text-gray-800">Kontakt</h4>
+        <h4 className="text-sm font-semibold mb-2 text-gray-800">{t('Kontakt')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Telefon</label>
+            <label className="block text-sm font-medium mb-1">{t('Telefon')}</label>
             <input name="phone" value={form.phone} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{t('Email')}</label>
             <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Website</label>
+            <label className="block text-sm font-medium mb-1">{t('Website')}</label>
             <input name="website" value={form.website} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Instagram</label>
+            <label className="block text-sm font-medium mb-1">{t('Instagram')}</label>
             <input name="instagram" value={form.instagram} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Facebook</label>
+            <label className="block text-sm font-medium mb-1">{t('Facebook')}</label>
             <input name="facebook" value={form.facebook} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Twitter / X</label>
+            <label className="block text-sm font-medium mb-1">{t('Twitter / X')}</label>
             <input name="twitter" value={form.twitter} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? t('Saving...') : t('Save Changes')}
         </button>
       </div>
       {errors && errors.general && <div className="text-red-500 mt-2">{errors.general}</div>}

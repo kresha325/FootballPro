@@ -15,6 +15,7 @@ import {
 import { ALLOW_MOBILE_DIGITAL_PURCHASES, WEB_APP_URL } from '../config/constants';
 import { JONCOIN_PACKS } from '../iap/products';
 import { purchaseAndFulfill } from '../iap/purchase';
+import { useLocale } from '../context/LocaleContext';
 
 function WalletSkeleton() {
   return (
@@ -27,6 +28,7 @@ function WalletSkeleton() {
 }
 
 export default function WalletScreen() {
+  const { t } = useLocale();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [txFilter, setTxFilter] = useState('all');
@@ -225,12 +227,12 @@ export default function WalletScreen() {
       ListHeaderComponent={
         <View>
           <View style={styles.balanceCard}>
-            <Text style={styles.balanceTitle}>Wallet Balance</Text>
+            <Text style={styles.balanceTitle}>{t('Bilanci i disponueshëm')}</Text>
             <Text style={styles.balanceValue}>{balance} XCoin</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Buy XCoin (IAP)</Text>
+            <Text style={styles.cardTitle}>{t('Bli XCoin')} (IAP)</Text>
             {ALLOW_MOBILE_DIGITAL_PURCHASES ? (
               JONCOIN_PACKS.map((pack) => (
                 <TouchableOpacity
@@ -254,32 +256,32 @@ export default function WalletScreen() {
                   ])
                 }
               >
-                <Text style={styles.primaryBtnText}>Bli në web</Text>
+                <Text style={styles.primaryBtnText}>{t('Bli në web')}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Withdraw XCoin</Text>
+            <Text style={styles.cardTitle}>{t('Tërhiq XCoin')}</Text>
             <Text style={styles.feeHint}>{withdrawFeePct}% withdrawal fee applies to the amount you cash out.</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={withdrawAmount} onChangeText={setWithdrawAmount} placeholder="Amount" />
             <TouchableOpacity style={styles.warningBtn} onPress={withdraw}>
-              <Text style={styles.primaryBtnText}>Withdraw</Text>
+              <Text style={styles.primaryBtnText}>{t('Tërhiq')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Transfer XCoin</Text>
+            <Text style={styles.cardTitle}>{t('Transfero XCoin')}</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={toUserId} onChangeText={setToUserId} placeholder="To User ID" />
             <TextInput style={styles.input} keyboardType="numeric" value={transferAmount} onChangeText={setTransferAmount} placeholder="Amount" />
             <TouchableOpacity style={styles.infoBtn} onPress={transfer}>
-              <Text style={styles.primaryBtnText}>Transfer</Text>
+              <Text style={styles.primaryBtnText}>{t('Transfero')}</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Shitjet e mia (prano)</Text>
+          <Text style={styles.sectionTitle}>{t('Shitjet e mia (prano)')}</Text>
           {sellerOrders.length === 0 ? (
-            <Text style={styles.emptyInline}>Nuk ke shitje ende.</Text>
+            <Text style={styles.emptyInline}>{t('Nuk ke shitje ende.')}</Text>
           ) : (
             sellerOrders.map((o) => (
               <View key={`sale-${o.id}`} style={styles.orderRow}>
@@ -316,9 +318,9 @@ export default function WalletScreen() {
             ))
           )}
 
-          <Text style={styles.sectionTitle}>Blerjet e mia</Text>
+          <Text style={styles.sectionTitle}>{t('Blerjet e mia')}</Text>
           {orders.length === 0 ? (
-            <Text style={styles.emptyInline}>Nuk ka porosi ende.</Text>
+            <Text style={styles.emptyInline}>{t('Nuk ka porosi ende.')}</Text>
           ) : (
             orders.map((o) => (
               <View key={String(o.id)} style={styles.orderRow}>
@@ -341,7 +343,7 @@ export default function WalletScreen() {
             ))
           )}
 
-          <Text style={styles.sectionTitle}>Transactions</Text>
+          <Text style={styles.sectionTitle}>{t('Transaksionet')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
             {[
               ['all', 'All'],
@@ -367,7 +369,7 @@ export default function WalletScreen() {
           <Text style={styles.txDesc}>{item?.createdAt ? new Date(item.createdAt).toLocaleString() : ''} · {item?.referenceType || item?.relatedEntityType || '—'} {item?.referenceId || item?.relatedEntityId || ''}</Text>
         </View>
       )}
-      ListEmptyComponent={<Text style={styles.empty}>No transactions yet.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{t('Nuk ka transaksione ende.')}</Text>}
     />
   );
 }

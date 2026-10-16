@@ -17,8 +17,10 @@ import { profileAPI } from '../services/api';
 import { ClubBadge } from '../utils/clubLogos';
 import VerifiedBadge from './VerifiedBadge';
 import { publicProfileName } from '../utils/orgProfile';
+import { useLocale } from '../contexts/LocaleContext';
 
 const BrowseProfiles = () => {
+  const { t } = useLocale();
   const [profiles, setProfiles] = useState([]);
   const [filteredProfiles, setFilteredProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ const BrowseProfiles = () => {
     { id: 'athlete', label: 'Players', icon: '⚽', role: 'athlete' },
     { id: 'coach', label: 'Coaches', icon: '📋', role: 'coach' },
     { id: 'scout', label: 'Scouts', icon: '🔍', role: 'scout' },
-    { id: 'referee', label: 'Referat', icon: '🧑‍⚖️', role: 'referee' },
+    { id: 'referee', label: 'Referees', icon: '🧑‍⚖️', role: 'referee' },
     { id: 'club', label: 'Clubs', icon: '🏟️', role: 'club' },
     { id: 'manager', label: 'Managers', icon: '💼', role: 'manager' },
     { id: 'business', label: 'Businesses', icon: '🏢', role: 'business' },
@@ -119,10 +121,10 @@ const BrowseProfiles = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-          Browse Profiles
+          {t('Browse Profiles')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Discover players, coaches, scouts and clubs
+          {t('Discover players, coaches, scouts and clubs')}
         </p>
       </div>
 
@@ -132,7 +134,7 @@ const BrowseProfiles = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, club, position, location..."
+          placeholder={t('Search by name, club, position, location...')}
           className="w-full px-6 py-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
         />
       </div>
@@ -150,7 +152,7 @@ const BrowseProfiles = () => {
             }`}
           >
             <span className="text-xl">{category.icon}</span>
-            <span>{category.label}</span>
+            <span>{t(category.label)}</span>
             {category.id === 'all' && (
               <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
                 {profiles.length}
@@ -183,7 +185,7 @@ const BrowseProfiles = () => {
               }`}
             >
               <span>{group.icon}</span>
-              <span>{group.label}</span>
+            <span>{group.id === 'all' ? t('All Ages') : group.label === 'Senior' ? t('Senior') : group.label}</span>
             </button>
           ))}
         </div>
@@ -192,7 +194,7 @@ const BrowseProfiles = () => {
       {/* Results Count */}
       <div className="mb-4">
         <p className="text-gray-600 dark:text-gray-400">
-          Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredProfiles.length}</span> {activeCategory !== 'all' ? categories.find(c => c.id === activeCategory)?.label.toLowerCase() : 'profiles'}
+          {t('Showing')} <span className="font-semibold text-gray-900 dark:text-white">{filteredProfiles.length}</span> {activeCategory !== 'all' ? t(categories.find(c => c.id === activeCategory)?.label).toLowerCase() : t('profiles')}
         </p>
       </div>
 
@@ -225,14 +227,14 @@ const BrowseProfiles = () => {
               </div>
               <div className="flex-1 flex flex-col justify-between p-4 bg-gray-900/90 text-white">
                 <div className="mb-2">
-                  <div className="text-sm opacity-80">Mosha: {profile.age != null ? profile.age : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
+                <div className="text-sm opacity-80">{t('Age')}: {profile.age != null ? profile.age : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
                 </div>
                 <div className="flex gap-2 mt-auto">
                   <Link
                     to={`/profile/${profile.id}`}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 rounded-md transition text-center"
                   >
-                    SHIKO PROFILIN
+                    {t('VIEW PROFILE')}
                   </Link>
                 </div>
               </div>
@@ -243,10 +245,10 @@ const BrowseProfiles = () => {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No profiles found
+            {t('No profiles found')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Try adjusting your search or filters
+            {t('Try adjusting your search or filters')}
           </p>
         </div>
       )}

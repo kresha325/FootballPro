@@ -190,7 +190,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
               </TouchableOpacity>
             ) : null}
             {!deleted && message.forwarded ? (
-              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>E përcjellë</Text>
+              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>{t('E përcjellë')}</Text>
             ) : null}
             {deleted ? (
               <Text style={[styles.bubbleText, mine && styles.bubbleTextMine, styles.deletedText]}>
@@ -207,7 +207,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
                     style={styles.mediaWrap}
                   >
                     {mediaBroken ? (
-                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{t('Media nuk u ngarkua')}</Text>
                     ) : (
                       <OptimizedImage uri={fileUri} style={styles.msgImage} width={400} contentFit="cover" onError={() => setMediaBroken(true)} />
                     )}
@@ -243,7 +243,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
                     style={styles.mediaWrap}
                   >
                     {mediaBroken ? (
-                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>Media nuk u ngarkua</Text>
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{t('Media nuk u ngarkua')}</Text>
                     ) : (
                       <OptimizedImage uri={fileUri} style={styles.msgImage} width={400} contentFit="cover" onError={() => setMediaBroken(true)} />
                     )}
@@ -269,7 +269,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
               </>
             )}
             {!deleted && message?.edited ? (
-              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>(ndryshuar)</Text>
+              <Text style={[styles.editedHint, mine && styles.editedHintMine]}>({t('ndryshuar')})</Text>
             ) : null}
             {!deleted && Array.isArray(message.reactions) && message.reactions.length > 0 ? (
               <View style={styles.reactionRow}>
@@ -293,7 +293,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
                     onPress={openActions}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={styles.moreBtn}
-                    accessibilityLabel="Veprime mesazhi"
+                    accessibilityLabel={t('Veprime mesazhi')}
                   >
                     <Ionicons
                       name="ellipsis-horizontal"
@@ -1288,9 +1288,9 @@ export default function ConversationScreen({ route, navigation }) {
       />
       {editing ? (
         <View style={styles.editBanner}>
-          <Text style={styles.editBannerText}>Po ndryshon mesazhin</Text>
+          <Text style={styles.editBannerText}>{t('Po ndryshon mesazhin')}</Text>
           <TouchableOpacity onPress={() => setEditing(null)}>
-            <Text style={styles.editBannerCancel}>Anulo</Text>
+            <Text style={styles.editBannerCancel}>{t('Anulo')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -1345,7 +1345,7 @@ export default function ConversationScreen({ route, navigation }) {
             isDark={isDark}
           />
         )}
-        ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>Ende nuk ka mesazhe.</Text>}
+        ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>{t('Ende nuk ka mesazhe.')}</Text>}
       />
       {typingLine ? (
         <View
@@ -1370,7 +1370,7 @@ export default function ConversationScreen({ route, navigation }) {
         {replyTo && !editing ? (
           <View style={styles.replyBanner}>
             <View style={styles.replyBannerBody}>
-              <Text style={styles.replyBannerLabel}>Përgjigje te:</Text>
+              <Text style={styles.replyBannerLabel}>{t('Përgjigje te:')}</Text>
               <ReplyPreview message={replyTo} compact />
             </View>
             <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -1412,7 +1412,7 @@ export default function ConversationScreen({ route, navigation }) {
                 onPressIn={keepComposerOpen}
                 onPress={pickAttachment}
                 disabled={sending}
-                accessibilityLabel="Shto media"
+                accessibilityLabel={t('Shto media')}
               >
                 <Text style={styles.inlinePlus}>+</Text>
               </TouchableOpacity>
@@ -1425,7 +1425,7 @@ export default function ConversationScreen({ route, navigation }) {
                   setShowEmojiBar((v) => !v);
                 }}
                 disabled={sending}
-                accessibilityLabel="Emoji"
+                accessibilityLabel={t('Emoji')}
               >
                 <Text style={styles.inlineEmoji}>😊</Text>
               </TouchableOpacity>
@@ -1444,7 +1444,7 @@ export default function ConversationScreen({ route, navigation }) {
             ]}
             value={inputValue}
             onChangeText={setInputValue}
-            placeholder={editing ? 'Ndrysho tekstin…' : 'Shkruaj mesazhin…'}
+            placeholder={editing ? t('Ndrysho tekstin…') : t('Shkruaj mesazhin…')}
             placeholderTextColor={colors.mutedSoft}
             multiline
             editable={!sending}
@@ -1455,7 +1455,7 @@ export default function ConversationScreen({ route, navigation }) {
             style={[styles.sendBtn, (editing && sending) || !canSend ? styles.sendBtnDisabled : null]}
             onPress={onSend}
             disabled={(editing && sending) || !canSend}
-            accessibilityLabel={editing ? 'Ruaj' : 'Dërgo'}
+            accessibilityLabel={editing ? t('Ruaj') : t('Dërgo')}
           >
             {editing && sending ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -1568,7 +1568,7 @@ export default function ConversationScreen({ route, navigation }) {
                 ) : (
                   <>
                     <Ionicons name="person-add-outline" size={18} color={colors.primaryText} />
-                    <Text style={[styles.membersActionText, { color: colors.primaryText }]}>Fto anëtarë</Text>
+                    <Text style={[styles.membersActionText, { color: colors.primaryText }]}>{t('Fto anëtarë')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -1582,7 +1582,7 @@ export default function ConversationScreen({ route, navigation }) {
                 ) : (
                   <>
                     <Ionicons name="exit-outline" size={18} color={colors.danger} />
-                    <Text style={[styles.membersActionText, { color: colors.danger }]}>Dil nga grupi</Text>
+                    <Text style={[styles.membersActionText, { color: colors.danger }]}>{t('Dil nga grupi')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -1592,7 +1592,7 @@ export default function ConversationScreen({ route, navigation }) {
               keyExtractor={(item, index) => String(item?.id ?? index)}
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
-                <Text style={[styles.membersEmpty, { color: colors.muted }]}>Nuk ka anëtarë.</Text>
+                <Text style={[styles.membersEmpty, { color: colors.muted }]}>{t('Nuk ka anëtarë.')}</Text>
               }
               renderItem={({ item }) => {
                 const name = `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Përdorues';
@@ -1652,7 +1652,7 @@ export default function ConversationScreen({ route, navigation }) {
           />
           <View style={[styles.membersModalCard, { backgroundColor: colors.card }]}>
             <View style={styles.membersModalHeader}>
-              <Text style={[styles.membersModalTitle, { color: colors.text }]}>Fto anëtarë</Text>
+              <Text style={[styles.membersModalTitle, { color: colors.text }]}>{t('Fto anëtarë')}</Text>
               <TouchableOpacity onPress={() => setShowInvitePicker(false)} hitSlop={12}>
                 <Ionicons name="close" size={24} color={colors.muted} />
               </TouchableOpacity>

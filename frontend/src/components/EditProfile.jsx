@@ -10,8 +10,10 @@ import EditBusinessProfile from './profiles/edit/EditBusinessProfile';
 import EditManagerProfile from './profiles/edit/EditManagerProfile';
 import EditRefereeProfile from './profiles/edit/EditRefereeProfile';
 import EditScoutProfile from './profiles/edit/EditScoutProfile';
+import { useLocale } from '../contexts/LocaleContext';
 
 const EditProfile = ({ user, onClose }) => {
+  const { t } = useLocale();
   const location = useLocation();
   const initialPath = useRef(location.pathname);
 
@@ -72,7 +74,7 @@ const EditProfile = ({ user, onClose }) => {
       onClose(true);
     } catch {
       setLoading(false);
-      setErrors({ general: 'Gabim gjatë ruajtjes së profilit.' });
+      setErrors({ general: t('Gabim gjatë ruajtjes së profilit.') });
     }
   };
 
@@ -117,7 +119,7 @@ const EditProfile = ({ user, onClose }) => {
           className="xt-edit-cancel rounded px-6 py-2 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={loading}
         >
-          Anulo
+          {t('Anulo')}
         </button>
       </div>
     </div>

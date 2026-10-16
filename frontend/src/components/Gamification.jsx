@@ -5,9 +5,11 @@ import { useParams } from 'react-router-dom';
 import { gamificationAPI } from '../services/api';
 import { TrophyIcon, BoltIcon, StarIcon, FireIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState, useRef } from 'react';
+import { useLocale } from '../contexts/LocaleContext';
     // DEBUG LOGS (vendosen jashtë JSX)
 
 const Gamification = () => {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { userId } = useParams();
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
@@ -113,7 +115,7 @@ const Gamification = () => {
   if (!gamificationData) {
     return (
       <div className="xt-dashboard-page xt-gamification min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">No gamification data available</p>
+        <p className="text-gray-600">{t('No gamification data available')}</p>
       </div>
     );
   }
@@ -127,8 +129,8 @@ const Gamification = () => {
       <div className="max-w-7xl mx-auto p-6">
         <div className="xt-game-tabs flex gap-4 mb-6" role="tablist" aria-label="Gamification sections">
           <button type="button" role="tab" aria-selected={activeTab==='overview'} onClick={() => setActiveTab('overview')} className={activeTab==='overview' ? 'is-active' : ''}>Overview</button>
-          <button type="button" role="tab" aria-selected={activeTab==='achievements'} onClick={() => setActiveTab('achievements')} className={activeTab==='achievements' ? 'is-active' : ''}>Achievements</button>
-          <button type="button" role="tab" aria-selected={activeTab==='badges'} onClick={() => setActiveTab('badges')} className={activeTab==='badges' ? 'is-active' : ''}>Badges</button>
+          <button type="button" role="tab" aria-selected={activeTab==='achievements'} onClick={() => setActiveTab('achievements')} className={activeTab==='achievements' ? 'is-active' : ''}>{t('Achievements')}</button>
+          <button type="button" role="tab" aria-selected={activeTab==='badges'} onClick={() => setActiveTab('badges')} className={activeTab==='badges' ? 'is-active' : ''}>{t('Badges')}</button>
           <button type="button" role="tab" aria-selected={activeTab==='leaderboard'} onClick={() => setActiveTab('leaderboard')} className={activeTab==='leaderboard' ? 'is-active' : ''}>Leaderboard</button>
         </div>
 
@@ -138,21 +140,21 @@ const Gamification = () => {
             <h2 className="text-3xl font-extrabold mb-2 text-green-700 flex items-center gap-2">
               <BoltIcon className="h-7 w-7" aria-hidden="true" /> Welcome to your gamification dashboard!
             </h2>
-            <p className="mb-8 text-lg text-gray-600">Track your progress, unlock achievements, and climb the leaderboard!</p>
+            <p className="mb-8 text-lg text-gray-600">{t('Track your progress, unlock achievements, and climb the leaderboard!')}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <StarIcon className="h-6 w-6" aria-hidden="true" />
-                  <span className="text-lg font-semibold">XP:</span>
+                  <span className="text-lg font-semibold">{t('XP:')}</span>
                   <span className="font-bold text-blue-700 text-xl">{profileUser.xp}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <TrophyIcon className="h-6 w-6" aria-hidden="true" />
-                  <span className="text-lg font-semibold">Level:</span>
+                  <span className="text-lg font-semibold">{t('Level:')}</span>
                   <span className="font-bold text-purple-700 text-xl">{profileUser.level}</span>
                 </div>
                 <div className="mb-2">
-                  <span className="text-lg font-semibold">Progress to next level:</span>
+                  <span className="text-lg font-semibold">{t('Progress to next level:')}</span>
                   <div className="w-full bg-gray-200 rounded-full h-5 mt-2 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 h-5 rounded-full transition-all duration-700"
@@ -165,17 +167,17 @@ const Gamification = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <FireIcon className="h-6 w-6" aria-hidden="true" />
-                  <span className="text-lg font-semibold">Matches played:</span>
+                  <span className="text-lg font-semibold">{t('Matches played:')}</span>
                   <span className="font-bold text-gray-800">{gamificationData.matchesCount ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <TrophyIcon className="h-6 w-6" aria-hidden="true" />
-                  <span className="text-lg font-semibold">Wins:</span>
+                  <span className="text-lg font-semibold">{t('Wins:')}</span>
                   <span className="font-bold text-gray-800">{gamificationData.winsCount ?? '-'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <SparklesIcon className="h-6 w-6" aria-hidden="true" />
-                  <span className="text-lg font-semibold">Unlocked achievements:</span>
+                  <span className="text-lg font-semibold">{t('Unlocked achievements:')}</span>
                   <span className="font-bold text-green-700">{userAchievements?.filter(a => a.unlocked).length ?? 0}</span>
                 </div>
               </div>
@@ -186,9 +188,9 @@ const Gamification = () => {
         {/* Achievements Tab */}
         {activeTab === 'achievements' && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Achievements</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('Achievements')}</h2>
             {(!userAchievements || userAchievements.length === 0) ? (
-              <p className="text-gray-500">No achievements found.</p>
+              <p className="text-gray-500">{t('No achievements found.')}</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {userAchievements.map((ach) => (
@@ -212,9 +214,9 @@ const Gamification = () => {
         {/* Badges Tab */}
         {activeTab === 'badges' && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Badges</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('Badges')}</h2>
             {(!userBadges || userBadges.length === 0) ? (
-              <p className="text-gray-500">No badges found.</p>
+              <p className="text-gray-500">{t('No badges found.')}</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {userBadges.map((badge) => (
@@ -224,9 +226,9 @@ const Gamification = () => {
                     <p className="text-sm text-gray-500">{badge.description}</p>
                     <p className="text-xs mt-2 font-medium capitalize">{badge.rarity}</p>
                     {badge.earned ? (
-                      <span className="text-green-600 text-xs mt-2">Earned</span>
+                      <span className="text-green-600 text-xs mt-2">{t('Earned')}</span>
                     ) : (
-                      <span className="text-gray-400 text-xs mt-2">Locked</span>
+                      <span className="text-gray-400 text-xs mt-2">{t('Locked')}</span>
                     )}
                     {badge.earned && badge.earnedAt && (
                       <p className="text-xs mt-1 opacity-75">
@@ -244,7 +246,7 @@ const Gamification = () => {
         {activeTab === 'leaderboard' && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Global Leaderboard</h2>
+              <h2 className="text-xl font-semibold">{t('Global Leaderboard')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">

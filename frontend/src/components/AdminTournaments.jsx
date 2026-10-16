@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 function apiError(error, fallback = 'Veprimi dështoi') {
   return (
@@ -33,6 +34,7 @@ function toDateInput(value) {
 }
 
 export default function AdminTournaments() {
+  const { t } = useLocale();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -150,7 +152,7 @@ export default function AdminTournaments() {
   };
 
   const handleDelete = async (t) => {
-    if (!window.confirm(`Fshi turneun "${t.name}"? Kjo fshin edhe ndeshjet dhe pjesëmarrësit.`)) return;
+    if (!window.confirm(`${t('Fshi turneun')} "${t.name}"? ${t('Kjo fshin edhe ndeshjet dhe pjesëmarrësit.')}`)) return;
     try {
       try {
         await api.delete(`/admin/tournaments/${t.id}`);
@@ -174,7 +176,7 @@ export default function AdminTournaments() {
         {editingId ? (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="block text-sm">
-              <span className="text-gray-700">Emri</span>
+              <span className="text-gray-700">{t('Emri')}</span>
               <input
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={form.name}
@@ -183,7 +185,7 @@ export default function AdminTournaments() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Sezoni</span>
+              <span className="text-gray-700">{t('Sezoni')}</span>
               <input
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={form.season}
@@ -192,43 +194,43 @@ export default function AdminTournaments() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Lloji</span>
+              <span className="text-gray-700">{t('Lloji')}</span>
               <select
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
               >
-                <option value="league">League</option>
-                <option value="cup">Cup</option>
-                <option value="knockout">Knockout</option>
+                <option value="league">{t('League')}</option>
+                <option value="cup">{t('Cup')}</option>
+                <option value="knockout">{t('Knockout')}</option>
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Statusi</span>
+              <span className="text-gray-700">{t('Statusi')}</span>
               <select
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
               >
-                <option value="open">Open</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="finished">Finished</option>
+                <option value="open">{t('Open')}</option>
+                <option value="ongoing">{t('Ongoing')}</option>
+                <option value="finished">{t('Finished')}</option>
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Pjesëmarrës</span>
+              <span className="text-gray-700">{t('Pjesëmarrës')}</span>
               <select
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                 value={form.participantType}
                 onChange={(e) => setForm((f) => ({ ...f, participantType: e.target.value }))}
               >
-                <option value="individual">Individual</option>
-                <option value="club">Club</option>
-                <option value="mixed">Mixed</option>
+                <option value="individual">{t('Individual')}</option>
+                <option value="club">{t('Club')}</option>
+                <option value="mixed">{t('Mixed')}</option>
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Max pjesëmarrës</span>
+              <span className="text-gray-700">{t('Max pjesëmarrës')}</span>
               <input
                 type="number"
                 min="0"
@@ -238,7 +240,7 @@ export default function AdminTournaments() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Fillimi</span>
+              <span className="text-gray-700">{t('Fillimi')}</span>
               <input
                 type="date"
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -247,7 +249,7 @@ export default function AdminTournaments() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700">Mbarimi</span>
+              <span className="text-gray-700">{t('Mbarimi')}</span>
               <input
                 type="date"
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -256,7 +258,7 @@ export default function AdminTournaments() {
               />
             </label>
             <label className="block text-sm md:col-span-2">
-              <span className="text-gray-700">Përshkrimi</span>
+              <span className="text-gray-700">{t('Përshkrimi')}</span>
               <textarea
                 rows={3}
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
@@ -282,7 +284,7 @@ export default function AdminTournaments() {
             </div>
           </form>
         ) : (
-          <p className="text-sm text-gray-500">Zgjidh «Ndrysho» nga lista për të edituar një turne.</p>
+          <p className="text-sm text-gray-500">{t('Zgjidh «Ndrysho» nga lista për të edituar një turne.')}</p>
         )}
       </div>
 
@@ -299,20 +301,20 @@ export default function AdminTournaments() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">Të gjitha statuset</option>
-            <option value="open">Open</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="finished">Finished</option>
+            <option value="">{t('Të gjitha statuset')}</option>
+            <option value="open">{t('Open')}</option>
+            <option value="ongoing">{t('Ongoing')}</option>
+            <option value="finished">{t('Finished')}</option>
           </select>
           <select
             className="border border-gray-300 rounded-lg px-3 py-2"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
-            <option value="">Të gjitha llojet</option>
-            <option value="league">League</option>
-            <option value="cup">Cup</option>
-            <option value="knockout">Knockout</option>
+            <option value="">{t('Të gjitha llojet')}</option>
+            <option value="league">{t('League')}</option>
+            <option value="cup">{t('Cup')}</option>
+            <option value="knockout">{t('Knockout')}</option>
           </select>
           <button
             type="button"
@@ -324,60 +326,60 @@ export default function AdminTournaments() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500 py-8 text-center">Duke ngarkuar…</p>
+          <p className="text-sm text-gray-500 py-8 text-center">{t('Duke ngarkuar…')}</p>
         ) : tournaments.length === 0 ? (
-          <p className="text-sm text-gray-500 py-8 text-center">Nuk ka turne.</p>
+          <p className="text-sm text-gray-500 py-8 text-center">{t('Nuk ka turne.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-gray-600">
-                  <th className="py-2 pr-3">ID</th>
-                  <th className="py-2 pr-3">Emri</th>
-                  <th className="py-2 pr-3">Lloji</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Sezon</th>
-                  <th className="py-2 pr-3">Krijuesi</th>
-                  <th className="py-2 pr-3">Veprime</th>
+                  <th className="py-2 pr-3">{t('ID')}</th>
+                  <th className="py-2 pr-3">{t('Emri')}</th>
+                  <th className="py-2 pr-3">{t('Lloji')}</th>
+                  <th className="py-2 pr-3">{t('Status')}</th>
+                  <th className="py-2 pr-3">{t('Sezon')}</th>
+                  <th className="py-2 pr-3">{t('Krijuesi')}</th>
+                  <th className="py-2 pr-3">{t('Veprime')}</th>
                 </tr>
               </thead>
               <tbody>
-                {tournaments.map((t) => (
-                  <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-2 pr-3 text-gray-500">{t.id}</td>
-                    <td className="py-2 pr-3 font-medium text-gray-900">{t.name}</td>
-                    <td className="py-2 pr-3">{t.type}</td>
+                {tournaments.map((tournament) => (
+                  <tr key={tournament.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 pr-3 text-gray-500">{tournament.id}</td>
+                    <td className="py-2 pr-3 font-medium text-gray-900">{tournament.name}</td>
+                    <td className="py-2 pr-3">{t(tournament.type === 'league' ? 'League' : tournament.type === 'cup' ? 'Cup' : tournament.type === 'knockout' ? 'Knockout' : tournament.type)}</td>
                     <td className="py-2 pr-3">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          t.status === 'open'
+                          tournament.status === 'open'
                             ? 'bg-green-100 text-green-800'
-                            : t.status === 'ongoing'
+                            : tournament.status === 'ongoing'
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-gray-100 text-gray-700'
                         }`}
                       >
-                        {t.status}
+                        {t(tournament.status === 'open' ? 'Open' : tournament.status === 'ongoing' ? 'Ongoing' : tournament.status === 'finished' ? 'Finished' : tournament.status)}
                       </span>
                     </td>
-                    <td className="py-2 pr-3">{t.season || '—'}</td>
+                    <td className="py-2 pr-3">{tournament.season || '—'}</td>
                     <td className="py-2 pr-3 text-gray-600">
-                      {t.creator
-                        ? `${t.creator.firstName || ''} ${t.creator.lastName || ''}`.trim() ||
-                          t.creator.email
+                      {tournament.creator
+                        ? `${tournament.creator.firstName || ''} ${tournament.creator.lastName || ''}`.trim() ||
+                          tournament.creator.email
                         : '—'}
                     </td>
                     <td className="py-2 pr-3 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => startEdit(t)}
+                        onClick={() => startEdit(tournament)}
                         className="text-blue-600 hover:underline mr-3"
                       >
                         Ndrysho
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(t)}
+                        onClick={() => handleDelete(tournament)}
                         className="text-red-600 hover:underline"
                       >
                         Fshi

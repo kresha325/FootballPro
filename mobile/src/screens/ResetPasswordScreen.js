@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { extractErrorMessage, resetPasswordRequest } from '../api/client';
 import { passwordPolicyMessage } from '../utils/passwordPolicy';
+import { useLocale } from '../context/LocaleContext';
 
 export default function ResetPasswordScreen({ route, navigation }) {
+  const { t } = useLocale();
   const token = route?.params?.token || '';
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -13,26 +15,26 @@ export default function ResetPasswordScreen({ route, navigation }) {
   const onSubmit = async () => {
     setError('');
     if (!token) {
-      setError('Linku i rivendosjes është i pavlefshëm ose mungon.');
+      setError(t('Linku i rivendosjes është i pavlefshëm ose mungon.'));
       return;
     }
     const passwordError = passwordPolicyMessage(password);
     if (passwordError) {
-      setError(passwordError);
+      setError(t(passwordError));
       return;
     }
     if (password !== confirm) {
-      setError('Fjalëkalimet nuk përputhen.');
+      setError(t('Fjalëkalimet nuk përputhen.'));
       return;
     }
     setLoading(true);
     try {
       const res = await resetPasswordRequest(token, password);
-      Alert.alert('Sukses', res?.data?.msg || 'Fjalëkalimi u përditësua. Tani mund të hyni.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      Alert.alert(t('Sukses'), res?.data?.msg || t('Fjalëkalimi u përditësua. Tani mund të hyni.'), [
+        { text: t('OK'), onPress: () => navigation.navigate('Login') },
       ]);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Nuk u arrit rivendosja e fjalëkalimit'));
+      setError(extractErrorMessage(err, t('Nuk u arrit rivendosja e fjalëkalimit')));
     } finally {
       setLoading(false);
     }
@@ -40,12 +42,12 @@ export default function ResetPasswordScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Rivendos fjalëkalimin</Text>
-      <Text style={styles.sub}>Shkruani një fjalëkalim të ri për llogarinë tuaj.</Text>
+      <Text style={styles.title}>{t('Rivendos fjalëkalimin')}</Text>
+      <Text style={styles.sub}>{t('Shkruani një fjalëkalim të ri për llogarinë tuaj.')}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TextInput
         style={styles.input}
-        placeholder="Fjalëkalimi i ri"
+        placeholder={t('Fjalëkalimi i ri')}
         placeholderTextColor="#94a3b8"
         secureTextEntry
         value={password}
@@ -54,7 +56,7 @@ export default function ResetPasswordScreen({ route, navigation }) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Konfirmo fjalëkalimin"
+        placeholder={t('Konfirmo fjalëkalimin')}
         placeholderTextColor="#94a3b8"
         secureTextEntry
         value={confirm}
@@ -62,10 +64,10 @@ export default function ResetPasswordScreen({ route, navigation }) {
         autoCapitalize="none"
       />
       <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Përditëso fjalëkalimin</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{t('Përditëso fjalëkalimin')}</Text>}
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Kthehu te hyrja</Text>
+        <Text style={styles.link}>{t('Kthehu te hyrja')}</Text>
       </TouchableOpacity>
     </View>
   );

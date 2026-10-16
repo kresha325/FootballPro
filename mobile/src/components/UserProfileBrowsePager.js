@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import OptimizedImage from './media/OptimizedImage';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocale } from '../context/LocaleContext';
 
 export function useBrowseColors(isDark) {
   return useMemo(
@@ -49,15 +50,17 @@ export function normalizeBrowseUser(raw) {
   };
 }
 
-function roleLabel(role) {
+function roleLabel(role, t) {
   const r = String(role || '').toLowerCase();
-  if (r === 'trajner') return 'Coach';
-  if (!r) return 'Member';
-  return r.charAt(0).toUpperCase() + r.slice(1);
+  if (r === 'trajner' || r === 'coach') return t('Coach');
+  if (r === 'athlete' || r === 'player') return t('Player');
+  if (!r) return t('Member');
+  return t(r.charAt(0).toUpperCase() + r.slice(1));
 }
 
 function ProfileBrowseCard({ item, onPress, colors }) {
-  const name = `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'User';
+  const { t } = useLocale();
+  const name = `${item.firstName || ''} ${item.lastName || ''}`.trim() || t('User');
   const initials = `${(item.firstName || 'U').charAt(0)}${(item.lastName || '').charAt(0)}`.toUpperCase();
   const photo = item.profilePhoto && typeof item.profilePhoto === 'string' ? item.profilePhoto : null;
   const location = [item.city, item.country].filter(Boolean).join(', ');
@@ -72,7 +75,7 @@ function ProfileBrowseCard({ item, onPress, colors }) {
       </View>
       <View style={styles.overlayRolePill}>
         <Text style={styles.overlayRoleText} numberOfLines={1}>
-          {roleLabel(item.role)}
+          {roleLabel(item.role, t)}
         </Text>
       </View>
       {item.club ? (
@@ -100,7 +103,7 @@ function ProfileBrowseCard({ item, onPress, colors }) {
         </View>
       ) : null}
       <View style={styles.overlayHintRow}>
-        <Text style={styles.overlayHint}>Profili i plotë</Text>
+        <Text style={styles.overlayHint}>{t('Profili i plotë')}</Text>
         <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.85)" />
       </View>
     </>

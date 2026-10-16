@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { useNavigation } from '@react-navigation/native';
 import { calendarRequest, extractErrorMessage } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
 
 const VIEWS = [
   { id: 'upcoming', label: 'Upcoming' },
@@ -11,6 +12,7 @@ const VIEWS = [
 ];
 
 export default function CalendarScreen() {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const [view, setView] = useState('upcoming');
   const [competitionId, setCompetitionId] = useState('');
@@ -31,13 +33,13 @@ export default function CalendarScreen() {
       const res = await calendarRequest(params);
       setMatches(Array.isArray(res?.data?.matches) ? res.data.matches : []);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Calendar failed to load'));
+      setError(extractErrorMessage(err, t('Calendar failed to load')));
       setMatches([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [view, competitionId, season, clubId]);
+  }, [view, competitionId, season, clubId, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -50,26 +52,26 @@ export default function CalendarScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
     >
-      <Text style={styles.title}>Match calendar</Text>
+      <Text style={styles.title}>{t('Match calendar')}</Text>
       <View style={styles.row}>
         {VIEWS.map((item) => (
           <TouchableOpacity key={item.id} style={[styles.chip, view === item.id && styles.chipOn]} onPress={() => setView(item.id)}>
-            <Text style={styles.chipText}>{item.label}</Text>
+            <Text style={styles.chipText}>{t(item.label)}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      <TextInput value={competitionId} onChangeText={setCompetitionId} placeholder="Competition ID" placeholderTextColor="#94a3b8" style={styles.input} />
-      <TextInput value={season} onChangeText={setSeason} placeholder="Season" placeholderTextColor="#94a3b8" style={styles.input} />
-      <TextInput value={clubId} onChangeText={setClubId} placeholder="Club / team user ID" placeholderTextColor="#94a3b8" style={styles.input} />
+      <TextInput value={competitionId} onChangeText={setCompetitionId} placeholder={t('Competition ID')} placeholderTextColor="#94a3b8" style={styles.input} />
+      <TextInput value={season} onChangeText={setSeason} placeholder={t('Season')} placeholderTextColor="#94a3b8" style={styles.input} />
+      <TextInput value={clubId} onChangeText={setClubId} placeholder={t('Club / team user ID')} placeholderTextColor="#94a3b8" style={styles.input} />
       {loading ? <ActivityIndicator /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {!loading && !error && matches.length === 0 ? <Text style={styles.empty}>No matches for this view.</Text> : null}
+      {!loading && !error && matches.length === 0 ? <Text style={styles.empty}>{t('No matches for this view.')}</Text> : null}
       {matches.map((match) => (
         <TouchableOpacity key={String(match.id)} style={styles.card} onPress={() => navigation.navigate('MatchDetail', { matchId: match.id })}>
-          <Text style={styles.teams}>{match.homeName || 'Home'} vs {match.awayName || 'Away'}</Text>
-          <Text style={styles.meta}>{match.Tournament?.name || 'Competition'} · {match.status}</Text>
+          <Text style={styles.teams}>{match.homeName || t('Home')} vs {match.awayName || t('Away')}</Text>
+          <Text style={styles.meta}>{match.Tournament?.name || t('Competition')} · {t(match.status)}</Text>
           <Text style={styles.meta}>{match.scoreHome ?? '–'} : {match.scoreAway ?? '–'}</Text>
-          <Text style={styles.meta}>{match.matchDate ? new Date(match.matchDate).toLocaleString() : 'No date'}</Text>
+          <Text style={styles.meta}>{match.matchDate ? new Date(match.matchDate).toLocaleString() : t('No date')}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>

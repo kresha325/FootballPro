@@ -16,8 +16,10 @@ import {
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import PropTypes from 'prop-types';
 import VerifiedBadge from './VerifiedBadge';
+import { useLocale } from '../contexts/LocaleContext';
 
 const Videos = ({ userId, onlyUserVideos }) => {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [trendingVideos, setTrendingVideos] = useState([]);
@@ -189,15 +191,15 @@ const Videos = ({ userId, onlyUserVideos }) => {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold">Videos</h1>
-              <p className="text-red-100 mt-1">Watch and share football content</p>
+              <h1 className="text-3xl font-bold">{t('Videos')}</h1>
+              <p className="text-red-100 mt-1">{t('Watch and share football content')}</p>
             </div>
             <button
               onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
             >
               <PlusIcon className="h-5 w-5" />
-              Upload
+              {t('Upload')}
             </button>
           </div>
 
@@ -206,7 +208,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search videos..."
+              placeholder={t('Search videos...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-900 placeholder-gray-500"
@@ -221,7 +223,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <FireIcon className="h-6 w-6 text-orange-500" />
-              <h2 className="text-2xl font-bold text-gray-900">Trending Now</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t('Trending Now')}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {trendingVideos.map((video) => (
@@ -235,7 +237,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <FunnelIcon className="h-5 w-5 text-gray-600" />
-            <span className="font-semibold text-gray-900">Categories</span>
+            <span className="font-semibold text-gray-900">{t('Categories')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -246,7 +248,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
                   : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
             >
-              All
+              {t('All')}
             </button>
             {categories.map((cat) => (
               <button
@@ -258,7 +260,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
                     : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {cat}
+                {t(cat)}
               </button>
             ))}
           </div>
@@ -272,7 +274,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
         ) : videos.length === 0 ? (
           <div className="text-center py-20">
             <VideoCameraIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No videos found</p>
+            <p className="text-gray-600">{t('No videos found')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -298,6 +300,7 @@ const Videos = ({ userId, onlyUserVideos }) => {
 };
 
 const UploadVideoModal = ({ onClose, onSuccess }) => {
+  const { t } = useLocale();
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -311,7 +314,7 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!videoFile) {
-      alert('Please select a video file');
+      alert(t('Please select a video file'));
       return;
     }
 
@@ -332,7 +335,7 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
       onSuccess();
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload video');
+      alert(t('Failed to upload video'));
     } finally {
       setUploading(false);
     }
@@ -342,11 +345,11 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Upload Video</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('Upload Video')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video File (Max 100MB)
+                {t('Video File (Max 100MB)')}
               </label>
               <input
                 type="file"
@@ -358,7 +361,7 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('Title')}</label>
               <input
                 type="text"
                 value={formData.title}
@@ -370,7 +373,7 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                {t('Description')}
               </label>
               <textarea
                 value={formData.description}
@@ -381,31 +384,31 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('Category')}</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               >
-                <option value="">Select category</option>
-                <option value="Highlights">Highlights</option>
-                <option value="Skills">Skills</option>
-                <option value="Training">Training</option>
-                <option value="Matches">Matches</option>
-                <option value="Interviews">Interviews</option>
-                <option value="Behind the Scenes">Behind the Scenes</option>
+                <option value="">{t('Select category')}</option>
+                <option value="Highlights">{t('Highlights')}</option>
+                <option value="Skills">{t('Skills')}</option>
+                <option value="Training">{t('Training')}</option>
+                <option value="Matches">{t('Matches')}</option>
+                <option value="Interviews">{t('Interviews')}</option>
+                <option value="Behind the Scenes">{t('Behind the Scenes')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (comma separated)
+                {t('Tags (comma separated)')}
               </label>
               <input
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="football, skills, goals"
+                placeholder={t('football, skills, goals')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
             </div>
@@ -419,7 +422,7 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
                 className="rounded"
               />
               <label htmlFor="isPremium" className="text-sm text-gray-700">
-                Premium content (subscribers only)
+                {t('Premium content (subscribers only)')}
               </label>
             </div>
 
@@ -429,14 +432,14 @@ const UploadVideoModal = ({ onClose, onSuccess }) => {
                 disabled={uploading}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
               >
-                {uploading ? 'Uploading...' : 'Upload'}
+                {uploading ? t('Uploading...') : t('Upload')}
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
               >
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </form>

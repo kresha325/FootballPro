@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocale } from '../../../contexts/LocaleContext';
 
 function asObject(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -36,6 +37,7 @@ function csvToList(value) {
 }
 
 const EditLigaProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const contact = asObject(user.contact);
   const social = asObject(user.socialLinks);
   const [form, setForm] = useState({
@@ -110,104 +112,104 @@ const EditLigaProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Foto e profilit</label>
-        {preview ? <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" /> : null}
+        <label className="block text-sm font-medium mb-1">{t('Foto e profilit')}</label>
+        {preview ? <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" /> : null}
         <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Profili i Ligës</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Profili i Ligës')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Emri *</label>
+          <label className="block text-sm font-medium mb-1">{t('Emri')} *</label>
           <input name="name" value={form.name} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Logo URL</label>
+          <label className="block text-sm font-medium mb-1">{t('Logo URL')}</label>
           <input name="logo" value={form.logo} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Shteti</label>
+          <label className="block text-sm font-medium mb-1">{t('Shteti')}</label>
           <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Niveli</label>
+          <label className="block text-sm font-medium mb-1">{t('Niveli')}</label>
           <select name="level" value={form.level} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Zgjidh nivelin</option>
-            <option value="national">National</option>
-            <option value="regional">Regional</option>
-            <option value="youth">Youth</option>
-            <option value="women">Women</option>
-            <option value="other">Other</option>
+            <option value="">{t('Zgjidh nivelin')}</option>
+            <option value="national">{t('National')}</option>
+            <option value="regional">{t('Regional')}</option>
+            <option value="youth">{t('Youth')}</option>
+            <option value="women">{t('Women')}</option>
+            <option value="other">{t('Other')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Viti i themelimit</label>
+          <label className="block text-sm font-medium mb-1">{t('Viti i themelimit')}</label>
           <input name="foundedYear" value={form.foundedYear} onChange={handleChange} type="number" className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Website</label>
+          <label className="block text-sm font-medium mb-1">{t('Website')}</label>
           <input name="website" value={form.website} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Përshkrimi</label>
+        <label className="block text-sm font-medium mb-1">{t('Përshkrimi')}</label>
         <textarea name="description" value={form.description} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Kompeticionet</label>
+        <label className="block text-sm font-medium mb-1">{t('Kompeticionet')}</label>
         <input
           name="competitions"
           value={form.competitions}
           onChange={handleChange}
           className="w-full p-2 border border-gray-300 rounded"
-          placeholder="p.sh. Liga e Parë, Kupa e Kosovës"
+          placeholder={t('p.sh. Liga e Parë, Kupa e Kosovës')}
         />
-        <p className="mt-1 text-xs text-gray-500">Ndaji me presje. Klubet menaxhohen nga profili (Bashkohu / Hiq).</p>
+        <p className="mt-1 text-xs text-gray-500">{t('Ndaji me presje. Klubet menaxhohen nga profili (Bashkohu / Hiq).')}</p>
       </div>
       <div>
-        <h4 className="text-sm font-semibold mb-2">Kontakt</h4>
+        <h4 className="text-sm font-semibold mb-2">{t('Kontakt')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Telefon</label>
+            <label className="block text-sm font-medium mb-1">{t('Telefon')}</label>
             <input name="phone" value={form.phone} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="+383 ..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{t('Email')}</label>
             <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Website (kontakt)</label>
+            <label className="block text-sm font-medium mb-1">{t('Website (kontakt)')}</label>
             <input name="contactWebsite" value={form.contactWebsite} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://" />
           </div>
         </div>
       </div>
       <div>
-        <h4 className="text-sm font-semibold mb-2">Rrjetet sociale</h4>
+        <h4 className="text-sm font-semibold mb-2">{t('Rrjetet sociale')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Instagram</label>
+            <label className="block text-sm font-medium mb-1">{t('Instagram')}</label>
             <input name="instagram" value={form.instagram} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://instagram.com/..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Facebook</label>
+            <label className="block text-sm font-medium mb-1">{t('Facebook')}</label>
             <input name="facebook" value={form.facebook} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://facebook.com/..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Twitter / X</label>
+            <label className="block text-sm font-medium mb-1">{t('Twitter / X')}</label>
             <input name="twitter" value={form.twitter} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://x.com/..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">YouTube</label>
+            <label className="block text-sm font-medium mb-1">{t('YouTube')}</label>
             <input name="youtube" value={form.youtube} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://youtube.com/..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">LinkedIn</label>
+            <label className="block text-sm font-medium mb-1">{t('LinkedIn')}</label>
             <input name="linkedin" value={form.linkedin} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" placeholder="https://linkedin.com/..." />
           </div>
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Duke ruajtur…' : 'Ruaj ndryshimet'}
+          {loading ? t('Duke ruajtur…') : t('Ruaj ndryshimet')}
         </button>
       </div>
       {errors?.general ? <div className="text-red-600 mt-2">{errors.general}</div> : null}

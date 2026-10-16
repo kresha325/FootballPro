@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 const UserManagement = () => {
+  const { t } = useLocale();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ const UserManagement = () => {
   };
 
   const deleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm(t('Are you sure you want to delete this user?'))) {
       try {
         await adminAPI.deleteUser(userId);
         fetchUsers(); // Refresh the list
@@ -41,22 +43,22 @@ const UserManagement = () => {
   };
 
   if (loading) {
-    return <div className="text-center mt-10">Loading users...</div>;
+    return <div className="text-center mt-10">{t('Loading users...')}</div>;
   }
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-6">User Management</h2>
+      <h2 className="text-2xl font-bold mb-6">{t('User Management')}</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full table-auto">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700">
-              <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Email</th>
-              <th className="px-4 py-2 text-left">Role</th>
-              <th className="px-4 py-2 text-left">Premium</th>
-              <th className="px-4 py-2 text-left">Verified</th>
-              <th className="px-4 py-2 text-left">Actions</th>
+              <th className="px-4 py-2 text-left">{t('Name')}</th>
+              <th className="px-4 py-2 text-left">{t('Email')}</th>
+              <th className="px-4 py-2 text-left">{t('Role')}</th>
+              <th className="px-4 py-2 text-left">{t('Premium')}</th>
+              <th className="px-4 py-2 text-left">{t('Verified')}</th>
+              <th className="px-4 py-2 text-left">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -70,16 +72,16 @@ const UserManagement = () => {
                     onChange={(e) => updateUserRole(user.id, e.target.value)}
                     className="border rounded px-2 py-1 dark:bg-gray-700"
                   >
-                    <option value="athlete">Athlete</option>
-                    <option value="coach">Coach</option>
-                    <option value="scout">Scout</option>
-                    <option value="manager">Manager</option>
-                    <option value="referee">Referat</option>
-                    <option value="club">Club</option>
-                    <option value="federation">Federation</option>
-                    <option value="media">Media</option>
-                    <option value="business">Business</option>
-                    <option value="admin">Admin</option>
+                    <option value="athlete">{t('Athlete')}</option>
+                    <option value="coach">{t('Coach')}</option>
+                    <option value="scout">{t('Scout')}</option>
+                    <option value="manager">{t('Manager')}</option>
+                    <option value="referee">{t('Referat')}</option>
+                    <option value="club">{t('Club')}</option>
+                    <option value="federation">{t('Federation')}</option>
+                    <option value="media">{t('Media')}</option>
+                    <option value="business">{t('Business')}</option>
+                    <option value="admin">{t('Admin')}</option>
                   </select>
                 </td>
                 <td className="px-4 py-2">{user.premium ? 'Yes' : 'No'}</td>

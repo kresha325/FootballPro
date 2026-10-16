@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { getJonCoinBalance, transferJonCoin, purchaseJonCoin, withdrawJonCoin, getJonCoinTransactions } from '../services/joncoin';
 import { ordersAPI } from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 function deliveryLabel(method) {
   const m = String(method || '').toLowerCase();
@@ -48,6 +49,7 @@ function transactionFlow(type) {
 }
 
 const JonCoinWallet = () => {
+  const { t } = useLocale();
   const [balance, setBalance] = useState(0);
   const [withdrawFeePct, setWithdrawFeePct] = useState(5);
   const [amount, setAmount] = useState('');
@@ -207,19 +209,19 @@ const JonCoinWallet = () => {
   return (
     <div className="mx-auto min-h-screen max-w-5xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Wallet</p><h1 className="mt-1 text-3xl font-black text-white">XCoin</h1></div>
+        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Portofoli')}</p><h1 className="mt-1 text-3xl font-black text-white">XCoin</h1></div>
         <Link
           to="/marketplace"
           className="btn btn-outline min-h-11 text-sm"
         >
-          Shko te marketplace
+          {t('Shko te marketplace')}
         </Link>
       </div>
-      <div className="flex flex-wrap gap-2"><Link to="/marketplace" className="xt-badge hover:border-[var(--xt-color-gold)]">Tregu XCoin</Link><Link to="/premium" className="xt-badge hover:border-[var(--xt-color-gold)]">Abonimi Premium</Link></div>
+      <div className="flex flex-wrap gap-2"><Link to="/marketplace" className="xt-badge hover:border-[var(--xt-color-gold)]">{t('Tregu XCoin')}</Link><Link to="/premium" className="xt-badge hover:border-[var(--xt-color-gold)]">{t('Abonimi Premium')}</Link></div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="xt-card p-4 sm:p-6">
-          <div className="mb-2 text-sm text-[var(--xt-color-text-muted)]">Bilanci i disponueshëm</div>
+          <div className="mb-2 text-sm text-[var(--xt-color-text-muted)]">{t('Bilanci i disponueshëm')}</div>
           <div className="mb-6 flex items-baseline gap-2 text-white">
             <span className="font-mono text-4xl font-black tabular-nums text-[var(--xt-color-gold-bright)]">{balance}</span>
             <span className="font-semibold text-[var(--xt-color-text-muted)]">XCoin</span>
@@ -227,13 +229,13 @@ const JonCoinWallet = () => {
           <p className="mb-4 text-xs text-[var(--xt-color-text-subtle)]">1 XCoin = {rate} EUR. Balanca vjen nga libri i transaksioneve.</p>
 
           <form onSubmit={handleBuy} className="space-y-3 mb-6">
-            <div className="font-semibold text-[var(--xt-color-text)]">Bli XCoin</div>
+            <div className="font-semibold text-[var(--xt-color-text)]">{t('Bli XCoin')}</div>
             <p className="text-xs text-[var(--xt-color-text-subtle)]">
-              Kërkesa nuk shton XCoin. Kreditohet vetëm pasi pagesa verifikohet ose admini e konfirmon.
+              {t('Kërkesa nuk shton XCoin. Kreditohet vetëm pasi pagesa verifikohet ose admini e konfirmon.')}
             </p>
             <input
               type="number"
-              placeholder="Shuma"
+              placeholder={t('Shuma')}
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
               className="input"
@@ -399,7 +401,7 @@ const JonCoinWallet = () => {
         <div className="mb-3 flex flex-wrap gap-2">
           {FILTERS.map(([id, label]) => (
             <button key={id} type="button" className={`xt-badge ${txFilter === id ? 'xt-badge-gold' : ''}`} onClick={() => setTxFilter(id)}>
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>

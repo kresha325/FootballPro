@@ -76,13 +76,13 @@ export default function MarketplaceSimple() {
   });
 
   const deleteProduct = async (productId) => {
-    if (!window.confirm('A je i sigurt që do ta fshish këtë produkt?')) return;
+    if (!window.confirm(t('A je i sigurt që do ta fshish këtë produkt?'))) return;
     try {
       await API.delete(`/products/${productId}`);
       setSelectedProduct(null);
       fetchProducts();
     } catch (error) {
-      alert(error.response?.data?.msg || 'Nuk u fshi produkti!');
+      alert(error.response?.data?.msg || t('Nuk u fshi produkti!'));
     }
   };
 
@@ -125,7 +125,7 @@ export default function MarketplaceSimple() {
       alert('Produkti u përditësua.');
     } catch (error) {
       console.error('Error updating product:', error);
-      alert(error.response?.data?.msg || 'Përditësimi dështoi');
+      alert(error.response?.data?.msg || t('Përditësimi dështoi'));
     }
   };
 
@@ -269,17 +269,17 @@ export default function MarketplaceSimple() {
       setJonCoinBalance(Number(bal) || 0);
     } catch (error) {
       console.error('Error checkout cart:', error);
-      alert(error.response?.data?.msg || 'Porosia dështoi');
+      alert(error.response?.data?.msg || t('Porosia dështoi'));
     } finally {
       setCartChecking(false);
     }
   };
 
   const categories = [
-    { value: 'all', label: 'Të gjitha', icon: '📦' },
-    { value: 'gear', label: 'Pajisjet', icon: '⚽' },
-    { value: 'tickets', label: 'Biletat', icon: '🎫' },
-    { value: 'merchandise', label: 'Merchendiset', icon: '🛍️' },
+    { value: 'all', label: t('Të gjitha'), icon: '📦' },
+    { value: 'gear', label: t('Pajisjet'), icon: '⚽' },
+    { value: 'tickets', label: t('Biletat'), icon: '🎫' },
+    { value: 'merchandise', label: t('Merchendiset'), icon: '🛍️' },
   ];
 
   const getCategoryIcon = (cat) => {
@@ -305,7 +305,7 @@ export default function MarketplaceSimple() {
       {/* XCoin Balance Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <span className="xt-badge xt-badge-gold min-h-10 px-3" title="XCoin Balance">
+          <span className="xt-badge xt-badge-gold min-h-10 px-3" title={t('XCoin Balance')}>
             {jonCoinBalance !== null ? `${jonCoinBalance} XCoin` : '...'}
 
           </span>
@@ -316,7 +316,7 @@ export default function MarketplaceSimple() {
             className="btn btn-quiet relative min-h-11"
             onClick={() => setShowCartDrawer(true)}
           >
-            Shporta
+            {t("Shporta")}
             {totalPieces > 0 ? (
               <span className="absolute -top-2 -right-2 min-h-[20px] min-w-[20px] px-1 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">
                 {totalPieces > 99 ? '99+' : totalPieces}
@@ -327,7 +327,7 @@ export default function MarketplaceSimple() {
             className="btn btn-outline min-h-11"
             onClick={() => navigate('/wallet')}
           >
-            Shiko Wallet
+            {t("Shiko Wallet")}
           </button>
         </div>
       </div>
@@ -341,14 +341,14 @@ export default function MarketplaceSimple() {
           onClick={() => setShowCreateModal(true)}
           className="btn btn-primary min-h-11"
         >
-          + Shto Produkt
+          {t("+ Shto Produkt")}
         </button>
       </div>
 
       <ListSearchBar
         value={listSearch}
         onChange={setListSearch}
-        placeholder="Kërko produkte sipas emrit ose përshkrimit…"
+        placeholder={t('Kërko produkte sipas emrit ose përshkrimit…')}
       />
 
       {/* Category Filter */}
@@ -394,13 +394,13 @@ export default function MarketplaceSimple() {
                 {isSold && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="bg-red-600 text-white px-4 py-2 rounded-full font-bold text-lg">
-                      PA STOK
+                      {t("PA STOK")}
                     </span>
                   </div>
                 )}
                 {isOwner && !isSold && (
                   <div className="absolute top-2 right-2 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                    Your Item
+                    {t("Your Item")}
                   </div>
                 )}
               </div>
@@ -443,7 +443,7 @@ export default function MarketplaceSimple() {
 
                 {isSold && product.outOfStockHoursLeft != null ? (
                   <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 font-medium">
-                    Pa stok — fshihet pas ~{product.outOfStockHoursLeft}h nëse nuk restokohet (max 48h).
+                    {t("Pa stok — fshihet pas ~")}{product.outOfStockHoursLeft}{t("h nëse nuk restokohet (max 48h).")}
                   </p>
                 ) : null}
 
@@ -456,7 +456,7 @@ export default function MarketplaceSimple() {
                     }}
                     className="w-full py-2 mb-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors"
                   >
-                    Ndrysho / stok / fshi
+                    {t("Ndrysho / stok / fshi")}
                   </button>
                 )}
 
@@ -475,14 +475,14 @@ export default function MarketplaceSimple() {
                         }
                         className="w-20 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-[var(--xt-color-text)] bg-[var(--xt-color-surface)]"
                       />
-                      <span className="text-xs text-gray-500">max {product.stock ?? 0}</span>
+                      <span className="text-xs text-gray-500">{t("max")} {product.stock ?? 0}</span>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => addToCart(product, e)}
                       className="btn btn-primary min-h-11 w-full"
                     >
-                      Shto në shportë
+                      {t("Shto në shportë")}
                     </button>
                   </div>
                 )}
@@ -498,7 +498,7 @@ export default function MarketplaceSimple() {
         <div className="text-center py-20">
           <ShoppingBagIcon className="mx-auto mb-4 h-12 w-12 text-[var(--xt-color-gold)]" aria-hidden="true" />
           <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">
-            Nuk ka produkte
+            {t("Nuk ka produkte")}
           </h3>
           <p className="text-[var(--xt-color-text-muted)] mb-6">
             {category === 'all'
@@ -509,7 +509,7 @@ export default function MarketplaceSimple() {
             onClick={() => setShowCreateModal(true)}
             className="px-6 py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-xl hover:bg-blue-700 transition-colors font-semibold"
           >
-            Shto Produktin e Parë
+            {t("Shto Produktin e Parë")}
           </button>
         </div>
       )}
@@ -523,7 +523,7 @@ export default function MarketplaceSimple() {
             <form onSubmit={createProduct} className="space-y-4">
                             <div>
                               <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                                Foto e Produktit
+                                {t("Foto e Produktit")}
                               </label>
                               <input
                                 type="file"
@@ -534,7 +534,7 @@ export default function MarketplaceSimple() {
                             </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Emri i Produktit
+                  {t("Emri i Produktit")}
                 </label>
                 <input
                   type="text"
@@ -542,20 +542,20 @@ export default function MarketplaceSimple() {
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
-                  placeholder="Nike Football Boots"
+                  placeholder={t('Nike Football Boots')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Përshkrimi
+                  {t("Përshkrimi")}
                 </label>
                 <textarea
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
-                  placeholder="Përshkruaj produktin..."
+                  placeholder={t('Përshkruaj produktin...')}
                 />
               </div>
 
@@ -576,7 +576,7 @@ export default function MarketplaceSimple() {
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Sasia në stok (copë)
+                  {t("Sasia në stok (copë)")}
                 </label>
                 <input
                   type="number"
@@ -589,13 +589,13 @@ export default function MarketplaceSimple() {
                   placeholder="10"
                 />
                 <p className="text-xs text-[var(--xt-color-text-subtle)] mt-1">
-                  Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.
+                  {t("Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.")}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Kategoria
+                  {t("Kategoria")}
                 </label>
                 <select
                   value={newProduct.category}
@@ -612,17 +612,17 @@ export default function MarketplaceSimple() {
 
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Gjendja
+                  {t("Gjendja")}
                 </label>
                 <select
                   value={newProduct.condition}
                   onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                 >
-                  <option value="new">E Re</option>
-                  <option value="like-new">Si e Re</option>
-                  <option value="good">E Mirë</option>
-                  <option value="fair">E Përdorur</option>
+                  <option value="new">{t("E Re")}</option>
+                  <option value="like-new">{t("Si e Re")}</option>
+                  <option value="good">{t("E Mirë")}</option>
+                  <option value="fair">{t("E Përdorur")}</option>
                 </select>
               </div>
 
@@ -632,13 +632,13 @@ export default function MarketplaceSimple() {
                   onClick={() => setShowCreateModal(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                 >
-                  Anulo
+                  {t("Anulo")}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
-                  Shto Produktin
+                  {t("Shto Produktin")}
                 </button>
               </div>
             </form>
@@ -654,7 +654,7 @@ export default function MarketplaceSimple() {
             <form onSubmit={saveProductEdit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
-                  Foto e re (opsionale)
+                  {t("Foto e re (opsionale)")}
                 </label>
                 <input
                   type="file"
@@ -664,7 +664,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Emri</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Emri")}</label>
                 <input
                   type="text"
                   value={editForm.name}
@@ -674,7 +674,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Përshkrimi</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Përshkrimi")}</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -683,7 +683,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Çmimi (XCoin)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t('Çmimi (XCoin)')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -694,7 +694,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Sasia në stok (copë)</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Sasia në stok (copë)")}</label>
                 <input
                   type="number"
                   min={0}
@@ -705,11 +705,11 @@ export default function MarketplaceSimple() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  Restoko (stok &gt; 0) për ta mbajtur listimin. Pa stok fshihet automatikisht pas 48h.
+                  {t("Restoko (stok > 0) për ta mbajtur listimin. Pa stok fshihet automatikisht pas 48h.")}
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Kategoria</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Kategoria")}</label>
                 <select
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
@@ -723,16 +723,16 @@ export default function MarketplaceSimple() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">Gjendja</label>
+                <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">{t("Gjendja")}</label>
                 <select
                   value={editForm.condition}
                   onChange={(e) => setEditForm({ ...editForm, condition: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 >
-                  <option value="new">E Re</option>
-                  <option value="like-new">Si e Re</option>
-                  <option value="good">E Mirë</option>
-                  <option value="fair">E Përdorur</option>
+                  <option value="new">{t("E Re")}</option>
+                  <option value="like-new">{t("Si e Re")}</option>
+                  <option value="good">{t("E Mirë")}</option>
+                  <option value="fair">{t("E Përdorur")}</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
@@ -744,10 +744,10 @@ export default function MarketplaceSimple() {
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-[var(--xt-color-text-muted)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
                 >
-                  Anulo
+                  {t("Anulo")}
                 </button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium">
-                  Ruaj
+                  {t("Ruaj")}
                 </button>
               </div>
             </form>
@@ -760,7 +760,7 @@ export default function MarketplaceSimple() {
         <div
           className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50"
           role="dialog"
-          aria-label="Shporta"
+          aria-label={t('Shporta')}
           onClick={() => setShowCartDrawer(false)}
         >
           <div
@@ -769,13 +769,13 @@ export default function MarketplaceSimple() {
           >
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-bold text-[var(--xt-color-text)]">
-                Shporta {totalPieces > 0 ? `(${totalPieces} copë)` : ''}
+                {t("Shporta")} {totalPieces > 0 ? `(${totalPieces} copë)` : ''}
               </h3>
               <button
                 type="button"
                 className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-2xl leading-none px-2"
                 onClick={() => setShowCartDrawer(false)}
-                aria-label="Mbyll"
+                aria-label={t('Mbyll')}
               >
                 ✕
               </button>
@@ -832,7 +832,7 @@ export default function MarketplaceSimple() {
                               className="ml-auto text-red-600 text-sm font-semibold"
                               onClick={() => removeItem(line.productId)}
                             >
-                              Hiq
+                              {t("Hiq")}
                             </button>
                           </div>
                         </div>
@@ -844,27 +844,27 @@ export default function MarketplaceSimple() {
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
               <div className="space-y-2 text-sm">
-                <label className="block font-medium text-[var(--xt-color-text)]">Si e merr / dërgon? *</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">{t("Si e merr / dërgon? *")}</label>
                 <select
                   value={checkoutForm.deliveryMethod}
                   onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryMethod: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 >
-                  <option value="meetup">Takim</option>
-                  <option value="pickup">Marrje personale</option>
-                  <option value="shipping">Dërgesë</option>
+                  <option value="meetup">{t("Takim")}</option>
+                  <option value="pickup">{t("Marrje personale")}</option>
+                  <option value="shipping">{t("Dërgesë")}</option>
                 </select>
-                <label className="block font-medium text-[var(--xt-color-text)]">Kontakt (tel / email) *</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">{t("Kontakt (tel / email) *")}</label>
                 <input
                   type="text"
                   value={checkoutForm.buyerContact}
                   onChange={(e) => setCheckoutForm({ ...checkoutForm, buyerContact: e.target.value })}
-                  placeholder="+383… ose email"
+                  placeholder={t('+383… ose email')}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 />
                 {checkoutForm.deliveryMethod === 'shipping' ? (
                   <>
-                    <label className="block font-medium text-[var(--xt-color-text)]">Adresa e dërgesës *</label>
+                    <label className="block font-medium text-[var(--xt-color-text)]">{t("Adresa e dërgesës *")}</label>
                     <textarea
                       value={checkoutForm.deliveryAddress}
                       onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
@@ -874,7 +874,7 @@ export default function MarketplaceSimple() {
                   </>
                 ) : (
                   <>
-                    <label className="block font-medium text-[var(--xt-color-text)]">Vendtakimi / adresa (opsionale)</label>
+                    <label className="block font-medium text-[var(--xt-color-text)]">{t("Vendtakimi / adresa (opsionale)")}</label>
                     <input
                       type="text"
                       value={checkoutForm.deliveryAddress}
@@ -883,12 +883,12 @@ export default function MarketplaceSimple() {
                     />
                   </>
                 )}
-                <label className="block font-medium text-[var(--xt-color-text)]">Shënim</label>
+                <label className="block font-medium text-[var(--xt-color-text)]">{t("Shënim")}</label>
                 <input
                   type="text"
                   value={checkoutForm.deliveryNotes}
                   onChange={(e) => setCheckoutForm({ ...checkoutForm, deliveryNotes: e.target.value })}
-                  placeholder="p.sh. pas orës 18:00"
+                  placeholder={t('p.sh. pas orës 18:00')}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                 />
               </div>
@@ -966,7 +966,7 @@ export default function MarketplaceSimple() {
                   <p className="font-semibold text-[var(--xt-color-text)]">
                     {selectedProduct.Seller?.firstName} {selectedProduct.Seller?.lastName}
                   </p>
-                  <p className="text-sm text-[var(--xt-color-text-muted)]">Seller</p>
+                  <p className="text-sm text-[var(--xt-color-text-muted)]">{t("Seller")}</p>
                 </div>
               </div>
 
@@ -979,13 +979,13 @@ export default function MarketplaceSimple() {
 
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <div>
-                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">Kategoria</p>
+                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">{t("Kategoria")}</p>
                   <p className="font-medium text-[var(--xt-color-text)] capitalize">
                     {getCategoryIcon(selectedProduct.category)} {selectedProduct.category}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">Statusi</p>
+                  <p className="text-sm text-[var(--xt-color-text-muted)] mb-1">{t("Statusi")}</p>
                   <p className="font-medium text-[var(--xt-color-text)] capitalize">
                     {selectedProduct.status}
                   </p>
@@ -997,7 +997,7 @@ export default function MarketplaceSimple() {
                 selectedProduct.status !== 'sold' && (
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-[var(--xt-color-text-muted)]">Sasia</label>
+                    <label className="text-sm text-[var(--xt-color-text-muted)]">{t("Sasia")}</label>
                     <input
                       type="number"
                       min={1}
@@ -1014,7 +1014,7 @@ export default function MarketplaceSimple() {
                     onClick={() => addToCart(selectedProduct)}
                     className="btn btn-primary min-h-12 w-full text-base"
                   >
-                    Shto në shportë —{' '}
+                    {t("Shto në shportë —")}{' '}
                     {Math.round(
                       (Number(selectedProduct.price) || 0) *
                         (parseInt(
@@ -1042,14 +1042,14 @@ export default function MarketplaceSimple() {
                     }}
                     className="w-full py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold text-lg"
                   >
-                    Ndrysho produktin
+                    {t("Ndrysho produktin")}
                   </button>
                   <button
                     type="button"
                     onClick={() => deleteProduct(selectedProduct.id)}
                     className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold text-lg"
                   >
-                    🗑️ Fshi Produktin
+                    {t("🗑️ Fshi Produktin")}
                   </button>
                 </div>
               )}

@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import UserProfileBrowsePager, { useBrowseColors } from '../components/UserProfileBrowsePager';
 import { extractErrorMessage, profilesRequest } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 
 export default function BrowseProfilesScreen({ navigation }) {
+  const { t } = useLocale();
   const { isDark } = useTheme();
   const colors = useBrowseColors(isDark);
 
@@ -22,12 +24,12 @@ export default function BrowseProfilesScreen({ navigation }) {
       const response = await profilesRequest({ limit: 80, search: query || undefined });
       setItems(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to load profiles'));
+      setError(extractErrorMessage(err, t('Failed to load profiles')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadProfiles();
@@ -60,11 +62,11 @@ export default function BrowseProfilesScreen({ navigation }) {
             ]}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search name, club, city..."
+            placeholder={t('Search name, club, city...')}
             placeholderTextColor={colors.muted}
             onSubmitEditing={onSearch}
           />
-          <TouchableOpacity style={styles.searchBtn} onPress={onSearch} accessibilityLabel="Search">
+          <TouchableOpacity style={styles.searchBtn} onPress={onSearch} accessibilityLabel={t('Search')}>
             <Ionicons name="search" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -80,7 +82,7 @@ export default function BrowseProfilesScreen({ navigation }) {
           setRefreshing(true);
           loadProfiles({ silent: true, query: search.trim() });
         }}
-        emptyMessage="No profiles found."
+        emptyMessage={t('No profiles found.')}
       />
     </View>
   );

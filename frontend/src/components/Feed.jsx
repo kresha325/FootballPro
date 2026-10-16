@@ -328,17 +328,17 @@ const Feed = () => {
   }, [highlightedPostId, allPosts]);
 
   const handleDeletePost = async (postId) => {
-    if (!window.confirm('Je i sigurt që do ta fshish këtë postim?')) return;
+    if (!window.confirm(t('Je i sigurt që do ta fshish këtë postim?'))) return;
     
     setDeletingPost(postId);
     try {
       await postsAPI.deletePost(postId);
       const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; }})();
       await fetchPosts({ followedOnly });
-      alert('Postimi u fshi!');
+      alert(t('Postimi u fshi!'));
     } catch (error) {
       console.error('Error deleting post:', error);
-      alert('Nuk u fshi postimi');
+      alert(t('Nuk u fshi postimi'));
     } finally {
       setDeletingPost(null);
     }
@@ -366,7 +366,7 @@ const Feed = () => {
     const isVideo = String(file.type || '').startsWith('video/');
     const maxBytes = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxBytes) {
-      alert(isVideo ? 'Videoja është shumë e madhe (max 100MB).' : 'Fotoja është shumë e madhe (max 10MB).');
+      alert(isVideo ? t('Videoja është shumë e madhe (max 100MB).') : t('Fotoja është shumë e madhe (max 10MB).'));
       e.target.value = '';
       return;
     }
@@ -380,7 +380,7 @@ const Feed = () => {
     e.preventDefault();
     if (!editingPost) return;
     if (!editContent.trim() && !editFile && !editFilePreview) {
-      alert('Postimi duhet të ketë tekst ose media.');
+      alert(t('Postimi duhet të ketë tekst ose media.'));
       return;
     }
     setSavingEdit(true);
@@ -401,23 +401,23 @@ const Feed = () => {
       await fetchPosts({ followedOnly });
     } catch (error) {
       console.error('Error updating post:', error);
-      alert('Nuk u përditësua postimi');
+      alert(t('Nuk u përditësua postimi'));
     } finally {
       setSavingEdit(false);
     }
   };
 
   const handleDeleteComment = async (commentId, postId) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this comment?'))) return;
     
     setDeletingComment(commentId);
     try {
       await postsAPI.deleteComment(commentId);
       await fetchComments(postId); // Refresh comments
-      alert('Comment deleted successfully!');
+      alert(t('Comment deleted successfully!'));
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert('Failed to delete comment');
+      alert(t('Failed to delete comment'));
     } finally {
       setDeletingComment(null);
     }
@@ -484,9 +484,9 @@ const Feed = () => {
       const status = error?.response?.status;
       const msg = error?.response?.data?.msg || error?.response?.data?.error;
       if (status === 413) {
-        alert(msg || 'Skedari është shumë i madh. Foto max 10MB, video max 100MB.');
+        alert(msg || t('Skedari është shumë i madh. Foto max 10MB, video max 100MB.'));
       } else {
-        alert(msg || 'Dështoi publikimi i postimit. Provo përsëri.');
+        alert(msg || t('Dështoi publikimi i postimit. Provo përsëri.'));
       }
     } finally {
       setPosting(false);
@@ -696,7 +696,7 @@ const Feed = () => {
       {postsError && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--xt-color-danger)]/35 bg-[var(--xt-color-danger)]/5 p-4 text-sm" role="alert"><span>{postsError}</span><button type="button" onClick={() => {
         const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; } })();
         fetchPosts({ followedOnly });
-      }} className="btn btn-quiet min-h-10 text-xs">Provo përsëri</button></div>}
+      }} className="btn btn-quiet min-h-10 text-xs">{t('Provo përsëri')}</button></div>}
 
       {/* Create Post Form (flat background, no grid overlay) */}
       <div className="xt-card mb-5 p-4 sm:p-5">
@@ -708,7 +708,7 @@ const Feed = () => {
                 id="new-post"
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
-                placeholder="Shkruaj postimin tënd..."
+                placeholder={t('Shkruaj postimin tënd...')}
                 className="input min-h-24 resize-y rounded-xl p-4 text-sm"
                 rows="3"
                 style={{ minHeight: 96 }}
@@ -762,10 +762,10 @@ const Feed = () => {
                 <button
                   type="button"
                   className="btn btn-quiet min-h-11"
-                  title="Add emoji"
+                  title={t('Add emoji')}
                   onClick={() => setShowEmojiPicker((prev) => !prev)}
                 >
-                  <span className="text-sm">Emoji</span>
+                  <span className="text-sm">{t('Emoji')}</span>
                 </button>
                 {showEmojiPicker && (
                   <div className="absolute z-50 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg p-2 flex flex-wrap gap-2 w-64">
@@ -790,17 +790,17 @@ const Feed = () => {
               <button
                 type="button"
                 className="btn btn-quiet min-h-11"
-                title="Add location"
+                title={t('Add location')}
                 onClick={() => setShowLocationInput((prev) => !prev)}
               >
-                <span className="text-sm">Vendndodhje</span>
+                <span className="text-sm">{t('Vendndodhje')}</span>
               </button>
               {showLocationInput && (
                 <input
                   type="text"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
-                  placeholder="Vendndodhja (p.sh. Prishtinë, Stadiumi X...)"
+                  placeholder={t('Vendndodhja (p.sh. Prishtinë, Stadiumi X...)')}
                   className="input min-w-[180px]"
                 />
               )}
@@ -815,14 +815,14 @@ const Feed = () => {
               {posting ? 'Duke postuar...' : 'Posto'}
             </button>
           </div>
-          <div id="post-button-desc" className="sr-only">Publiko postimin për ta ndarë me të tjerët</div>
+          <div id="post-button-desc" className="sr-only">{t('Publiko postimin për ta ndarë me të tjerët')}</div>
         </form>
         </div>
       </div>
 
       {/* Posts List */}
       <div className="space-y-4">
-        {!displayPosts.length && <div className="xt-empty-state xt-card"><div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[var(--xt-color-gold)]"><MagnifyingGlassIcon className="h-6 w-6" /></div><h3 className="text-base text-[var(--xt-color-text)]">Nuk ka përditësime për këtë kërkim</h3><p className="max-w-sm text-sm">Provo një fjalë tjetër ose ndiq profile që feed-i yt të bëhet më relevant.</p><Link to="/profiles" className="btn btn-outline">Zbulo talente</Link></div>}
+        {!displayPosts.length && <div className="xt-empty-state xt-card"><div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[var(--xt-color-gold)]"><MagnifyingGlassIcon className="h-6 w-6" /></div><h3 className="text-base text-[var(--xt-color-text)]">{t('Nuk ka përditësime për këtë kërkim')}</h3><p className="max-w-sm text-sm">{t('Provo një fjalë tjetër ose ndiq profile që feed-i yt të bëhet më relevant.')}</p><Link to="/profiles" className="btn btn-outline">{t('Zbulo talente')}</Link></div>}
         {displayPosts.map((post, index) => (
           <div 
             key={post.id}
@@ -838,7 +838,7 @@ const Feed = () => {
               <article className={`xt-card flex-1 p-4 transition-colors sm:p-5 ${post.sponsors?.length > 0 ? 'border-[var(--xt-color-gold)]/40 bg-[var(--xt-color-surface-raised)]' : ''} ${highlightedPostId === String(post.id) ? 'ring-2 ring-[var(--xt-color-gold)]' : ''}`}>
                 {post.sponsors?.length > 0 && (
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="xt-badge xt-badge-gold">Sponsored</span>
+                    <span className="xt-badge xt-badge-gold">{t('Sponsored')}</span>
                     <SponsorBanner sponsors={post.sponsors} compact />
                   </div>
                 )}
@@ -889,7 +889,7 @@ const Feed = () => {
                       type="button"
                       onClick={() => openSponsorModal(post.id)}
                       className="btn btn-quiet min-h-10 px-3 text-xs"
-                      title="Sponsorizo këtë post"
+                      title={t('Sponsorizo këtë post')}
                     >
                       S
                     </button>
@@ -897,7 +897,7 @@ const Feed = () => {
                       type="button"
                       onClick={() => openEditPost(post)}
                       className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white"
-                      title="Ndrysho postimin"
+                      title={t('Ndrysho postimin')}
                     >
                       ✏️
                     </button>
@@ -906,7 +906,7 @@ const Feed = () => {
                       onClick={() => handleDeletePost(post.id)}
                       disabled={deletingPost === post.id}
                       className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-danger)] hover:bg-white/5 disabled:opacity-50"
-                      title="Fshi postimin"
+                      title={t('Fshi postimin')}
                     >
                       {deletingPost === post.id ? '⏳' : '🗑️'}
                     </button>
@@ -919,11 +919,11 @@ const Feed = () => {
                           <button
                             className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
                             onClick={closeSponsorModal}
-                            aria-label="Mbyll"
+                            aria-label={t('Mbyll')}
                           >
                             &times;
                           </button>
-                          <h2 className="text-xl font-bold mb-4 text-orange-600">Shto Sponsor për Postin</h2>
+                          <h2 className="text-xl font-bold mb-4 text-orange-600">{t('Shto Sponsor për Postin')}</h2>
                           <form
                             onSubmit={e => {
                               e.preventDefault();
@@ -933,7 +933,7 @@ const Feed = () => {
                             className="space-y-4"
                           >
                             <div>
-                              <label className="block text-sm font-medium mb-1">Emri i Firmës</label>
+                              <label className="block text-sm font-medium mb-1">{t('Emri i Firmës')}</label>
                               <input
                                 type="text"
                                 className="w-full border rounded px-3 py-2"
@@ -943,7 +943,7 @@ const Feed = () => {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-1">Linku</label>
+                              <label className="block text-sm font-medium mb-1">{t('Linku')}</label>
                               <input
                                 type="url"
                                 className="w-full border rounded px-3 py-2"
@@ -953,7 +953,7 @@ const Feed = () => {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-1">Logo/Fotografia</label>
+                              <label className="block text-sm font-medium mb-1">{t('Logo/Fotografia')}</label>
                               <input
                                 type="file"
                                 accept="image/*"
@@ -1005,7 +1005,7 @@ const Feed = () => {
                   type="button"
                   className="mb-4 block w-full cursor-zoom-in text-left"
                   onClick={() => openPostPager(post.id)}
-                  aria-label="Hap postimin në ekran të plotë"
+                  aria-label={t('Hap postimin në ekran të plotë')}
                 >
                   <img 
                     src={getCloudinarySafeUrl(getFullUrl(post.imageUrl))}
@@ -1025,7 +1025,7 @@ const Feed = () => {
                   type="button"
                   className="mb-4 block w-full cursor-zoom-in text-left"
                   onClick={() => openPostPager(post.id)}
-                  aria-label="Hap postimin në ekran të plotë"
+                  aria-label={t('Hap postimin në ekran të plotë')}
                 >
                   <video 
                     src={getCloudinarySafeUrl(getFullUrl(post.videoUrl || post.imageUrl))}
@@ -1093,9 +1093,9 @@ const Feed = () => {
                     onClick={() => setSharingPost(post.id)}
                     className="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[.03] px-3 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/[.07]"
                     aria-label={`Ndaj postimin e ${post.author?.username || 'I panjohur'}`}
-                    title="Ndaj"
+                    title={t('Ndaj')}
                   >
-                    <span className="text-sm">Ndaj</span>
+                    <span className="text-sm">{t('Ndaj')}</span>
                   </button>
                 </div>
               </div>
@@ -1104,8 +1104,8 @@ const Feed = () => {
             {/* Share Modal */}
             {sharingPost === post.id && (
               <div className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4" role="dialog" aria-labelledby="share-dialog-title" aria-describedby="share-dialog-desc">
-                <p id="share-dialog-title" className="text-sm text-gray-600 dark:text-gray-400 mb-2">Ndaje këtë postim:</p>
-                <div id="share-dialog-desc" className="sr-only">Opsionet e ndarjes për postimin</div>
+                <p id="share-dialog-title" className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('Ndaje këtë postim:')}</p>
+                <div id="share-dialog-desc" className="sr-only">{t('Opsionet e ndarjes për postimin')}</div>
                 <div className="flex space-x-2">
                   <FacebookShareButton url={`${window.location.origin}/post/${post.id}`} quote={post.content}>
                     <FacebookIcon size={32} round />
@@ -1120,7 +1120,7 @@ const Feed = () => {
                 <button
                   onClick={() => setSharingPost(null)}
                   className="mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                  aria-label="Mbyll opsionet e ndarjes"
+                  aria-label={t('Mbyll opsionet e ndarjes')}
                 >
                   Mbyll
                 </button>
@@ -1137,7 +1137,7 @@ const Feed = () => {
                     value={commentInputs[post.id] || ''}
                     onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                     onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
-                    placeholder="Shkruaj një koment..."
+                    placeholder={t('Shkruaj një koment...')}
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -1177,7 +1177,7 @@ const Feed = () => {
                                 onClick={() => handleDeleteComment(comment.id, post.id)}
                                 disabled={deletingComment === comment.id}
                                 className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 text-xs"
-                                title="Fshi komentin"
+                                title={t('Fshi komentin')}
                               >
                                 {deletingComment === comment.id ? '⏳' : '🗑️'}
                               </button>
@@ -1216,25 +1216,25 @@ const Feed = () => {
             type="button"
             className="absolute top-2 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-2xl"
             onClick={closeEditPost}
-            aria-label="Mbyll"
+            aria-label={t('Mbyll')}
           >
             &times;
           </button>
-          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Ndrysho postimin</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Ndrysho postimin')}</h2>
           <form onSubmit={handleSaveEditPost} className="space-y-4">
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               rows={4}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              placeholder="Shkruaj postimin…"
+              placeholder={t('Shkruaj postimin…')}
             />
             <input
               type="text"
               value={editLocation}
               onChange={(e) => setEditLocation(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              placeholder="Lokacioni (opsionale)"
+              placeholder={t('Lokacioni (opsionale)')}
             />
             {editFilePreview && (
               <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -1285,26 +1285,26 @@ const Feed = () => {
     <aside className="min-w-0 space-y-4 lg:sticky lg:top-20">
       <section className="xt-card p-4" aria-labelledby="matches-widget-title">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">On the pitch</p><h2 id="matches-widget-title" className="mt-1 text-base">Ndeshjet e ardhshme</h2></div>
-          <Link to="/matches" aria-label="Shiko të gjitha ndeshjet" className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-gold-bright)] hover:bg-white/5"><ArrowRightIcon className="h-4 w-4" /></Link>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">{t('On the pitch')}</p><h2 id="matches-widget-title" className="mt-1 text-base">{t('Ndeshjet e ardhshme')}</h2></div>
+          <Link to="/matches" aria-label={t('Shiko të gjitha ndeshjet')} className="grid h-10 w-10 place-items-center rounded-lg text-[var(--xt-color-gold-bright)] hover:bg-white/5"><ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
-        {matchesError ? <p className="text-sm text-[var(--xt-color-text-muted)]">Ndeshjet nuk mund të ngarkoheshin.</p> : upcomingMatches.length ? <ul className="space-y-2">{upcomingMatches.slice(0, 4).map((match) => <li key={match.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3">
-          <div className="flex items-center justify-between gap-2 text-sm font-semibold"><span className="truncate">{match.homeUser ? `${match.homeUser.firstName || ''} ${match.homeUser.lastName || ''}`.trim() : `Ekipi ${match.homeUserId}`}</span><span className="text-xs font-bold text-[var(--xt-color-gold-bright)]">VS</span><span className="truncate text-right">{match.awayUser ? `${match.awayUser.firstName || ''} ${match.awayUser.lastName || ''}`.trim() : (match.awayUserId ? `Ekipi ${match.awayUserId}` : 'TBD')}</span></div>
+        {matchesError ? <p className="text-sm text-[var(--xt-color-text-muted)]">{t('Ndeshjet nuk mund të ngarkoheshin.')}</p> : upcomingMatches.length ? <ul className="space-y-2">{upcomingMatches.slice(0, 4).map((match) => <li key={match.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3">
+          <div className="flex items-center justify-between gap-2 text-sm font-semibold"><span className="truncate">{match.homeUser ? `${match.homeUser.firstName || ''} ${match.homeUser.lastName || ''}`.trim() : `Ekipi ${match.homeUserId}`}</span><span className="text-xs font-bold text-[var(--xt-color-gold-bright)]">{t('VS')}</span><span className="truncate text-right">{match.awayUser ? `${match.awayUser.firstName || ''} ${match.awayUser.lastName || ''}`.trim() : (match.awayUserId ? `Ekipi ${match.awayUserId}` : 'TBD')}</span></div>
           <p className="mt-2 text-xs text-[var(--xt-color-text-subtle)]">{new Date(match.matchDate).toLocaleString()} {match.Tournament?.name ? `· ${match.Tournament.name}` : ''}</p>
-        </li>)}</ul> : <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-[var(--xt-color-text-muted)]">Nuk ka ndeshje të planifikuara tani.</p>}
-        <Link to="/matches" className="btn btn-quiet mt-3 w-full text-sm">Kalendari i ndeshjeve</Link>
+        </li>)}</ul> : <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-[var(--xt-color-text-muted)]">{t('Nuk ka ndeshje të planifikuara tani.')}</p>}
+        <Link to="/matches" className="btn btn-quiet mt-3 w-full text-sm">{t('Kalendari i ndeshjeve')}</Link>
       </section>
 
       <section className="xt-card p-4" aria-labelledby="tournaments-widget-title">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">Competition</p>
-            <h2 id="tournaments-widget-title" className="mt-1 text-base">Turne aktive</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[var(--xt-color-gold)]">{t('Competition')}</p>
+            <h2 id="tournaments-widget-title" className="mt-1 text-base">{t('Turne aktive')}</h2>
           </div>
           <TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
         </div>
         {trendingError ? (
-          <p className="text-sm text-[var(--xt-color-text-muted)]" role="status">Turnetë nuk mund të ngarkoheshin.</p>
+          <p className="text-sm text-[var(--xt-color-text-muted)]" role="status">{t('Turnetë nuk mund të ngarkoheshin.')}</p>
         ) : trending.length ? (
           <ul className="space-y-2">
             {trending.slice(0, 4).map((t) => {
@@ -1329,15 +1329,15 @@ const Feed = () => {
           </ul>
         ) : (
           <div className="xt-empty-state px-2 py-4">
-            <p className="text-sm">Nuk ka turne aktive për momentin.</p>
+            <p className="text-sm">{t('Nuk ka turne aktive për momentin.')}</p>
           </div>
         )}
-        <Link to="/tournaments" className="btn btn-quiet mt-3 w-full text-sm">Shfleto turnetë</Link>
+        <Link to="/tournaments" className="btn btn-quiet mt-3 w-full text-sm">{t('Shfleto turnetë')}</Link>
       </section>
 
       {myTournaments.length > 0 && (
         <section className="xt-card p-4" aria-labelledby="my-tournaments-title">
-          <h2 id="my-tournaments-title" className="mb-3 text-base">Turnetë e mia</h2>
+          <h2 id="my-tournaments-title" className="mb-3 text-base">{t('Turnetë e mia')}</h2>
           <ul className="space-y-2">
             {myTournaments.slice(0, 3).map((t) => {
               const meta = tournamentMetaLine(t);
@@ -1375,7 +1375,7 @@ const Feed = () => {
         </section>
       )}
 
-      <section className="xt-card p-4" aria-labelledby="quick-actions-title"><h2 id="quick-actions-title" className="mb-3 text-base">Veprime të shpejta</h2><ul className="space-y-1">{quickActions.map(({ label, to, icon }) => <li key={to}><Link to={to} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)]">{icon}{label}</Link></li>)}</ul></section>
+      <section className="xt-card p-4" aria-labelledby="quick-actions-title"><h2 id="quick-actions-title" className="mb-3 text-base">{t('Veprime të shpejta')}</h2><ul className="space-y-1">{quickActions.map(({ label, to, icon }) => <li key={to}><Link to={to} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)]">{icon}{label}</Link></li>)}</ul></section>
       <StadiumStrip />
     </aside>
   </div>

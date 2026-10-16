@@ -268,7 +268,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Capacity</label>
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">{t("Capacity")}</label>
             <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
               {(profile.capacity ?? clubData.capacity) != null &&
               String(profile.capacity ?? clubData.capacity) !== ''
@@ -322,7 +322,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* Club Statistics */}
       {clubMetrics.length > 0 && (
         <section className="xt-card p-4 sm:p-6">
-          <div className="xt-section-header"><div><p className="text-xs font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">Përmbledhje</p><h3 className="mt-1 text-xl font-semibold">Të dhënat e klubit</h3></div></div>
+          <div className="xt-section-header"><div><p className="text-xs font-bold uppercase tracking-wide text-[var(--xt-color-gold-bright)]">{t("Përmbledhje")}</p><h3 className="mt-1 text-xl font-semibold">{t("Të dhënat e klubit")}</h3></div></div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {clubMetrics.map((metric) => <div className="xt-stat-card" key={metric.label}><p className="text-2xl font-bold tabular-nums text-[var(--xt-color-gold-bright)]">{metric.value}</p><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{metric.label}</p></div>)}
           </div>
@@ -332,7 +332,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* About Club */}
       {profile.bio && (
         <div className="xt-card p-4 sm:p-6">
-          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Rreth {profile.club || 'klubit'}</h3>
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">{t("Rreth")} {profile.club || 'klubit'}</h3>
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
         </div>
       )}
@@ -340,15 +340,15 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* Club Staff */}
       <div className="xt-card p-4 sm:p-6">
         <h3 className="text-xl font-bold mb-1 text-[var(--xt-color-text)] flex items-center gap-2">
-          Stafi teknik dhe drejtues
+          {t("Stafi teknik dhe drejtues")}
         </h3>
         <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
-          Sipas kategorisë së ekipit dhe rolit — klikoni për profilin.
+          {t("Sipas kategorisë së ekipit dhe rolit — klikoni për profilin.")}
         </p>
         {loadingStaff ? (
-          <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
+          <div className="text-[var(--xt-color-text-muted)]">{t("Duke ngarkuar...")}</div>
         ) : clubStaff.length === 0 ? (
-          <div className="text-[var(--xt-color-text-muted)]">Nuk ka staf aktiv ende.</div>
+          <div className="text-[var(--xt-color-text-muted)]">{t("Nuk ka staf aktiv ende.")}</div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedStaff).map(([group, staffList]) => (
@@ -376,7 +376,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                             {staffUser?.firstName} {staffUser?.lastName}
                           </div>
                           <div className="text-sm text-[var(--xt-color-gold-bright)]">
-                            {staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff'}
+                            {t(staffRoleLabels[staff.staffRole] || staff.staffRole || 'Staff')}
                           </div>
                         </div>
                       </>
@@ -404,12 +404,12 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {isOwner && (
         <div className="xt-card p-4 sm:p-6">
           <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
-            <span>⏳</span> Kërkesa në pritje
+            <span>⏳</span> {t("Kërkesa në pritje")}
           </h3>
           {loadingPending ? (
-            <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
+            <div className="text-[var(--xt-color-text-muted)]">{t("Duke ngarkuar...")}</div>
           ) : pendingMembers.filter(isAthleteMember).length === 0 ? (
-            <div className="text-[var(--xt-color-text-muted)]">Nuk ka kërkesa në pritje.</div>
+            <div className="text-[var(--xt-color-text-muted)]">{t("Nuk ka kërkesa në pritje.")}</div>
           ) : (
             <div className="space-y-3">
               {pendingMembers.filter(isAthleteMember).map((member) => (
@@ -424,7 +424,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                       <div className="font-semibold text-[var(--xt-color-text)]">
                         {member.athlete?.firstName} {member.athlete?.lastName}
                       </div>
-                      <div className="text-xs text-[var(--xt-color-gold-bright)] font-medium">Atlet</div>
+                      <div className="text-xs text-[var(--xt-color-gold-bright)] font-medium">{t("Atlet")}</div>
                       {member.position && (
                         <div className="text-sm text-gray-500">{member.position}</div>
                       )}
@@ -436,14 +436,14 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                       onClick={() => handleMembershipDecision(member.id, 'approved')}
                       className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                     >
-                      Aprovo
+                      {t("Aprovo")}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleMembershipDecision(member.id, 'rejected')}
                       className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                     >
-                      Refuzo
+                      {t("Refuzo")}
                     </button>
                   </div>
                 </div>
@@ -455,14 +455,14 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Squad by group */}
       <div className="xt-card p-4 sm:p-6">
-        <h3 className="text-xl font-bold mb-1 text-[var(--xt-color-text)]">Skuadra e lojtarëve</h3>
+        <h3 className="text-xl font-bold mb-1 text-[var(--xt-color-text)]">{t("Skuadra e lojtarëve")}</h3>
         <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
-          Të ndarë sipas ekipit / kategorisë — klikoni për profilin.
+          {t("Të ndarë sipas ekipit / kategorisë — klikoni për profilin.")}
         </p>
         {loadingMembers ? (
-          <div className="text-[var(--xt-color-text-muted)]">Duke ngarkuar...</div>
+          <div className="text-[var(--xt-color-text-muted)]">{t("Duke ngarkuar...")}</div>
         ) : athleteMembers.length === 0 ? (
-          <div className="text-[var(--xt-color-text-muted)]">Nuk ka atletë të aprovuar ende.</div>
+          <div className="text-[var(--xt-color-text-muted)]">{t("Nuk ka atletë të aprovuar ende.")}</div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedMembers).map(([group, members]) => (
@@ -504,11 +504,11 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
                           </div>
                           <div className="flex flex-wrap gap-1 mt-1">
                             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                              Atlet
+                              {t("Atlet")}
                             </span>
                             {competition && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
-                                Ligë: {competition}
+                                {t("Ligë:")} {competition}
                                 {member.squadGroup && String(member.competitionCategory || '').toLowerCase().startsWith('u')
                                   ? `/${String(member.squadGroup).toUpperCase()}`
                                   : ''}
@@ -538,15 +538,15 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* Club Roster */}
       {isOwner && (
         <div className="xt-card p-4 sm:p-6">
-          <h3 className="text-xl font-bold mb-2 text-[var(--xt-color-text)]">Skuadra e klubit</h3>
+          <h3 className="text-xl font-bold mb-2 text-[var(--xt-color-text)]">{t("Skuadra e klubit")}</h3>
           <p className="text-sm text-[var(--xt-color-text-muted)] mb-4">
-            Menaxho kërkesat dhe anëtarët e klubit në faqen e dedikuar.
+            {t("Menaxho kërkesat dhe anëtarët e klubit në faqen e dedikuar.")}
           </p>
           <Link
             to="/club-roster"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
           >
-            Hap menaxhimin e klubit
+            {t("Hap menaxhimin e klubit")}
           </Link>
         </div>
       )}
@@ -555,7 +555,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {clubData.achievements && clubData.achievements.length > 0 && (
         <div className="xt-card p-4 sm:p-6">
           <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
-            <span>🏅</span> Achievements & Honors
+            <span>🏅</span> {t("Achievements & Honors")}
           </h3>
           <div className="space-y-3">
             {clubData.achievements.map((achievement, index) => (
@@ -575,7 +575,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {clubData.colors && clubData.colors.length > 0 && (
         <div className="xt-card p-4 sm:p-6">
           <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)] flex items-center gap-2">
-            <span>🎨</span> Team Colors
+            <span>🎨</span> {t("Team Colors")}
           </h3>
           <div className="flex gap-3">
             {clubData.colors.map((color, index) => (
@@ -593,7 +593,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* Contact & Social */}
       {profile.contact && (
         <div className="xt-card p-4 sm:p-6">
-          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Kontakti</h3>
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">{t("Kontakti")}</h3>
           <div className="space-y-3">
             {profile.contact.phone && (
               <div className="flex items-center gap-3">

@@ -4,8 +4,10 @@ import { deleteGalleryItemRequest, extractErrorMessage, myGalleryRequest } from 
 import { VideoPlayerModal, VideoPoster } from '../components/media/LazyVideo';
 import OptimizedImage from '../components/media/OptimizedImage';
 import { absoluteBackendUrl } from '../config/constants';
+import { useLocale } from '../context/LocaleContext';
 
 function GalleryCard({ item, onDelete, onPlay }) {
+  const { t } = useLocale();
   const isVideo = !!item?.videoUrl;
 
   return (
@@ -27,13 +29,14 @@ function GalleryCard({ item, onDelete, onPlay }) {
       )}
 
       <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(item)}>
-        <Text style={styles.deleteButtonText}>Delete</Text>
+        <Text style={styles.deleteButtonText}>{t('Fshi')}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 export default function GalleryScreen() {
+  const { t } = useLocale();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -113,7 +116,7 @@ export default function GalleryScreen() {
           colors={['#9A6B12']}
         />
       }
-      ListEmptyComponent={<Text style={styles.empty}>Your gallery is empty.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{t('Galeria është bosh.')}</Text>}
     />
     <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
     </>

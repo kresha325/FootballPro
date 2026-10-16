@@ -4,6 +4,7 @@ import { useReducedMotion } from 'framer-motion';
 import { UserIcon } from '@heroicons/react/24/outline';
 import { profileAPI } from '../services/api';
 import { getFullUrl } from '../utils/mediaUrl';
+import { useLocale } from '../contexts/LocaleContext';
 
 /** Dwell times (ms) cycle so each profile stays on screen for a different duration. */
 const DWELL_MS = [4200, 5600, 4800, 6400, 5000, 5800];
@@ -22,6 +23,7 @@ function playerName(player) {
  * Rotating real athlete cards for the landing platform preview.
  */
 export default function LandingPlayerShowcase() {
+  const { t } = useLocale();
   const reduceMotion = useReducedMotion();
   const [players, setPlayers] = useState([]);
   const [index, setIndex] = useState(0);
@@ -63,9 +65,9 @@ export default function LandingPlayerShowcase() {
     return (
       <div className="xt-preview-profile xt-preview-profile--live">
         <div className="xt-player-silhouette xt-player-silhouette--loading" />
-        <span className="xt-preview-tag">LOJTARËT NË PLATFORMË</span>
+        <span className="xt-preview-tag">{t('LOJTARËT NË PLATFORMË')}</span>
         <h3>Duke ngarkuar…</h3>
-        <p>Profile reale nga X TALENTI</p>
+        <p>{t('Profile reale nga X TALENTI')}</p>
       </div>
     );
   }
@@ -76,13 +78,13 @@ export default function LandingPlayerShowcase() {
         <div className="xt-player-silhouette">
           <UserIcon className="h-12 w-12" />
         </div>
-        <span className="xt-preview-tag">PLAYER PROFILE</span>
-        <h3>Player Profile</h3>
-        <p>Profile · CV · Highlights</p>
+        <span className="xt-preview-tag">{t('PLAYER PROFILE')}</span>
+        <h3>{t('Player Profile')}</h3>
+        <p>{t('Profile · CV · Highlights')}</p>
         <div className="xt-progress">
           <span />
         </div>
-        <small>PROFILE COMPLETION</small>
+        <small>{t('PROFILE COMPLETION')}</small>
       </div>
     );
   }
@@ -125,7 +127,7 @@ export default function LandingPlayerShowcase() {
           </div>
         ) : null}
       </div>
-      <span className="xt-preview-tag">LOJTARËT NË PLATFORMË</span>
+      <span className="xt-preview-tag">{t('LOJTARËT NË PLATFORMË')}</span>
       <h3>
         {playerName(player)}
         {player.verified ? <span className="xt-verified-dot" title="I verifikuar" /> : null}

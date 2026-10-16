@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckIcon, XMarkIcon, SparklesIcon, StarIcon } from '@heroicons/react/24/solid';
 import api from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 function Premium() {
+  const { t } = useLocale();
   const { user, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState('monthly');
@@ -29,7 +31,7 @@ function Premium() {
         const { data } = await api.get(`/premium/verify-session/${sessionId}`);
         if (data.success) {
           await refreshUser?.();
-          alert('Premium u aktivizua me sukses!');
+          alert(t('Premium was activated successfully!'));
         }
       } catch (e) {
         console.error('Premium verify:', e);
@@ -80,7 +82,7 @@ function Premium() {
 
       if (data.mode === 'demo' && data.success) {
         await refreshUser?.();
-        alert(data.message || 'Premium activated (demo mode).');
+          alert(data.message || t('Premium activated (demo mode).'));
         setShowPaymentModal(false);
         return;
       }
@@ -90,10 +92,10 @@ function Premium() {
         return;
       }
 
-      setCheckoutError('Could not start checkout.');
+      setCheckoutError(t('Could not start checkout.'));
     } catch (error) {
       console.error('Subscription error:', error);
-      setCheckoutError(error.response?.data?.msg || 'Payment failed. Please try again.');
+      setCheckoutError(error.response?.data?.msg || t('Payment failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +109,10 @@ function Premium() {
         <div className="relative z-10">
           <div className="mb-4 flex items-center gap-3">
             <StarIcon className="h-9 w-9 text-[var(--xt-color-gold-bright)]" />
-            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Membership</p><h1 className="mt-1 text-3xl font-black text-white sm:text-4xl">Premium</h1></div>
+            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Membership')}</p><h1 className="mt-1 text-3xl font-black text-white sm:text-4xl">Premium</h1></div>
           </div>
           <p className="max-w-2xl text-base text-[var(--xt-color-text-muted)] sm:text-lg">
-            Unlock exclusive features and boost your football career to the next level.
-            Get noticed by scouts worldwide!
+            {t('Unlock exclusive features and boost your football career to the next level. Get noticed by scouts worldwide!')}
           </p>
         </div>
         <SparklesIcon className="pointer-events-none absolute bottom-4 right-5 h-20 w-20 text-[var(--xt-color-gold)]/10" aria-hidden="true" />
@@ -119,10 +120,9 @@ function Premium() {
 
       {!paymentsLive ? (
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100">
-          <p className="font-semibold">Pagesat nuk janë aktive</p>
+          <p className="font-semibold">{t('Payments are not active')}</p>
           <p className="text-sm mt-1">
-            Premium aktivizohet në mënyrë demo (pa kartë). Marketplace përdor XCoin. Stripe aktivizohet vetëm kur
-            PAYMENTS_ENABLED=true në server.
+            {t('Premium is activated in demo mode (without a card). Marketplace uses XCoin. Stripe is enabled only when PAYMENTS_ENABLED=true on the server.')}
           </p>
         </div>
       ) : null}
@@ -134,10 +134,10 @@ function Premium() {
             <CheckIcon className="h-8 w-8 text-green-600" />
             <div>
               <h2 className="text-xl font-bold text-green-900 dark:text-green-400">
-                You're a Premium Member!
+                {t("You're a Premium Member!")}
               </h2>
               <p className="text-green-700 dark:text-green-300">
-                Your subscription is active and renews on {new Date(user.premiumExpiresAt).toLocaleDateString()}
+                {t('Your subscription is active and renews on')} {new Date(user.premiumExpiresAt).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -148,10 +148,10 @@ function Premium() {
             <SparklesIcon className="h-8 w-8 text-blue-600" />
             <div>
               <h2 className="text-xl font-bold text-blue-900 dark:text-blue-400">
-                Free Account
+                {t('Free Account')}
               </h2>
               <p className="text-blue-700 dark:text-blue-300">
-                Upgrade to Premium to unlock all features and stand out!
+                {t('Upgrade to Premium to unlock all features and stand out!')}
               </p>
             </div>
           </div>
@@ -168,7 +168,7 @@ function Premium() {
               : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
           }`}
         >
-          Monthly
+          {t('Monthly')}
         </button>
         <button
           onClick={() => setSelectedPlan('yearly')}
@@ -178,9 +178,9 @@ function Premium() {
               : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
           }`}
         >
-          Yearly
+          {t('Yearly')}
           <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">
-            Best Value
+            {t('Best Value')}
           </span>
         </button>
       </div>
@@ -189,60 +189,60 @@ function Premium() {
       <div className="grid md:grid-cols-2 gap-8 mb-12">
         {/* Free Plan */}
         <div className="xt-card p-5 sm:p-8">
-          <h3 className="text-2xl font-bold text-[var(--xt-color-text)] mb-2">Free</h3>
+          <h3 className="text-2xl font-bold text-[var(--xt-color-text)] mb-2">{t('Free')}</h3>
           <div className="text-4xl font-bold text-[var(--xt-color-text)] mb-6">
             €0
-            <span className="text-lg font-normal text-gray-500"> / 30 days</span>
+            <span className="text-lg font-normal text-gray-500">{t('/ 30 days')}</span>
           </div>
           <ul className="space-y-3 mb-8">
             <li className="flex items-start gap-2">
               <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-muted)]">Basic profile</span>
+              <span className="text-[var(--xt-color-text-muted)]">{t('Basic profile')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-muted)]">Post highlights</span>
+              <span className="text-[var(--xt-color-text-muted)]">{t('Post highlights')}</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-muted)]">Join tournaments</span>
+              <span className="text-[var(--xt-color-text-muted)]">{t('Join tournaments')}</span>
             </li>
             <li className="flex items-start gap-2">
               <XMarkIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-subtle)]">Advanced analytics</span>
+              <span className="text-[var(--xt-color-text-subtle)]">{t('Advanced analytics')}</span>
             </li>
             <li className="flex items-start gap-2">
               <XMarkIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-subtle)]">Scout recommendations</span>
+              <span className="text-[var(--xt-color-text-subtle)]">{t('Scout recommendations')}</span>
             </li>
             <li className="flex items-start gap-2">
               <XMarkIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <span className="text-[var(--xt-color-text-subtle)]">Premium badge</span>
+              <span className="text-[var(--xt-color-text-subtle)]">{t('Premium badge')}</span>
             </li>
           </ul>
           <button
             disabled
             className="w-full py-3 rounded-lg font-medium bg-gray-200 dark:bg-gray-700 text-[var(--xt-color-text-subtle)] cursor-not-allowed"
           >
-            Current Plan
+            {t('Current Plan')}
           </button>
         </div>
 
         {/* Premium Plan */}
         <div className="xt-card relative overflow-hidden border-2 border-[var(--xt-color-gold)]/50 bg-[var(--xt-color-surface-raised)] p-5 text-[var(--xt-color-text)] shadow-xl sm:p-8">
           <div className="absolute right-0 top-0 rounded-bl-lg bg-[var(--xt-color-gold)] px-4 py-1 text-sm font-bold text-slate-950">
-            RECOMMENDED
+            {t('RECOMMENDED')}
           </div>
           <h3 className="mb-2 text-2xl font-bold text-[var(--xt-color-text)]">Premium</h3>
           <div className="mb-2 text-4xl font-bold text-[var(--xt-color-text)]">
             €{plans[selectedPlan].price}
-            <span className="text-lg font-normal text-[var(--xt-color-text-muted)]">{plans[selectedPlan].period}</span>
+            <span className="text-lg font-normal text-[var(--xt-color-text-muted)]">{t(plans[selectedPlan].period)}</span>
           </div>
           {plans[selectedPlan].originalPrice && (
             <div className="mb-4 flex items-center gap-2">
               <span className="text-[var(--xt-color-text-subtle)] line-through">€{plans[selectedPlan].originalPrice}</span>
               <span className="xt-badge xt-badge-gold">
-                {plans[selectedPlan].savings}
+                {t(plans[selectedPlan].savings)}
               </span>
             </div>
           )}
@@ -250,7 +250,7 @@ function Premium() {
             {plans[selectedPlan].features.map((feature, index) => (
               <li key={index} className="flex items-start gap-2">
                 <CheckIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--xt-color-gold-bright)]" />
-                <span className="text-[var(--xt-color-text-muted)]">{feature}</span>
+                <span className="text-[var(--xt-color-text-muted)]">{t(feature)}</span>
               </li>
             ))}
           </ul>
@@ -259,7 +259,7 @@ function Premium() {
             disabled={user?.premium}
             className="btn btn-primary min-h-12 w-full disabled:cursor-not-allowed"
           >
-            {user?.premium ? 'Already Premium' : 'Upgrade Now'}
+            {user?.premium ? t('Already Premium') : t('Upgrade Now')}
           </button>
         </div>
       </div>
@@ -267,7 +267,7 @@ function Premium() {
       {/* Benefits Section */}
       <div className="xt-card p-5 sm:p-8">
         <h2 className="text-3xl font-bold text-[var(--xt-color-text)] mb-6 text-center">
-          Why Go Premium?
+          {t('Why Go Premium?')}
         </h2>
         <div className="grid md:grid-cols-3 gap-6">
           <div className="text-center">
@@ -277,9 +277,9 @@ function Premium() {
                 <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Get Noticed</h3>
+            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">{t('Get Noticed')}</h3>
             <p className="text-[var(--xt-color-text-muted)]">
-              Premium badge makes your profile stand out to scouts and clubs
+              {t('Premium badge makes your profile stand out to scouts and clubs')}
             </p>
           </div>
           <div className="text-center">
@@ -288,9 +288,9 @@ function Premium() {
                 <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Track Progress</h3>
+            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">{t('Track Progress')}</h3>
             <p className="text-[var(--xt-color-text-muted)]">
-              Advanced analytics show your growth and engagement metrics
+              {t('Advanced analytics show your growth and engagement metrics')}
             </p>
           </div>
           <div className="text-center">
@@ -299,9 +299,9 @@ function Premium() {
                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Priority Access</h3>
+            <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">{t('Priority Access')}</h3>
             <p className="text-[var(--xt-color-text-muted)]">
-              Get early access to new features and exclusive tournaments
+              {t('Get early access to new features and exclusive tournaments')}
             </p>
           </div>
         </div>
@@ -310,39 +310,39 @@ function Premium() {
       {/* FAQ Section */}
       <div className="bg-[var(--xt-color-canvas)] rounded-lg p-8">
         <h2 className="text-3xl font-bold text-[var(--xt-color-text)] mb-6 text-center">
-          Frequently Asked Questions
+          {t('Frequently Asked Questions')}
         </h2>
         <div className="space-y-4 max-w-3xl mx-auto">
           <details className="bg-[var(--xt-color-surface)] rounded-lg p-4">
             <summary className="font-medium text-[var(--xt-color-text)] cursor-pointer">
-              Can I cancel anytime?
+              {t('Can I cancel anytime?')}
             </summary>
             <p className="mt-2 text-[var(--xt-color-text-muted)]">
-              Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
+              {t("Yes! You can cancel your subscription at any time. You'll continue to have access until the end of your billing period.")}
             </p>
           </details>
           <details className="bg-[var(--xt-color-surface)] rounded-lg p-4">
             <summary className="font-medium text-[var(--xt-color-text)] cursor-pointer">
-              What payment methods do you accept?
+              {t('What payment methods do you accept?')}
             </summary>
             <p className="mt-2 text-[var(--xt-color-text-muted)]">
-              We accept all major credit cards, PayPal, and bank transfers.
+              {t('We accept all major credit cards, PayPal, and bank transfers.')}
             </p>
           </details>
           <details className="bg-[var(--xt-color-surface)] rounded-lg p-4">
             <summary className="font-medium text-[var(--xt-color-text)] cursor-pointer">
-              Is there a free trial?
+              {t('Is there a free trial?')}
             </summary>
             <p className="mt-2 text-[var(--xt-color-text-muted)]">
-              Yes! New users get 30 days free to try the platform, then can upgrade to Basic (€5.99/mo) or Pro (€11.99/mo).
+              {t('Yes! New users get 30 days free to try the platform, then can upgrade to Basic (€5.99/mo) or Pro (€11.99/mo).')}
             </p>
           </details>
           <details className="bg-[var(--xt-color-surface)] rounded-lg p-4">
             <summary className="font-medium text-[var(--xt-color-text)] cursor-pointer">
-              Will scouts really see my profile?
+              {t('Will scouts really see my profile?')}
             </summary>
             <p className="mt-2 text-[var(--xt-color-text-muted)]">
-              Premium profiles are boosted in scout recommendations and appear higher in search results, significantly increasing your visibility.
+              {t('Premium profiles are boosted in scout recommendations and appear higher in search results, significantly increasing your visibility.')}
             </p>
           </details>
         </div>
@@ -354,7 +354,7 @@ function Premium() {
           <div className="bg-[var(--xt-color-surface)] rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-[var(--xt-color-text)]">
-                Complete Payment
+                {t('Complete Payment')}
               </h3>
               <button
                 onClick={() => setShowPaymentModal(false)}
@@ -366,13 +366,13 @@ function Premium() {
 
             <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[var(--xt-color-text-muted)]">Plan:</span>
+                <span className="text-[var(--xt-color-text-muted)]">{t('Plan:')}</span>
                 <span className="font-bold text-[var(--xt-color-text)]">
-                  {plans[selectedPlan].name}
+                  {t(plans[selectedPlan].name)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[var(--xt-color-text-muted)]">Total:</span>
+                <span className="text-[var(--xt-color-text-muted)]">{t('Total:')}</span>
                 <span className="text-2xl font-bold text-purple-600">
                   €{plans[selectedPlan].price}
                 </span>
@@ -382,18 +382,18 @@ function Premium() {
             <div className="space-y-4 mb-6">
               <input
                 type="text"
-                placeholder="Card Number"
+                placeholder={t('Card Number')}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
               />
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="MM/YY"
+                  placeholder={t('MM/YY')}
                   className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
                 <input
                   type="text"
-                  placeholder="CVV"
+                  placeholder={t('CVV')}
                   className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />
               </div>
@@ -408,11 +408,11 @@ function Premium() {
               disabled={loading}
               className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition disabled:opacity-50"
             >
-              {loading ? 'Processing...' : 'Subscribe Now'}
+              {loading ? t('Processing...') : t('Subscribe Now')}
             </button>
 
             <p className="text-xs text-[var(--xt-color-text-subtle)] text-center mt-4">
-              🔒 Secure payment powered by Stripe
+              🔒 {t('Secure payment powered by Stripe')}
             </p>
           </div>
         </div>

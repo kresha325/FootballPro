@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { profileAPI, transferHistoryAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 function currentSeasonLabel(now = new Date()) {
   const y = now.getFullYear();
@@ -20,24 +21,24 @@ function clubLabel(club) {
   );
 }
 
-function statusBadge(transfer) {
+function statusBadge(transfer, t) {
   const status = String(transfer?.status || 'confirmed').toLowerCase();
   if (status === 'pending') {
     const fromOk = !transfer.fromClubUserId || transfer.fromClubConfirmedAt;
     const toOk = Boolean(transfer.toClubConfirmedAt);
     return {
-      label: `Në pritje (${fromOk ? '✓' : '…'} nisës · ${toOk ? '✓' : '…'} destinacion)`,
+      label: `${t('Në pritje')} (${fromOk ? '✓' : '…'} ${t('nisës')} · ${toOk ? '✓' : '…'} ${t('destinacion')})`,
       className: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
     };
   }
   if (status === 'rejected') {
     return {
-      label: 'Refuzuar',
+      label: t('Refuzuar'),
       className: 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200',
     };
   }
   return {
-    label: 'I konfirmuar',
+    label: t('I konfirmuar'),
     className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
   };
 }
@@ -51,6 +52,7 @@ function ClubAutocomplete({
   onSelectClub,
   placeholder,
 }) {
+  const { t } = useLocale();
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
 
@@ -74,7 +76,7 @@ function ClubAutocomplete({
   return (
     <div className="relative">
       <label className="block text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
-        {label}
+        {t(label)}
         {required ? ' *' : ''}
       </label>
       <input
@@ -86,15 +88,15 @@ function ClubAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 180)}
-        placeholder={placeholder}
+        placeholder={t(placeholder)}
         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         required={required}
         autoComplete="off"
       />
       {clubUserId ? (
-        <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">Klub i regjistruar ✓</p>
+        <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">{t('Klub i regjistruar ✓')}</p>
       ) : value?.trim() ? (
-        <p className="mt-1 text-xs text-gray-500">Tekst i lirë (ose zgjidh nga lista e klubeve)</p>
+        <p className="mt-1 text-xs text-gray-500">{t('Tekst i lirë (ose zgjidh nga lista e klubeve)')}</p>
       ) : null}
       {open && suggestions.length > 0 ? (
         <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -129,7 +131,8 @@ function ClubAutocomplete({
 }
 
 function ClubName({ name, userId }) {
-  if (!name) return <span>Free Agent</span>;
+  const { t } = useLocale();
+  if (!name) return <span>{t('Free Agent')}</span>;
   if (userId) {
     return (
       <Link to={`/profile/${userId}`} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
@@ -162,6 +165,7 @@ const emptyForm = () => ({
 });
 
 const TransferHistory = ({ userId, isOwner, onChanged }) => {
+  const { t: translate } = useLocale();
   const { user } = useAuth();
   const [transfers, setTransfers] = useState([]);
   const [clubPending, setClubPending] = useState([]);
@@ -349,14 +353,14 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
     return icons[type] || '📍';
   };
 
-  if (loading) return <div className="animate-pulse">Loading transfers...</div>;
+  if (loading) return <div className="animate-pulse">{translate("Loading transfers...")}</div>;
 
   const renderClubActions = (transfer) => {
     if (!canActAsClub(transfer)) return null;
     if (mySideConfirmed(transfer)) {
       return (
         <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          Klubi yt e konfirmoi
+          {translate("Klubi yt e konfirmoi")}
         </span>
       );
     }
@@ -368,7 +372,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
           onClick={() => handleConfirm(transfer.id)}
           className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-60"
         >
-          Konfirmo
+          {translate("Konfirmo")}
         </button>
         <button
           type="button"
@@ -376,7 +380,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
           onClick={() => handleReject(transfer.id)}
           className="px-3 py-1.5 rounded-lg border border-red-400 text-red-600 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-60"
         >
-          Refuzo
+          {translate("Refuzo")}
         </button>
       </div>
     );
@@ -386,7 +390,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <span>🔄</span> Transfer History
+          <span>{translate("🔄")}</span> {translate("Transfer History")}
         </h3>
         {isOwner && !isClub ? (
           <button
@@ -398,19 +402,19 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
             }}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
           >
-            + Add Transfer
+            {translate("+ Add Transfer")}
           </button>
         ) : null}
       </div>
 
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        Transferet e reja kërkojnë konfirmim nga <strong>të dy klubet</strong> (nisës + destinacion). Klubi aktual ndryshon vetëm pasi të dyja palët konfirmojnë.
+        {translate("Transferet e reja kërkojnë konfirmim nga")} <strong>{translate("të dy klubet")}</strong> {translate("(nisës + destinacion). Klubi aktual ndryshon vetëm pasi të dyja palët konfirmojnë.")}
       </p>
 
       {isClub && clubPending.length > 0 ? (
         <div className="mb-5 rounded-xl border border-amber-300/50 bg-amber-50/80 p-4 dark:border-amber-500/30 dark:bg-amber-950/30">
           <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-            Transfere në pritje për klubin tënd ({clubPending.length})
+            {translate("Transfere në pritje për klubin tënd (")}{clubPending.length}{translate(")")}
           </h4>
           <ul className="space-y-3">
             {clubPending.map((t) => {
@@ -428,7 +432,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                       {name}
                     </Link>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {t.fromClub || 'Free agent'} → {t.toClub} · {t.season}
+                      {t.fromClub || translate('Free Agent')} {translate("→")} {t.toClub} {translate("·")} {t.season}
                     </p>
                   </div>
                   {renderClubActions(t)}
@@ -461,12 +465,12 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                         <div className="mb-1 flex flex-wrap items-center gap-2">
                           <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
                           <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-                            Klubi aktual
+                            {translate("Klubi aktual")}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-                          <span>📅 {transfer.season || '—'} · vazhdon</span>
-                          {transfer.position && <span>⚽ {transfer.position}</span>}
+                          <span>{translate("📅")} {transfer.season || '—'} {translate("· vazhdon")}</span>
+                          {transfer.position && <span>{translate("⚽")} {transfer.position}</span>}
                         </div>
                       </>
                     ) : (
@@ -475,27 +479,27 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                           {transfer.fromClub ? (
                             <>
                               <ClubName name={transfer.fromClub} userId={transfer.fromClubUserId} />
-                              <span className="text-gray-400">→</span>
+                              <span className="text-gray-400">{translate("→")}</span>
                             </>
                           ) : null}
                           <ClubName name={transfer.toClub} userId={transfer.toClubUserId} />
                           <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge(transfer).className}`}
+                            className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge(transfer, translate).className}`}
                           >
-                            {statusBadge(transfer).label}
+                            {statusBadge(transfer, translate).label}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-                          <span>📅 {transfer.season}</span>
-                          {transfer.position && <span>⚽ {transfer.position}</span>}
-                          {transfer.transferFee && <span>💰 {transfer.transferFee}</span>}
+                          <span>{translate("📅")} {transfer.season}</span>
+                          {transfer.position && <span>{translate("⚽")} {transfer.position}</span>}
+                          {transfer.transferFee && <span>{translate("💰")} {transfer.transferFee}</span>}
                           {transfer.contractUntil &&
                           String(transfer.contractUntil).toLowerCase() !== 'vazhdon' ? (
-                            <span>📝 Until {transfer.contractUntil}</span>
+                            <span>{translate("📝 Until")} {transfer.contractUntil}</span>
                           ) : null}
                           {transfer.transferDate ? (
                             <span>
-                              🗓{' '}
+                              {translate("🗓")}{' '}
                               {new Date(transfer.transferDate).toLocaleDateString(undefined, {
                                 year: 'numeric',
                                 month: 'short',
@@ -521,7 +525,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                     className="text-red-600 hover:text-red-700 p-2"
                     title="Delete"
                   >
-                    🗑️
+                    {translate("🗑️")}
                   </button>
                 )}
               </div>
@@ -533,7 +537,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Add Transfer Record</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{translate("Add Transfer Record")}</h3>
             {formError ? (
               <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 {formError}
@@ -542,26 +546,26 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
             <form onSubmit={handleAddTransfer} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Transfer Type</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Transfer Type")}</label>
                   <select
                     value={form.transferType}
                     onChange={(e) => setForm({ ...form, transferType: e.target.value })}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   >
-                    <option value="player_transfer">Player Transfer</option>
-                    <option value="coach_appointment">Coach Appointment</option>
-                    <option value="staff_appointment">Staff Appointment</option>
-                    <option value="loan">Loan</option>
+                    <option value="player_transfer">{translate("Player Transfer")}</option>
+                    <option value="coach_appointment">{translate("Coach Appointment")}</option>
+                    <option value="staff_appointment">{translate("Staff Appointment")}</option>
+                    <option value="loan">{translate("Loan")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Season *</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Season *")}</label>
                   <input
                     type="text"
                     value={form.season}
                     onChange={(e) => setForm({ ...form, season: e.target.value })}
-                    placeholder="e.g., 2026-2027"
+                    placeholder={translate('e.g., 2026-2027')}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -572,7 +576,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                   clubUserId={form.fromClubUserId}
                   onChange={(fromClub) => setForm((f) => ({ ...f, fromClub }))}
                   onSelectClub={(fromClubUserId) => setForm((f) => ({ ...f, fromClubUserId }))}
-                  placeholder="Previous club or Free Agent"
+                  placeholder={translate('Previous club or Free Agent')}
                 />
                 <ClubAutocomplete
                   label="To Club"
@@ -581,20 +585,20 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                   clubUserId={form.toClubUserId}
                   onChange={(toClub) => setForm((f) => ({ ...f, toClub }))}
                   onSelectClub={(toClubUserId) => setForm((f) => ({ ...f, toClubUserId }))}
-                  placeholder="New club"
+                  placeholder={translate('New club')}
                 />
                 <div>
-                  <label className="block text-sm font-medium mb-1">Position/Role</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Position/Role")}</label>
                   <input
                     type="text"
                     value={form.position}
                     onChange={(e) => setForm({ ...form, position: e.target.value })}
-                    placeholder="e.g., Striker, Head Coach"
+                    placeholder={translate('e.g., Striker, Head Coach')}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Transfer Date</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Transfer Date")}</label>
                   <input
                     type="date"
                     value={form.transferDate}
@@ -603,39 +607,38 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Transfer Fee</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Transfer Fee")}</label>
                   <input
                     type="text"
                     value={form.transferFee}
                     onChange={(e) => setForm({ ...form, transferFee: e.target.value })}
-                    placeholder="e.g., Free, €5M, Loan"
+                    placeholder={translate('e.g., Free, €5M, Loan')}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Contract Until</label>
+                  <label className="block text-sm font-medium mb-1">{translate("Contract Until")}</label>
                   <input
                     type="text"
                     value={form.contractUntil}
                     onChange={(e) => setForm({ ...form, contractUntil: e.target.value })}
-                    placeholder="e.g., 2026"
+                    placeholder={translate('e.g., 2026')}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Notes</label>
+                <label className="block text-sm font-medium mb-1">{translate("Notes")}</label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Additional details"
+                  placeholder={translate('Additional details')}
                   rows="3"
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
               <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3">
-                Transferi mbetet <strong>në pritje</strong> derisa klubi nisës dhe klubi destinacion ta konfirmojnë.
-                Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm. Free agent: mjafton konfirmimi i klubit destinacion.
+                {translate("Transferi mbetet")} <strong>{translate("në pritje")}</strong> {translate("derisa klubi nisës dhe klubi destinacion ta konfirmojnë. Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm. Free agent: mjafton konfirmimi i klubit destinacion.")}
               </p>
               <div className="flex gap-3">
                 <button
@@ -643,7 +646,7 @@ const TransferHistory = ({ userId, isOwner, onChanged }) => {
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
                 >
-                  Cancel
+                  {translate("Cancel")}
                 </button>
                 <button
                   type="submit"

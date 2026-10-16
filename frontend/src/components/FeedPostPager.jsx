@@ -4,6 +4,7 @@ import { usePosts } from '../contexts/PostsContext';
 import { useAuth } from '../contexts/AuthContext';
 import PersonName from './PersonName';
 import VerifiedBadge from './VerifiedBadge';
+import { useLocale } from '../contexts/LocaleContext';
 
 function mediaUrl(apiRoot, url, cloudinarySafe) {
   if (!url) return '';
@@ -33,6 +34,7 @@ export default function FeedPostPager({
   getFullUrl,
   getCloudinarySafeUrl,
 }) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { likedPosts, toggleLike, postComments, fetchComments, addComment } = usePosts();
   const scrollerRef = useRef(null);
@@ -217,14 +219,14 @@ export default function FeedPostPager({
       {commentsOpen && activePost ? (
         <div className="absolute inset-x-0 bottom-0 z-30 max-h-[45vh] rounded-t-2xl border-t border-white/10 bg-slate-950/95 p-4 backdrop-blur">
           <div className="mb-2 flex items-center justify-between">
-            <p className="font-bold">Komente</p>
+            <p className="font-bold">{t('Komente')}</p>
             <button type="button" className="text-sm text-white/70" onClick={() => setCommentsOpen(false)}>
               Mbyll
             </button>
           </div>
           <div className="mb-3 max-h-[28vh] space-y-2 overflow-y-auto">
             {comments.length === 0 ? (
-              <p className="text-sm text-white/50">Ende pa komente.</p>
+              <p className="text-sm text-white/50">{t('Ende pa komente.')}</p>
             ) : (
               comments.map((c) => (
                 <div key={c.id} className="text-sm">

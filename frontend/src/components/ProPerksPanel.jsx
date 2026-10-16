@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocale } from '../contexts/LocaleContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { profileAPI, supportAPI } from '../services/api';
 import { hasTier } from '../utils/subscriptionAccess';
@@ -11,6 +12,7 @@ import {
 } from '../utils/profileThemes';
 
 export default function ProPerksPanel({ user, profileTheme = 'default', onThemeSaved }) {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const isPro = hasTier(user, 'pro');
   const [theme, setTheme] = useState(profileTheme || 'default');
@@ -71,11 +73,11 @@ export default function ProPerksPanel({ user, profileTheme = 'default', onThemeS
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="mb-1 text-xl font-semibold text-gray-900 dark:text-white">Përfitime Pro</h2>
+        <h2 className="mb-1 text-xl font-semibold text-gray-900 dark:text-white">{t('Përfitime Pro')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           {isPro
-            ? 'Tema profili, akses i hershëm dhe suport prioritar.'
-            : 'Këto tipare aktivizohen me planin Pro.'}{' '}
+            ? t('Tema profili, akses i hershëm dhe suport prioritar.')
+            : t('Këto tipare aktivizohen me planin Pro.')}{' '}
           {!isPro ? (
             <Link to="/premium" className="font-semibold text-[var(--xt-color-gold-bright)]">
               Upgrade →
@@ -85,9 +87,9 @@ export default function ProPerksPanel({ user, profileTheme = 'default', onThemeS
       </div>
 
       <section className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Tema e profilit</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white">{t('Tema e profilit')}</h3>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Ngjyra e theksit në profilin tënd publik.
+          {t('Ngjyra e theksit në profilin tënd publik.')}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {PROFILE_THEMES.map((t) => {

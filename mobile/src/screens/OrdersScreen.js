@@ -8,10 +8,12 @@ import {
   sellerSummaryRequest,
   updateOrderStatusRequest,
 } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
 
 const NEXT = { paid: 'processing', processing: 'shipped', shipped: 'delivered' };
 
 export default function OrdersScreen() {
+  const { t } = useLocale();
   const [orders, setOrders] = useState([]);
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -27,11 +29,11 @@ export default function OrdersScreen() {
       setSales(Array.isArray(selling.data) ? selling.data : []);
       setSummary(sum.data || null);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Porositë nuk u ngarkuan'));
+      setError(extractErrorMessage(err, t('Orders could not be loaded')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -40,7 +42,7 @@ export default function OrdersScreen() {
       await fn();
       await load();
     } catch (err) {
-      Alert.alert('Porosia', extractErrorMessage(err, 'Veprimi dështoi'));
+      Alert.alert(t('Order'), extractErrorMessage(err, t('Action failed')));
     }
   };
 
@@ -56,16 +58,16 @@ export default function OrdersScreen() {
 
   const card = (order, seller) => (
     <View key={`${seller ? 's' : 'b'}-${order.id}`} style={styles.card}>
-      <Text style={styles.title}>#{order.id} · {order.status}</Text>
+      <Text style={styles.title}>#{order.id} · {t(order.status)}</Text>
       <Text>{order.totalAmount} XCoin</Text>
       <Text>{Array.isArray(order.products) ? order.products.map((line) => `${line.name} × ${line.quantity}`).join(', ') : ''}</Text>
       {seller && NEXT[order.status] ? (
         <TouchableOpacity style={styles.button} onPress={() => run(() => updateOrderStatusRequest(order.id, NEXT[order.status]))}>
-          <Text style={styles.buttonText}>{NEXT[order.status]}</Text>
+          <Text style={styles.buttonText}>{t(NEXT[order.status])}</Text>
         </TouchableOpacity>
       ) : null}
       {seller && ['paid', 'processing', 'shipped', 'delivered'].includes(order.status) ? (
-        <TouchableOpacity onPress={() => run(() => refundOrderRequest(order.id))}><Text style={styles.link}>Rimburso</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => run(() => refundOrderRequest(order.id))}><Text style={styles.link}>{t('Refund')}</Text></TouchableOpacity>
       ) : null}
     </View>
   );
@@ -74,15 +76,15 @@ export default function OrdersScreen() {
     <ScrollView contentContainerStyle={styles.wrap}>
       {summary ? (
         <View style={styles.card}>
-          <Text>Bruto {summary.grossSales} · tarifa {summary.platformFees} · neto {summary.netAmount}</Text>
-          <Text>Të përfunduara {summary.completedOrders} · të rimbursuara {summary.refundedOrders}</Text>
-          <Text>Balanca {summary.sellerBalance} XCoin</Text>
+          <Text>{t('Gross')} {summary.grossSales} · {t('Fees')} {summary.platformFees} · {t('Net')} {summary.netAmount}</Text>
+          <Text>{t('Completed')} {summary.completedOrders} · {t('Refunded')} {summary.refundedOrders}</Text>
+          <Text>{t('Balance')} {summary.sellerBalance} XCoin</Text>
         </View>
       ) : null}
-      <Text style={styles.section}>Blerjet</Text>
-      {orders.length ? orders.map((order) => card(order, false)) : <Text>Nuk ke blerje.</Text>}
-      <Text style={styles.section}>Shitjet</Text>
-      {sales.length ? sales.map((order) => card(order, true)) : <Text>Nuk ke shitje.</Text>}
+      <Text style={styles.section}>{t('Purchases')}</Text>
+      {orders.length ? orders.map((order) => card(order, false)) : <Text>{t('No purchases yet.')}</Text>}
+      <Text style={styles.section}>{t('Sales')}</Text>
+      {sales.length ? sales.map((order) => card(order, true)) : <Text>{t('No sales yet.')}</Text>}
     </ScrollView>
   );
 }

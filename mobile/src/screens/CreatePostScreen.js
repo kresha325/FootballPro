@@ -7,8 +7,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { createPostRequest, extractErrorMessage, setPostSponsorsRequest, sponsorsByUserRequest } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import AiCaptionButton from '../components/AiCaptionButton';
+import { useLocale } from '../context/LocaleContext';
 
 export default function CreatePostScreen({ navigation }) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [media, setMedia] = useState(null);
@@ -38,7 +40,7 @@ export default function CreatePostScreen({ navigation }) {
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow media library access to create a post.');
+      Alert.alert(t('Permission required'), t('Please allow media library access to create a post.'));
       return;
     }
 
@@ -55,10 +57,10 @@ export default function CreatePostScreen({ navigation }) {
       const maxBytes = isVideo ? 80 * 1024 * 1024 : 12 * 1024 * 1024;
       if (fileSize > 0 && fileSize > maxBytes) {
         Alert.alert(
-          'Skedar i madh',
+          t('File too large'),
           isVideo
-            ? 'Video max ~80MB. Kompreso ose zgjidh një video më të shkurtër.'
-            : 'Foto max ~12MB. Zgjidh një imazh më të vogël.'
+            ? t('Video max ~80MB. Compress it or choose a shorter video.')
+            : t('Photo max ~12MB. Choose a smaller image.')
         );
         return;
       }
@@ -74,7 +76,7 @@ export default function CreatePostScreen({ navigation }) {
 
   const onPublish = async () => {
     if (!content.trim() && !media) {
-      Alert.alert('Missing content', 'Add text or choose an image/video.');
+      Alert.alert(t('Missing content'), t('Add text or choose an image/video.'));
       return;
     }
 
@@ -93,10 +95,10 @@ export default function CreatePostScreen({ navigation }) {
       if (createdPostId && selectedSponsorIds.length > 0) {
         await setPostSponsorsRequest(createdPostId, selectedSponsorIds);
       }
-      Alert.alert('Success', 'Post created successfully.');
+      Alert.alert(t('Success'), t('Post created successfully.'));
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Create failed', extractErrorMessage(err, 'Could not create post'));
+      Alert.alert(t('Create failed'), extractErrorMessage(err, t('Could not create post')));
     } finally {
       setSaving(false);
     }
@@ -104,10 +106,10 @@ export default function CreatePostScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.label}>Post content</Text>
+      <Text style={styles.label}>{t('Post content')}</Text>
       <AiCaptionButton
         hints={{
-          topic: content.trim().slice(0, 80) || 'futboll',
+          topic: content.trim().slice(0, 80) || t('football'),
           hasMedia: Boolean(media),
           role: user?.role,
         }}
@@ -117,12 +119,12 @@ export default function CreatePostScreen({ navigation }) {
         style={[styles.input, styles.multiline]}
         value={content}
         onChangeText={setContent}
-        placeholder="Write something for your audience"
+        placeholder={t('Write something for your audience')}
         multiline
       />
 
       <TouchableOpacity style={styles.secondaryButton} onPress={pickMedia}>
-        <Text style={styles.secondaryButtonText}>{media ? 'Change Media' : 'Choose Image/Video'}</Text>
+        <Text style={styles.secondaryButtonText}>{media ? t('Change Media') : t('Choose Image/Video')}</Text>
       </TouchableOpacity>
 
       {media?.kind === 'image' ? <OptimizedImage uri={media.uri} style={styles.previewImage} width={800} contentFit="cover" /> : null}
@@ -134,7 +136,7 @@ export default function CreatePostScreen({ navigation }) {
 
       {mySponsors.length > 0 ? (
         <View style={styles.sponsorsWrap}>
-          <Text style={styles.label}>Sponsors on this post</Text>
+          <Text style={styles.label}>{t('Sponsors on this post')}</Text>
           <View style={styles.sponsorsRow}>
             {mySponsors.map((s) => {
               const active = selectedSponsorIds.includes(s.id);
@@ -149,7 +151,7 @@ export default function CreatePostScreen({ navigation }) {
                   }
                 >
                   <Text style={[styles.sponsorChipText, active && styles.sponsorChipTextActive]} numberOfLines={1}>
-                    {s?.name || 'Sponsor'}
+                    {s?.name || t('Sponsor')}
                   </Text>
                 </TouchableOpacity>
               );
@@ -159,7 +161,7 @@ export default function CreatePostScreen({ navigation }) {
       ) : null}
 
       <TouchableOpacity style={[styles.primaryButton, saving && styles.disabled]} onPress={onPublish} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Publish Post</Text>}
+        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>{t('Publish Post')}</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

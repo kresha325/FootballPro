@@ -9,6 +9,7 @@ import {
 import { profileAPI, searchAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import VerifiedBadge from './VerifiedBadge';
+import { useLocale } from '../contexts/LocaleContext';
 
 const TABS = [
   { id: 'following', label: 'Duke ndjekur', icon: UserGroupIcon },
@@ -80,6 +81,7 @@ function mapFollowingRows(raw) {
 }
 
 export default function GlobalSearch() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQ = searchParams.get('q') || '';
@@ -235,9 +237,9 @@ export default function GlobalSearch() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 text-[var(--xt-color-text)]">
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-[var(--xt-color-text)]">Kërkim</h1>
+        <h1 className="mb-2 text-3xl font-bold text-[var(--xt-color-text)]">{t('Kërkim')}</h1>
         <p className="text-[var(--xt-color-text-muted)]">
-          Duke ndjekur, Shfleto njerëz të rinj, ose kërko postime, turne dhe më shumë.
+          {t('Duke ndjekur, Shfleto njerëz të rinj, ose kërko postime, turne dhe më shumë.')}
         </p>
       </div>
 
@@ -247,7 +249,7 @@ export default function GlobalSearch() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Kërko për emër, turne, produkt, stream…"
+            placeholder={t('Kërko për emër, turne, produkt, stream…')}
             className="w-full rounded-2xl border border-[var(--xt-color-border-strong)] bg-[var(--xt-color-surface)] py-4 pl-14 pr-28 text-lg text-[var(--xt-color-text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
           />
           <MagnifyingGlassIcon className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-[var(--xt-color-text-subtle)]" />
@@ -256,7 +258,7 @@ export default function GlobalSearch() {
             disabled={loading}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-[var(--xt-color-gold)] px-6 py-2 font-medium text-[#101114] hover:opacity-95 disabled:opacity-50"
           >
-            {loading ? '…' : 'Kërko'}
+            {loading ? '…' : t('Kërko')}
           </button>
         </div>
       </form>
@@ -273,7 +275,7 @@ export default function GlobalSearch() {
                 : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)]'
             }`}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         ))}
       </div>
@@ -295,7 +297,7 @@ export default function GlobalSearch() {
         <EmptyHint />
       ) : !hasAnyResult ? (
         <p className="py-16 text-center text-[var(--xt-color-text-muted)]">
-          Nuk u gjet asgjë për &quot;{query}&quot;
+          {t('Nuk u gjet asgjë për')} &quot;{query}&quot;
         </p>
       ) : (
         <div className="space-y-10">
@@ -313,10 +315,11 @@ export default function GlobalSearch() {
 }
 
 function EmptyHint() {
+  const { t } = useLocale();
   return (
     <div className="py-16 text-center text-[var(--xt-color-text-muted)]">
       <div className="mb-4 text-5xl">🔍</div>
-      <p>Shkruaj diçka, ose hap Shfleto për të gjetur njerëz të rinj.</p>
+      <p>{t('Shkruaj diçka, ose hap Shfleto për të gjetur njerëz të rinj.')}</p>
     </div>
   );
 }

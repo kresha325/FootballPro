@@ -2,15 +2,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '../theme/nativeComponents';
 import { matchByIdRequest, matchMediaRequest, streamsRequest, extractErrorMessage } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
 
-function sideName(match, side) {
+function sideName(match, side, t) {
   const user = side === 'home' ? match?.homeUser : match?.awayUser;
   const fallback = side === 'home' ? match?.homeName : match?.awayName;
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
-  return name || user?.Profile?.club || fallback || (side === 'away' && !match?.awayUserId ? 'Bye' : '—');
+  return name || user?.Profile?.club || fallback || (side === 'away' && !match?.awayUserId ? t('Bye') : '—');
 }
 
 export default function MatchDetailScreen({ route }) {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const matchId = route?.params?.matchId;
   const [match, setMatch] = useState(null);
@@ -21,7 +23,7 @@ export default function MatchDetailScreen({ route }) {
 
   const load = useCallback(async () => {
     if (!matchId) {
-      setError('Missing match');
+      setError(t('Missing match'));
       setLoading(false);
       return;
     }
@@ -37,11 +39,11 @@ export default function MatchDetailScreen({ route }) {
       setStreams(Array.isArray(streamRes?.data) ? streamRes.data : []);
       setHighlights(Array.isArray(mediaRes?.data?.items) ? mediaRes.data.items : []);
     } catch (err) {
-      setError(extractErrorMessage(err, 'Match failed to load'));
+      setError(extractErrorMessage(err, t('Match failed to load')));
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, t]);
 
   useEffect(() => {
     load();
@@ -49,7 +51,7 @@ export default function MatchDetailScreen({ route }) {
 
   if (loading) return <ActivityIndicator style={{ marginTop: 32 }} />;
   if (error) return <Text style={styles.error}>{error}</Text>;
-  if (!match) return <Text style={styles.empty}>Match not found.</Text>;
+  if (!match) return <Text style={styles.empty}>{t('Match not found.')}</Text>;
 
   const events = Array.isArray(match.events) ? match.events : [];
   const scorers = Array.isArray(match.MatchScorers) ? match.MatchScorers : [];
@@ -57,17 +59,17 @@ export default function MatchDetailScreen({ route }) {
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
-      <Text style={styles.kicker}>{match.competition?.name || 'Match'} · {match.roundLabel || match.status}</Text>
-      <Text style={styles.score}>{sideName(match, 'home')}  {match.scoreHome ?? '–'} : {match.scoreAway ?? '–'}  {sideName(match, 'away')}</Text>
-      <Text style={styles.meta}>{match.matchDate ? new Date(match.matchDate).toLocaleString() : 'No kickoff'}</Text>
-      <Text style={styles.meta}>{match.venue || 'Venue not set'}{match.refereeName ? ` · Ref ${match.refereeName}` : ''}</Text>
+      <Text style={styles.kicker}>{match.competition?.name || t('Match')} · {match.roundLabel || t(match.status)}</Text>
+      <Text style={styles.score}>{sideName(match, 'home', t)}  {match.scoreHome ?? '–'} : {match.scoreAway ?? '–'}  {sideName(match, 'away', t)}</Text>
+      <Text style={styles.meta}>{match.matchDate ? new Date(match.matchDate).toLocaleString() : t('No kickoff')}</Text>
+      <Text style={styles.meta}>{match.venue || t('Venue not set')}{match.refereeName ? ` · ${t('Referee')} ${match.refereeName}` : ''}</Text>
       {match.clockMinute != null ? <Text style={styles.meta}>{match.clockPhase || match.status} · {match.clockMinute}'</Text> : null}
-      <Text style={styles.section}>Video</Text>
+      <Text style={styles.section}>{t('Video')}</Text>
       {streams.length === 0 && highlights.length === 0 ? (
-        <Text style={styles.meta}>No live stream, replay, or highlights. Match statistics stay available without video.</Text>
+        <Text style={styles.meta}>{t('No live stream, replay, or highlights. Match statistics stay available without video.')}</Text>
       ) : null}
       {streams.map((stream) => {
-        const label = stream.isLive ? 'LIVE NOW' : stream.videoUrl ? 'WATCH REPLAY' : 'UPCOMING';
+        const label = stream.isLive ? t('LIVE NOW') : stream.videoUrl ? t('WATCH REPLAY') : t('UPCOMING');
         return (
           <TouchableOpacity key={stream.id} onPress={() => navigation.navigate('LiveViewer', { streamId: stream.id, videoUrl: stream.videoUrl })}>
             <Text style={styles.line}>{label} · {stream.title}</Text>
@@ -75,10 +77,10 @@ export default function MatchDetailScreen({ route }) {
         );
       })}
       {highlights.map((item) => (
-        <Text key={item.id} style={styles.line}>HIGHLIGHTS · {item.title}</Text>
+        <Text key={item.id} style={styles.line}>{t('HIGHLIGHTS')} · {item.title}</Text>
       ))}
-      <Text style={styles.section}>Events</Text>
-      {scorers.length === 0 && events.length === 0 ? <Text style={styles.meta}>No goals, cards, or substitutions yet.</Text> : null}
+      <Text style={styles.section}>{t('Events')}</Text>
+      {scorers.length === 0 && events.length === 0 ? <Text style={styles.meta}>{t('No goals, cards, or substitutions yet.')}</Text> : null}
       {scorers.map((row) => (
         <Text key={`s-${row.id}`} style={styles.line}>Goal #{row.userId} {row.minute != null ? `${row.minute}'` : ''}</Text>
       ))}
@@ -87,11 +89,11 @@ export default function MatchDetailScreen({ route }) {
           {event.minute != null ? `${event.minute}' ` : ''}{event.type} {event.userId ? `#${event.userId}` : ''} {event.detail || ''}
         </Text>
       ))}
-      <Text style={styles.section}>Player statistics</Text>
-      {stats.length === 0 ? <Text style={styles.meta}>No player statistics recorded.</Text> : null}
+      <Text style={styles.section}>{t('Player statistics')}</Text>
+      {stats.length === 0 ? <Text style={styles.meta}>{t('No player statistics recorded.')}</Text> : null}
       {stats.map((row) => (
         <Text key={row.id || row.userId} style={styles.line}>
-          #{row.userId} · {row.minutes || 0} min · {row.goals || 0} goals · {row.assists || 0} assists
+          #{row.userId} · {row.minutes || 0} {t('min')} · {row.goals || 0} {t('goals')} · {row.assists || 0} {t('assists')}
         </Text>
       ))}
     </ScrollView>

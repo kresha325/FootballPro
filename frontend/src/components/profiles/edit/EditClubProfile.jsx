@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocale } from '../../../contexts/LocaleContext';
 import { getFullUrl } from '../../../utils/mediaUrl';
 import api, { ligaAPI } from '../../../services/api';
 
@@ -27,6 +28,7 @@ function normalizeLiga(l) {
 }
 
 const EditClubProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const stats = user.stats && typeof user.stats === 'object' ? user.stats : {};
   const contact = user.contact && typeof user.contact === 'object' ? user.contact : {};
   const clubUserId = user.userId || user.id || user.User?.id;
@@ -289,7 +291,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
     try {
       await syncLigaMemberships();
     } catch {
-      setLigaSyncError('Nuk u përditësuan disa liga. Provo përsëri.');
+      setLigaSyncError(t('Nuk u përditësuan disa liga. Provo përsëri.'));
       return;
     }
     onSave(formData);
@@ -298,20 +300,20 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        <label className="block text-sm font-medium mb-1">{t('Profile Photo')}</label>
         {preview && (
           <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
         <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Club Profile</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Club Profile')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Emri i klubit</label>
+          <label className="block text-sm font-medium mb-1">{t('Emri i klubit')}</label>
           <input name="club" value={form.club} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Viti i themelimit</label>
+          <label className="block text-sm font-medium mb-1">{t('Viti i themelimit')}</label>
           <input
             name="founded"
             value={form.founded}
@@ -319,12 +321,12 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             type="number"
             min="1800"
             max="2100"
-            placeholder="p.sh. 2017"
+            placeholder={t('p.sh. 2017')}
             className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
         <div className="md:col-span-2" ref={stadiumDropdownRef}>
-          <label className="block text-sm font-medium mb-1">Stadiumi</label>
+          <label className="block text-sm font-medium mb-1">{t('Stadiumi')}</label>
           <div className="relative">
             <input
               type="text"
@@ -336,7 +338,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                 setShowStadiumDropdown(true);
               }}
               onFocus={() => setShowStadiumDropdown(true)}
-              placeholder={loadingStadiums ? 'Duke ngarkuar stadiumet…' : 'Shkruaj për të kërkuar stadium…'}
+              placeholder={loadingStadiums ? t('Duke ngarkuar stadiumet…') : t('Shkruaj për të kërkuar stadium…')}
               disabled={loadingStadiums}
               className="w-full p-2 border border-gray-300 rounded"
               autoComplete="off"
@@ -346,10 +348,10 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                 {filteredStadiums.length === 0 ? (
                   <p className="px-3 py-2 text-sm text-gray-500">
                     {stadiumQuery.trim()
-                      ? 'Nuk u gjet stadium. Shtohet nga Admin → Stadiume.'
+                      ? t('Nuk u gjet stadium. Shtohet nga Admin → Stadiume.')
                       : allStadiums.length === 0
-                        ? 'Nuk ka stadiume në katalog. Admini duhet t’i shtojë.'
-                        : 'Shkruaj emrin e stadiumit…'}
+                        ? t('Nuk ka stadiume në katalog. Admini duhet t’i shtojë.')
+                        : t('Shkruaj emrin e stadiumit…')}
                   </p>
                 ) : (
                   filteredStadiums.map((s) => (
@@ -365,7 +367,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                       <span className="block font-medium text-gray-900">{s.name}</span>
                       <span className="block text-xs text-gray-500">
                         {[s.city, s.country].filter(Boolean).join(' • ')}
-                        {s.capacity != null ? ` · ${Number(s.capacity).toLocaleString()} ulëse` : ''}
+                        {s.capacity != null ? ` · ${Number(s.capacity).toLocaleString()} ${t('ulëse')}` : ''}
                       </span>
                     </button>
                   ))
@@ -376,27 +378,27 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
           {stadiumId ? (
             <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-gray-600">
               <span>
-                Kapaciteti: <strong>{form.capacity != null && form.capacity !== '' ? Number(form.capacity).toLocaleString() : '—'}</strong>
+                {t('Kapaciteti:')} <strong>{form.capacity != null && form.capacity !== '' ? Number(form.capacity).toLocaleString() : '—'}</strong>
               </span>
               <button type="button" onClick={clearStadium} className="text-red-600 hover:underline">
-                Hiq stadiumin
+                {t('Hiq stadiumin')}
               </button>
             </div>
           ) : (
             <p className="text-xs text-gray-500 mt-1">
-              Zgjidh nga katalogu (Admin → Stadiume). Kapaciteti mbushët automatikisht.
+              {t('Zgjidh nga katalogu (Admin → Stadiume). Kapaciteti mbushët automatikisht.')}
             </p>
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Capacity</label>
+          <label className="block text-sm font-medium mb-1">{t('Capacity')}</label>
           <input
             name="capacity"
             value={form.capacity}
             onChange={handleChange}
             type="number"
             min="0"
-            placeholder="Automatikisht nga stadiumi"
+            placeholder={t('Automatikisht nga stadiumi')}
             readOnly={Boolean(stadiumId)}
             className={`w-full p-2 border border-gray-300 rounded ${stadiumId ? 'bg-slate-50 text-gray-600' : ''}`}
           />
@@ -404,7 +406,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
 
         <div className="md:col-span-2" ref={dropdownRef}>
           <label className="block text-sm font-medium mb-1">
-            Ligat ku merr pjesë ({selectedLigas.length})
+            {t('Ligat ku merr pjesë')} ({selectedLigas.length})
           </label>
           {selectedLigas.length > 0 && (
             <ul className="mb-2 flex flex-wrap gap-2">
@@ -428,7 +430,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                       type="button"
                       onClick={() => removeLiga(lid)}
                       className="ml-0.5 text-slate-400 hover:text-red-600 text-base leading-none shrink-0"
-                      aria-label={`Hiq ${liga.name}`}
+                      aria-label={`${t('Hiq')} ${liga.name}`}
                     >
                       ×
                     </button>
@@ -446,7 +448,7 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                 setShowLigaDropdown(true);
               }}
               onFocus={() => setShowLigaDropdown(true)}
-              placeholder={loadingLigas ? 'Duke ngarkuar ligat…' : 'Shkruaj për të kërkuar dhe zgjedhur liga…'}
+              placeholder={loadingLigas ? t('Duke ngarkuar ligat…') : t('Shkruaj për të kërkuar dhe zgjedhur liga…')}
               disabled={loadingLigas}
               className="w-full p-2 border border-gray-300 rounded"
               autoComplete="off"
@@ -456,10 +458,10 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
                 {filteredLigas.length === 0 ? (
                   <p className="px-3 py-2 text-sm text-gray-500">
                     {ligaQuery.trim()
-                      ? 'Nuk u gjet asnjë ligë me këtë emër.'
+                      ? t('Nuk u gjet asnjë ligë me këtë emër.')
                       : allLigas.length === 0
-                        ? 'Nuk ka liga të regjistruara ende.'
-                        : 'Të gjitha ligat e disponueshme janë zgjedhur.'}
+                        ? t('Nuk ka liga të regjistruara ende.')
+                        : t('Të gjitha ligat e disponueshme janë zgjedhur.')}
                   </p>
                 ) : (
                   filteredLigas.map((liga) => {
@@ -497,60 +499,60 @@ const EditClubProfile = ({ user, onSave, loading, errors }) => {
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Zgjidh një ose më shumë liga. Ruajtja i bashkon automatikisht klubin në ligat e zgjedhura.
+            {t('Zgjidh një ose më shumë liga. Ruajtja i bashkon automatikisht klubin në ligat e zgjedhura.')}
           </p>
           {ligaSyncError ? <p className="text-sm text-amber-600 mt-1">{ligaSyncError}</p> : null}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">City</label>
+          <label className="block text-sm font-medium mb-1">{t('City')}</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="block text-sm font-medium mb-1">{t('Country')}</label>
           <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Bio</label>
+        <label className="block text-sm font-medium mb-1">{t('Bio')}</label>
         <textarea name="bio" value={form.bio} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1">Career History</label>
+        <label className="block text-sm font-medium mb-1">{t('Career History')}</label>
         <textarea name="careerHistory" value={form.careerHistory} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <h4 className="text-sm font-semibold mb-2 text-gray-800">Kontakt</h4>
+        <h4 className="text-sm font-semibold mb-2 text-gray-800">{t('Kontakt')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Telefon</label>
+            <label className="block text-sm font-medium mb-1">{t('Telefon')}</label>
             <input name="phone" value={form.phone} onChange={handleChange} placeholder="+383 ..." className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{t('Email')}</label>
             <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="klubi@email.com" className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Website</label>
+            <label className="block text-sm font-medium mb-1">{t('Website')}</label>
             <input name="website" value={form.website} onChange={handleChange} placeholder="https://..." className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Instagram</label>
+            <label className="block text-sm font-medium mb-1">{t('Instagram')}</label>
             <input name="instagram" value={form.instagram} onChange={handleChange} placeholder="@klubi" className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Facebook</label>
+            <label className="block text-sm font-medium mb-1">{t('Facebook')}</label>
             <input name="facebook" value={form.facebook} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Twitter / X</label>
+            <label className="block text-sm font-medium mb-1">{t('Twitter / X')}</label>
             <input name="twitter" value={form.twitter} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
           </div>
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? t('Saving...') : t('Save Changes')}
         </button>
       </div>
       {errors && errors.general && <div className="text-red-500 mt-2">{errors.general}</div>}

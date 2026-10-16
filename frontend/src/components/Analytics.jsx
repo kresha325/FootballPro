@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
 import {
   ChartBarIcon,
@@ -35,12 +36,13 @@ import {
 const COLORS = ['#D9A441', '#42C98B', '#70AAF5', '#F36B72', '#A78BFA', '#55C5C8'];
 
 function StatCard({ icon, label, value, change, color }) {
+  const { t } = useLocale();
   const Icon = icon;
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
+          <p className="text-sm text-gray-600">{t(label)}</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
           {change !== undefined && (
             <div className="flex items-center mt-2">
@@ -52,7 +54,7 @@ function StatCard({ icon, label, value, change, color }) {
               <span className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {Math.abs(change)}%
               </span>
-              <span className="text-xs text-gray-500 ml-1">vs last week</span>
+              <span className="text-xs text-gray-500 ml-1">{t('vs last week')}</span>
             </div>
           )}
         </div>
@@ -65,6 +67,7 @@ function StatCard({ icon, label, value, change, color }) {
 }
 
 const Analytics = () => {
+  const { t } = useLocale();
   const apiRoot = import.meta.env.VITE_API_URL.replace('/api','');
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -120,7 +123,7 @@ const Analytics = () => {
   if (planBlocked || (!canUseAnalytics && !loading)) {
     return (
       <div className="xt-dashboard-page xt-analytics mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-[var(--xt-color-text)]">Analitika e avancuar</h1>
+        <h1 className="text-2xl font-bold text-[var(--xt-color-text)]">{t('Analitika e avancuar')}</h1>
         <p className="mt-3 text-[var(--xt-color-text-muted)]">
           Plani yt aktualisht: <strong>{tierLabel(getEffectiveTier(user))}</strong>.
           Analitika është e disponueshme me Basic, Pro ose trial 30-ditor.
@@ -143,7 +146,7 @@ const Analytics = () => {
   if (!analytics) {
     return (
       <div className="xt-dashboard-page xt-analytics min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">No analytics data available</p>
+        <p className="text-gray-600">{t('No analytics data available')}</p>
       </div>
     );
   }
@@ -171,8 +174,8 @@ const Analytics = () => {
     <div className="xt-dashboard-page xt-analytics min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        <p className="text-blue-100 mt-2">Track your performance and audience insights</p>
+        <h1 className="text-3xl font-bold">{t('Analytics Dashboard')}</h1>
+        <p className="text-blue-100 mt-2">{t('Track your performance and audience insights')}</p>
 
         {/* Period Selector */}
         <div className="mt-6 flex gap-2">
@@ -226,7 +229,7 @@ const Analytics = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Posts</p>
+                <p className="text-sm text-gray-600">{t('Total Posts')}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalPosts}
                 </p>
@@ -237,7 +240,7 @@ const Analytics = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Following</p>
+                <p className="text-sm text-gray-600">{t('Following')}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalFollowing}
                 </p>
@@ -248,7 +251,7 @@ const Analytics = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Engagement rate</p>
+                <p className="text-sm text-gray-600">{t('Engagement rate')}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
                   {analytics.overview.engagementRate == null ? '—' : `${analytics.overview.engagementRate}%`}
                 </p>
@@ -265,9 +268,9 @@ const Analytics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Follower Growth Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Follower Growth</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('Follower Growth')}</h2>
             {followerGrowth.length < 2 ? (
-              <p className="text-sm text-gray-500">Nuk ka mjaft ndjekës të rinj për këtë periudhë.</p>
+              <p className="text-sm text-gray-500">{t('Nuk ka mjaft ndjekës të rinj për këtë periudhë.')}</p>
             ) : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={followerGrowth}>
@@ -284,9 +287,9 @@ const Analytics = () => {
 
           {/* Engagement Rate Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Engagement rate (%)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('Engagement rate (%)')}</h2>
             {engagementRate.filter((row) => row.rate != null).length < 1 ? (
-              <p className="text-sm text-gray-500">Nuk ka shikime të mjaftueshme për të llogaritur normën.</p>
+              <p className="text-sm text-gray-500">{t('Nuk ka shikime të mjaftueshme për të llogaritur normën.')}</p>
             ) : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={engagementRate}>
@@ -305,7 +308,7 @@ const Analytics = () => {
 
           {/* Post Type Performance */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Post Type Performance</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('Post Type Performance')}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
                 data={[
@@ -403,7 +406,7 @@ const Analytics = () => {
 
         {/* Top Posts */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Posts</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('Top Performing Posts')}</h2>
           <div className="space-y-4">
             {analytics.topPosts.map((post, index) => (
               <div
@@ -435,7 +438,7 @@ const Analytics = () => {
                     {post.content && post.content.trim() ? (
                       <p className="text-gray-900 whitespace-pre-line">{post.content}</p>
                     ) : (!post.imageUrl && !post.videoUrl) ? (
-                      <p className="italic text-gray-400">(pa përmbajtje)</p>
+                      <p className="italic text-gray-400">{t('(pa përmbajtje)')}</p>
                     ) : null}
                   </div>
                   {/* Show image if present and not a video file */}
@@ -492,7 +495,7 @@ const Analytics = () => {
                 >
                   &times;
                 </button>
-                <h3 className="text-lg font-semibold mb-2">Post i plotë</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('Post i plotë')}</h3>
                 {selectedPost.imageUrl && !selectedPost.imageUrl.match(/\.(mp4|mov|avi|webm)$/i) && (
                   <img
                     src={getFullUrl(selectedPost.imageUrl)}
@@ -507,7 +510,7 @@ const Analytics = () => {
                     className="w-full h-auto object-cover rounded mb-4"
                   />
                 )}
-                <p className="mb-2">{selectedPost.content || <span className="italic text-gray-400">(pa përmbajtje)</span>}</p>
+                <p className="mb-2">{selectedPost.content || <span className="italic text-gray-400">{t('(pa përmbajtje)')}</span>}</p>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span><HeartIcon className="h-4 w-4 mr-1 text-red-500 inline" /> {selectedPost.likesCount} likes</span>
                   <span><ChatBubbleLeftIcon className="h-4 w-4 mr-1 text-blue-500 inline" /> {selectedPost.commentsCount} comments</span>

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { dedupeLiveByStreamer } from '../utils/liveStreams';
 import { resolveStreamerPhotoUrl } from '../utils/avatarUrl';
+import { useLocale } from '../contexts/LocaleContext';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -34,6 +35,7 @@ function recordingSrc(videoUrl) {
 }
 
 export default function StreamsPage() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [streams, setStreams] = useState([]);
@@ -109,24 +111,24 @@ export default function StreamsPage() {
   return (
     <div className="max-w-3xl mx-auto py-6 sm:py-8 px-3 sm:px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Streams</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('Streams')}</h1>
         <button type="button" className="text-sm font-semibold text-teal-700" onClick={() => navigate('/live')}>
-          Live discovery
+          {t('Live discovery')}
         </button>
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Live aktive hapen me të njëjtin player si në Feed (YouTube ose LiveKit). Ngarko regjistrime më poshtë.
+        {t('Live streams open with the same player as in Feed (YouTube or LiveKit). Upload recordings below.')}
       </p>
 
       <ListSearchBar
         value={listSearch}
         onChange={setListSearch}
-        placeholder="Kërko stream sipas titullit ose streamer-it…"
+        placeholder={t('Search streams by title or streamer…')}
       />
 
       {filteredLive.length > 0 ? (
         <section className="mb-8 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/30 px-4 py-3">
-          <h2 className="text-base font-extrabold text-red-800 dark:text-red-300 mb-3">Live Now</h2>
+          <h2 className="text-base font-extrabold text-red-800 dark:text-red-300 mb-3">{t('Live Now')}</h2>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {filteredLive.map((stream) => {
               const streamer = stream?.streamer || {};
@@ -165,7 +167,7 @@ export default function StreamsPage() {
         </section>
       ) : null}
 
-      <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Ngarko regjistrim</h2>
+      <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('Upload a recording')}</h2>
       <div className="mb-8">
         <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files[0])} />
         <button
@@ -173,25 +175,25 @@ export default function StreamsPage() {
           disabled={uploading || !videoFile}
           className="ml-2 px-4 py-2 bg-blue-600 text-white rounded"
         >
-          {uploading ? 'Uploading...' : 'Upload Recording'}
+          {uploading ? t('Uploading...') : t('Upload Recording')}
         </button>
-        {error && <div className="text-red-600 mt-2">{error}</div>}
+        {error && <div className="text-red-600 mt-2">{t(error)}</div>}
       </div>
 
       {loading ? (
-        <div className="text-gray-600 dark:text-gray-400">Loading streams...</div>
+        <div className="text-gray-600 dark:text-gray-400">{t('Loading streams...')}</div>
       ) : !streams.length ? (
-        <div className="text-gray-600 dark:text-gray-400">No streams found.</div>
+        <div className="text-gray-600 dark:text-gray-400">{t('No streams found.')}</div>
       ) : (
         <ul className="space-y-4">
           {recorded.length === 0 && liveStreams.length === 0 ? (
-            <li className="text-gray-600 dark:text-gray-400">No recorded videos yet.</li>
+            <li className="text-gray-600 dark:text-gray-400">{t('No recorded videos yet.')}</li>
           ) : null}
           {recorded.map((stream) => (
             <li key={stream.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
               <div className="font-bold text-gray-900 dark:text-white">{stream.title}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">{stream.description}</div>
-              <div className="text-xs text-gray-500 mt-1">Recorded</div>
+              <div className="text-xs text-gray-500 mt-1">{t('Recorded')}</div>
               {stream.videoUrl && (
                 <video src={recordingSrc(stream.videoUrl)} controls className="w-full mt-2 rounded" />
               )}

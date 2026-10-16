@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import AiGenerateBioButton from '../../ai/AiGenerateBioButton';
 import { profileAPI } from '../../../services/api';
 import { getFullUrl } from '../../../utils/mediaUrl';
+import { useLocale } from '../../../contexts/LocaleContext';
 
 const EditCoachProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const [form, setForm] = useState({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
@@ -82,26 +84,26 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Profile Photo</label>
+        <label className="block text-sm font-medium mb-1">{t('Profile Photo')}</label>
         {preview && (
-          <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
+          <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
         <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Coach Profile</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Coach Profile')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">First Name *</label>
+          <label className="block text-sm font-medium mb-1">{t('First Name')} *</label>
           <input id="coach-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="given-name" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Last Name *</label>
+          <label className="block text-sm font-medium mb-1">{t('Last Name')} *</label>
           <input id="coach-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="family-name" />
         </div>
       </div>
       <div>
         <div className="flex items-center justify-between gap-2 mb-1">
-          <label className="block text-sm font-medium">Bio</label>
+          <label className="block text-sm font-medium">{t('Bio')}</label>
           <AiGenerateBioButton
             hints={{ club: form.club, city: form.city, country: form.country }}
             onBio={(bio) => setForm((prev) => ({ ...prev, bio }))}
@@ -111,7 +113,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Club</label>
+          <label className="block text-sm font-medium mb-1">{t('Club')}</label>
           <div className="relative">
             <input
               id="coach-club"
@@ -126,7 +128,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
               onFocus={() => setShowClubSuggestions(true)}
               onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
               className="w-full p-2 border border-gray-300 rounded"
-              placeholder="Shkruaj emrin e klubit"
+              placeholder={t('Shkruaj emrin e klubit')}
               autoComplete="organization"
             />
             {showClubSuggestions && clubSuggestions.length > 0 && (
@@ -149,7 +151,7 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
                         setShowClubSuggestions(false);
                       }}
                     >
-                      {label || 'Club'}
+                      {label || t('Club')}
                     </button>
                   );
                 })}
@@ -158,45 +160,45 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Affiliation</label>
+          <label className="block text-sm font-medium mb-1">{t('Affiliation')}</label>
           <select name="coachAffiliation" value={form.coachAffiliation} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select Affiliation</option>
-            <option value="club">Club Trainer</option>
-            <option value="independent">Independent</option>
-            <option value="personal_trainer">Personal Trainer</option>
+            <option value="">{t('Select Affiliation')}</option>
+            <option value="club">{t('Club Trainer')}</option>
+            <option value="independent">{t('Independent')}</option>
+            <option value="personal_trainer">{t('Personal Trainer')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
+          <label className="block text-sm font-medium mb-1">{t('Category')}</label>
           <select name="coachCategory" value={form.coachCategory} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select Category</option>
-            <option value="general_trainer">General Trainer</option>
-            <option value="assistant_trainer">Assistant Trainer</option>
-            <option value="fitness_trainer">Fitness/Conditional Trainer</option>
-            <option value="goalkeeper_trainer">Goalkeeper Trainer</option>
-            <option value="technical_trainer">Technical Trainer</option>
-            <option value="tactical_trainer">Tactical Trainer</option>
-            <option value="psychological_trainer">Psychological Trainer</option>
-            <option value="youth_trainer">Youth Trainer</option>
-            <option value="rehabilitation_trainer">Rehabilitation Trainer</option>
+            <option value="">{t('Select Category')}</option>
+            <option value="general_trainer">{t('General Trainer')}</option>
+            <option value="assistant_trainer">{t('Assistant Trainer')}</option>
+            <option value="fitness_trainer">{t('Fitness/Conditional Trainer')}</option>
+            <option value="goalkeeper_trainer">{t('Goalkeeper Trainer')}</option>
+            <option value="technical_trainer">{t('Technical Trainer')}</option>
+            <option value="tactical_trainer">{t('Tactical Trainer')}</option>
+            <option value="psychological_trainer">{t('Psychological Trainer')}</option>
+            <option value="youth_trainer">{t('Youth Trainer')}</option>
+            <option value="rehabilitation_trainer">{t('Rehabilitation Trainer')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">City</label>
+          <label className="block text-sm font-medium mb-1">{t('City')}</label>
           <input name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="block text-sm font-medium mb-1">{t('Country')}</label>
           <input name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Career History</label>
+          <label className="block text-sm font-medium mb-1">{t('Career History')}</label>
           <textarea name="careerHistory" value={form.careerHistory} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? t('Saving...') : t('Save Changes')}
         </button>
       </div>
       {errors && errors.general && <div className="text-red-500 mt-2">{errors.general}</div>}

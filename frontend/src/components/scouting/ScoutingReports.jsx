@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { scoutingAPI } from '../../services/api';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from './ScoutingLayout';
 import { apiError } from './scoutingState';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const GROUPS = [
   ['technical', 'Teknike'],
@@ -31,6 +32,7 @@ const EMPTY_FORM = {
 };
 
 export default function ScoutingReports() {
+  const { t } = useLocale();
   const [params] = useSearchParams();
   const [meta, setMeta] = useState(null);
   const [reports, setReports] = useState([]);
@@ -147,27 +149,27 @@ export default function ScoutingReports() {
         <h2 className="text-xl font-semibold">{editingId ? 'Ndrysho raportin' : 'Raport i ri'}</h2>
         {error ? <ErrorBlock message={error} /> : null}
         <div className="grid gap-3 sm:grid-cols-2">
-          <label><span className="label">ID e lojtarit</span><input className="input" required value={form.playerId} onChange={(event) => setForm({ ...form, playerId: event.target.value })} /></label>
-          <label><span className="label">Data</span><input className="input" type="date" value={form.reportDate} onChange={(event) => setForm({ ...form, reportDate: event.target.value })} /></label>
-          <label><span className="label">ID e kompeticionit</span><input className="input" value={form.tournamentId} onChange={(event) => setForm({ ...form, tournamentId: event.target.value })} /></label>
-          <label><span className="label">ID e ndeshjes</span><input className="input" value={form.matchId} onChange={(event) => setForm({ ...form, matchId: event.target.value })} /></label>
-          <label><span className="label">Statusi</span>
+          <label><span className="label">{t("ID e lojtarit")}</span><input className="input" required value={form.playerId} onChange={(event) => setForm({ ...form, playerId: event.target.value })} /></label>
+          <label><span className="label">{t("Data")}</span><input className="input" type="date" value={form.reportDate} onChange={(event) => setForm({ ...form, reportDate: event.target.value })} /></label>
+          <label><span className="label">{t("ID e kompeticionit")}</span><input className="input" value={form.tournamentId} onChange={(event) => setForm({ ...form, tournamentId: event.target.value })} /></label>
+          <label><span className="label">{t("ID e ndeshjes")}</span><input className="input" value={form.matchId} onChange={(event) => setForm({ ...form, matchId: event.target.value })} /></label>
+          <label><span className="label">{t("Statusi")}</span>
             <select className="select" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-              <option value="draft">Draft</option>
-              <option value="completed">I përfunduar</option>
+              <option value="draft">{t("Draft")}</option>
+              <option value="completed">{t("I përfunduar")}</option>
             </select>
           </label>
-          <label><span className="label">Rekomandimi</span>
+          <label><span className="label">{t("Rekomandimi")}</span>
             <select className="select" value={form.recommendation} onChange={(event) => setForm({ ...form, recommendation: event.target.value })}>
               <option value="">—</option>
               {(meta?.recommendationOptions || []).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </label>
-          <label><span className="label">Potenciali (1–10)</span><input className="input" type="number" min="1" max="10" step="0.1" value={form.potentialRating} onChange={(event) => setForm({ ...form, potentialRating: event.target.value })} /></label>
+          <label><span className="label">{t("Potenciali (1–10)")}</span><input className="input" type="number" min="1" max="10" step="0.1" value={form.potentialRating} onChange={(event) => setForm({ ...form, potentialRating: event.target.value })} /></label>
         </div>
         {GROUPS.map(([group, label]) => (
           <fieldset key={group} className="grid gap-2 sm:grid-cols-2">
-            <legend className="text-sm font-semibold">{label}</legend>
+            <legend className="text-sm font-semibold">{t(label)}</legend>
             {(meta?.criteria?.[group] || []).map((key) => (
               <label key={key}><span className="label">{key}</span>
                 <input className="input" type="number" min="1" max="10" step="0.1" value={form[group][key] ?? ''} onChange={(event) => setScore(group, key, event.target.value)} />
@@ -177,7 +179,7 @@ export default function ScoutingReports() {
         ))}
         {specificKeys.length > 0 ? (
           <fieldset className="grid gap-2 sm:grid-cols-2">
-            <legend className="text-sm font-semibold">Sipas pozicionit</legend>
+            <legend className="text-sm font-semibold">{t("Sipas pozicionit")}</legend>
             {specificKeys.map((key) => (
               <label key={key}><span className="label">{key}</span>
                 <input className="input" type="number" min="1" max="10" step="0.1" value={form.positionSpecific[key] ?? ''} onChange={(event) => setScore('positionSpecific', key, event.target.value)} />
@@ -208,8 +210,8 @@ export default function ScoutingReports() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <button type="button" className="btn btn-outline" onClick={() => edit(report)}>Ndrysho</button>
-                <button type="button" className="btn btn-quiet" onClick={() => remove(report)}>Fshi</button>
+                <button type="button" className="btn btn-outline" onClick={() => edit(report)}>{t("Ndrysho")}</button>
+                <button type="button" className="btn btn-quiet" onClick={() => remove(report)}>{t("Fshi")}</button>
               </div>
             </div>
           </article>

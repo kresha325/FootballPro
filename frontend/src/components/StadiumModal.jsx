@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getFullUrl } from '../utils/mediaUrl';
 import { stadiumsAPI } from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 function todayKey() {
   const d = new Date();
@@ -16,6 +17,7 @@ function addDaysKey(baseKey, days) {
 }
 
 export default function StadiumModal({ stadium, onClose }) {
+  const { t } = useLocale();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState('');
@@ -105,19 +107,19 @@ export default function StadiumModal({ stadium, onClose }) {
 
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-gray-500 dark:text-gray-400">Kapaciteti</dt>
+              <dt className="text-gray-500 dark:text-gray-400">{t('Kapaciteti')}</dt>
               <dd className="font-semibold text-gray-900 dark:text-white">
                 {stadium.capacity != null ? Number(stadium.capacity).toLocaleString() : '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-gray-500 dark:text-gray-400">Adresa</dt>
+              <dt className="text-gray-500 dark:text-gray-400">{t('Adresa')}</dt>
               <dd className="font-semibold text-gray-900 dark:text-white">{stadium.address || '—'}</dd>
             </div>
           </dl>
 
           <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-slate-50 dark:bg-gray-900/40 p-4 space-y-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Orari i ndeshjeve</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">{t('Orari i ndeshjeve')}</h3>
 
             <div className="flex flex-wrap gap-2">
               {[
@@ -141,7 +143,7 @@ export default function StadiumModal({ stadium, onClose }) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Filtro sipas datës</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('Filtro sipas datës')}</label>
               <input
                 type="date"
                 value={filterDate}
@@ -156,7 +158,7 @@ export default function StadiumModal({ stadium, onClose }) {
             {loading ? (
               <p className="text-sm text-gray-500">Duke ngarkuar orarin…</p>
             ) : matches.length === 0 ? (
-              <p className="text-sm text-gray-500">Nuk ka ndeshje për këtë filtër.</p>
+              <p className="text-sm text-gray-500">{t('Nuk ka ndeshje për këtë filtër.')}</p>
             ) : (
               <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 {grouped.map(([dateKey, list]) => (
@@ -175,7 +177,7 @@ export default function StadiumModal({ stadium, onClose }) {
                             {m.tournamentName || 'Turne'}
                           </div>
                           <div className="font-semibold text-gray-900 dark:text-white">
-                            {m.homeTeam} <span className="text-gray-400 font-normal">vs</span> {m.awayTeam}
+                            {m.homeTeam} <span className="text-gray-400 font-normal">{t('vs')}</span> {m.awayTeam}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {m.timeLabel || '—'}

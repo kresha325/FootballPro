@@ -24,9 +24,10 @@ const REPORT_REASONS = [
 ];
 
 function ChatMedia({ src, kind, alt, onOpen }) {
+  const { t } = useLocale();
   const [broken, setBroken] = useState(false);
   if (!src || broken) {
-    return <span className="text-xs italic opacity-80">Media nuk u ngarkua</span>;
+    return <span className="text-xs italic opacity-80">{t('Media nuk u ngarkua')}</span>;
   }
   if (kind === 'video') {
     return (
@@ -42,7 +43,7 @@ function ChatMedia({ src, kind, alt, onOpen }) {
   return (
     <img
       src={src}
-      alt={alt || 'Shared'}
+      alt={alt || t('Shared')}
       className="rounded mb-2 cursor-pointer max-w-[180px] max-h-[180px] object-cover border border-gray-300"
       onError={() => setBroken(true)}
       onClick={() => onOpen?.(src)}
@@ -82,15 +83,15 @@ function dayKey(d) {
   return `${x.getFullYear()}-${x.getMonth() + 1}-${x.getDate()}`;
 }
 
-function dayDividerLabel(d) {
+function dayDividerLabel(d, language, t) {
   const messageDate = new Date(d);
   if (Number.isNaN(messageDate.getTime())) return '';
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (dayKey(messageDate) === dayKey(today)) return 'Sot';
-  if (dayKey(messageDate) === dayKey(yesterday)) return 'Dje';
-  return messageDate.toLocaleDateString('sq-AL', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  if (dayKey(messageDate) === dayKey(today)) return t('Sot');
+  if (dayKey(messageDate) === dayKey(yesterday)) return t('Dje');
+  return messageDate.toLocaleDateString(language, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Modal për shfaqjen e fotove të mëdha
@@ -114,7 +115,7 @@ function MediaModal({ src, alt, onClose }) {
           className="absolute top-2 right-2 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 px-4 py-2 rounded shadow border border-gray-300 text-sm font-semibold transition"
           onClick={e => e.stopPropagation()}
         >
-          Save
+          {t('Save')}
         </a>
       </div>
     </div>
@@ -122,7 +123,7 @@ function MediaModal({ src, alt, onClose }) {
 }
 
 function Messaging() {
-  const { t } = useLocale();
+  const { t, language } = useLocale();
   // All useState declarations at the top
   const [modalImage, setModalImage] = useState(null);
   const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
@@ -254,14 +255,14 @@ function Messaging() {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (messageDate.toDateString() === today.toDateString()) {
-      return messageDate.toLocaleTimeString('sq-AL', {
+      return messageDate.toLocaleTimeString(language, {
         hour: '2-digit',
         minute: '2-digit',
       });
     } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Dje';
+      return t('Dje');
     } else {
-      return messageDate.toLocaleDateString('sq-AL', {
+      return messageDate.toLocaleDateString(language, {
         month: 'short',
         day: 'numeric',
       });
@@ -394,7 +395,7 @@ function Messaging() {
       setShowInviteMembersPanel(false);
       setInviteMemberIds([]);
     } catch (err) {
-      alert(err?.response?.data?.msg || 'Nuk u shtuan anëtarët');
+      alert(err?.response?.data?.msg || t('Nuk u shtuan anëtarët'));
     } finally {
       setInviteBusy(false);
     }
@@ -411,7 +412,7 @@ function Messaging() {
       setSelectedConversation(null);
       setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(leftId)));
     } catch (err) {
-      alert(err?.response?.data?.msg || 'Nuk u dal nga grupi');
+      alert(err?.response?.data?.msg || t('Nuk u dal nga grupi'));
     } finally {
       setLeaveBusy(false);
     }
@@ -919,7 +920,7 @@ function Messaging() {
       await api.post('/moderation/reports', { targetType: 'message', targetId: reportTarget.id, reason });
       setReportTarget(null);
       setActionError('');
-      window.alert('Raportimi u dërgua.');
+      window.alert(t('Raportimi u dërgua.'));
     } catch (err) {
       setActionError(err?.response?.data?.msg || 'Raportimi nuk u dërgua');
     }
@@ -930,7 +931,7 @@ function Messaging() {
     try {
       await api.post(`/moderation/blocks/${peerId}`);
       setActionError('');
-      window.alert('Përdoruesi u bllokua.');
+      window.alert(t('Përdoruesi u bllokua.'));
     } catch (err) {
       setActionError(err?.response?.data?.msg || 'Bllokimi dështoi');
     }
@@ -1072,7 +1073,7 @@ function Messaging() {
           </p>
         )}
         {message.edited && (
-          <span className={`ml-2 text-xs ${isMine ? 'text-slate-700' : 'text-[var(--xt-color-text-subtle)]'}`}>(edited)</span>
+          <span className={`ml-2 text-xs ${isMine ? 'text-slate-700' : 'text-[var(--xt-color-text-subtle)]'}`}>{t('(edited)')}</span>
         )}
         <ForwardButton message={message} />
       </>
@@ -1119,11 +1120,11 @@ function Messaging() {
 
   async function createGroupConversation() {
     if (!groupName.trim()) {
-      alert('Shkruaj emrin e grupit.');
+      alert(t('Shkruaj emrin e grupit.'));
       return;
     }
     if (groupMembers.length < 2) {
-      alert('Zgjidh të paktën 2 anëtarë.');
+      alert(t('Zgjidh të paktën 2 anëtarë.'));
       return;
     }
     setCreatingGroup(true);
@@ -1207,7 +1208,7 @@ function Messaging() {
         {inboxError ? (
           <div role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             <p>{inboxError}</p>
-            <button type="button" onClick={() => { setLoading(true); fetchConversations(); }} className="mt-2 font-semibold underline">Provo përsëri</button>
+            <button type="button" onClick={() => { setLoading(true); fetchConversations(); }} className="mt-2 font-semibold underline">{t('Provo përsëri')}</button>
           </div>
         ) : null}
         {inboxError ? null : conversations.length === 0 ? (
@@ -1215,12 +1216,12 @@ function Messaging() {
             <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p className="text-[var(--xt-color-text-subtle)] mb-2">Ende nuk ke biseda</p>
-            <p className="text-sm text-[var(--xt-color-text-subtle)]">Nis një bisedë të re ose zgjidh dikë nga profili i tij.</p>
-            <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary mt-4 min-h-11 px-4">Nis bisedë të re</button>
+            <p className="text-[var(--xt-color-text-subtle)] mb-2">{t('Ende nuk ke biseda')}</p>
+            <p className="text-sm text-[var(--xt-color-text-subtle)]">{t('Nis një bisedë të re ose zgjidh dikë nga profili i tij.')}</p>
+            <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary mt-4 min-h-11 px-4">{t('Nis bisedë të re')}</button>
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="p-6 text-center text-sm text-[var(--xt-color-text-subtle)]">Nuk u gjet asnjë bisedë për këtë kërkim.</div>
+          <div className="p-6 text-center text-sm text-[var(--xt-color-text-subtle)]">{t('Nuk u gjet asnjë bisedë për këtë kërkim.')}</div>
         ) : (
           filteredConversations.map(conv => {
             const other = getOtherMember(conv);
@@ -1288,15 +1289,15 @@ function Messaging() {
       {showCreateGroup ? (
         <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-3">
           <div className="w-full max-w-md bg-[var(--xt-color-surface)] rounded-xl shadow-lg p-4 max-h-[85vh] overflow-y-auto">
-            <h3 className="text-lg font-bold dark:text-white mb-3">Krijo Group Chat</h3>
+            <h3 className="text-lg font-bold dark:text-white mb-3">{t('Krijo Group Chat')}</h3>
             <input
               type="text"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Emri i grupit"
+              placeholder={t('Emri i grupit')}
               className="w-full mb-3 px-3 py-2 rounded-lg border dark:border-gray-600 bg-[var(--xt-color-canvas)] dark:text-white"
             />
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Zgjidh anëtarët:</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{t('Zgjidh anëtarët:')}</p>
             <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
               {directContacts.map((m) => (
                 <label key={m.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
@@ -1315,7 +1316,7 @@ function Messaging() {
                 </label>
               ))}
               {directContacts.length === 0 ? (
-                <p className="text-sm text-gray-500">Nuk ka kontakte. Fillo biseda 1-1 fillimisht.</p>
+                <p className="text-sm text-gray-500">{t('Nuk ka kontakte. Fillo biseda 1-1 fillimisht.')}</p>
               ) : null}
             </div>
             <div className="flex justify-end gap-2">
@@ -1328,7 +1329,7 @@ function Messaging() {
                 }}
                 className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-sm"
               >
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -1336,7 +1337,7 @@ function Messaging() {
                 disabled={creatingGroup}
                 className="px-3 py-2 rounded-lg bg-[var(--xt-color-gold)] hover:bg-[var(--xt-color-gold-bright)] text-slate-950 text-sm disabled:opacity-60"
               >
-                {creatingGroup ? 'Creating...' : 'Create Group'}
+                {creatingGroup ? t('Creating...') : t('Create Group')}
               </button>
             </div>
           </div>
@@ -1354,7 +1355,7 @@ function Messaging() {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Anëtarët e grupit"
+            aria-label={t('Anëtarët e grupit')}
           >
             <div className="flex items-center justify-between border-b border-[var(--xt-color-border)] px-4 py-3">
               <h3 className="font-extrabold text-[var(--xt-color-text)]">
@@ -1365,7 +1366,7 @@ function Messaging() {
                 className="btn btn-quiet min-h-10 px-3"
                 onClick={() => setShowGroupMembersPanel(false)}
               >
-                Mbyll
+                {t('Mbyll')}
               </button>
             </div>
             {canManageGroup ? (
@@ -1374,15 +1375,15 @@ function Messaging() {
                   <input
                     value={groupRename}
                     onChange={(e) => setGroupRename(e.target.value)}
-                    placeholder="Emër i ri i grupit"
+                    placeholder={t('Emër i ri i grupit')}
                     className="input min-h-10 flex-1 text-sm"
                   />
                   <button type="button" className="btn btn-outline min-h-10 px-3 text-sm" onClick={renameSelectedGroup}>
-                    Ruaj
+                    {t('Ruaj')}
                   </button>
                 </div>
                 <label className="text-xs font-semibold text-[var(--xt-color-text-muted)]">
-                  Ndrysho foton
+                  {t('Ndrysho foton')}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif"
@@ -1402,7 +1403,7 @@ function Messaging() {
                   setShowInviteMembersPanel(true);
                 }}
               >
-                Fto anëtarë
+                {t('Fto anëtarë')}
               </button>
               <button
                 type="button"
@@ -1410,12 +1411,12 @@ function Messaging() {
                 disabled={leaveBusy || inviteBusy}
                 onClick={leaveSelectedGroup}
               >
-                {leaveBusy ? 'Duke dalë…' : 'Dil nga grupi'}
+                {leaveBusy ? t('Duke dalë…') : t('Dil nga grupi')}
               </button>
             </div>
             <div className="overflow-y-auto max-h-[min(55vh,26rem)]">
               {(Array.isArray(selectedConversation.members) ? selectedConversation.members : []).length === 0 ? (
-                <p className="p-6 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk ka anëtarë.</p>
+                <p className="p-6 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Nuk ka anëtarë.')}</p>
               ) : (
                 selectedConversation.members.map((m) => {
                   const name = `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Përdorues';
@@ -1457,14 +1458,14 @@ function Messaging() {
                       {canManageGroup && !isMe && !memberIsOwner ? (
                         <div className="flex flex-col items-end gap-1 text-[11px]">
                           {memberRole === 'admin' ? (
-                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'member')}>Hiq admin</button>
+                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'member')}>{t('Hiq admin')}</button>
                           ) : (
-                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'admin')}>Bëj admin</button>
+                            <button type="button" className="hover:underline" onClick={() => setMemberRole(m.id, 'admin')}>{t('Bëj admin')}</button>
                           )}
                           {(isGroupOwner || !selectedConversation.ownerId) && (
-                            <button type="button" className="hover:underline" onClick={() => transferOwnership(m.id)}>Pronar</button>
+                            <button type="button" className="hover:underline" onClick={() => transferOwnership(m.id)}>{t('Pronar')}</button>
                           )}
-                          <button type="button" className="text-red-600 hover:underline" onClick={() => removeGroupMember(m.id)}>Hiq</button>
+                          <button type="button" className="text-red-600 hover:underline" onClick={() => removeGroupMember(m.id)}>{t('Hiq')}</button>
                         </div>
                       ) : null}
                     </div>
@@ -1487,16 +1488,16 @@ function Messaging() {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Fto anëtarë"
+            aria-label={t('Fto anëtarë')}
           >
             <div className="flex items-center justify-between border-b border-[var(--xt-color-border)] px-4 py-3">
-              <h3 className="font-extrabold text-[var(--xt-color-text)]">Fto anëtarë</h3>
+              <h3 className="font-extrabold text-[var(--xt-color-text)]">{t('Fto anëtarë')}</h3>
               <button
                 type="button"
                 className="btn btn-quiet min-h-10 px-3"
                 onClick={() => setShowInviteMembersPanel(false)}
               >
-                Mbyll
+                {t('Mbyll')}
               </button>
             </div>
             <p className="px-4 pt-3 text-xs text-[var(--xt-color-text-muted)]">
@@ -1505,7 +1506,7 @@ function Messaging() {
             <div className="overflow-y-auto max-h-[min(45vh,20rem)] px-2 py-2">
               {inviteableContacts.length === 0 ? (
                 <p className="p-4 text-center text-sm text-[var(--xt-color-text-muted)]">
-                  Nuk ka kontakte të reja. Fillo biseda 1-1 fillimisht.
+                  {t('Nuk ka kontakte të reja. Fillo biseda 1-1 fillimisht.')}
                 </p>
               ) : (
                 inviteableContacts.map((m) => {
@@ -1538,7 +1539,7 @@ function Messaging() {
                 className="btn btn-quiet min-h-10 px-3"
                 onClick={() => setShowInviteMembersPanel(false)}
               >
-                Anulo
+                {t('Anulo')}
               </button>
               <button
                 type="button"
@@ -1571,7 +1572,7 @@ function Messaging() {
                           navigate('/messaging', { replace: true });
                         }}
                         className="btn btn-quiet min-h-10 px-3 md:hidden"
-                        aria-label="Kthehu te bisedat"
+                        aria-label={t('Kthehu te bisedat')}
                       >‹</button>
                       <div className="relative flex-shrink-0">
                         {other.profilePhoto ? (
@@ -1613,16 +1614,16 @@ function Messaging() {
                 {!selectedConversation.isGroup && getOtherMember(selectedConversation).id ? (
                   <button
                     type="button"
-                    title="Blloko"
+                    title={t('Blloko')}
                     className="p-2 rounded-full hover:bg-red-100 text-xs font-semibold text-red-600"
                     onClick={() => blockPeer(getOtherMember(selectedConversation).id)}
                   >
-                    Blloko
+                    {t('Blloko')}
                   </button>
                 ) : null}
                 <button
                   type="button"
-                  title="Thirrje zanore"
+                  title={t('Thirrje zanore')}
                   className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
                   onClick={() => startCall(false)}
                 >
@@ -1630,7 +1631,7 @@ function Messaging() {
                 </button>
                 <button
                   type="button"
-                  title="Video thirrje"
+                  title={t('Video thirrje')}
                   className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition"
                   onClick={() => startCall(true)}
                 >
@@ -1689,7 +1690,7 @@ function Messaging() {
                   {showDay && (
                     <div className="flex justify-center my-5">
                       <span className="text-xs font-medium text-[var(--xt-color-text-subtle)] bg-white/90 dark:bg-gray-800/90 px-3 py-1 rounded-full shadow-sm border dark:border-gray-700">
-                        {dayDividerLabel(message.createdAt)}
+                        {dayDividerLabel(message.createdAt, language, t)}
                       </span>
                     </div>
                   )}
@@ -1775,11 +1776,11 @@ function Messaging() {
                         {!message.deleted && (
                           <div className={`flex flex-wrap gap-2 text-[11px] ${isMine ? 'text-blue-100' : 'text-[var(--xt-color-text-subtle)]'}`}>
                             <button type="button" className="hover:underline" onClick={() => setReplyTo(message)}>
-                              Përgjigju
+                              {t('Përgjigju')}
                             </button>
                             {!!message.content?.trim() && (
                               <button type="button" className="hover:underline" onClick={() => copyText(message.content)}>
-                                Kopjo
+                                {t('Kopjo')}
                               </button>
                             )}
                             {isMine && message.content?.trim() && !message.fileUrl && (
@@ -1788,12 +1789,12 @@ function Messaging() {
                                 className="hover:underline"
                                 onClick={() => setEditingMessage({ id: message.id, content: message.content })}
                               >
-                                Ndrysho
+                                {t('Ndrysho')}
                               </button>
                             )}
                             {isMine && (
                               <button type="button" className="hover:underline" onClick={() => deleteMessage(message.id)}>
-                                Fshi
+                                {t('Fshi')}
                               </button>
                             )}
                             <button
@@ -1801,11 +1802,11 @@ function Messaging() {
                               className="hover:underline"
                               onClick={() => setReactionMenuId((openId) => (openId === message.id ? null : message.id))}
                             >
-                              Reagim
+                              {t('Reagim')}
                             </button>
                             {!isMine && (
                               <button type="button" className="hover:underline" onClick={() => setReportTarget(message)}>
-                                Raporto
+                                {t('Raporto')}
                               </button>
                             )}
                           </div>
@@ -1825,7 +1826,7 @@ function Messaging() {
           {showScrollDown && (
             <button
               type="button"
-              aria-label="Shko poshtë"
+              aria-label={t('Shko poshtë')}
               onClick={() => scrollToBottom(false)}
               className="absolute bottom-40 right-4 z-40 rounded-full bg-[var(--xt-color-gold)] p-3 text-slate-950 shadow-lg transition md:bottom-36"
             >
@@ -1838,8 +1839,8 @@ function Messaging() {
             <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <span>{actionError}</span>
               <div className="flex shrink-0 gap-3">
-                {messageLoadError && selectedConversation ? <button type="button" className="font-semibold underline" onClick={() => fetchMessages(selectedConversation.id)}>Provo përsëri</button> : null}
-                <button type="button" className="font-semibold" onClick={() => setActionError('')}>Mbyll</button>
+                {messageLoadError && selectedConversation ? <button type="button" className="font-semibold underline" onClick={() => fetchMessages(selectedConversation.id)}>{t('Provo përsëri')}</button> : null}
+                <button type="button" className="font-semibold" onClick={() => setActionError('')}>{t('Mbyll')}</button>
               </div>
             </div>
           ) : null}
@@ -1850,14 +1851,14 @@ function Messaging() {
             {editingMessage && (
               <div className="mb-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl flex justify-between items-start gap-2">
                 <div className="text-sm dark:text-gray-200 min-w-0">
-                  <span className="font-medium text-amber-800 dark:text-amber-200">Po ndryshon mesazhin</span>
+                  <span className="font-medium text-amber-800 dark:text-amber-200">{t('Po ndryshon mesazhin')}</span>
                   <p className="text-[var(--xt-color-text-muted)] truncate mt-0.5">{editingMessage.content}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditingMessage(null)}
                   className="text-[var(--xt-color-text-subtle)] hover:text-gray-800 dark:hover:text-gray-100 flex-shrink-0"
-                  aria-label="Anulo ndryshimin"
+                  aria-label={t('Anulo ndryshimin')}
                 >
                   ✕
                 </button>
@@ -1866,7 +1867,7 @@ function Messaging() {
             {replyTo && !editingMessage && (
               <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex justify-between items-center gap-2">
                 <div className="text-sm dark:text-gray-200 min-w-0">
-                  <span className="font-medium">Përgjigje te:</span>{' '}
+                  <span className="font-medium">{t('Përgjigje te:')}</span>{' '}
                   <span className="text-[var(--xt-color-text-muted)] truncate">{replyTo.content}</span>
                 </div>
                 <button
@@ -1921,7 +1922,7 @@ function Messaging() {
               />
               <button
                 type="button"
-                title="Bashkëngjit skedar"
+                title={t('Bashkëngjit skedar')}
                 disabled={!!editingMessage}
                 onClick={() => fileInputRef.current?.click()}
                 className="p-2 text-[var(--xt-color-text-subtle)] hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40"
@@ -1932,7 +1933,7 @@ function Messaging() {
               </button>
               <button
                 type="button"
-                title="Emoji të shpejta"
+                title={t('Emoji të shpejta')}
                 disabled={!!editingMessage}
                 onClick={() => setShowEmojiBar(v => !v)}
                 className={`p-2 rounded-lg ${showEmojiBar ? 'bg-blue-100 dark:bg-blue-900 text-blue-600' : 'text-[var(--xt-color-text-subtle)]'} hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40`}
@@ -1962,7 +1963,7 @@ function Messaging() {
                     sendMessage(e);
                   }
                 }}
-                placeholder={editingMessage ? 'Ndrysho mesazhin…' : 'Shkruaj mesazhin… (⌘/Ctrl+Enter për dërguar)'}
+                placeholder={editingMessage ? t('Ndrysho mesazhin…') : t('Shkruaj mesazhin… (⌘/Ctrl+Enter për dërguar)')}
                 className="input min-h-[44px] max-h-32 flex-1 resize-none"
               />
               <button
@@ -1986,8 +1987,8 @@ function Messaging() {
             </svg>
             <p className="text-[var(--xt-color-text-subtle)] text-lg">{t('Choose a conversation to continue')}</p>
             <p className="text-sm text-[var(--xt-color-text-subtle)] mt-2 max-w-sm mx-auto">
-              Nëse ke lidhur nga një link me <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">conversationId</code> ose{' '}
-              <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">userId</code>, biseda duhet të hapet automatikisht pasi të ngarkohet lista.
+              {t('Nëse ke lidhur nga një link me')} <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">conversationId</code> {t('ose')} {' '}
+              <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">userId</code>, {t('biseda duhet të hapet automatikisht pasi të ngarkohet lista.')}
             </p>
           </div>
         </div>
@@ -1997,21 +1998,21 @@ function Messaging() {
           <section role="dialog" aria-modal="true" aria-labelledby="new-message-title" className="flex max-h-[85dvh] min-h-[340px] w-full max-w-lg flex-col rounded-t-2xl bg-[var(--xt-color-surface)] p-5 shadow-2xl sm:rounded-2xl">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div><h2 id="new-message-title" className="text-lg font-bold">{t('New message')}</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{t('Search for the person you want to message.')}</p></div>
-              <button type="button" onClick={closeNewMessage} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Mbyll"><span aria-hidden="true">✕</span></button>
+              <button type="button" onClick={closeNewMessage} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label={t('Mbyll')}><span aria-hidden="true">✕</span></button>
             </div>
             <input autoFocus type="search" value={newMessageQuery} onChange={(event) => setNewMessageQuery(event.target.value)} placeholder={t('Search by name…')} className="input mb-3" aria-label={t('search')} />
             {newMessageError ? <p role="alert" className="mb-2 text-sm text-red-700">{newMessageError}</p> : null}
             <div className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
               {newMessageLoading ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Searching…')}</p> : null}
-              {!newMessageLoading && newMessageQuery.trim().length < 2 ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Shkruaj të paktën 2 shkronja për të kërkuar.</p> : null}
-              {!newMessageLoading && newMessageQuery.trim().length >= 2 && newMessageResults.length === 0 && !newMessageError ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk u gjet asnjë përdorues.</p> : null}
+              {!newMessageLoading && newMessageQuery.trim().length < 2 ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Shkruaj të paktën 2 shkronja për të kërkuar.')}</p> : null}
+              {!newMessageLoading && newMessageQuery.trim().length >= 2 && newMessageResults.length === 0 && !newMessageError ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Nuk u gjet asnjë përdorues.')}</p> : null}
               {newMessageResults.map((person) => {
                 const id = person.id ?? person.userId;
                 const name = `${person.firstName || ''} ${person.lastName || ''}`.trim() || 'Përdorues';
                 return <button type="button" key={id} onClick={() => startConversationWith(person)} disabled={openingUserId != null} className="flex w-full items-center gap-3 border-b border-[var(--xt-color-border)] px-1 py-3 text-left hover:bg-[var(--xt-color-canvas)] disabled:opacity-60" aria-label={`Hap bisedë me ${name}`}>
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--xt-color-gold)] font-bold text-slate-950">{name.charAt(0).toUpperCase()}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{name}</span><span className="block truncate text-xs text-[var(--xt-color-text-muted)]">{person.role || person.club || ''}</span></span>
-                  {openingUserId === id ? <span className="text-sm">Duke hapur…</span> : <span aria-hidden="true">›</span>}
+                  {openingUserId === id ? <span className="text-sm">{t('Duke hapur…')}</span> : <span aria-hidden="true">›</span>}
                 </button>;
               })}
             </div>
@@ -2021,11 +2022,11 @@ function Messaging() {
       {reportTarget ? (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setReportTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-bold text-slate-900">Raporto mesazhin</h3>
+            <h3 className="mb-3 font-bold text-slate-900">{t('Raporto mesazhin')}</h3>
             <div className="flex flex-col gap-2">
               {REPORT_REASONS.map(([key, label]) => (
                 <button key={key} type="button" className="rounded-lg border px-3 py-2 text-left text-sm text-slate-800 hover:bg-gray-50" onClick={() => submitReport(key)}>
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>

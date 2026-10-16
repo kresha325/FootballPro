@@ -7,6 +7,7 @@ import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/bran
 import { getProfileCvShareText, getProfileCvShareUrl } from '../utils/shareProfile';
 import { useAuth } from '../contexts/AuthContext';
 import ShareChannelsPanel from './ShareChannelsPanel';
+import { useLocale } from '../contexts/LocaleContext';
 
 const ROLE_LABELS = {
   athlete: 'Futbollist',
@@ -39,6 +40,7 @@ function StatPill({ label, value }) {
 }
 
 function PublicCvPage() {
+  const { t } = useLocale();
   const { id } = useParams();
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -57,7 +59,7 @@ function PublicCvPage() {
       } catch {
         if (!cancelled) {
           setProfile(null);
-          setError('Profili nuk u gjet ose nuk është i disponueshëm publikisht.');
+          setError(t('Profili nuk u gjet ose nuk është i disponueshëm publikisht.'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -66,12 +68,12 @@ function PublicCvPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   const displayName = useMemo(() => {
     if (!profile) return '';
-    return publicProfileName(profile) || roleLabel(profile.role);
-  }, [profile]);
+    return publicProfileName(profile) || t(roleLabel(profile.role));
+  }, [profile, t]);
 
   const shareUrl = profile ? getProfileCvShareUrl(profile.id || id) : '';
   const shareText = profile ? getProfileCvShareText(profile) : '';
@@ -91,7 +93,7 @@ function PublicCvPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] space-y-4 bg-[var(--xt-color-canvas)] px-4 py-12" aria-label="Po ngarkohet CV-ja">
+      <div className="min-h-[70vh] space-y-4 bg-[var(--xt-color-canvas)] px-4 py-12" aria-label={t('Po ngarkohet CV-ja')}>
         <div className="mx-auto max-w-4xl space-y-4"><div className="xt-skeleton h-12 w-48" /><div className="xt-skeleton h-72 rounded-2xl" /><div className="xt-skeleton h-48 rounded-2xl" /></div>
       </div>
     );
@@ -100,9 +102,9 @@ function PublicCvPage() {
   if (error || !profile) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[var(--xt-color-canvas)] px-4 text-center">
-        <p className="text-lg text-slate-300">{error || 'Profili nuk u gjet'}</p>
+        <p className="text-lg text-slate-300">{error || t('Profili nuk u gjet')}</p>
         <Link to="/" className="mt-6 text-[var(--xt-color-gold-bright)] hover:underline">
-          Kthehu te {APP_BRAND_NAME}
+          {t('Kthehu te')} {APP_BRAND_NAME}
         </Link>
       </div>
     );
@@ -179,7 +181,7 @@ function PublicCvPage() {
             </span>
           </Link>
           <span className="rounded-full border border-[var(--xt-color-gold)]/40 bg-[var(--xt-color-gold)]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--xt-color-gold-bright)]">
-            CV dixhitale
+            {t('CV dixhitale')}
           </span>
         </div>
       </header>
@@ -213,17 +215,17 @@ function PublicCvPage() {
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   <span className="rounded-full bg-[var(--xt-color-gold)]/15 px-3 py-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">
-                    {roleLabel(profile.role)}
+                    {t(roleLabel(profile.role))}
                   </span>
                   {profile.verificationStatus && (
                     <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
                       {profile.verificationStatus === 'VERIFIED'
-                        ? 'I verifikuar'
+                        ? t('I verifikuar')
                         : profile.verificationStatus === 'PENDING'
-                          ? 'Në pritje'
+                          ? t('Në pritje')
                           : profile.verificationStatus === 'REJECTED'
-                            ? 'Refuzuar'
-                            : 'I paverifikuar'}
+                            ? t('Refuzuar')
+                            : t('I paverifikuar')}
                     </span>
                   )}
                   {profile.position && (
@@ -238,12 +240,12 @@ function PublicCvPage() {
                   )}
                   {isOrg && founding && (
                     <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
-                      Themeluar {founding}
+                      {t('Themeluar')} {founding}
                     </span>
                   )}
                   {!isOrg && profile.age != null && (
                     <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
-                      {profile.age} vjeç{profile.ageGroup ? ` · ${profile.ageGroup}` : ''}
+                      {profile.age} {t('vjeç')}{profile.ageGroup ? ` · ${profile.ageGroup}` : ''}
                     </span>
                   )}
                 </div>
@@ -256,7 +258,7 @@ function PublicCvPage() {
             {/* Real stats strip */}
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               {heroStats.map((s) => (
-                <StatPill key={s.label} label={s.label} value={s.value} />
+                <StatPill key={s.label} label={t(s.label)} value={s.value} />
               ))}
             </div>
           </div>
@@ -265,23 +267,23 @@ function PublicCvPage() {
         {/* Overview + detail stats */}
         <div className="mt-6 grid gap-6 lg:grid-cols-5">
           <section className="rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6 lg:col-span-3">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Overview</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Overview')}</h2>
             {profile.bio ? (
               <p className="mt-3 whitespace-pre-wrap text-base leading-relaxed text-slate-200">
                 {profile.bio}
               </p>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">Nuk ka bio publike ende.</p>
+              <p className="mt-3 text-sm text-slate-500">{t('Nuk ka bio publike ende.')}</p>
             )}
             {Array.isArray(profile.careerHistory) && profile.careerHistory.length > 0 && (
               <div className="mt-6 border-t border-[var(--xt-color-border)] pt-5">
-                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Karriera</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{t('Karriera')}</h3>
                 <ol className="mt-3 space-y-3">
                   {profile.careerHistory.map((entry, index) => {
                     const row = typeof entry === 'string' ? { club: entry } : entry || {};
                     return (
                       <li key={`${row.club || 'club'}-${index}`}>
-                        <p className="font-semibold text-white">{row.club || row.team || 'Klub'}</p>
+                        <p className="font-semibold text-white">{row.club || row.team || t('Klub')}</p>
                         <p className="text-sm text-slate-400">
                           {[row.season, row.team, row.position, row.appearances != null ? `${row.appearances} ndeshje` : null, row.goals != null ? `${row.goals} gola` : null]
                             .filter(Boolean)
@@ -295,7 +297,7 @@ function PublicCvPage() {
             )}
             {typeof profile.careerHistory === 'string' && profile.careerHistory.trim() && (
               <div className="mt-6 border-t border-[var(--xt-color-border)] pt-5">
-                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Karriera</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{t('Karriera')}</h3>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
                   {profile.careerHistory}
                 </p>
@@ -304,18 +306,18 @@ function PublicCvPage() {
           </section>
 
           <section className="rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6 lg:col-span-2">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Stats</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Stats')}</h2>
             {detailStats.length > 0 ? (
               <dl className="mt-4 space-y-3">
                 {detailStats.map((s) => (
                   <div key={s.label} className="flex items-baseline justify-between gap-3 border-b border-white/5 pb-2">
-                    <dt className="text-sm text-slate-400">{s.label}</dt>
+                    <dt className="text-sm text-slate-400">{t(s.label)}</dt>
                     <dd className="text-sm font-semibold text-white">{s.value}</dd>
                   </div>
                 ))}
               </dl>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">Nuk ka stats shtesë.</p>
+              <p className="mt-3 text-sm text-slate-500">{t('Nuk ka stats shtesë.')}</p>
             )}
           </section>
         </div>
@@ -324,11 +326,11 @@ function PublicCvPage() {
         <section className="mt-6 rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Galerie</h2>
-              <p className="mt-1 text-sm text-slate-400">5 mediat e fundit</p>
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Galerie')}</h2>
+              <p className="mt-1 text-sm text-slate-400">{t('5 mediat e fundit')}</p>
             </div>
             {(profile.galleryCount || 0) > 5 && (
-              <span className="text-xs text-slate-500">+{(profile.galleryCount || 0) - 5} më shumë në profil</span>
+              <span className="text-xs text-slate-500">+{(profile.galleryCount || 0) - 5} {t('më shumë në profil')}</span>
             )}
           </div>
           {gallery.length > 0 ? (
@@ -381,7 +383,7 @@ function PublicCvPage() {
                     )}
                     {isVideo && (
                       <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        VIDEO
+                        {t('VIDEO')}
                       </span>
                     )}
                   </button>
@@ -389,7 +391,7 @@ function PublicCvPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Nuk ka foto publike në galeri.</p>
+            <p className="text-sm text-slate-500">{t('Nuk ka foto publike në galeri.')}</p>
           )}
         </section>
 
@@ -399,7 +401,7 @@ function PublicCvPage() {
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             {Array.isArray(profile.achievements) && profile.achievements.length > 0 && (
               <section className="rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Arritje</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Arritje')}</h2>
                 <ul className="mt-4 space-y-2">
                   {profile.achievements.slice(0, 6).map((a, i) => (
                     <li key={a.id || i} className="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200">
@@ -412,11 +414,11 @@ function PublicCvPage() {
             )}
             {Array.isArray(profile.matches) && profile.matches.length > 0 && (
               <section className="rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6">
-                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Ndeshje</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Ndeshje')}</h2>
                 <ul className="mt-4 space-y-2">
                   {profile.matches.slice(0, 6).map((m, i) => (
                     <li key={m.id || i} className="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200">
-                      {m.opponent || m.title || m.competition || 'Ndeshje'}
+                      {m.opponent || m.title || m.competition || t('Ndeshje')}
                       {m.score != null ? ` · ${m.score}` : ''}
                     </li>
                   ))}
@@ -429,7 +431,7 @@ function PublicCvPage() {
         {/* Contact */}
         {profile.contact && Object.keys(profile.contact).length > 0 && (
           <section className="mt-6 rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Kontakt</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Kontakt')}</h2>
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-200">
               {profile.contact.phone && (
                 <span className="rounded-full bg-white/5 px-3 py-1.5">📱 {profile.contact.phone}</span>
@@ -444,7 +446,7 @@ function PublicCvPage() {
                   rel="noopener noreferrer"
                   className="rounded-full bg-white/5 px-3 py-1.5 text-[var(--xt-color-gold-bright)] hover:bg-white/10"
                 >
-                  🌐 Website
+                  🌐 {t('Website')}
                 </a>
               )}
               {profile.contact.instagram && (
@@ -456,12 +458,12 @@ function PublicCvPage() {
 
         {/* More / follow gate */}
         <section className="mt-6 overflow-hidden rounded-3xl border border-[var(--xt-color-gold)]/40 bg-gradient-to-br from-[#1d1910] via-[var(--xt-color-surface)] to-[var(--xt-color-canvas)] p-6 sm:p-8">
-          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Për më shumë</h2>
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Për më shumë')}</h2>
           <p className="mt-2 max-w-xl text-base text-slate-300">
-            Postime, ndjekje, mesazhe dhe profili i plotë janë në {APP_BRAND_NAME}.
+            {t('Postime, ndjekje, mesazhe dhe profili i plotë janë në')} {APP_BRAND_NAME}.
           </p>
           <div className="mt-4 rounded-2xl border border-[var(--xt-color-border)] bg-black/30 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Linku i profilit</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t('Linku i profilit')}</p>
             <p className="mt-1 break-all font-mono text-sm text-[var(--xt-color-gold-bright)]">{fullProfileUrl}</p>
           </div>
 
@@ -471,14 +473,14 @@ function PublicCvPage() {
                 to={profilePath}
                 className="inline-flex items-center justify-center rounded-full bg-[var(--xt-color-gold)] px-6 py-3 text-sm font-bold text-[var(--xt-color-canvas)] hover:bg-[var(--xt-color-gold-bright)]"
               >
-                Hap profilin tënd
+                {t('Hap profilin tënd')}
               </Link>
             ) : user ? (
               <Link
                 to={profilePath}
                 className="inline-flex items-center justify-center rounded-full bg-[var(--xt-color-gold)] px-6 py-3 text-sm font-bold text-[var(--xt-color-canvas)] hover:bg-[var(--xt-color-gold-bright)]"
               >
-                Hap profilin & ndiq
+                {t('Hap profilin & ndiq')}
               </Link>
             ) : (
               <>
@@ -486,27 +488,27 @@ function PublicCvPage() {
                   to={registerFollowUrl}
                   className="inline-flex items-center justify-center rounded-full bg-[var(--xt-color-gold)] px-6 py-3 text-sm font-bold text-[var(--xt-color-canvas)] hover:bg-[var(--xt-color-gold-bright)]"
                 >
-                  Hap llogari për ta ndjekur
+                  {t('Hap llogari për ta ndjekur')}
                 </Link>
                 <Link
                   to={loginFollowUrl}
                   className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white hover:bg-white/5"
                 >
-                  Kam llogari — Hyr
+                  {t('Kam llogari — Hyr')}
                 </Link>
               </>
             )}
           </div>
           {!user && !isOwner && (
             <p className="mt-4 text-xs leading-relaxed text-slate-500">
-              Pa llogari nuk mund ta ndjekësh këtë profil. Regjistrohu në xtalenti.com për të vazhduar.
+              {t('Pa llogari nuk mund ta ndjekësh këtë profil. Regjistrohu në xtalenti.com për të vazhduar.')}
             </p>
           )}
         </section>
 
         {isOwner && (
           <section className="mt-6 rounded-3xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">Ndaj CV-në</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--xt-color-gold-bright)]">{t('Ndaj CV-në')}</h2>
             <div className="mt-4">
               <ShareChannelsPanel url={shareUrl} text={shareText} />
             </div>
@@ -519,7 +521,7 @@ function PublicCvPage() {
           type="button"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setLightbox(null)}
-          aria-label="Mbyll"
+          aria-label={t('Mbyll')}
         >
           <div
             className="max-h-full max-w-full"

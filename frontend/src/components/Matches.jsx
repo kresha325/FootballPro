@@ -8,6 +8,7 @@ import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import ParticipantPickGrid from './ParticipantPickGrid';
 import { Link } from 'react-router-dom';
 import MediaSection from './media/MediaSection';
+import { useLocale } from '../contexts/LocaleContext';
 
 // Helper: fetch tournaments and participants
 const fetchTournaments = async () => {
@@ -26,6 +27,7 @@ const isUpcomingMatch = (match) => {
 };
 
 function EditMatchModal({ isOpen, onClose, match, tournaments, participants, stadiums, onSave }) {
+  const { t } = useLocale();
   const [form, setForm] = useState({
     tournamentId: '',
     homeUserId: '',
@@ -71,19 +73,19 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, sta
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
       <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg max-w-2xl w-full p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 gap-2">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Ndrysho ndeshjen</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('Ndrysho ndeshjen')}</h2>
           <button type="button" onClick={onClose} className="shrink-0 text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Turneu *</label>
+            <label className="block text-sm font-medium mb-2">{t('Turneu')} *</label>
             <select
               required
               value={form.tournamentId}
               onChange={(e) => setForm({ ...form, tournamentId: e.target.value })}
               className="w-full min-w-0 max-w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
             >
-              <option value="">Zgjidh turneun</option>
+              <option value="">{t('Zgjidh turneun')}</option>
               {tournaments.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -91,8 +93,8 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, sta
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Vendas *</label>
-              <p className="text-xs text-gray-500 mb-1">Zgjidh me avatar — emrat e njëjtë dallohen nga foto/ID</p>
+              <label className="block text-sm font-medium mb-1">{t('Vendas')} *</label>
+              <p className="text-xs text-gray-500 mb-1">{t('Zgjidh me avatar — emrat e njëjtë dallohen nga foto/ID')}</p>
               <ParticipantPickGrid
                 options={participants}
                 value={form.homeUserId}
@@ -100,7 +102,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, sta
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Mysafir *</label>
+              <label className="block text-sm font-medium mb-1">{t('Mysafir')} *</label>
               <ParticipantPickGrid
                 options={participants}
                 value={form.awayUserId}
@@ -109,14 +111,14 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, sta
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Stadiumi *</label>
+            <label className="block text-sm font-medium mb-2">{t('Stadiumi')} *</label>
             <select
               required
               value={form.stadiumId}
               onChange={(e) => setForm({ ...form, stadiumId: e.target.value })}
               className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700"
             >
-              <option value="">Zgjidh stadiumin</option>
+              <option value="">{t('Zgjidh stadiumin')}</option>
               {(stadiums || []).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}{s.city ? ` — ${s.city}` : ''}
@@ -157,6 +159,7 @@ function EditMatchModal({ isOpen, onClose, match, tournaments, participants, sta
 }
 
 function Matches() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -348,8 +351,8 @@ function Matches() {
       <header className="xt-card relative overflow-hidden p-5 sm:p-7">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-[var(--xt-color-gold)]/10 to-transparent" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · Match Center</p><h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Ndeshjet</h1><p className="mt-2 max-w-xl text-sm text-[var(--xt-color-text-muted)]">Kalendar, ndeshje live dhe rezultatet e turneve.</p></div>
-          {canCreateMatch && <button onClick={() => setShowCreateModal(true)} className="btn btn-primary min-h-11 shrink-0">+ Krijo ndeshje</button>}
+          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Qendra e ndeshjeve')}</p><h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{t('Ndeshjet')}</h1><p className="mt-2 max-w-xl text-sm text-[var(--xt-color-text-muted)]">{t('Kalendar, ndeshje live dhe rezultatet e turneve.')}</p></div>
+          {canCreateMatch && <button onClick={() => setShowCreateModal(true)} className="btn btn-primary min-h-11 shrink-0">+ {t('Krijo ndeshje')}</button>}
         </div>
       </header>
 
@@ -365,7 +368,7 @@ function Matches() {
           {loading ? (
             <div className="xt-card space-y-3 p-5" aria-label="Po ngarkohen ndeshjet">{[0, 1, 2].map((key) => <div key={key} className="xt-skeleton h-24" />)}</div>
           ) : loadError ? (
-            <div className="xt-error-state xt-card"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchMatches(); }}>Provo përsëri</button></div>
+            <div className="xt-error-state xt-card"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchMatches(); }}>{t('Provo përsëri')}</button></div>
           ) : visibleMatches.length === 0 ? (
             <div className="xt-empty-state xt-card">
               <CalendarIcon className="h-12 w-12 text-[var(--xt-color-gold)]" aria-hidden="true" />
@@ -381,14 +384,14 @@ function Matches() {
                   <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
                     <div className="min-w-0 text-center sm:text-right">
                       <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.homeUser)}</h2>
-                      <span className="text-xs text-[var(--xt-color-text-subtle)]">Vendas</span>
+                      <span className="text-xs text-[var(--xt-color-text-subtle)]">{t('Vendas')}</span>
                     </div>
                     <div className="min-w-16 text-center font-mono text-2xl font-black tabular-nums text-white sm:text-3xl" aria-label="Rezultati">
                       {match.scoreHome != null && match.scoreAway != null ? `${match.scoreHome} : ${match.scoreAway}` : <span className="text-base text-[var(--xt-color-gold-bright)]">VS</span>}
                     </div>
                     <div className="min-w-0 text-center sm:text-left">
                       <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.awayUser)}</h2>
-                      <span className="text-xs text-[var(--xt-color-text-subtle)]">Mysafir</span>
+                      <span className="text-xs text-[var(--xt-color-text-subtle)]">{t('Mysafir')}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[var(--xt-color-text-muted)] sm:justify-end">
@@ -408,8 +411,8 @@ function Matches() {
                     >
                       {mediaMatchId === match.id ? 'Fshih median' : 'Media / YouTube'}
                     </button>
-                    {activeTab === 'upcoming' && canEditThisMatch(match) && <button className="btn btn-quiet min-h-10 px-3 text-sm" onClick={() => handleEditMatch(match)}>Ndrysho ndeshjen</button>}
-                    {match.tournamentId && <Link className="btn btn-quiet min-h-10 px-3 text-sm" to={`/tournaments?tournamentId=${match.tournamentId}`}>Qendra e ndeshjes</Link>}
+                    {activeTab === 'upcoming' && canEditThisMatch(match) && <button className="btn btn-quiet min-h-10 px-3 text-sm" onClick={() => handleEditMatch(match)}>{t('Ndrysho ndeshjen')}</button>}
+                    {match.tournamentId && <Link className="btn btn-quiet min-h-10 px-3 text-sm" to={`/tournaments?tournamentId=${match.tournamentId}`}>{t('Qendra e ndeshjes')}</Link>}
                   </div>
                 </div>
                 {mediaMatchId === match.id ? (

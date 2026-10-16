@@ -14,8 +14,10 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
+import { useLocale } from '../contexts/LocaleContext';
 
 const VideoPlayer = () => {
+  const { t } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const videoRef = useRef(null);
@@ -134,7 +136,7 @@ const VideoPlayer = () => {
   if (!video) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Video not found</p>
+        <p className="text-gray-600">{t('Video not found')}</p>
       </div>
     );
   }
@@ -277,7 +279,7 @@ const VideoPlayer = () => {
               {/* Description */}
               {video.description && (
                 <div className="mt-6">
-                  <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{t('Description')}</h3>
                   <p className="text-gray-700 whitespace-pre-wrap">{video.description}</p>
                 </div>
               )}
@@ -302,7 +304,7 @@ const VideoPlayer = () => {
 
           {/* Sidebar - Related Videos */}
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-gray-900">Related Videos</h3>
+            <h3 className="text-xl font-bold text-gray-900">{t('Related Videos')}</h3>
             {relatedVideos.map((relatedVideo) => (
               <div
                 key={relatedVideo.id}

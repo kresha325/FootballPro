@@ -12,6 +12,7 @@ import {
   uploadVideoRequest,
   videosRequest,
 } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
 
 function VideosSkeleton() {
   return (
@@ -23,7 +24,7 @@ function VideosSkeleton() {
   );
 }
 
-function VideoCard({ item, onLike, onPlay }) {
+function VideoCard({ item, onLike, onPlay, t }) {
   const author = item?.User ? `${item.User.firstName || ''} ${item.User.lastName || ''}`.trim() : 'Unknown';
   const videoUri = absoluteBackendUrl(item?.videoUrl) || item?.videoUrl;
 
@@ -31,14 +32,14 @@ function VideoCard({ item, onLike, onPlay }) {
     <View style={styles.card}>
       <Text style={styles.title}>{item?.title || 'Untitled video'}</Text>
       {item?.description ? <Text style={styles.description}>{item.description}</Text> : null}
-      <Text style={styles.author}>By: {author}</Text>
+      <Text style={styles.author}>{t('By:')} {author}</Text>
       {videoUri ? (
         <View style={styles.videoWrap}>
           <VideoPoster style={styles.video} onPress={() => onPlay(videoUri)} />
         </View>
       ) : null}
       <View style={styles.rowBetween}>
-        <Text style={styles.meta}>Views: {item?.views || 0} | Likes: {item?.likes || 0}</Text>
+        <Text style={styles.meta}>{t('Views:')} {item?.views || 0} | {t('Likes:')} {item?.likes || 0}</Text>
         <TouchableOpacity style={styles.likeBtn} onPress={() => onLike(item.id)}>
           <Text style={styles.likeBtnText}>Like</Text>
         </TouchableOpacity>
@@ -48,6 +49,7 @@ function VideoCard({ item, onLike, onPlay }) {
 }
 
 export default function VideosScreen() {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const [videos, setVideos] = useState([]);
   const [listSearch, setListSearch] = useState('');
@@ -69,12 +71,12 @@ export default function VideosScreen() {
       const res = await videosRequest({ limit: 20 });
       setVideos(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      Alert.alert('Videos error', extractErrorMessage(err, 'Could not load videos'));
+      Alert.alert(t('Videos error'), extractErrorMessage(err, t('Could not load videos')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadVideos();
@@ -83,7 +85,7 @@ export default function VideosScreen() {
   const pickVideo = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow media library access.');
+      Alert.alert(t('Permission required'), t('Please allow media library access.'));
       return;
     }
 
@@ -104,7 +106,7 @@ export default function VideosScreen() {
 
   const upload = async () => {
     if (!selectedVideo) {
-      Alert.alert('Video required', 'Choose a video before upload.');
+      Alert.alert(t('Video required'), t('Choose a video before upload.'));
       return;
     }
 
@@ -119,9 +121,9 @@ export default function VideosScreen() {
       setDescription('');
       setSelectedVideo(null);
       await loadVideos({ silent: true });
-      Alert.alert('U ngarkua', 'Video u shtua te Videot dhe te Lajmet (feed).');
+      Alert.alert(t('Upload complete'), t('The video was added to Videos and the Feed.'));
     } catch (err) {
-      Alert.alert('Upload failed', extractErrorMessage(err, 'Could not upload video'));
+      Alert.alert(t('Upload failed'), extractErrorMessage(err, t('Could not upload video')));
     } finally {
       setUploading(false);
     }
@@ -132,7 +134,7 @@ export default function VideosScreen() {
       await likeVideoRequest(videoId);
       setVideos((prev) => prev.map((v) => (v.id === videoId ? { ...v, likes: Number(v.likes || 0) + 1 } : v)));
     } catch (err) {
-      Alert.alert('Like failed', extractErrorMessage(err, 'Could not like video'));
+      Alert.alert(t('Like failed'), extractErrorMessage(err, t('Could not like video')));
     }
   };
 
@@ -162,31 +164,31 @@ export default function VideosScreen() {
       }
       ListHeaderComponent={
         <View style={styles.uploadCard}>
-          <Text style={styles.uploadTitle}>Upload Video</Text>
-          <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
+          <Text style={styles.uploadTitle}>{t('Upload Video')}</Text>
+          <TextInput style={styles.input} placeholder={t('Title')} value={title} onChangeText={setTitle} />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="Description"
+            placeholder={t('Description')}
             value={description}
             onChangeText={setDescription}
             multiline
           />
           <TouchableOpacity style={styles.secondaryBtn} onPress={pickVideo}>
-            <Text style={styles.secondaryBtnText}>{selectedVideo ? 'Change Video' : 'Choose Video'}</Text>
+            <Text style={styles.secondaryBtnText}>{selectedVideo ? t('Change Video') : t('Choose Video')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.primaryBtn, uploading && styles.disabled]} onPress={upload} disabled={uploading}>
-            <Text style={styles.primaryBtnText}>{uploading ? 'Uploading...' : 'Upload'}</Text>
+            <Text style={styles.primaryBtnText}>{uploading ? t('Uploading...') : t('Upload')}</Text>
           </TouchableOpacity>
           <ListSearchBar
             value={listSearch}
             onChangeText={setListSearch}
-            placeholder="Kërko video…"
+            placeholder={t('Search videos…')}
             onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
           />
         </View>
       }
-      renderItem={({ item }) => <VideoCard item={item} onLike={onLike} onPlay={setPlayingUri} />}
-      ListEmptyComponent={<Text style={styles.empty}>No videos yet.</Text>}
+      renderItem={({ item }) => <VideoCard item={item} onLike={onLike} onPlay={setPlayingUri} t={t} />}
+      ListEmptyComponent={<Text style={styles.empty}>{t('No videos yet.')}</Text>}
     />
     <VideoPlayerModal uri={playingUri} visible={!!playingUri} onClose={() => setPlayingUri(null)} />
     </>

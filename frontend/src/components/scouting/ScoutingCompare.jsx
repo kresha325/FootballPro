@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { scoutingAPI } from '../../services/api';
+import { useLocale } from '../../contexts/LocaleContext';
 import FeedScoutingReport from '../FeedScoutingReport';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from './ScoutingLayout';
 import { apiError } from './scoutingState';
@@ -20,6 +21,7 @@ const METRICS = [
 ];
 
 export default function ScoutingCompare() {
+  const { t } = useLocale();
   const [params, setParams] = useSearchParams();
   const [ids, setIds] = useState(params.get('ids') || '');
   const [windowName, setWindowName] = useState(params.get('window') || 'season');
@@ -67,17 +69,17 @@ export default function ScoutingCompare() {
   return (
     <div className="space-y-4">
       <form className="xt-card grid gap-3 p-4 sm:grid-cols-4" onSubmit={(event) => { event.preventDefault(); load(); }}>
-        <label className="sm:col-span-2"><span className="label">ID e lojtarëve (2–4)</span><input className="input" value={ids} onChange={(event) => setIds(event.target.value)} placeholder="12, 18, 24" /></label>
-        <label><span className="label">Periudha</span>
+        <label className="sm:col-span-2"><span className="label">{t("ID e lojtarëve (2–4)")}</span><input className="input" value={ids} onChange={(event) => setIds(event.target.value)} placeholder="12, 18, 24" /></label>
+        <label><span className="label">{t("Periudha")}</span>
           <select className="select" value={windowName} onChange={(event) => setWindowName(event.target.value)}>
-            <option value="season">Sezoni</option>
-            <option value="career">Karriera</option>
-            <option value="last5">5 ndeshjet e fundit</option>
-            <option value="last10">10 ndeshjet e fundit</option>
+            <option value="season">{t("Sezoni")}</option>
+            <option value="career">{t("Karriera")}</option>
+            <option value="last5">{t("5 ndeshjet e fundit")}</option>
+            <option value="last10">{t("10 ndeshjet e fundit")}</option>
           </select>
         </label>
-        <label><span className="label">Sezoni</span><input className="input" value={season} onChange={(event) => setSeason(event.target.value)} placeholder="2026/2027" /></label>
-        <div className="sm:col-span-4"><button className="btn btn-primary" type="submit">Krahaso</button></div>
+        <label><span className="label">{t("Sezoni")}</span><input className="input" value={season} onChange={(event) => setSeason(event.target.value)} placeholder="2026/2027" /></label>
+        <div className="sm:col-span-4"><button className="btn btn-primary" type="submit">{t("Krahaso")}</button></div>
       </form>
       {loading ? <LoadingBlock /> : error ? <ErrorBlock message={error} onRetry={() => load()} /> : players.length === 0 ? (
         <EmptyBlock title="Asnjë krahasim" text="Të gjithë lojtarët krahasohen në të njëjtën periudhë. Karriera dhe sezoni nuk përzihen." />
@@ -87,19 +89,19 @@ export default function ScoutingCompare() {
           <table className="xt-table min-w-[720px]">
             <thead>
               <tr>
-                <th>Treguesi</th>
+                <th>{t("Treguesi")}</th>
                 {players.map((player) => <th key={player.playerId}><Link to={`/profile/${player.playerId}`}>{player.playerName}</Link></th>)}
               </tr>
             </thead>
             <tbody>
               {METRICS.map(([key, label]) => (
                 <tr key={key}>
-                  <td>{label}</td>
+                  <td>{t(label)}</td>
                   {players.map((player) => {
                     const identity = ['age', 'position', 'height', 'preferredFoot'].includes(key);
                     const value = identity ? player[key] : player.stats?.[key];
                     const noMatches = !identity && Number(player.stats?.sampleSize || 0) === 0;
-                    return <td key={player.playerId}>{noMatches ? 'Pa ndeshje' : (value ?? '—')}</td>;
+                    return <td key={player.playerId}>{noMatches ? t('Pa ndeshje') : (value ?? '—')}</td>;
                   })}
                 </tr>
               ))}

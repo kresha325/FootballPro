@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useLocale } from '../../../contexts/LocaleContext';
 import { clubMembersAPI, profileAPI } from '../../../services/api';
 import AiGenerateBioButton from '../../ai/AiGenerateBioButton';
 
 const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
+  const { t } = useLocale();
   const [form, setForm] = useState({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
@@ -196,7 +198,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           })
         );
       } catch (err) {
-        alert('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.');
+        alert(t('Kërkesa për klubin dështoi. Kontrollo emrin e klubit.'));
       }
     }
   };
@@ -204,39 +206,39 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
       <div className="mb-4">
-        <label htmlFor="athlete-profile-photo" className="block text-sm font-medium mb-1">Profile Photo</label>
+        <label htmlFor="athlete-profile-photo" className="block text-sm font-medium mb-1">{t('Profile Photo')}</label>
         {preview && (
           <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
         <input id="athlete-profile-photo" type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} autoComplete="photo" />
       </div>
-      <h3 className="text-lg font-semibold mb-3">Athlete Profile</h3>
+      <h3 className="text-lg font-semibold mb-3">{t('Athlete Profile')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="athlete-first-name" className="block text-sm font-medium mb-1">First Name *</label>
+          <label htmlFor="athlete-first-name" className="block text-sm font-medium mb-1">{t('First Name *')}</label>
           <input id="athlete-first-name" name="firstName" value={form.firstName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="given-name" />
         </div>
         <div>
-          <label htmlFor="athlete-last-name" className="block text-sm font-medium mb-1">Last Name *</label>
+          <label htmlFor="athlete-last-name" className="block text-sm font-medium mb-1">{t('Last Name *')}</label>
           <input id="athlete-last-name" name="lastName" value={form.lastName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" required autoComplete="family-name" />
         </div>
         <div>
-          <label htmlFor="athlete-dob" className="block text-sm font-medium mb-1">Date of Birth</label>
+          <label htmlFor="athlete-dob" className="block text-sm font-medium mb-1">{t('Date of Birth')}</label>
           <input id="athlete-dob" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="bday" />
         </div>
         <div>
-          <label htmlFor="athlete-gender" className="block text-sm font-medium mb-1">Gender</label>
+          <label htmlFor="athlete-gender" className="block text-sm font-medium mb-1">{t('Gender')}</label>
           <select id="athlete-gender" name="gender" value={form.gender} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="">{t('Select Gender')}</option>
+            <option value="male">{t('Male')}</option>
+            <option value="female">{t('Female')}</option>
+            <option value="other">{t('Other')}</option>
           </select>
         </div>
       </div>
       <div>
         <div className="flex items-center justify-between gap-2 mb-1">
-          <label htmlFor="athlete-bio" className="block text-sm font-medium">Bio</label>
+          <label htmlFor="athlete-bio" className="block text-sm font-medium">{t('Bio')}</label>
           <AiGenerateBioButton
             hints={{
               position: form.position,
@@ -251,19 +253,19 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="athlete-position" className="block text-sm font-medium mb-1">Position</label>
+          <label htmlFor="athlete-position" className="block text-sm font-medium mb-1">{t('Position')}</label>
           <select id="athlete-position" name="position" value={form.position} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select Position</option>
-            <option value="Goalkeeper">Goalkeeper</option>
-            <option value="Defender">Defender</option>
-            <option value="Midfielder">Midfielder</option>
-            <option value="Forward">Forward</option>
-            <option value="Winger">Winger</option>
-            <option value="Striker">Striker</option>
+            <option value="">{t('Select Position')}</option>
+            <option value="Goalkeeper">{t('Goalkeeper')}</option>
+            <option value="Defender">{t('Defender')}</option>
+            <option value="Midfielder">{t('Midfielder')}</option>
+            <option value="Forward">{t('Forward')}</option>
+            <option value="Winger">{t('Winger')}</option>
+            <option value="Striker">{t('Striker')}</option>
           </select>
         </div>
         <div>
-          <label htmlFor="athlete-club" className="block text-sm font-medium mb-1">Klubi</label>
+          <label htmlFor="athlete-club" className="block text-sm font-medium mb-1">{t('Klubi')}</label>
           <div className="relative">
             <input
               id="athlete-club"
@@ -278,7 +280,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
               onFocus={() => setShowClubSuggestions(true)}
               onBlur={() => setTimeout(() => setShowClubSuggestions(false), 150)}
               className="w-full p-2 border border-gray-300 rounded"
-              placeholder="Shkruaj emrin e klubit"
+              placeholder={t('Shkruaj emrin e klubit')}
               autoComplete="organization"
             />
             {showClubSuggestions && clubSuggestions.length > 0 && (
@@ -300,7 +302,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
                         setShowClubSuggestions(false);
                       }}
                     >
-                      {label || 'Club'}
+                      {label || t('Club')}
                     </button>
                   );
                 })}
@@ -309,7 +311,7 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
           </div>
         </div>
         <div>
-          <label htmlFor="athlete-club-year" className="block text-sm font-medium mb-1">Nga viti (klubi aktual)</label>
+          <label htmlFor="athlete-club-year" className="block text-sm font-medium mb-1">{t('Nga viti (klubi aktual)')}</label>
           <input
             id="athlete-club-year"
             name="clubJoinedYear"
@@ -318,133 +320,133 @@ const EditAthleteProfile = ({ user, onSave, loading, errors }) => {
             type="number"
             min="1950"
             max={new Date().getFullYear() + 1}
-            placeholder="p.sh. 2024"
+            placeholder={t('p.sh. 2024')}
             className="w-full p-2 border border-gray-300 rounded"
             autoComplete="off"
             required={Boolean(form.club?.trim())}
           />
           <p className="mt-1 text-xs text-gray-500">
-            Ky vit shfaqet te Karriera si «nga YYYY · vazhdon». Ndryshoje këtu dhe Ruaj.
+            {t('Ky vit shfaqet te Karriera si «nga YYYY · vazhdon». Ndryshoje këtu dhe Ruaj.')}
           </p>
         </div>
         <div>
-          <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">Jersey Number</label>
+          <label htmlFor="athlete-jersey" className="block text-sm font-medium mb-1">{t('Jersey Number')}</label>
           <input id="athlete-jersey" name="jerseyNumber" value={form.jerseyNumber} onChange={handleChange} type="number" min="1" max="99" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
         <div>
-          <label htmlFor="athlete-city" className="block text-sm font-medium mb-1">City</label>
+          <label htmlFor="athlete-city" className="block text-sm font-medium mb-1">{t('City')}</label>
           <input id="athlete-city" name="city" value={form.city} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="address-level2" />
         </div>
         <div>
-          <label htmlFor="athlete-country" className="block text-sm font-medium mb-1">Country</label>
+          <label htmlFor="athlete-country" className="block text-sm font-medium mb-1">{t('Country')}</label>
           <input id="athlete-country" name="country" value={form.country} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" autoComplete="country" />
         </div>
         <div>
-          <label htmlFor="athlete-foot" className="block text-sm font-medium mb-1">Preferred Foot</label>
+          <label htmlFor="athlete-foot" className="block text-sm font-medium mb-1">{t('Preferred Foot')}</label>
           <select id="athlete-foot" name="preferredFoot" value={form.preferredFoot} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select foot</option>
-            <option value="right">Right</option>
-            <option value="left">Left</option>
-            <option value="both">Both</option>
+            <option value="">{t('Select foot')}</option>
+            <option value="right">{t('Right')}</option>
+            <option value="left">{t('Left')}</option>
+            <option value="both">{t('Both')}</option>
           </select>
         </div>
         <div>
-          <label htmlFor="athlete-height" className="block text-sm font-medium mb-1">Height (cm)</label>
+          <label htmlFor="athlete-height" className="block text-sm font-medium mb-1">{t('Height (cm)')}</label>
           <input id="athlete-height" name="height" value={form.height} onChange={handleChange} type="number" placeholder="175" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
         <div>
-          <label htmlFor="athlete-weight" className="block text-sm font-medium mb-1">Weight (kg)</label>
+          <label htmlFor="athlete-weight" className="block text-sm font-medium mb-1">{t('Weight (kg)')}</label>
           <input id="athlete-weight" name="weight" value={form.weight} onChange={handleChange} type="number" placeholder="70" className="w-full p-2 border border-gray-300 rounded" autoComplete="off" />
         </div>
         <div>
-          <label htmlFor="athlete-secondary" className="block text-sm font-medium mb-1">Secondary positions</label>
-          <input id="athlete-secondary" name="secondaryPositions" value={form.secondaryPositions} onChange={handleChange} placeholder="Winger, Striker" className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-secondary" className="block text-sm font-medium mb-1">{t('Secondary positions')}</label>
+          <input id="athlete-secondary" name="secondaryPositions" value={form.secondaryPositions} onChange={handleChange} placeholder={t('Winger, Striker')} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-language" className="block text-sm font-medium mb-1">Preferred language</label>
+          <label htmlFor="athlete-language" className="block text-sm font-medium mb-1">{t('Preferred language')}</label>
           <input id="athlete-language" name="preferredLanguage" value={form.preferredLanguage} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-level" className="block text-sm font-medium mb-1">Playing level</label>
+          <label htmlFor="athlete-level" className="block text-sm font-medium mb-1">{t('Playing level')}</label>
           <input id="athlete-level" name="playingLevel" value={form.playingLevel} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-category" className="block text-sm font-medium mb-1">Football category</label>
+          <label htmlFor="athlete-category" className="block text-sm font-medium mb-1">{t('Football category')}</label>
           <input id="athlete-category" name="footballCategory" value={form.footballCategory} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-status" className="block text-sm font-medium mb-1">Youth / senior</label>
+          <label htmlFor="athlete-status" className="block text-sm font-medium mb-1">{t('Youth / senior')}</label>
           <select id="athlete-status" name="youthSenior" value={form.youthSenior} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-            <option value="">Select</option>
-            <option value="youth">Youth</option>
-            <option value="senior">Senior</option>
+            <option value="">{t('Select')}</option>
+            <option value="youth">{t('Youth')}</option>
+            <option value="senior">{t('Senior')}</option>
           </select>
         </div>
         <div>
-          <label htmlFor="athlete-journey" className="block text-sm font-medium mb-1">Football journey</label>
+          <label htmlFor="athlete-journey" className="block text-sm font-medium mb-1">{t('Football journey')}</label>
           <textarea id="athlete-journey" name="footballJourney" value={form.footballJourney} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-strengths" className="block text-sm font-medium mb-1">Strengths</label>
+          <label htmlFor="athlete-strengths" className="block text-sm font-medium mb-1">{t('Strengths')}</label>
           <textarea id="athlete-strengths" name="strengths" value={form.strengths} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-style" className="block text-sm font-medium mb-1">Playing style</label>
+          <label htmlFor="athlete-style" className="block text-sm font-medium mb-1">{t('Playing style')}</label>
           <textarea id="athlete-style" name="playingStyle" value={form.playingStyle} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-objectives" className="block text-sm font-medium mb-1">Objectives</label>
+          <label htmlFor="athlete-objectives" className="block text-sm font-medium mb-1">{t('Objectives')}</label>
           <textarea id="athlete-objectives" name="objectives" value={form.objectives} onChange={handleChange} rows={2} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-agent" className="block text-sm font-medium mb-1">Agent</label>
+          <label htmlFor="athlete-agent" className="block text-sm font-medium mb-1">{t('Agent')}</label>
           <input id="athlete-agent" name="agentName" value={form.agentName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-agency" className="block text-sm font-medium mb-1">Agency</label>
+          <label htmlFor="athlete-agency" className="block text-sm font-medium mb-1">{t('Agency')}</label>
           <input id="athlete-agency" name="agencyName" value={form.agencyName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-contact-email" className="block text-sm font-medium mb-1">Contact email</label>
+          <label htmlFor="athlete-contact-email" className="block text-sm font-medium mb-1">{t('Contact email')}</label>
           <input id="athlete-contact-email" name="contactEmail" value={form.contactEmail} onChange={handleChange} type="email" className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-contact-phone" className="block text-sm font-medium mb-1">Phone</label>
+          <label htmlFor="athlete-contact-phone" className="block text-sm font-medium mb-1">{t('Phone')}</label>
           <input id="athlete-contact-phone" name="contactPhone" value={form.contactPhone} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded" />
         </div>
         <div>
-          <label htmlFor="athlete-award" className="block text-sm font-medium mb-1">Add achievement</label>
-          <input id="athlete-award" name="achievementTitle" value={form.achievementTitle} onChange={handleChange} placeholder="Title" className="mb-2 w-full p-2 border border-gray-300 rounded" />
-          <input name="achievementSeason" value={form.achievementSeason} onChange={handleChange} placeholder="Season" className="mb-2 w-full p-2 border border-gray-300 rounded" />
-          <input name="achievementCompetition" value={form.achievementCompetition} onChange={handleChange} placeholder="Competition" className="mb-2 w-full p-2 border border-gray-300 rounded" />
-          <input name="achievementClub" value={form.achievementClub} onChange={handleChange} placeholder="Club" className="w-full p-2 border border-gray-300 rounded" />
+          <label htmlFor="athlete-award" className="block text-sm font-medium mb-1">{t('Add achievement')}</label>
+          <input id="athlete-award" name="achievementTitle" value={form.achievementTitle} onChange={handleChange} placeholder={t('Title')} className="mb-2 w-full p-2 border border-gray-300 rounded" />
+          <input name="achievementSeason" value={form.achievementSeason} onChange={handleChange} placeholder={t('Season')} className="mb-2 w-full p-2 border border-gray-300 rounded" />
+          <input name="achievementCompetition" value={form.achievementCompetition} onChange={handleChange} placeholder={t('Competition')} className="mb-2 w-full p-2 border border-gray-300 rounded" />
+          <input name="achievementClub" value={form.achievementClub} onChange={handleChange} placeholder={t('Club')} className="w-full p-2 border border-gray-300 rounded" />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          ['privacyDateOfBirth', 'Date of birth'],
-          ['privacyLocation', 'Location'],
-          ['privacyCareer', 'Career'],
-          ['privacyContact', 'Contact'],
-          ['privacyEmail', 'Email'],
-          ['privacyPhone', 'Phone'],
-          ['privacyAgent', 'Agent'],
-          ['privacyGallery', 'Gallery'],
-          ['privacyVideos', 'Videos'],
+          ['privacyDateOfBirth', t('Date of birth')],
+          ['privacyLocation', t('Location')],
+          ['privacyCareer', t('Career')],
+          ['privacyContact', t('Contact')],
+          ['privacyEmail', t('Email')],
+          ['privacyPhone', t('Phone')],
+          ['privacyAgent', t('Agent')],
+          ['privacyGallery', t('Gallery')],
+          ['privacyVideos', t('Videos')],
         ].map(([name, label]) => (
           <div key={name}>
             <label htmlFor={name} className="block text-sm font-medium mb-1">{label}</label>
             <select id={name} name={name} value={form[name]} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded">
-              <option value="public">Public</option>
-              <option value="followers">Followers</option>
-              <option value="private">Private</option>
+              <option value="public">{t('Public')}</option>
+              <option value="followers">{t('Followers')}</option>
+              <option value="private">{t('Private')}</option>
             </select>
           </div>
         ))}
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? t('Saving...') : t('Save Changes')}
         </button>
       </div>
       {(formError || (errors && errors.general)) && (

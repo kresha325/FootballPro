@@ -4,8 +4,10 @@ import { scoutingAPI } from '../../services/api';
 import ScoutPlayerCard from './ScoutPlayerCard';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from './ScoutingLayout';
 import { apiError } from './scoutingState';
+import { useLocale } from '../../contexts/LocaleContext';
 
 export default function ScoutingDashboard() {
+  const { t } = useLocale();
   const [data, setData] = useState(null);
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -88,23 +90,23 @@ export default function ScoutingDashboard() {
 
       <form className="xt-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={savePrefs}>
         <div className="sm:col-span-2 lg:col-span-3">
-          <h2 className="text-xl font-semibold">Preferencat e skautit</h2>
-          <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Përdoren vetëm për përputhjen personale. Nuk ndryshojnë pikën e performancës zyrtare.</p>
+          <h2 className="text-xl font-semibold">{t("Preferencat e skautit")}</h2>
+          <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{t("Përdoren vetëm për përputhjen personale. Nuk ndryshojnë pikën e performancës zyrtare.")}</p>
         </div>
-        <label><span className="label">Pozicionet</span><input className="input" name="positions" defaultValue={(prefs?.positions || []).join(', ')} placeholder="forward, winger" /></label>
-        <label><span className="label">Shtetet</span><input className="input" name="countries" defaultValue={(prefs?.countries || []).join(', ')} placeholder="Albania" /></label>
-        <label><span className="label">Niveli i kompeticionit</span><input className="input" name="competitionLevel" defaultValue={prefs?.competitionLevel || ''} /></label>
-        <label><span className="label">Mosha nga</span><input className="input" name="minAge" type="number" min="8" max="60" defaultValue={prefs?.minAge ?? ''} /></label>
-        <label><span className="label">Mosha deri</span><input className="input" name="maxAge" type="number" min="8" max="60" defaultValue={prefs?.maxAge ?? ''} /></label>
-        <label><span className="label">Këmba</span>
+        <label><span className="label">{t("Pozicionet")}</span><input className="input" name="positions" defaultValue={(prefs?.positions || []).join(', ')} placeholder="forward, winger" /></label>
+        <label><span className="label">{t("Shtetet")}</span><input className="input" name="countries" defaultValue={(prefs?.countries || []).join(', ')} placeholder="Albania" /></label>
+        <label><span className="label">{t("Niveli i kompeticionit")}</span><input className="input" name="competitionLevel" defaultValue={prefs?.competitionLevel || ''} /></label>
+        <label><span className="label">{t("Mosha nga")}</span><input className="input" name="minAge" type="number" min="8" max="60" defaultValue={prefs?.minAge ?? ''} /></label>
+        <label><span className="label">{t("Mosha deri")}</span><input className="input" name="maxAge" type="number" min="8" max="60" defaultValue={prefs?.maxAge ?? ''} /></label>
+        <label><span className="label">{t("Këmba")}</span>
           <select className="select" name="foot" defaultValue={prefs?.foot || ''}>
-            <option value="">Çdo këmbë</option>
-            <option value="left">Majtas</option>
-            <option value="right">Djathtas</option>
-            <option value="both">Të dyja</option>
+            <option value="">{t("Çdo këmbë")}</option>
+            <option value="left">{t("Majtas")}</option>
+            <option value="right">{t("Djathtas")}</option>
+            <option value="both">{t("Të dyja")}</option>
           </select>
         </label>
-        <div><button className="btn btn-primary" type="submit">Ruaj preferencat</button></div>
+        <div><button className="btn btn-primary" type="submit">{t("Ruaj preferencat")}</button></div>
       </form>
 
       {sections.map(([title, players, note]) => (
@@ -120,8 +122,8 @@ export default function ScoutingDashboard() {
 
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="xt-card p-4">
-          <h2 className="text-xl font-semibold">Ndjekjet</h2>
-          {(data.shortlist?.followUps || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">Nuk ka data ndjekjeje të hapura.</p> : (
+          <h2 className="text-xl font-semibold">{t("Ndjekjet")}</h2>
+          {(data.shortlist?.followUps || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">{t("Nuk ka data ndjekjeje të hapura.")}</p> : (
             <ul className="mt-3 space-y-2 text-sm">
               {data.shortlist.followUps.map((item) => (
                 <li key={item.id}><Link to={`/profile/${item.playerId}`} className="font-semibold">{item.playerName}</Link> · {item.priority} · {item.followUpDate}</li>
@@ -130,8 +132,8 @@ export default function ScoutingDashboard() {
           )}
         </div>
         <div className="xt-card p-4">
-          <h2 className="text-xl font-semibold">Ndryshimet në watchlist</h2>
-          {(data.watchlist?.recentChanges || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">Nuk ka ndryshime të reja.</p> : (
+          <h2 className="text-xl font-semibold">{t("Ndryshimet në watchlist")}</h2>
+          {(data.watchlist?.recentChanges || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">{t("Nuk ka ndryshime të reja.")}</p> : (
             <ul className="mt-3 space-y-2 text-sm">
               {data.watchlist.recentChanges.map((item) => <li key={item.id}>{item.summary}</li>)}
             </ul>
@@ -140,8 +142,8 @@ export default function ScoutingDashboard() {
       </section>
 
       <section className="xt-card p-4">
-        <h2 className="text-xl font-semibold">Aktiviteti</h2>
-        {(data.activity || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">Ende pa raporte ose shortlist.</p> : (
+        <h2 className="text-xl font-semibold">{t("Aktiviteti")}</h2>
+        {(data.activity || []).length === 0 ? <p className="mt-3 text-sm text-[var(--xt-color-text-muted)]">{t("Ende pa raporte ose shortlist.")}</p> : (
           <ul className="mt-3 space-y-2 text-sm">
             {data.activity.map((item, index) => <li key={`${item.type}-${index}`}>{item.label}</li>)}
           </ul>

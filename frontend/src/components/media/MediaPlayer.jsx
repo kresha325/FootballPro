@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import YouTubePlayer from './YouTubePlayer';
 import { getFullUrl } from '../../utils/mediaUrl';
+import { useLocale } from '../../contexts/LocaleContext';
 
 /**
  * One player for uploaded video, YouTube, replay, and a live handoff.
@@ -17,12 +18,13 @@ export default function MediaPlayer({
   status,
   className = '',
 }) {
+  const { t } = useLocale();
   const videoRef = useRef(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(kind === 'file' || kind === 'replay');
 
   if (kind === 'loading') {
-    return <PlayerFrame className={className}><p className="text-sm text-white/80">Duke u ngarkuar…</p></PlayerFrame>;
+    return <PlayerFrame className={className}><p className="text-sm text-white/80">{t('Duke u ngarkuar…')}</p></PlayerFrame>;
   }
 
   if (kind === 'youtube' || youtubeId) {
@@ -40,7 +42,7 @@ export default function MediaPlayer({
               Shiko live
             </Link>
           ) : (
-            <p className="mt-3 text-sm text-white/70">Transmetimi nuk është i disponueshëm.</p>
+            <p className="mt-3 text-sm text-white/70">{t('Transmetimi nuk është i disponueshëm.')}</p>
           )}
         </div>
       </PlayerFrame>
@@ -60,7 +62,7 @@ export default function MediaPlayer({
   const url = getFullUrl(src);
   return (
     <div className={`relative aspect-video w-full overflow-hidden rounded-lg bg-black ${className}`}>
-      {loading ? <p className="absolute left-3 top-3 z-10 text-xs text-white/80">Duke u ngarkuar…</p> : null}
+      {loading ? <p className="absolute left-3 top-3 z-10 text-xs text-white/80">{t('Duke u ngarkuar…')}</p> : null}
       <video
         ref={videoRef}
         className="h-full w-full object-contain"

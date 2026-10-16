@@ -19,6 +19,7 @@ import { extractErrorMessage, streamsRequest } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
 import { filterBySearch } from '../utils/listSearch';
 import { dedupeLiveByStreamer } from '../utils/liveStreams';
+import { useLocale } from '../context/LocaleContext';
 
 function streamerName(stream) {
   const s = stream?.streamer || stream?.User || {};
@@ -36,6 +37,7 @@ function recordingUri(videoUrl) {
 }
 
 export default function StreamsScreen({ navigation }) {
+  const { t } = useLocale();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [streams, setStreams] = useState([]);
@@ -68,12 +70,12 @@ export default function StreamsScreen({ navigation }) {
       loadedAt.current = Date.now();
     } catch (err) {
       setStreams([]);
-      setError(extractErrorMessage(err, 'Nuk u ngarkuan stream-et'));
+      setError(extractErrorMessage(err, t('Could not load streams')));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,15 +143,15 @@ export default function StreamsScreen({ navigation }) {
       ListHeaderComponent={
         <>
       <View style={styles.headerPad}>
-        <Text style={[styles.h1, { color: theme.text }]}>Streams</Text>
+        <Text style={[styles.h1, { color: theme.text }]}>{t('Streams')}</Text>
         <Text style={[styles.sub, { color: theme.muted }]}>
-          Live aktive dhe regjistrime. Nis Go Live nga butoni më poshtë.
+          {t('Live streams and recordings. Start a live broadcast with the button below.')}
         </Text>
         <TouchableOpacity
           style={[styles.goLiveBtn, { backgroundColor: '#dc2626' }]}
           onPress={() => navigation.navigate('GoLive')}
         >
-          <Text style={styles.goLiveText}>Go Live</Text>
+          <Text style={styles.goLiveText}>{t('Go Live')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -157,7 +159,7 @@ export default function StreamsScreen({ navigation }) {
         <ListSearchBar
           value={listSearch}
           onChangeText={setListSearch}
-          placeholder="Kërko stream sipas titullit ose streamer-it…"
+          placeholder={t('Search streams by title or streamer…')}
           colors={theme}
         />
       </View>
@@ -174,7 +176,7 @@ export default function StreamsScreen({ navigation }) {
 
       {filteredLive.length > 0 ? (
         <View style={[styles.liveBox, { borderColor: '#fecaca', backgroundColor: isDark ? '#450a0a55' : '#fef2f2' }]}>
-          <Text style={styles.liveTitle}>Live Now</Text>
+          <Text style={styles.liveTitle}>{t('Live Now')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.liveRow}>
             {filteredLive.map((stream) => {
               const name = streamerName(stream);
@@ -207,12 +209,12 @@ export default function StreamsScreen({ navigation }) {
         </View>
       ) : !loading ? (
         <View style={[styles.emptyLive, { borderColor: theme.border, backgroundColor: theme.card }]}>
-          <Text style={{ color: theme.muted, textAlign: 'center' }}>Asnjë stream live tani.</Text>
+          <Text style={{ color: theme.muted, textAlign: 'center' }}>{t('No live streams right now.')}</Text>
         </View>
       ) : null}
 
       <View style={styles.headerPad}>
-        <Text style={[styles.h2, { color: theme.text }]}>Regjistrime</Text>
+        <Text style={[styles.h2, { color: theme.text }]}>{t('Recordings')}</Text>
       </View>
         </>
       }
@@ -220,12 +222,12 @@ export default function StreamsScreen({ navigation }) {
         const uri = recordingUri(stream.videoUrl);
         return (
           <View style={[styles.recCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.recTitle, { color: theme.text }]}>{stream.title || 'Stream'}</Text>
+              <Text style={[styles.recTitle, { color: theme.text }]}>{stream.title || t('Stream')}</Text>
             {stream.description ? (
               <Text style={{ color: theme.muted, marginTop: 4 }}>{stream.description}</Text>
             ) : null}
             <Text style={[styles.recMeta, { color: theme.muted }]}>
-              {streamerName(stream)} · Recorded
+              {streamerName(stream)} · {t('Recorded')}
             </Text>
             {uri ? (
               <View style={styles.videoWrap}>
@@ -237,7 +239,7 @@ export default function StreamsScreen({ navigation }) {
       }}
       ListEmptyComponent={
         !loading ? (
-          <Text style={[styles.emptyRec, { color: theme.muted }]}>Nuk ka regjistrime ende.</Text>
+          <Text style={[styles.emptyRec, { color: theme.muted }]}>{t('No recordings yet.')}</Text>
         ) : null
       }
     />

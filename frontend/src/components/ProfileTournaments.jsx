@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { formatTotalsPoints, formatTournamentPoints } from '../utils/tournamentPoints';
+import { useLocale } from '../contexts/LocaleContext';
 
-function statusLabel(status) {
+function statusLabel(status, t) {
   const map = {
     open: 'Open',
     ongoing: 'Ongoing',
@@ -10,7 +11,7 @@ function statusLabel(status) {
     accepted: 'Participating',
     rejected: 'Rejected',
   };
-  return map[status] || status || '';
+  return t(map[status] || status || '');
 }
 
 const STAT_ICONS = {
@@ -22,13 +23,14 @@ const STAT_ICONS = {
 };
 
 export default function ProfileTournaments({ tournaments = [], totals = null }) {
+  const { t } = useLocale();
   const rows = Array.isArray(tournaments) ? tournaments : [];
 
   if (!rows.length && !totals) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 px-6 py-12 text-center">
         <p className="text-4xl mb-3">🏟️</p>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">No tournament participation yet.</p>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">{t('No tournament participation yet.')}</p>
       </div>
     );
   }
@@ -37,7 +39,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
     <div className="space-y-5">
       {totals ? (
         <div className="overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-slate-900 via-emerald-950/80 to-slate-900 p-4 sm:p-5 shadow-xl shadow-emerald-900/20">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400/90 mb-4">Career tournament stats</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400/90 mb-4">{t('Career tournament stats')}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
               { label: 'Tournaments', value: totals.tournamentsPlayed ?? 0 },
@@ -52,7 +54,7 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
               >
                 <p className="text-lg mb-1">{STAT_ICONS[item.label]}</p>
                 <div className="text-2xl sm:text-3xl font-black tabular-nums text-white">{item.value}</div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-1">{item.label}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-1">{t(item.label)}</div>
               </div>
             ))}
           </div>
@@ -81,9 +83,9 @@ export default function ProfileTournaments({ tournaments = [], totals = null }) 
                 ) : null}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {statusLabel(row.tournamentStatus)}
+                {statusLabel(row.tournamentStatus, t)}
                 {row.participantStatus && row.participantStatus !== 'accepted'
-                  ? ` · ${statusLabel(row.participantStatus)}`
+                  ? ` · ${statusLabel(row.participantStatus, t)}`
                   : ''}
                 {row.tournamentType ? ` · ${row.tournamentType}` : ''}
                 {row.tournamentCategory ? ` · ${String(row.tournamentCategory).toUpperCase()}` : ''}

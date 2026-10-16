@@ -14,8 +14,10 @@ import {
   updateClubStaffRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 
 export default function ClubRosterScreen() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const route = useRoute();
   const [requests, setRequests] = useState([]);
@@ -120,7 +122,7 @@ export default function ClubRosterScreen() {
   if (!isClub && !isAthlete) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.denied}>Club roster is available for club and athlete accounts.</Text>
+        <Text style={styles.denied}>{t('Club roster is available for club and athlete accounts.')}</Text>
       </View>
     );
   }
@@ -155,8 +157,8 @@ export default function ClubRosterScreen() {
       ListHeaderComponent={
         <View>
           <View style={styles.headerCard}>
-            <Text style={styles.headerTitle}>Club Roster</Text>
-            <Text style={styles.sub}>Pending: {pending.length} | Approved: {approved.length} | All: {requests.length}</Text>
+            <Text style={styles.headerTitle}>{t('Skuadra e klubit')}</Text>
+            <Text style={styles.sub}>{t('Në pritje')}: {pending.length} | {t('Aprovuar')}: {approved.length} | {t('Të gjitha')}: {requests.length}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
 
@@ -167,19 +169,19 @@ export default function ClubRosterScreen() {
                   style={[styles.tabBtn, activeTab === 'pending' ? styles.tabActive : null]}
                   onPress={() => setActiveTab('pending')}
                 >
-                  <Text style={[styles.tabText, activeTab === 'pending' ? styles.tabTextActive : null]}>Pending</Text>
+                  <Text style={[styles.tabText, activeTab === 'pending' ? styles.tabTextActive : null]}>{t('Në pritje')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.tabBtn, activeTab === 'approved' ? styles.tabActive : null]}
                   onPress={() => setActiveTab('approved')}
                 >
-                  <Text style={[styles.tabText, activeTab === 'approved' ? styles.tabTextActive : null]}>Approved</Text>
+                  <Text style={[styles.tabText, activeTab === 'approved' ? styles.tabTextActive : null]}>{t('Aprovuar')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.tabBtn, activeTab === 'staff' ? styles.tabActive : null]}
                   onPress={() => setActiveTab('staff')}
                 >
-                  <Text style={[styles.tabText, activeTab === 'staff' ? styles.tabTextActive : null]}>Staff</Text>
+                  <Text style={[styles.tabText, activeTab === 'staff' ? styles.tabTextActive : null]}>{t('Stafi')}</Text>
                 </TouchableOpacity>
               </View>
               {activeTab === 'staff' ? (
@@ -188,13 +190,13 @@ export default function ClubRosterScreen() {
                     style={[styles.tabBtn, staffSubTab === 'pending' ? styles.tabActive : null]}
                     onPress={() => setStaffSubTab('pending')}
                   >
-                    <Text style={[styles.tabText, staffSubTab === 'pending' ? styles.tabTextActive : null]}>Pending staff</Text>
+                    <Text style={[styles.tabText, staffSubTab === 'pending' ? styles.tabTextActive : null]}>{t('Staf në pritje')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.tabBtn, staffSubTab === 'active' ? styles.tabActive : null]}
                     onPress={() => setStaffSubTab('active')}
                   >
-                    <Text style={[styles.tabText, staffSubTab === 'active' ? styles.tabTextActive : null]}>Active staff</Text>
+                    <Text style={[styles.tabText, staffSubTab === 'active' ? styles.tabTextActive : null]}>{t('Staf aktiv')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -206,18 +208,18 @@ export default function ClubRosterScreen() {
                   style={[styles.tabBtn, activeTab === 'myRequests' ? styles.tabActive : null]}
                   onPress={() => setActiveTab('myRequests')}
                 >
-                  <Text style={[styles.tabText, activeTab === 'myRequests' ? styles.tabTextActive : null]}>My Requests</Text>
+                  <Text style={[styles.tabText, activeTab === 'myRequests' ? styles.tabTextActive : null]}>{t('Kërkesat e mia')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.tabBtn, activeTab === 'clubView' ? styles.tabActive : null]}
                   onPress={() => setActiveTab('clubView')}
                 >
-                  <Text style={[styles.tabText, activeTab === 'clubView' ? styles.tabTextActive : null]}>Club Roster</Text>
+                  <Text style={[styles.tabText, activeTab === 'clubView' ? styles.tabTextActive : null]}>{t('Skuadra e klubit')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.formCard}>
-                <Text style={styles.formTitle}>Join a Club</Text>
+                <Text style={styles.formTitle}>{t('Bashkohu me një klub')}</Text>
                 <TextInput
                   value={athleteForm.clubId}
                   onChangeText={(v) => setAthleteForm((f) => ({ ...f, clubId: v }))}
