@@ -11,12 +11,14 @@ import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { APP_BRAND_NAME, APP_BRAND_WORDMARK, APP_LOGO_SRC } from '../config/branding';
 import { hasTier } from '../utils/subscriptionAccess';
+import { useLocale } from '../contexts/LocaleContext';
 
 
 
 
 function Navbar() {
   const { user, logout } = useAuth();
+  const { t } = useLocale();
   const { totalPieces } = useCart();
   const cartBadge = totalPieces > 0 ? (totalPieces > 99 ? '99+' : String(totalPieces)) : null;
   const navigate = useNavigate();
@@ -420,7 +422,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <HomeIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Ballina</span>
+                <span className="font-medium">{t('home')}</span>
               </Link>
 
               <Link
@@ -429,7 +431,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Tregu</span>
+                <span className="font-medium">{t('marketplace')}</span>
                 {cartBadge ? (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
                     {cartBadge}
@@ -443,7 +445,7 @@ function Navbar() {
                 className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
               >
                 <TrophyIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Turnetë</span>
+                <span className="font-medium">{t('tournaments')}</span>
               </Link>
 
               <button
@@ -455,7 +457,7 @@ function Navbar() {
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/15 transition-colors"
               >
                 <VideoCameraIcon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">Dil LIVE</span>
+                <span className="font-medium">{t('goLive')}</span>
               </button>
             </div>
 
@@ -466,7 +468,7 @@ function Navbar() {
               className="md:hidden xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <TrophyIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Turnetë</span>
+              <span className="font-medium">{t('tournaments')}</span>
             </Link>
             
             {/* Notifications */}
@@ -476,7 +478,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <BellIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Njoftimet</span>
+              <span className="font-medium">{t('notifications')}</span>
               {unreadCount > 0 && (
                 <span className="xt-drawer-badge">
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -491,7 +493,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Mesazhet</span>
+              <span className="font-medium">{t('messages')}</span>
               {messagesUnread > 0 && (
                 <span className="xt-drawer-badge">
                   {messagesUnread > 99 ? '99+' : messagesUnread}
@@ -506,7 +508,7 @@ function Navbar() {
               className="xt-drawer-link flex items-center gap-3 p-3 rounded-lg transition-colors"
             >
               <UsersIcon className="h-5 w-5" aria-hidden="true" />
-              <span className="font-medium">Shfleto Profilet</span>
+              <span className="font-medium">{t('browseProfiles')}</span>
             </Link>
 
             {/* Insights (Analitika + Gamifikim) */}
@@ -700,7 +702,7 @@ function Navbar() {
                   <video ref={livePreviewRef} autoPlay muted playsInline className="w-full rounded border" />
                 </div>
               ) : null}
-              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">Nis LIVE</button>
+              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium mt-2">{t('startLive')}</button>
               {activeLiveStreamId ? (
                 <button
                   type="button"
@@ -708,7 +710,7 @@ function Navbar() {
                   disabled={isEndingLive}
                   className="ml-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium mt-2"
                 >
-                  {isEndingLive ? 'Duke përfunduar...' : 'Përfundo LIVE aktual'}
+                  {isEndingLive ? t('loading') : t('finishLive')}
                 </button>
               ) : null}
               <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Anulo</button>

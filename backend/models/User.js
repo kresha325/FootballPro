@@ -25,6 +25,11 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('athlete', 'coach', 'scout', 'manager', 'referee', 'club', 'federation', 'liga', 'media', 'business', 'admin'),
     allowNull: false,
   },
+  language: {
+    type: DataTypes.STRING(5),
+    allowNull: false,
+    defaultValue: 'sq',
+  },
   verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

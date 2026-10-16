@@ -114,6 +114,7 @@ export const registerRequest = (payload) => api.post('/api/auth/register', paylo
 export const forgotPasswordRequest = (email) => api.post('/api/auth/forgot-password', { email });
 export const resetPasswordRequest = (token, password) => api.post('/api/auth/reset-password', { token, password });
 export const meRequest = (config = {}) => api.get('/api/auth/me', config);
+export const updateLanguageRequest = (language) => api.patch('/api/auth/language', { language });
 export const oauthProvidersRequest = () => api.get('/api/auth/providers');
 export const exchangeOAuthCodeRequest = (code) => api.post('/api/auth/oauth/exchange', { code });
 export const adminMediaListRequest = (params = {}) => api.get('/api/media/admin', { params });

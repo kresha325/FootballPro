@@ -19,6 +19,7 @@ import StartConversationModal from '../components/messaging/StartConversationMod
 import { conversationsRequest, extractErrorMessage } from '../api/client';
 import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 import { BACKEND_URL } from '../config/constants';
 import { openUserProfile } from '../utils/openUserProfile';
 import {
@@ -133,6 +134,7 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
 }
 
 export default function MessagingScreen({ navigation }) {
+  const { t } = useLocale();
   useRenderLog('MessagingScreen');
   const { user } = useAuth();
   const { getSocket, socketConnected } = useSocket();
@@ -277,7 +279,7 @@ export default function MessagingScreen({ navigation }) {
       ListHeaderComponent={
         <View style={styles.headerBlock}>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {error ? <TouchableOpacity onPress={() => loadConversations()} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>Provo përsëri</Text></TouchableOpacity> : null}
+          {error ? <TouchableOpacity onPress={() => loadConversations()} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>{t('Provo përsëri')}</Text></TouchableOpacity> : null}
           <TextInput
             value={query}
             onChangeText={setQuery}

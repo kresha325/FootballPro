@@ -25,6 +25,8 @@ import {
 } from '../api/client';
 import AiBioButton from '../components/AiBioButton';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
+import { translateRole } from '../localization/catalog';
 import EditAthleteMatchAchievements, {
   loadAthleteExtrasFromProfile,
 } from '../components/editProfile/EditAthleteMatchAchievements';
@@ -132,6 +134,7 @@ const defaultForm = () => ({
 
 export default function EditProfileScreen({ navigation }) {
   const { user, refreshMe } = useAuth();
+  const { language, t } = useLocale();
   const editRole = useMemo(() => normalizeEditRole(user?.role), [user?.role]);
 
   const [loading, setLoading] = useState(true);
@@ -148,7 +151,7 @@ export default function EditProfileScreen({ navigation }) {
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const openPicker = (field, title, options) => {
-    setPicker({ open: true, field, title, options });
+    setPicker({ open: true, field, title: t(title), options: options.map((option) => ({ ...option, label: t(option.label) })) });
   };
 
   const onPickerSelect = (field, value) => {
@@ -262,7 +265,7 @@ export default function EditProfileScreen({ navigation }) {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow media library access.');
+      Alert.alert(t('Permission required'), t('Please allow media library access.'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -486,14 +489,14 @@ export default function EditProfileScreen({ navigation }) {
       const trimmedClub = form.club?.trim();
       const yearRaw = String(form.clubJoinedYear || '').trim();
       if (trimmedClub && !yearRaw) {
-        Alert.alert('Klubi', 'Vendos vitin nga kur je në këtë klub.');
+        Alert.alert(t('Klubi'), t('Enter the year you joined this club.'));
         return;
       }
       if (yearRaw) {
         const yearNum = parseInt(yearRaw, 10);
         const maxYear = new Date().getFullYear() + 1;
         if (!Number.isFinite(yearNum) || yearNum < 1950 || yearNum > maxYear) {
-          Alert.alert('Klubi', 'Viti i klubit nuk është i vlefshëm.');
+          Alert.alert(t('Klubi'), t('Club year is invalid.'));
           return;
         }
       }
@@ -518,16 +521,16 @@ export default function EditProfileScreen({ navigation }) {
       } catch (_e) {
         /* tab avatar rifreskohet herën tjetër që /me kalon */
       }
-      Alert.alert('Success', 'Profile updated successfully.');
+      Alert.alert(t('Success'), t('Profile updated successfully.'));
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Update failed', extractErrorMessage(err, 'Could not update profile'));
+      Alert.alert(t('Update failed'), extractErrorMessage(err, t('Update failed')));
     } finally {
       setSaving(false);
     }
   };
 
-  const labelFor = (text) => <Text style={styles.label}>{text}</Text>;
+  const labelFor = (text) => <Text style={styles.label}>{t(text)}</Text>;
   const input = (key, props = {}) => (
     <TextInput
       style={styles.input}
@@ -540,15 +543,15 @@ export default function EditProfileScreen({ navigation }) {
 
   const pickerButton = (fieldKey, title, options, displayValue) => (
     <TouchableOpacity style={styles.pickerBtn} onPress={() => openPicker(fieldKey, title, options)}>
-      <Text style={styles.pickerBtnText}>{displayValue || title}</Text>
+      <Text style={styles.pickerBtnText}>{t(displayValue || title)}</Text>
     </TouchableOpacity>
   );
 
-  const genderDisplay = GENDER_OPTIONS.find((o) => o.value === form.gender)?.label || 'Select Gender';
-  const positionDisplay = ATHLETE_POSITIONS.find((o) => o.value === form.position)?.label || 'Select Position';
-  const footDisplay = PREFERRED_FOOT_OPTIONS.find((o) => o.value === form.preferredFoot)?.label || 'Select foot';
-  const coachAffDisplay = COACH_AFFILIATIONS.find((o) => o.value === form.coachAffiliation)?.label || 'Select Affiliation';
-  const coachCatDisplay = COACH_CATEGORIES.find((o) => o.value === form.coachCategory)?.label || 'Select Category';
+  const genderDisplay = t(GENDER_OPTIONS.find((o) => o.value === form.gender)?.label || 'Select Gender');
+  const positionDisplay = t(ATHLETE_POSITIONS.find((o) => o.value === form.position)?.label || 'Select Position');
+  const footDisplay = t(PREFERRED_FOOT_OPTIONS.find((o) => o.value === form.preferredFoot)?.label || 'Select foot');
+  const coachAffDisplay = t(COACH_AFFILIATIONS.find((o) => o.value === form.coachAffiliation)?.label || 'Select Affiliation');
+  const coachCatDisplay = t(COACH_CATEGORIES.find((o) => o.value === form.coachCategory)?.label || 'Select Category');
 
   if (loading) {
     return (
@@ -565,7 +568,7 @@ export default function EditProfileScreen({ navigation }) {
           Profili i Ligës përditësohet nga platforma web (forma e veçantë për liga), jo nga ky ekran.
         </Text>
         <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonText}>Kthehu</Text>
+          <Text style={styles.buttonText}>{t('back')}</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -573,11 +576,11 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.roleTag}>Role: {String(user?.role || '—')}</Text>
+      <Text style={styles.roleTag}>{t('accountType')}: {translateRole(language, user?.role) || '—'}</Text>
 
       {labelFor('Profile Photo')}
       <TouchableOpacity style={styles.secondaryButton} onPress={pickImage}>
-        <Text style={styles.secondaryButtonText}>{profilePhotoFile ? 'Change photo' : 'Choose photo'}</Text>
+        <Text style={styles.secondaryButtonText}>{profilePhotoFile ? t('Change photo') : t('Choose photo')}</Text>
       </TouchableOpacity>
       {profilePhotoFile ? (
         <OptimizedImage uri={profilePhotoFile.uri} style={styles.avatarPreview} width={240} contentFit="cover" />
@@ -922,7 +925,7 @@ export default function EditProfileScreen({ navigation }) {
       )}
 
       <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={onSave} disabled={saving}>
-        <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Save profile'}</Text>
+        <Text style={styles.buttonText}>{saving ? t('Saving...') : t('Save profile')}</Text>
       </TouchableOpacity>
 
       <OptionPickerModal

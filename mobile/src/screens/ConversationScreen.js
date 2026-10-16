@@ -45,6 +45,7 @@ import {
 import ReportSheet from '../components/ReportSheet';
 import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import {
   messageBelongsToConversation,
@@ -311,6 +312,7 @@ function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo,
 }
 
 export default function ConversationScreen({ route, navigation }) {
+  const { t } = useLocale();
   const {
     conversationId,
     otherUserId: paramOtherUserId,
@@ -1274,7 +1276,7 @@ export default function ConversationScreen({ route, navigation }) {
       {error ? (
         <View style={styles.errorBanner} accessibilityRole="alert">
           <Text style={styles.error}>{error}</Text>
-          {messageLoadError ? <TouchableOpacity onPress={() => loadMessages({ skipFullScreenLoading: true })} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>Provo përsëri</Text></TouchableOpacity> : null}
+          {messageLoadError ? <TouchableOpacity onPress={() => loadMessages({ skipFullScreenLoading: true })} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>{t('Provo përsëri')}</Text></TouchableOpacity> : null}
         </View>
       ) : null}
       <TextInput

@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/media/OptimizedImage';
+import { LANGUAGES } from '../localization/catalog';
+import { useLocale } from '../context/LocaleContext';
 
 export const WELCOME_ONBOARDING_KEY = 'welcome_onboarding_done';
 
@@ -43,6 +45,7 @@ const SLIDES = [
 export default function WelcomeOnboardingScreen({ onDone }) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { language, languageSelected, setLanguage, t } = useLocale();
   const listRef = useRef(null);
   const [index, setIndex] = useState(0);
 
@@ -65,6 +68,14 @@ export default function WelcomeOnboardingScreen({ onDone }) {
     setIndex(next);
   };
 
+  const chooseLanguage = async (code) => {
+    const alreadyCompleted = await AsyncStorage.getItem(WELCOME_ONBOARDING_KEY).catch(() => null);
+    await setLanguage(code);
+    if (alreadyCompleted === '1') {
+      onDone?.();
+    }
+  };
+
   const brandRest = APP_BRAND_NAME.replace(/^x\s*/i, '').trim() || 'TALENTI';
 
   return (
@@ -74,11 +85,35 @@ export default function WelcomeOnboardingScreen({ onDone }) {
           <Text style={[styles.brandX, { color: colors.primary }]}>X</Text>
           <Text style={[styles.brandRest, { color: colors.text }]}>{brandRest}</Text>
         </Text>
-        <TouchableOpacity onPress={finish} hitSlop={12} accessibilityLabel="Anashkalo">
-          <Text style={[styles.skip, { color: colors.muted }]}>Anashkalo</Text>
-        </TouchableOpacity>
+        {languageSelected ? (
+          <TouchableOpacity onPress={finish} hitSlop={12} accessibilityLabel={t('skip')}>
+            <Text style={[styles.skip, { color: colors.muted }]}>{t('skip')}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
+      {!languageSelected ? (
+        <View style={styles.languagePage}>
+          <Text style={[styles.languageTitle, { color: colors.text }]}>{t('chooseLanguage')}</Text>
+          <Text style={[styles.languagePrompt, { color: colors.muted }]}>{t('languagePrompt')}</Text>
+          <FlatList
+            data={LANGUAGES}
+            keyExtractor={(item) => item.code}
+            contentContainerStyle={styles.languageList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => chooseLanguage(item.code)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: language === item.code }}
+                style={[styles.languageOption, { backgroundColor: colors.card, borderColor: language === item.code ? colors.primary : colors.border }]}
+              >
+                <Text style={[styles.languageOptionText, { color: colors.text }]}>{item.name}</Text>
+                {language === item.code ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      ) : (
       <FlatList
         ref={listRef}
         data={SLIDES}
@@ -96,13 +131,14 @@ export default function WelcomeOnboardingScreen({ onDone }) {
             <View style={[styles.imageWrap, { width: IMAGE_W, height: IMAGE_H, backgroundColor: colors.primarySoft }]}>
               <OptimizedImage source={item.image} style={styles.image} contentFit="cover" />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
-            <Text style={[styles.body, { color: colors.muted }]}>{item.body}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t(`${item.key}Title`)}</Text>
+            <Text style={[styles.body, { color: colors.muted }]}>{t(`${item.key}Body`)}</Text>
           </View>
         )}
       />
+      )}
 
-      <View style={styles.dots}>
+      {languageSelected ? <View style={styles.dots}>
         {SLIDES.map((s, i) => (
           <View
             key={s.key}
@@ -113,17 +149,17 @@ export default function WelcomeOnboardingScreen({ onDone }) {
             ]}
           />
         ))}
-      </View>
+      </View> : null}
 
-      <TouchableOpacity
+      {languageSelected ? <TouchableOpacity
         style={[styles.cta, { backgroundColor: colors.primary }]}
         onPress={goNext}
         activeOpacity={0.9}
       >
         <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
-          {index >= SLIDES.length - 1 ? 'Fillo' : 'Vazhdo'}
+          {index >= SLIDES.length - 1 ? t('start') : t('continue')}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> : null}
     </View>
   );
 }
@@ -139,6 +175,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginBottom: 8,
+  },
+  languagePage: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  languageTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  languagePrompt: {
+    fontSize: 15,
+    marginBottom: 18,
+  },
+  languageList: {
+    gap: 10,
+    paddingBottom: 24,
+  },
+  languageOption: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   brand: {
     fontSize: 22,

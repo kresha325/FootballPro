@@ -557,9 +557,9 @@ exports.sendMessage = async (req, res) => {
     for (const member of recipients) {
       if (userIsViewingConversation(io, member.userId, conversationId)) continue;
       try {
-        const recipient = await User.findByPk(member.userId, { attributes: ['id', 'email'] });
+        const recipient = await User.findByPk(member.userId, { attributes: ['id', 'email', 'language'] });
         if (recipient?.email) {
-          await sendEmail(recipient.email, 'newMessage', senderName, preview, conversationId);
+          await sendEmail(recipient.email, 'newMessage', senderName, preview, conversationId, recipient.language || 'sq');
         }
       } catch (emailError) {
         console.error('Email notification failed:', emailError.message);

@@ -246,7 +246,7 @@ export const AuthProvider = ({ children }) => {
     return { ok: true };
   };
 
-  const register = async ({ firstName, lastName, email, password, role, dateOfBirth, city, country }) => {
+  const register = async ({ firstName, lastName, email, password, role, dateOfBirth, foundedYear, language, city, country }) => {
     setIsSubmitting(true);
     try {
       const payload = {
@@ -255,8 +255,10 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         role: role || 'athlete',
+        language: language || 'sq',
       };
       if (dateOfBirth) payload.dateOfBirth = dateOfBirth;
+      if (foundedYear) payload.foundedYear = foundedYear;
       if (city) payload.city = city;
       if (country) payload.country = country;
 

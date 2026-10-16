@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { profileAPI, youtubeAPI } from '../services/api';
+import { authAPI, profileAPI, youtubeAPI } from '../services/api';
 import api from '../services/api';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import { MoonIcon, SunIcon, UserIcon, BellIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
@@ -8,9 +8,17 @@ import ParentVerificationForm from './ParentVerificationForm';
 import { Link } from 'react-router-dom';
 import ProPerksPanel from './ProPerksPanel';
 import NotificationPreferences from './NotificationPreferences';
+import { LANGUAGES } from '../locales/catalog';
+import { useLocale } from '../contexts/LocaleContext';
 
 const Settings = () => {
   const { user, refreshUser, logout, darkMode, toggleDarkMode } = useAuth();
+  const { language, setLanguage, t } = useLocale();
+  const selectLanguage = async (nextLanguage) => {
+    setLanguage(nextLanguage);
+    if (!user?.id) return;
+    try { await authAPI.updateLanguage(nextLanguage); } catch { /* local preference remains available offline */ }
+  };
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -169,7 +177,21 @@ const Settings = () => {
 
   return (
     <div className="mx-auto max-w-2xl rounded-lg bg-[var(--xt-color-surface)] p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-[var(--xt-color-text)] shadow-md sm:p-6">
-      <h1 className="mb-8 text-3xl font-bold text-[var(--xt-color-text)]">Cilësimet</h1>
+      <h1 className="mb-8 text-3xl font-bold text-[var(--xt-color-text)]">{t('settings')}</h1>
+
+      <section className="mb-8 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-4">
+        <h2 className="mb-1 text-xl font-semibold">{t('language')}</h2>
+        <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">{t('languagePrompt')}</p>
+        <div className="flex flex-wrap gap-2">
+          {LANGUAGES.map((item) => (
+            <button key={item.code} type="button" onClick={() => selectLanguage(item.code)}
+              aria-pressed={language === item.code}
+              className={`rounded-full border px-3 py-1.5 text-sm ${language === item.code ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-black' : 'border-[var(--xt-color-border)]'}`}>
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </section>
 
 
 
@@ -178,10 +200,10 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="mb-4 flex items-center text-xl font-semibold text-[var(--xt-color-text)]">
           <MoonIcon className="mr-2 h-6 w-6" />
-          Appearance
+          {t('Appearance')}
         </h2>
         <div className="flex items-center justify-between rounded-lg bg-[var(--xt-color-surface-raised)] p-4 border border-[var(--xt-color-border)]">
-          <span className="text-[var(--xt-color-text-muted)]">Modaliteti i errët</span>
+          <span className="text-[var(--xt-color-text-muted)]">{t('Dark mode')}</span>
           <button
             onClick={toggleDarkMode}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -201,7 +223,7 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <BellIcon className="w-6 h-6 mr-2" />
-          Njoftimet
+          {t('notifications')}
         </h2>
         <div className="rounded-lg border border-[var(--xt-color-border)] p-4">
           <NotificationPreferences />
@@ -212,7 +234,7 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <ShieldCheckIcon className="w-6 h-6 mr-2" />
-          Verifikimi
+          {t('Verification')}
         </h2>
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-white dark:bg-gray-800">
           <div className="flex flex-wrap gap-2 text-xs">
@@ -293,7 +315,7 @@ const Settings = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
           <UserIcon className="w-6 h-6 mr-2" />
-          Profili
+          {t('profile')}
         </h2>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           {saveMessage.text ? (
@@ -309,7 +331,7 @@ const Settings = () => {
           ) : null}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Emri (emër dhe mbiemër)
+              {t('Full name')}
             </label>
             <input
               type="text"

@@ -20,7 +20,6 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   REGISTER_ROLE_OPTIONS,
   REGISTER_ROLE_VALUES,
-  registerRoleLabel,
 } from '../constants/registerRoles';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -29,6 +28,8 @@ import { BACKEND_URL, WEB_APP_URL } from '../config/constants';
 import { isOrgProfileRole } from '../utils/orgProfile';
 import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import { oauthProvidersRequest } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
+import { translateRole } from '../localization/catalog';
 
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 const PRIVACY_URL = `${WEB_BASE}/privacy`;
@@ -36,7 +37,7 @@ const TERMS_URL = `${WEB_BASE}/terms`;
 const HELP_URL = `${WEB_BASE}/help`;
 const API_ROOT = String(BACKEND_URL || '').replace(/\/$/, '').replace(/\/api$/i, '');
 
-function RolePickerModal({ visible, selectedValue, onSelect, onClose, colors }) {
+function RolePickerModal({ visible, selectedValue, onSelect, onClose, colors, language, t }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
@@ -44,7 +45,7 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose, colors }) 
           style={[styles.modalCard, { backgroundColor: colors.card }]}
           onPress={(e) => e.stopPropagation()}
         >
-          <Text style={[styles.modalTitle, { color: colors.text }]}>Lloji i llogarisë</Text>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('accountType')}</Text>
           <FlatList
             data={REGISTER_ROLE_OPTIONS}
             keyExtractor={(item) => item.value}
@@ -62,10 +63,7 @@ function RolePickerModal({ visible, selectedValue, onSelect, onClose, colors }) 
                 }}
               >
                 <View style={styles.modalRowBody}>
-                  <Text style={[styles.modalRowText, { color: colors.text }]}>{item.label}</Text>
-                  {item.hint ? (
-                    <Text style={[styles.modalRowHint, { color: colors.muted }]}>{item.hint}</Text>
-                  ) : null}
+                  <Text style={[styles.modalRowText, { color: colors.text }]}>{translateRole(language, item.value)}</Text>
                 </View>
                 {item.value === selectedValue ? (
                   <Ionicons name="checkmark" size={20} color={colors.primaryText} />
@@ -92,6 +90,7 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { colors } = useTheme();
+  const { language, t } = useLocale();
   const { login, register, forgotPassword, isSubmitting } = useAuth();
   const initialMode =
     route.params?.mode === 'register' ? 'register' : route.params?.mode === 'forgot' ? 'forgot' : 'login';
@@ -110,6 +109,7 @@ export default function LoginScreen() {
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobYear, setDobYear] = useState('');
+  const [foundedYear, setFoundedYear] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -194,19 +194,24 @@ export default function LoginScreen() {
       return;
     }
 
-    const isAthlete = normalizedRole === 'athlete';
     const isOrg = isOrgProfileRole(normalizedRole);
     let dateOfBirth;
-    if (isAthlete) {
+    if (!isOrg) {
       dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
       if (!dateOfBirth) {
         setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
         return;
       }
     }
+    const parsedFoundedYear = Number(foundedYear);
+    const currentYear = new Date().getFullYear();
+    if (isOrg && (!/^\d{4}$/.test(foundedYear) || parsedFoundedYear < 1800 || parsedFoundedYear > currentYear)) {
+      setInlineError(`Vendos vitin e themelimit (1800–${currentYear}).`);
+      return;
+    }
 
     if (!acceptedTerms) {
-      setInlineError('Duhet të pranosh kushtet e përdorimit.');
+      setInlineError(t('acceptTerms'));
       return;
     }
 
@@ -216,7 +221,9 @@ export default function LoginScreen() {
       email: email.trim().toLowerCase(),
       password,
       role: normalizedRole,
+      language,
       ...(dateOfBirth ? { dateOfBirth } : {}),
+      ...(isOrg ? { foundedYear: parsedFoundedYear } : {}),
     });
     if (!result.ok) {
       setInlineError(result.message || 'Regjistrimi dështoi');
@@ -284,7 +291,7 @@ export default function LoginScreen() {
         {navigation.canGoBack() ? (
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
-            <Text style={[styles.backText, themed.backText]}>Kthehu</Text>
+            <Text style={[styles.backText, themed.backText]}>{t('back')}</Text>
           </TouchableOpacity>
         ) : null}
         <Text style={[styles.title, themed.title]}>
@@ -292,11 +299,7 @@ export default function LoginScreen() {
           <Text>{APP_BRAND_WORDMARK}</Text>
         </Text>
         <Text style={[styles.subtitle, themed.subtitle]}>
-          {mode === 'login'
-            ? 'Hyr për të vazhduar'
-            : mode === 'register'
-              ? 'Krijo llogarinë — karriera jote fillon këtu'
-              : 'Rikupero fjalëkalimin'}
+          {mode === 'login' ? t('login') : mode === 'register' ? t('submitRegister') : t('sendReset')}
         </Text>
 
         {inlineError ? <Text style={[styles.inlineError, themed.inlineError]}>{inlineError}</Text> : null}
@@ -313,7 +316,7 @@ export default function LoginScreen() {
                 mode === 'login' && styles.segmentTextActive,
               ]}
             >
-              Hyr
+              {t('loginTab')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -327,7 +330,7 @@ export default function LoginScreen() {
                 mode === 'register' && styles.segmentTextActive,
               ]}
             >
-              Regjistrohu
+              {t('registerTab')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -341,24 +344,24 @@ export default function LoginScreen() {
                 mode === 'forgot' && styles.segmentTextActive,
               ]}
             >
-              Harruar?
+              {t('forgotTab')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {mode === 'register' ? (
           <>
-            <Text style={[styles.fieldLabel, themed.fieldLabel]}>Lloji i llogarisë</Text>
+            <Text style={[styles.fieldLabel, themed.fieldLabel]}>{t('accountType')}</Text>
             <TouchableOpacity
               style={[styles.pickerBtn, themed.pickerBtn]}
               onPress={() => setRolePickerOpen(true)}
             >
-              <Text style={[styles.pickerBtnText, themed.pickerBtnText]}>{registerRoleLabel(role)}</Text>
+              <Text style={[styles.pickerBtnText, themed.pickerBtnText]}>{translateRole(language, role)}</Text>
               <Ionicons name="chevron-down" size={20} color={colors.muted} />
             </TouchableOpacity>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+              placeholder={isOrgProfileRole(role) ? t('organizationName') : t('firstName')}
               value={firstName}
               onChangeText={setFirstName}
               {...inputProps}
@@ -366,15 +369,15 @@ export default function LoginScreen() {
             {!isOrgProfileRole(role) ? (
               <TextInput
                 style={[styles.input, themed.input]}
-                placeholder="Mbiemri"
+                placeholder={t('lastName')}
                 value={lastName}
                 onChangeText={setLastName}
                 {...inputProps}
               />
             ) : null}
-            {String(role || '').toLowerCase() === 'athlete' ? (
+            {!isOrgProfileRole(role) ? (
               <>
-                <Text style={[styles.fieldLabel, themed.fieldLabel]}>Datëlindja</Text>
+                <Text style={[styles.fieldLabel, themed.fieldLabel]}>{t('dateOfBirth')}</Text>
                 <View style={styles.dobRow}>
                   <TextInput
                     style={[styles.input, styles.dobInput, themed.input]}
@@ -404,17 +407,32 @@ export default function LoginScreen() {
                     {...inputProps}
                   />
                 </View>
-                <Text style={[styles.hint, themed.hint]}>
-                  Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.
-                </Text>
+                {String(role || '').toLowerCase() === 'athlete' ? (
+                  <Text style={[styles.hint, themed.hint]}>
+                    {t('parentMinorHint')}
+                  </Text>
+                ) : null}
               </>
-            ) : null}
+            ) : (
+              <>
+                <Text style={[styles.fieldLabel, themed.fieldLabel]}>{t('foundingYear')}</Text>
+                <TextInput
+                  style={[styles.input, themed.input]}
+                  placeholder="p.sh. 1998"
+                  value={foundedYear}
+                  onChangeText={(value) => setFoundedYear(value.replace(/\D/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  {...inputProps}
+                />
+              </>
+            )}
           </>
         ) : null}
 
         <TextInput
           style={[styles.input, themed.input]}
-          placeholder="Email"
+          placeholder={t('email')}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -430,7 +448,7 @@ export default function LoginScreen() {
           <>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder="Fjalëkalimi"
+              placeholder={t('password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -443,7 +461,7 @@ export default function LoginScreen() {
             {mode === 'register' ? (
               <TextInput
                 style={[styles.input, themed.input]}
-                placeholder="Përsërit fjalëkalimin"
+                placeholder={t('confirmPassword')}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -464,13 +482,13 @@ export default function LoginScreen() {
               trackColor={{ true: colors.primary, false: colors.border }}
             />
             <Text style={[styles.termsText, themed.termsText]}>
-              Pranoj{' '}
+              {t('agree')}{' '}
               <Text style={[styles.termsLink, themed.termsLink]} onPress={() => Linking.openURL(TERMS_URL)}>
-                kushtet
+                {t('terms')}
               </Text>
               {' '}dhe{' '}
               <Text style={[styles.termsLink, themed.termsLink]} onPress={() => Linking.openURL(PRIVACY_URL)}>
-                privatësinë
+                {t('privacy')}
               </Text>
             </Text>
           </View>
@@ -481,7 +499,7 @@ export default function LoginScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>
-              {mode === 'login' ? 'Hyr' : mode === 'register' ? 'Krijo llogarinë' : 'Dërgo linkun'}
+              {mode === 'login' ? t('submitLogin') : mode === 'register' ? t('submitRegister') : t('sendReset')}
             </Text>
           )}
         </TouchableOpacity>
@@ -543,6 +561,8 @@ export default function LoginScreen() {
         }}
         onClose={() => setRolePickerOpen(false)}
         colors={colors}
+        language={language}
+        t={t}
       />
     </KeyboardAvoidingView>
   );

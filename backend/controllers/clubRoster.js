@@ -65,7 +65,8 @@ exports.submitRosterRequest = async (req, res) => {
         athleteName: `${athlete.firstName} ${athlete.lastName}`,
         position,
         message: message || 'No message',
-        clubName: club.firstName
+        clubName: club.firstName,
+        language: club.language || 'sq'
       }
     );
 
@@ -228,7 +229,8 @@ exports.approveRequest = async (req, res) => {
         athleteName: request.athlete.firstName,
         clubName: request.club.firstName,
         position: request.position,
-        message: responseMessage || 'Welcome to the team!'
+        message: responseMessage || 'Welcome to the team!',
+        language: request.athlete.language || 'sq'
       }
     );
 
@@ -322,7 +324,8 @@ exports.rejectRequest = async (req, res) => {
         athleteName: request.athlete.firstName,
         clubName: request.club.firstName,
         position: request.position,
-        message: responseMessage || 'Thank you for your interest.'
+        message: responseMessage || 'Thank you for your interest.',
+        language: request.athlete.language || 'sq'
       }
     );
 

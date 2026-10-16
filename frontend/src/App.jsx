@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { LANGUAGE_KEY, useLocale } from './contexts/LocaleContext';
 import PostsProvider from './contexts/PostsContext';
 import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/Navbar';
@@ -71,6 +72,7 @@ import { APP_BRAND_NAME } from './config/branding';
 // Hiq importin e applyBackgroundStyle
 function App() {
   const { user, loading } = useAuth();
+  const { setLanguage, t } = useLocale();
   const location = useLocation();
   const isFullscreenRoute =
     location.pathname.startsWith('/embed-') ||
@@ -78,8 +80,15 @@ function App() {
     /^\/cv\/[^/]+/.test(location.pathname);
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
-    document.title = `${APP_BRAND_NAME} — Talent Has a Future`;
-  }, []);
+    document.title = `${APP_BRAND_NAME} — ${t('tagline')}`;
+  }, [t]);
+
+  useEffect(() => {
+    if (!user?.language) return;
+    try {
+      if (!localStorage.getItem(LANGUAGE_KEY)) setLanguage(user.language);
+    } catch { /* use the in-memory default when browser storage is unavailable */ }
+  }, [user?.language, setLanguage]);
 
   if (loading) {
     return (

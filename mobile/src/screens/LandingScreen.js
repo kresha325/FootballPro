@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
 import { WEB_APP_URL } from '../config/constants';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 
 const WEB_BASE = (WEB_APP_URL || 'https://xtalenti.com').replace(/\/$/, '');
 
@@ -105,6 +106,7 @@ function BrandMark({ textColor }) {
 }
 
 export default function LandingScreen() {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -141,7 +143,7 @@ export default function LandingScreen() {
             onPress={goLogin}
             activeOpacity={0.85}
           >
-            <Text style={[styles.navCtaText, { color: ON_DARK.text }]}>Hyr</Text>
+            <Text style={[styles.navCtaText, { color: ON_DARK.text }]}>{t('Hyr')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -156,17 +158,16 @@ export default function LandingScreen() {
       >
         <View style={[styles.hero, { backgroundColor: ON_DARK.surface }]}>
           <View style={styles.badge}>
-            <Text style={[styles.badgeText, { color: ON_DARK.accent }]}>Platforma #1 për talente futbolli</Text>
+            <Text style={[styles.badgeText, { color: ON_DARK.accent }]}>{t('Platforma #1 për talente futbolli')}</Text>
           </View>
           <Text style={[styles.heroTitle, { color: ON_DARK.text }]}>
-            Zbulo. Zhvillo. <Text style={[styles.heroAccent, { color: ON_DARK.accent }]}>Shko Më Tej.</Text>
+            {t('Zbulo.')} {t('Zhvillo.')} <Text style={[styles.heroAccent, { color: ON_DARK.accent }]}>{t('Shko Më Tej.')}</Text>
           </Text>
           <Text style={[styles.heroBody, { color: ON_DARK.muted }]}>
-            {APP_BRAND_NAME} lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme — për të ndarë
-            talentin, për t'u zbuluar dhe për të ndërtuar karrierën në futboll.
+            {t('X TALENTI lidh lojtarët, trajnerët, skautët dhe klubet në një platformë të vetme — për të ndarë talentin, për t\'u zbuluar dhe për të ndërtuar karrierën në futboll.')}
           </Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={goRegister} activeOpacity={0.9}>
-            <Text style={styles.primaryBtnText}>Regjistrohu Falas</Text>
+            <Text style={styles.primaryBtnText}>{t('Regjistrohu Falas')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -176,21 +177,19 @@ export default function LandingScreen() {
             onPress={scrollToPricing}
             activeOpacity={0.9}
           >
-            <Text style={[styles.secondaryBtnText, { color: ON_DARK.text }]}>Shiko Çmimet</Text>
+            <Text style={[styles.secondaryBtnText, { color: ON_DARK.text }]}>{t('Shiko Çmimet')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çka Është {APP_BRAND_NAME}?</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('Çka Është X TALENTI?')}</Text>
           <Text style={[styles.sectionBody, { color: colors.muted }]}>
-            {APP_BRAND_NAME} është një rrjet social i dedikuar botës së futbollit. E krijuar për lojtarë të rinj që
-            duan të tregojnë talentin e tyre, për trajnerë e skautë që kërkojnë lojtarë të rinj, dhe për klube e
-            federata që duan të organizojnë e menaxhojnë talentet e tyre — të gjithë në një vend.
+            {t('X TALENTI është një rrjet social i dedikuar botës së futbollit. E krijuar për lojtarë të rinj që duan të tregojnë talentin e tyre, për trajnerë e skautë që kërkojnë lojtarë të rinj, dhe për klube e federata që duan të organizojnë e menaxhojnë talentet e tyre — të gjithë në një vend.')}
           </Text>
         </View>
 
         <View style={[styles.featuresBand, { backgroundColor: colors.bgElevated }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çka Mund Të Bësh</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('Çka Mund Të Bësh')}</Text>
           <View style={styles.featureGrid}>
             {FEATURES.map((f) => (
               <View
@@ -198,8 +197,8 @@ export default function LandingScreen() {
                 style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
                 <Ionicons name={f.icon} size={26} color="#F59E0B" style={styles.featureIcon} />
-                <Text style={[styles.featureTitle, { color: colors.text }]}>{f.title}</Text>
-                <Text style={[styles.featureDesc, { color: colors.muted }]}>{f.desc}</Text>
+                <Text style={[styles.featureTitle, { color: colors.text }]}>{t(f.title)}</Text>
+                <Text style={[styles.featureDesc, { color: colors.muted }]}>{t(f.desc)}</Text>
               </View>
             ))}
           </View>
@@ -209,9 +208,9 @@ export default function LandingScreen() {
           style={styles.section}
           onLayout={(e) => setPricingY(e.nativeEvent.layout.y)}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Çmimet</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('Çmimet')}</Text>
           <Text style={[styles.sectionBody, styles.pricingIntro, { color: colors.muted }]}>
-            Zgjidh paketën që i përshtatet rolit tënd në futboll.
+            {t('Zgjidh paketën që i përshtatet rolit tënd në futboll.')}
           </Text>
 
           <View style={[styles.toggle, { backgroundColor: colors.bgElevated }]}>
@@ -232,12 +231,12 @@ export default function LandingScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {g.label}
+                  {t(g.label)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[styles.rolesHint, { color: colors.mutedSoft }]}>{group.roles}</Text>
+          <Text style={[styles.rolesHint, { color: colors.mutedSoft }]}>{t(group.roles)}</Text>
 
           {['social', 'basic', 'pro'].map((planKey) => {
             const plan = group.plans[planKey];
@@ -267,7 +266,7 @@ export default function LandingScreen() {
                     isPro && { color: ON_DARK.accent },
                   ]}
                 >
-                  {plan.name}
+                    {t(plan.name)}
                 </Text>
                 <Text
                   style={[
@@ -276,7 +275,7 @@ export default function LandingScreen() {
                     isPro && { color: ON_DARK.text },
                   ]}
                 >
-                  {plan.price === 0 ? 'Falas' : `€${plan.price}`}
+                  {plan.price === 0 ? t('Falas') : `€${plan.price}`}
                   <Text
                     style={[
                       styles.planPeriod,
@@ -285,7 +284,7 @@ export default function LandingScreen() {
                     ]}
                   >
                     {' '}
-                    {plan.period}
+                    {t(plan.period)}
                   </Text>
                 </Text>
                 {plan.yearly ? (
@@ -296,7 +295,7 @@ export default function LandingScreen() {
                       isPro && { color: ON_DARK.muted },
                     ]}
                   >
-                    ose €{plan.yearly}/vit · 2 muaj falas
+                    {t('ose')} €{plan.yearly}{t('/vit')} · {t('2 muaj falas')}
                   </Text>
                 ) : null}
                 {included.slice(0, 6).map((f) => (
@@ -314,7 +313,7 @@ export default function LandingScreen() {
                         isPro && { color: '#E2E8F0' },
                       ]}
                     >
-                      {f.label}
+                      {t(f.label)}
                     </Text>
                   </View>
                 ))}
@@ -324,7 +323,7 @@ export default function LandingScreen() {
                   activeOpacity={0.9}
                 >
                   <Text style={[styles.planCtaText, isPro ? styles.planCtaTextPro : styles.planCtaTextDefault]}>
-                    {plan.price === 0 ? 'Fillo Falas' : 'Regjistrohu'}
+                    {plan.price === 0 ? t('Fillo Falas') : t('Regjistrohu')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -333,7 +332,7 @@ export default function LandingScreen() {
         </View>
 
         <View style={[styles.featuresBand, { backgroundColor: colors.bgElevated }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Kush Mund Të Regjistrohet</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('Kush Mund Të Regjistrohet')}</Text>
           <View style={styles.roleGrid}>
             {ROLES.map((r) => (
               <View
@@ -341,32 +340,32 @@ export default function LandingScreen() {
                 style={[styles.roleChip, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
                 <Ionicons name={r.icon} size={20} color="#F59E0B" style={styles.roleIcon} />
-                <Text style={[styles.roleLabel, { color: colors.text }]}>{r.label}</Text>
+                <Text style={[styles.roleLabel, { color: colors.text }]}>{t(r.label)}</Text>
               </View>
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Si Të Regjistrohesh</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('Si Të Regjistrohesh')}</Text>
           {STEPS.map((s) => (
             <View key={s.step} style={styles.stepBlock}>
               <View style={styles.stepCircle}>
                 <Text style={styles.stepNumber}>{s.step}</Text>
               </View>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>{s.title}</Text>
-              <Text style={[styles.stepDesc, { color: colors.muted }]}>{s.desc}</Text>
+              <Text style={[styles.stepTitle, { color: colors.text }]}>{t(s.title)}</Text>
+              <Text style={[styles.stepDesc, { color: colors.muted }]}>{t(s.desc)}</Text>
             </View>
           ))}
           <TouchableOpacity style={styles.primaryBtn} onPress={goRegister} activeOpacity={0.9}>
-            <Text style={styles.primaryBtnText}>Regjistrohu Tani</Text>
+            <Text style={styles.primaryBtnText}>{t('Regjistrohu Tani')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={[styles.contact, { backgroundColor: ON_DARK.surface }]}>
-          <Text style={[styles.contactTitle, { color: ON_DARK.text }]}>Kontakti</Text>
+          <Text style={[styles.contactTitle, { color: ON_DARK.text }]}>{t('Kontakti')}</Text>
           <Text style={[styles.contactBody, { color: ON_DARK.muted }]}>
-            Ke pyetje? Na kontakto dhe do të përgjigjemi sa më shpejt.
+            {t('Ke pyetje? Na kontakto dhe do të përgjigjemi sa më shpejt.')}
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
@@ -380,20 +379,20 @@ export default function LandingScreen() {
         <View style={[styles.footer, { backgroundColor: ON_DARK.surfaceDeep }]}>
           <View style={styles.footerLinks}>
             <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/help`)}>
-              <Text style={styles.footerLink}>Ndihmë</Text>
+              <Text style={styles.footerLink}>{t('Ndihmë')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/privacy`)}>
-              <Text style={styles.footerLink}>Privatësia</Text>
+              <Text style={styles.footerLink}>{t('Privatësia')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/terms`)}>
-              <Text style={styles.footerLink}>Kushtet</Text>
+              <Text style={styles.footerLink}>{t('Kushtet')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/data`)}>
-              <Text style={styles.footerLink}>Të dhënat</Text>
+              <Text style={styles.footerLink}>{t('Të dhënat')}</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.footerText}>
-            © {year} {APP_BRAND_NAME}. Të gjitha të drejtat e rezervuara.
+            © {year} {APP_BRAND_NAME}. {t('Të gjitha të drejtat e rezervuara.')}
           </Text>
         </View>
       </ScrollView>

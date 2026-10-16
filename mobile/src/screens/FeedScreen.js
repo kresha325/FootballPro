@@ -45,6 +45,7 @@ import PostSponsorStrip from '../components/PostSponsorStrip';
 import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 import { logNav, perfStart, useRenderLog } from '../utils/perfLog';
 import { publishFeedPagerSession } from '../navigation/feedPagerStore';
 
@@ -123,6 +124,7 @@ const PostCard = React.memo(function PostCard({
   shareOpen,
   onToggleShare,
 }) {
+  const { t } = useLocale();
   const author = item?.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
   const avatarUrl = item?.author?.profilePhoto || null;
   const authorId = postAuthorId(item);
@@ -164,7 +166,7 @@ const PostCard = React.memo(function PostCard({
     >
       {hasSponsors ? (
         <View style={styles.sponsoredBanner}>
-          <Text style={styles.sponsoredBannerText}>Sponsored</Text>
+          <Text style={styles.sponsoredBannerText}>{t('Sponsored')}</Text>
         </View>
       ) : null}
 
@@ -173,7 +175,7 @@ const PostCard = React.memo(function PostCard({
         onPress={() => onOpenAuthorProfile?.(authorId)}
         disabled={!authorId || !onOpenAuthorProfile}
         accessibilityRole="button"
-        accessibilityLabel="Hap profilin e autorit"
+        accessibilityLabel={t('Hap profilin e autorit')}
         style={styles.authorRowHit}
       >
         <View style={styles.authorHeaderRow}>
@@ -208,7 +210,7 @@ const PostCard = React.memo(function PostCard({
                   style={styles.deletePostBtn}
                   onPress={() => onEditPost(item)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityLabel="Ndrysho postimin"
+                  accessibilityLabel={t('Ndrysho postimin')}
                 >
                   <Ionicons name="create-outline" size={20} color="#2563eb" />
                 </TouchableOpacity>
@@ -219,7 +221,7 @@ const PostCard = React.memo(function PostCard({
                   onPress={() => onDeletePost(item)}
                   disabled={deletingPostId === item.id}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityLabel="Fshi postimin"
+                  accessibilityLabel={t('Fshi postimin')}
                 >
                   <Ionicons name="trash-outline" size={20} color="#dc2626" />
                 </TouchableOpacity>
@@ -234,7 +236,7 @@ const PostCard = React.memo(function PostCard({
         onPress={() => onOpenPost?.(item)}
         disabled={!onOpenPost}
         accessibilityRole="button"
-        accessibilityLabel="Hap postin në ekran të plotë"
+        accessibilityLabel={t('Hap postin në ekran të plotë')}
       >
         {item?.content ? (
           <Text style={[styles.content, isDark && styles.textBodyDark]}>{item.content}</Text>
@@ -256,14 +258,14 @@ const PostCard = React.memo(function PostCard({
           <VideoPoster
             style={styles.videoPlayer}
             onPress={() => onOpenPost?.(item)}
-            accessibilityLabel="Hap videon"
+            accessibilityLabel={t('Hap videon')}
           />
           {onOpenPost ? (
             <TouchableOpacity
               style={styles.videoFsBtn}
               onPress={() => onOpenPost(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Hap videon në ekran të plotë"
+              accessibilityLabel={t('Hap videon në ekran të plotë')}
             >
               <Ionicons name="expand" size={20} color="#fff" />
             </TouchableOpacity>
@@ -310,7 +312,7 @@ const PostCard = React.memo(function PostCard({
         <TouchableOpacity
           style={[styles.pillBtn, styles.pillBtnShare, shareOpen && styles.pillBtnShareOpen]}
           onPress={() => onToggleShare?.(item.id)}
-          accessibilityLabel="Ndaj postin"
+          accessibilityLabel={t('Ndaj postin')}
         >
           <Ionicons name="share-social-outline" size={18} color="#fff" />
         </TouchableOpacity>
@@ -338,7 +340,7 @@ const PostCard = React.memo(function PostCard({
                       onPress={() => onDeleteComment(comment, item.id)}
                       disabled={deletingCommentId === comment.id}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      accessibilityLabel="Delete comment"
+                      accessibilityLabel={t('Delete comment')}
                     >
                       <Ionicons name="trash-outline" size={16} color="#dc2626" />
                     </TouchableOpacity>
@@ -354,11 +356,11 @@ const PostCard = React.memo(function PostCard({
               style={[styles.commentInput, isDark && styles.inputDark]}
               value={newComment}
               onChangeText={(value) => onChangeComment(item.id, value)}
-              placeholder="Write a comment"
+              placeholder={t('Write a comment')}
               placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
             />
             <TouchableOpacity style={[styles.sendBtn, isSendingComment && styles.sendBtnDisabled]} onPress={() => onAddComment(item.id)} disabled={isSendingComment}>
-              <Text style={styles.sendBtnText}>{isSendingComment ? 'Sending...' : 'Send'}</Text>
+              <Text style={styles.sendBtnText}>{isSendingComment ? t('Sending...') : t('Send')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -386,6 +388,7 @@ function FeedSkeleton({ isDark }) {
 }
 
 export default function FeedScreen({ navigation }) {
+  const { t } = useLocale();
   useRenderLog('FeedScreen');
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -657,23 +660,23 @@ export default function FeedScreen({ navigation }) {
             onPress={() => setFeedScope('my')}
             style={[styles.headerScopeBtn, feedScope === 'my' && styles.headerScopeBtnActive]}
             accessibilityRole="button"
-            accessibilityLabel="Show My feed"
+            accessibilityLabel={t('Show My feed')}
           >
-            <Text style={[styles.headerScopeBtnText, feedScope === 'my' && styles.headerScopeBtnTextActive]}>My</Text>
+            <Text style={[styles.headerScopeBtnText, feedScope === 'my' && styles.headerScopeBtnTextActive]}>{t('My')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setFeedScope('all')}
             style={[styles.headerScopeBtn, feedScope === 'all' && styles.headerScopeBtnActive]}
             accessibilityRole="button"
-            accessibilityLabel="Show All feed"
+            accessibilityLabel={t('Show All feed')}
           >
-            <Text style={[styles.headerScopeBtnText, feedScope === 'all' && styles.headerScopeBtnTextActive]}>All</Text>
+            <Text style={[styles.headerScopeBtnText, feedScope === 'all' && styles.headerScopeBtnTextActive]}>{t('All')}</Text>
           </TouchableOpacity>
         </View>
       ),
       headerRight: FeedHeaderNotifications,
     });
-  }, [feedScope, navigation]);
+  }, [feedScope, navigation, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -805,7 +808,7 @@ export default function FeedScreen({ navigation }) {
   const onSaveEditPost = async () => {
     if (!editingPost?.id || savingEdit) return;
     if (!String(editContent || '').trim() && !editingPost.imageUrl && !editingPost.videoUrl) {
-      Alert.alert('Gabim', 'Postimi duhet të ketë tekst ose media.');
+      Alert.alert(t('Gabim'), t('Postimi duhet të ketë tekst ose media.'));
       return;
     }
     setSavingEdit(true);
@@ -838,10 +841,10 @@ export default function FeedScreen({ navigation }) {
 
   const onDeletePost = useCallback((post) => {
     if (!post?.id || deletingPostRef.current) return;
-    Alert.alert('Fshi postimin', 'Je i sigurt?', [
-      { text: 'Anulo', style: 'cancel' },
+    Alert.alert(t('Fshi postimin'), t('Je i sigurt?'), [
+      { text: t('Anulo'), style: 'cancel' },
       {
-        text: 'Fshi',
+        text: t('Fshi'),
         style: 'destructive',
         onPress: async () => {
           setDeletingPostId(post.id);
@@ -850,21 +853,21 @@ export default function FeedScreen({ navigation }) {
             setPosts((prev) => prev.filter((p) => p.id !== post.id));
             if (openCommentsRef.current === post.id) setOpenCommentsPostId(null);
           } catch (err) {
-            setError(extractErrorMessage(err, 'Could not delete post'));
+            setError(extractErrorMessage(err, t('Could not delete post')));
           } finally {
             setDeletingPostId(null);
           }
         },
       },
     ]);
-  }, []);
+  }, [t]);
 
   const onDeleteComment = useCallback((comment, postId) => {
     if (!comment?.id || deletingCommentRef.current) return;
-    Alert.alert('Delete comment', 'Remove this comment?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('Delete comment'), t('Remove this comment?'), [
+      { text: t('Anulo'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('Delete comment'),
         style: 'destructive',
         onPress: async () => {
           setDeletingCommentId(comment.id);
@@ -880,14 +883,14 @@ export default function FeedScreen({ navigation }) {
               )
             );
           } catch (err) {
-            setError(extractErrorMessage(err, 'Could not delete comment'));
+            setError(extractErrorMessage(err, t('Could not delete comment')));
           } finally {
             setDeletingCommentId(null);
           }
         },
       },
     ]);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (loggedFeedRender.current || loading) return;
@@ -910,7 +913,7 @@ export default function FeedScreen({ navigation }) {
       <View style={[styles.centered, isDark && styles.screenDark]}>
         <Text style={styles.error}>{error}</Text>
         <Pressable style={styles.retryBtn} onPress={() => loadPosts()}>
-          <Text style={styles.retryBtnText}>Retry</Text>
+          <Text style={styles.retryBtnText}>{t('Retry')}</Text>
         </Pressable>
       </View>
     );
@@ -942,9 +945,9 @@ export default function FeedScreen({ navigation }) {
           {liveStreams.length > 0 ? (
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
               <View style={styles.liveHeaderRow}>
-                <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
+                <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>{t('Live Now')}</Text>
                 <TouchableOpacity onPress={() => navigateToMoreScreen('Streams')}>
-                  <Text style={styles.liveSeeAll}>See all</Text>
+                  <Text style={styles.liveSeeAll}>{t('See all')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -969,7 +972,7 @@ export default function FeedScreen({ navigation }) {
                       <Text numberOfLines={1} style={[styles.liveName, isDark && styles.textPrimaryDark]}>{name}</Text>
                       <View style={styles.liveDotWrap}>
                         <View style={styles.liveDot} />
-                        <Text style={styles.liveTag}>LIVE</Text>
+                        <Text style={styles.liveTag}>{t('LIVE')}</Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -980,16 +983,16 @@ export default function FeedScreen({ navigation }) {
 
           <View style={styles.feedActionsWrap}>
             <TouchableOpacity style={styles.createPostButton} onPress={() => navigation.navigate('CreatePost')}>
-              <Text style={styles.createPostButtonText}>Create Post</Text>
+              <Text style={styles.createPostButtonText}>{t('Create Post')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.galleryButton} onPress={() => navigation.navigate('Gallery')}>
-              <Text style={styles.galleryButtonText}>My Gallery</Text>
+              <Text style={styles.galleryButtonText}>{t('My Gallery')}</Text>
             </TouchableOpacity>
           </View>
           <ListSearchBar
             value={feedSearch}
             onChangeText={setFeedSearch}
-            placeholder="Kërko postime në feed…"
+            placeholder={t('Kërko postime në feed…')}
             onGlobalPress={() => {
               const more = navigation.getParent?.();
               if (more?.navigate) more.navigate('More', { screen: 'Search', params: { initialQuery: feedSearch } });
@@ -1041,7 +1044,7 @@ export default function FeedScreen({ navigation }) {
           colors={['#9A6B12']}
         />
       }
-      ListEmptyComponent={<Text style={styles.empty}>No posts yet.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{t('No posts yet.')}</Text>}
       ListFooterComponent={loadingMore ? <ActivityIndicator color="#9A6B12" style={{ marginVertical: 16 }} /> : null}
       onEndReachedThreshold={0.4}
       onEndReached={() => {
@@ -1053,28 +1056,28 @@ export default function FeedScreen({ navigation }) {
     <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>
       <View style={styles.editModalBackdrop}>
         <View style={[styles.editModalCard, isDark && styles.cardDark]}>
-          <Text style={[styles.editModalTitle, isDark && styles.textPrimaryDark]}>Ndrysho postimin</Text>
+          <Text style={[styles.editModalTitle, isDark && styles.textPrimaryDark]}>{t('Ndrysho postimin')}</Text>
           <TextInput
             value={editContent}
             onChangeText={setEditContent}
             multiline
             style={[styles.editModalInput, isDark && styles.editModalInputDark]}
-            placeholder="Shkruaj postimin…"
+            placeholder={t('Shkruaj postimin…')}
             placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
           />
           <TextInput
             value={editLocation}
             onChangeText={setEditLocation}
             style={[styles.editModalInput, styles.editModalLocation, isDark && styles.editModalInputDark]}
-            placeholder="Lokacioni (opsionale)"
+            placeholder={t('Lokacioni (opsionale)')}
             placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
           />
           <View style={styles.editModalActions}>
             <TouchableOpacity onPress={() => setEditingPost(null)} style={styles.editModalCancel}>
-              <Text style={styles.editModalCancelText}>Anulo</Text>
+              <Text style={styles.editModalCancelText}>{t('Anulo')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onSaveEditPost} disabled={savingEdit} style={styles.editModalSave}>
-              <Text style={styles.editModalSaveText}>{savingEdit ? 'Duke ruajtur…' : 'Ruaj'}</Text>
+              <Text style={styles.editModalSaveText}>{savingEdit ? t('Duke ruajtur…') : t('Ruaj')}</Text>
             </TouchableOpacity>
           </View>
         </View>

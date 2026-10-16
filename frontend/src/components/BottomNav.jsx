@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { HomeIcon, ShoppingBagIcon, ChatBubbleLeftRightIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import { useLocale } from "../contexts/LocaleContext";
 
 function formatCartBadge(value) {
   const n = Number(value || 0);
@@ -13,6 +14,7 @@ function formatCartBadge(value) {
 
 function BottomNav() {
   const { user } = useAuth();
+  const { t } = useLocale();
   const { totalPieces } = useCart();
   const cartBadge = formatCartBadge(totalPieces);
   const [messagesUnread, setMessagesUnread] = useState(0);
@@ -47,10 +49,10 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
-      aria-label="Ballina"
+      aria-label={t('home')}
     >
       <HomeIcon className="h-5 w-5" aria-hidden="true" />
-      <span className="text-[10px] font-medium">Ballina</span>
+      <span className="text-[10px] font-medium">{t('home')}</span>
     </NavLink>
   );
 
@@ -60,7 +62,7 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
-      aria-label="Tregu"
+      aria-label={t('marketplace')}
     >
       <span className="relative inline-flex items-center justify-center">
         <ShoppingBagIcon className="h-5 w-5" aria-hidden="true" />
@@ -70,7 +72,7 @@ function BottomNav() {
           </span>
         ) : null}
       </span>
-      <span className="text-[10px] font-medium">Tregu</span>
+      <span className="text-[10px] font-medium">{t('marketplace')}</span>
     </NavLink>
   );
 
@@ -82,7 +84,7 @@ function BottomNav() {
         className={({ isActive }) =>
           `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""}`
         }
-        aria-label="Bisedat"
+        aria-label={t('conversations')}
       >
         <span className="relative inline-flex items-center justify-center">
           <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
@@ -92,7 +94,7 @@ function BottomNav() {
             </span>
           ) : null}
         </span>
-        <span className="text-[10px] font-medium">Biseda</span>
+        <span className="text-[10px] font-medium">{t('conversations')}</span>
       </NavLink>
     );
   };
@@ -105,10 +107,10 @@ function BottomNav() {
           window.dispatchEvent(new CustomEvent("open-live-modal", { detail: { openCameraFirst: true } }))
         }
         className={`flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-danger)] transition-colors hover:bg-white/5 ${extra}`}
-        aria-label="Dil LIVE"
+        aria-label={t('goLive')}
       >
         <VideoCameraIcon className="h-5 w-5" aria-hidden="true" />
-        <span className="text-[10px] font-medium">LIVE</span>
+        <span className="text-[10px] font-medium">{t('live')}</span>
       </button>
     ) : null;
 
@@ -118,7 +120,7 @@ function BottomNav() {
       className={({ isActive }) =>
         `flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 text-[var(--xt-color-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--xt-color-gold-bright)] ${isActive ? "text-[var(--xt-color-gold-bright)]" : ""} ${extra}`
       }
-      aria-label="Profili"
+      aria-label={t('profile')}
     >
       {user?.profilePhoto && typeof user.profilePhoto === "string" && user.profilePhoto.trim() !== "" ? (
         <img
@@ -135,7 +137,7 @@ function BottomNav() {
           {user?.firstName?.[0]}
         </div>
       )}
-      <span className="text-[10px] font-medium">Profili</span>
+      <span className="text-[10px] font-medium">{t('profile')}</span>
     </NavLink>
   );
 

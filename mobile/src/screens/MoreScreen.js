@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
 import { useRenderLog } from '../utils/perfLog';
+import { useLocale } from '../context/LocaleContext';
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -34,6 +35,7 @@ export default function MoreScreen({ navigation }) {
   const { user, logout } = useAuth();
   const { getSocket, socketConnected } = useSocket();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const { notificationsCount, messagesCount } = useUnreadBadges(getSocket, socketConnected);
 
   const alertLines = useMemo(() => {
@@ -78,9 +80,9 @@ export default function MoreScreen({ navigation }) {
           { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('More')}</Text>
         <Text style={[styles.headerSubtitle, { color: colors.primaryText }]}>
-          Plani: {planName}
+          {t('Plan')}: {planName}
           {user?.inTrial ? ' · trial' : ''}
         </Text>
       </View>
@@ -100,10 +102,10 @@ export default function MoreScreen({ navigation }) {
         </View>
       ) : null}
 
-      <Text style={[styles.sectionLabel, { color: colors.muted }]}>Njoftime & mesazhe</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>{t('Notifications & messages')}</Text>
       {btn({
-        title: 'Notifications',
-        subtitle: 'Like, comment, follow, turne…',
+        title: t('notifications'),
+        subtitle: t('Likes, comments, follows, tournaments…'),
         badge: notificationsCount,
         onPress: () =>
           navigation.navigate({
@@ -111,8 +113,8 @@ export default function MoreScreen({ navigation }) {
           }),
       })}
       {btn({
-        title: 'Messages',
-        subtitle: 'Biseda private (edhe nga tab Chats)',
+        title: t('messages'),
+        subtitle: t('Private chats (also under Chats tab)'),
         badge: messagesCount,
         onPress: () => {
           const tabs = navigation.getParent?.();
@@ -122,86 +124,86 @@ export default function MoreScreen({ navigation }) {
         },
       })}
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>Module</Text>
-      {btn({ title: 'Wallet', subtitle: 'XCoin balance and transactions', onPress: () => navigation.navigate('Wallet') })}
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>{t('Modules')}</Text>
+      {btn({ title: t('Wallet'), subtitle: t('XCoin balance and transactions'), onPress: () => navigation.navigate('Wallet') })}
       {btn({
-        title: 'Performance',
-        subtitle: 'Statistika, formë, shitje dhe wallet',
+        title: t('Performance'),
+        subtitle: t('Statistics, form, sales and wallet'),
         onPress: () => navigation.navigate('Performance'),
       })}
       {canUseInsights
         ? btn({
-            title: 'Insights',
+            title: t('Insights'),
             subtitle: hasTier(user, 'basic')
-              ? 'Analitika e profilit, XP dhe arritje'
-              : 'Analitika kërkon Basic/Pro · XP është falas',
+              ? t('Profile analytics, XP and achievements')
+              : t('Analytics requires Basic/Pro · XP is free'),
             onPress: () => navigation.navigate('Insights'),
           })
         : null}
-      {btn({ title: 'Tournaments', subtitle: 'Trending and join flow', onPress: () => navigation.navigate('Tournaments') })}
-      {btn({ title: 'Videos', subtitle: 'Trending uploads and likes', onPress: () => navigation.navigate('Videos') })}
+      {btn({ title: t('Tournaments'), subtitle: t('Trending tournaments and joining'), onPress: () => navigation.navigate('Tournaments') })}
+      {btn({ title: t('Videos'), subtitle: t('Popular uploads and likes'), onPress: () => navigation.navigate('Videos') })}
       {canUseScouting
         ? btn({
-            title: 'Scouting',
-            subtitle: hasScoutingPlan ? 'Zbulim, shortlist, raporte' : 'Kërkon planin Pro',
+            title: t('Scouting'),
+            subtitle: hasScoutingPlan ? t('Discovery, shortlist, reports') : t('Requires the Pro plan'),
             onPress: () => navigation.navigate('Scouting'),
           })
         : null}
-      {btn({ title: 'Search', subtitle: 'Users, posts and discovery', onPress: () => navigation.navigate('Search') })}
-      {btn({ title: 'Matches', subtitle: 'View and schedule matches', onPress: () => navigation.navigate('Matches') })}
-      {btn({ title: 'Calendar', subtitle: 'Upcoming, today, and results', onPress: () => navigation.navigate('Calendar') })}
+      {btn({ title: t('Search'), subtitle: t('Users, posts and discovery'), onPress: () => navigation.navigate('Search') })}
+      {btn({ title: t('Matches'), subtitle: t('View and schedule matches'), onPress: () => navigation.navigate('Matches') })}
+      {btn({ title: t('Calendar'), subtitle: t('Upcoming, today, and results'), onPress: () => navigation.navigate('Calendar') })}
       {btn({
-        title: 'Streams',
-        subtitle: 'Live now, regjistrime, Go Live',
+        title: t('Streams'),
+        subtitle: t('Live now, recordings, Go Live'),
         onPress: () => navigation.navigate('Streams'),
       })}
       {btn({
-        title: 'Go Live',
-        subtitle: 'Nis transmetimin LiveKit / YouTube',
+        title: t('Go Live'),
+        subtitle: t('Start a LiveKit / YouTube stream'),
         onPress: () => navigation.navigate('GoLive'),
       })}
-      {btn({ title: 'Premium', subtitle: 'Membership plans and perks', onPress: () => navigation.navigate('Premium') })}
-      {btn({ title: 'Sponsors', subtitle: 'Manage your sponsor deals', onPress: () => navigation.navigate('Sponsors') })}
-      {btn({ title: 'Ads', subtitle: 'Create and view active ads', onPress: () => navigation.navigate('Ads') })}
-      {btn({ title: 'Settings', subtitle: 'Profile and app preferences', onPress: () => navigation.navigate('Settings') })}
+      {btn({ title: t('Premium'), subtitle: t('Membership plans and perks'), onPress: () => navigation.navigate('Premium') })}
+      {btn({ title: t('Sponsors'), subtitle: t('Manage your sponsor deals'), onPress: () => navigation.navigate('Sponsors') })}
+      {btn({ title: t('Ads'), subtitle: t('Create and view active ads'), onPress: () => navigation.navigate('Ads') })}
+      {btn({ title: t('Settings'), subtitle: t('Profile and app preferences'), onPress: () => navigation.navigate('Settings') })}
       {btn({
-        title: 'Ndihmë & FAQ',
-        subtitle: 'Si funksionon platforma',
+        title: t('Help & FAQ'),
+        subtitle: t('How the platform works'),
         onPress: () => navigation.navigate('Legal', { kind: 'help' }),
       })}
       {btn({
-        title: 'Privatësia & të dhënat',
-        subtitle: 'Privacy, kushtet, fshirja e llogarisë',
+        title: t('Privacy & data'),
+        subtitle: t('Privacy, terms and account deletion'),
         onPress: () => navigation.navigate('Legal', { kind: 'privacy' }),
       })}
       {btn({
-        title: 'Dil nga llogaria',
-        subtitle: 'Logout',
+        title: t('Log out'),
+        subtitle: t('Logout'),
         onPress: () => {
-          Alert.alert('Dil', 'Dal nga llogaria?', [
-            { text: 'Anulo', style: 'cancel' },
-            { text: 'Dil', style: 'destructive', onPress: () => logout() },
+          Alert.alert(t('Log out'), t('Do you want to log out?'), [
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('logout'), style: 'destructive', onPress: () => logout() },
           ]);
         },
       })}
       {canUseParentVerification
         ? btn({
-            title: 'Parent Verification',
-            subtitle: 'Send parent verification email',
+            title: t('Parent Verification'),
+            subtitle: t('Send parent verification email'),
             onPress: () => navigation.navigate('ParentVerification'),
           })
         : null}
       {isClub
         ? btn({
-            title: 'Club Roster',
-            subtitle: 'Manage requests and squad',
+            title: t('Club Roster'),
+            subtitle: t('Manage requests and squad'),
             onPress: () => navigation.navigate('ClubRoster'),
           })
         : null}
       {isAdmin
         ? btn({
-            title: 'Admin Dashboard',
-            subtitle: 'Users and platform analytics',
+            title: t('Admin Dashboard'),
+            subtitle: t('Users and platform analytics'),
             onPress: () => navigation.navigate('AdminDashboard'),
           })
         : null}
@@ -213,9 +215,9 @@ export default function MoreScreen({ navigation }) {
             { backgroundColor: colors.warningSoft, borderColor: colors.warningBorder },
           ]}
         >
-          <Text style={[styles.noteTitle, { color: colors.warningText }]}>Scouting Access</Text>
+          <Text style={[styles.noteTitle, { color: colors.warningText }]}>{t('Scouting Access')}</Text>
           <Text style={[styles.noteText, { color: colors.warningText }]}>
-            Scouting është për Scout, Club dhe Manager me planin Pro.
+            {t('Scouting is for Scout, Club and Manager with the Pro plan.')}
           </Text>
         </View>
       ) : !hasScoutingPlan ? (
@@ -225,9 +227,9 @@ export default function MoreScreen({ navigation }) {
             { backgroundColor: colors.warningSoft, borderColor: colors.warningBorder },
           ]}
         >
-          <Text style={[styles.noteTitle, { color: colors.warningText }]}>Plan Pro</Text>
+          <Text style={[styles.noteTitle, { color: colors.warningText }]}>{t('Pro plan')}</Text>
           <Text style={[styles.noteText, { color: colors.warningText }]}>
-            Rekomandimet e scouting kërkojnë Pro. Trial jep tipare Basic (analitikë).
+            {t('Scouting recommendations require Pro. Trial includes Basic analytics.')}
           </Text>
         </View>
       ) : null}

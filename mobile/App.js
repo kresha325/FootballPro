@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { LocaleProvider } from './src/context/LocaleContext';
 import { CartProvider } from './src/context/CartContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -19,13 +20,15 @@ export default function App() {
     <View style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <CartProvider>
-              <AppNavigator />
-              <XPNotificationManager />
-              <PushNotificationManager />
-            </CartProvider>
-          </AuthProvider>
+          <LocaleProvider>
+            <AuthProvider>
+              <CartProvider>
+                <AppNavigator />
+                <XPNotificationManager />
+                <PushNotificationManager />
+              </CartProvider>
+            </AuthProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </SafeAreaProvider>
       <SplashIntro />

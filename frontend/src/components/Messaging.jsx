@@ -11,6 +11,7 @@ import VerifiedBadge from './VerifiedBadge';
 
 import { API_URL, BACKEND_URL } from '../config/api';
 import { outboundChatStatus, replyUnavailable } from '../utils/messagePresentation';
+import { useLocale } from '../contexts/LocaleContext';
 
 const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
 const REACTION_EMOJIS = ['❤️', '👍', '😂', '🔥', '👏', '😮', '😢'];
@@ -121,6 +122,7 @@ function MediaModal({ src, alt, onClose }) {
 }
 
 function Messaging() {
+  const { t } = useLocale();
   // All useState declarations at the top
   const [modalImage, setModalImage] = useState(null);
   const [onlineStatus, setOnlineStatus] = useState({}); // { [userId]: true/false }
@@ -1003,7 +1005,7 @@ function Messaging() {
 
   const renderMessageContent = (message, isMine) => {
     if (message.deleted) {
-      return <span className="italic text-gray-400">Message deleted</span>;
+      return <span className="italic text-gray-400">{t('Message deleted')}</span>;
     }
     const fileLinkClass = isMine
       ? 'flex items-center gap-2 text-slate-900 hover:underline mb-2'
@@ -1017,7 +1019,7 @@ function Messaging() {
             onClick={() => scrollToOriginal(message.replyTo.id)}
           >
             {replyUnavailable(message.replyTo) ? (
-              <p className="italic">Mesazhi origjinal nuk është i disponueshëm</p>
+              <p className="italic">{t('Original message is unavailable')}</p>
             ) : (
               <>
                 <p className="font-medium">
@@ -1031,7 +1033,7 @@ function Messaging() {
           </button>
         )}
         {message.forwarded && !message.deleted ? (
-          <p className="mb-1 text-[11px] italic opacity-80">E përcjellë</p>
+          <p className="mb-1 text-[11px] italic opacity-80">{t('Forwarded')}</p>
         ) : null}
         {message.fileUrl && message.type === 'image' && (
           <ChatMedia
@@ -1139,7 +1141,7 @@ function Messaging() {
       setGroupMembers([]);
     } catch (err) {
       console.error('Create group failed:', err);
-      alert('Nuk u krijua grupi. Provo përsëri.');
+      alert(t('Could not create group. Try again.'));
     } finally {
       setCreatingGroup(false);
     }
@@ -1180,13 +1182,13 @@ function Messaging() {
       <div className={`w-full shrink-0 border-r border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] flex-col min-h-0 md:flex md:w-80 ${selectedConversation ? 'hidden' : 'flex'}`}>
         <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-xl font-bold dark:text-white">Mesazhet</h2>
+            <h2 className="text-xl font-bold dark:text-white">{t('messages')}</h2>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary min-h-10 gap-1 px-3 text-xs" aria-label="Mesazh i ri">
-                <FiSearch className="w-4 h-4" /> Mesazh i ri
+              <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary min-h-10 gap-1 px-3 text-xs" aria-label={t('New message')}>
+                <FiSearch className="w-4 h-4" /> {t('New message')}
               </button>
-              <button type="button" onClick={() => setShowCreateGroup(true)} className="btn min-h-10 gap-1 px-3 text-xs" aria-label="Krijo grup">
-                <FiUsers className="w-4 h-4" /> Grup i ri
+              <button type="button" onClick={() => setShowCreateGroup(true)} className="btn min-h-10 gap-1 px-3 text-xs" aria-label={t('Create group')}>
+                <FiUsers className="w-4 h-4" /> {t('New group')}
               </button>
             </div>
           </div>
@@ -1196,7 +1198,7 @@ function Messaging() {
               type="search"
               value={conversationSearch}
               onChange={e => setConversationSearch(e.target.value)}
-              placeholder="Kërko bisedë…"
+              placeholder={t('Search conversations…')}
               className="input pl-9 pr-3 text-sm"
             />
           </div>
@@ -1642,7 +1644,7 @@ function Messaging() {
                 type="search"
                 value={threadSearch}
                 onChange={e => setThreadSearch(e.target.value)}
-                placeholder="Kërko në këtë bisedë…"
+                placeholder={t('Search this conversation…')}
                 className="input pl-8 pr-3 text-sm"
               />
             </div>
@@ -1971,7 +1973,7 @@ function Messaging() {
                 }
                 className="btn btn-primary min-h-11 shrink-0 px-4 disabled:cursor-not-allowed"
               >
-                {sending ? '…' : editingMessage ? 'Ruaj' : 'Dërgo'}
+                {sending ? '…' : editingMessage ? t('save') : t('send')}
               </button>
             </div>
           </form>
@@ -1982,7 +1984,7 @@ function Messaging() {
             <svg className="w-20 h-20 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            <p className="text-[var(--xt-color-text-subtle)] text-lg">Zgjidh një bisedë për të vazhduar</p>
+            <p className="text-[var(--xt-color-text-subtle)] text-lg">{t('Choose a conversation to continue')}</p>
             <p className="text-sm text-[var(--xt-color-text-subtle)] mt-2 max-w-sm mx-auto">
               Nëse ke lidhur nga një link me <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">conversationId</code> ose{' '}
               <code className="text-xs bg-gray-200 dark:bg-gray-800 px-1 rounded">userId</code>, biseda duhet të hapet automatikisht pasi të ngarkohet lista.
@@ -1994,13 +1996,13 @@ function Messaging() {
         <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeNewMessage(); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="new-message-title" className="flex max-h-[85dvh] min-h-[340px] w-full max-w-lg flex-col rounded-t-2xl bg-[var(--xt-color-surface)] p-5 shadow-2xl sm:rounded-2xl">
             <div className="mb-4 flex items-start justify-between gap-4">
-              <div><h2 id="new-message-title" className="text-lg font-bold">Mesazh i ri</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Kërko personin që dëshiron t’i shkruash.</p></div>
+              <div><h2 id="new-message-title" className="text-lg font-bold">{t('New message')}</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{t('Search for the person you want to message.')}</p></div>
               <button type="button" onClick={closeNewMessage} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Mbyll"><span aria-hidden="true">✕</span></button>
             </div>
-            <input autoFocus type="search" value={newMessageQuery} onChange={(event) => setNewMessageQuery(event.target.value)} placeholder="Kërko sipas emrit…" className="input mb-3" aria-label="Kërko përdorues" />
+            <input autoFocus type="search" value={newMessageQuery} onChange={(event) => setNewMessageQuery(event.target.value)} placeholder={t('Search by name…')} className="input mb-3" aria-label={t('search')} />
             {newMessageError ? <p role="alert" className="mb-2 text-sm text-red-700">{newMessageError}</p> : null}
             <div className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
-              {newMessageLoading ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Duke kërkuar…</p> : null}
+              {newMessageLoading ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Searching…')}</p> : null}
               {!newMessageLoading && newMessageQuery.trim().length < 2 ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Shkruaj të paktën 2 shkronja për të kërkuar.</p> : null}
               {!newMessageLoading && newMessageQuery.trim().length >= 2 && newMessageResults.length === 0 && !newMessageError ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk u gjet asnjë përdorues.</p> : null}
               {newMessageResults.map((person) => {

@@ -129,7 +129,7 @@ exports.parentRequest = async (req, res) => {
     await user.save();
 
     const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
-    const emailResult = await sendEmail(normalizedParent, 'parentVerification', athleteName, token);
+    const emailResult = await sendEmail(normalizedParent, 'parentVerification', athleteName, token, user.language || 'sq');
 
     if (emailResult.success) {
       return res.json({

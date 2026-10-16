@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 import { PROFILE_THEMES } from '../utils/profileThemes';
 import {
   addTransferHistoryRequest,
@@ -107,6 +108,7 @@ function roleLabel(role) {
 }
 
 export default function PublicProfileScreen({ route, navigation }) {
+  const { t } = useLocale();
   useRenderLog('PublicProfileScreen');
   const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -200,8 +202,8 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const displayName = useMemo(() => {
     if (!profile) return APP_BRAND_NAME;
-    return publicProfileName(profile) || 'Përdorues';
-  }, [profile]);
+    return publicProfileName(profile) || t('Përdorues');
+  }, [profile, t]);
 
   const profileRef = useRef(profile);
   const logoutRef = useRef(logout);
@@ -211,8 +213,8 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: ownProfileRoot && !headerReady ? 'Profili im' : displayName,
-      headerTitle: ownProfileRoot && !headerReady ? 'Profili im' : displayName,
+      title: ownProfileRoot && !headerReady ? t('Profili im') : displayName,
+      headerTitle: ownProfileRoot && !headerReady ? t('Profili im') : displayName,
       headerRight: headerReady && isSelf
         ? () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
@@ -226,13 +228,13 @@ export default function PublicProfileScreen({ route, navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert('Dil', 'Dal nga llogaria?', [
-                    { text: 'Anulo', style: 'cancel' },
-                    { text: 'Dil', style: 'destructive', onPress: () => logoutRef.current() },
+                  Alert.alert(t('Dil'), t('Dal nga llogaria?'), [
+                    { text: t('Anulo'), style: 'cancel' },
+                    { text: t('Dil'), style: 'destructive', onPress: () => logoutRef.current() },
                   ]);
                 }}
                 style={{ paddingHorizontal: 6 }}
-                accessibilityLabel="Dil"
+                accessibilityLabel={t('Dil')}
               >
                 <View
                   style={{
@@ -242,7 +244,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Dil</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>{t('Dil')}</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -251,9 +253,9 @@ export default function PublicProfileScreen({ route, navigation }) {
           ? () => (
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert(displayName || 'Profili', undefined, [
+                  Alert.alert(displayName || t('Profili'), undefined, [
                     {
-                      text: iBlocked ? 'Hiq bllokimin' : 'Blloko',
+                      text: iBlocked ? t('Hiq bllokimin') : t('Blloko'),
                       style: iBlocked ? 'default' : 'destructive',
                       onPress: async () => {
                         try {
@@ -263,15 +265,15 @@ export default function PublicProfileScreen({ route, navigation }) {
                           } else {
                             await blockUserRequest(userId);
                             setIBlocked(true);
-                            Alert.alert('U bllokua', 'Ky përdorues është bllokuar.');
+                            Alert.alert(t('U bllokua'), t('Ky përdorues është bllokuar.'));
                           }
                         } catch (err) {
-                          Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u përditësua bllokimi'));
+                          Alert.alert(t('Gabim'), extractErrorMessage(err, t('Nuk u përditësua bllokimi')));
                         }
                       },
                     },
-                    { text: 'Raporto', onPress: () => setReportOpen(true) },
-                    { text: 'Anulo', style: 'cancel' },
+                    { text: t('Raporto'), onPress: () => setReportOpen(true) },
+                    { text: t('Anulo'), style: 'cancel' },
                   ]);
                 }}
                 style={{ paddingHorizontal: 12 }}
@@ -290,6 +292,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     isSelf,
     userId,
     iBlocked,
+    t,
   ]);
 
   useEffect(() => {
@@ -595,11 +598,11 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const onSaveTransfer = async () => {
     if (!transferForm.toClub.trim()) {
-      Alert.alert('Validim', 'Klubi i destinacionit është i detyrueshëm.');
+      Alert.alert(t('Validim'), t('Klubi i destinacionit është i detyrueshëm.'));
       return;
     }
     if (!transferForm.season.trim()) {
-      Alert.alert('Validim', 'Sezoni është i detyrueshëm (p.sh. 2026-2027).');
+      Alert.alert(t('Validim'), t('Sezoni është i detyrueshëm (p.sh. 2026-2027).'));
       return;
     }
     setTransferSaving(true);
@@ -616,15 +619,15 @@ export default function PublicProfileScreen({ route, navigation }) {
       setTransferModalOpen(false);
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit shtimi i transferit'));
+      Alert.alert(t('Gabim'), extractErrorMessage(err, t('Nuk u arrit shtimi i transferit')));
     } finally {
       setTransferSaving(false);
     }
   };
 
   const onDeleteTransfer = (transfer) => {
-    Alert.alert('Fshi transferin', 'Ta heq këtë regjistrim transferi?', [
-      { text: 'Anulo', style: 'cancel' },
+    Alert.alert(t('Fshi transferin'), t('Ta heq këtë regjistrim transferi?'), [
+      { text: t('Anulo'), style: 'cancel' },
       {
         text: 'Fshi',
         style: 'destructive',
@@ -633,7 +636,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             await deleteTransferHistoryRequest(transfer.id);
             await loadProfile({ silent: true });
           } catch (err) {
-            Alert.alert('Gabim', extractErrorMessage(err, 'Nuk u arrit fshirja e transferit'));
+            Alert.alert(t('Gabim'), extractErrorMessage(err, t('Nuk u arrit fshirja e transferit')));
           }
         },
       },
@@ -647,7 +650,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       await confirmTransferHistoryRequest(transfer.id);
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Gabim', extractErrorMessage(err, 'Konfirmimi dështoi'));
+      Alert.alert(t('Gabim'), extractErrorMessage(err, t('Konfirmimi dështoi')));
     } finally {
       setActionTransferId(null);
     }
@@ -655,8 +658,8 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const onRejectTransfer = (transfer) => {
     if (!transfer?.id) return;
-    Alert.alert('Refuzo transferin', 'Refuzo këtë transfer?', [
-      { text: 'Anulo', style: 'cancel' },
+    Alert.alert(t('Refuzo transferin'), t('Refuzo këtë transfer?'), [
+      { text: t('Anulo'), style: 'cancel' },
       {
         text: 'Refuzo',
         style: 'destructive',
@@ -666,7 +669,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             await rejectTransferHistoryRequest(transfer.id);
             await loadProfile({ silent: true });
           } catch (err) {
-            Alert.alert('Gabim', extractErrorMessage(err, 'Refuzimi dështoi'));
+            Alert.alert(t('Gabim'), extractErrorMessage(err, t('Refuzimi dështoi')));
           } finally {
             setActionTransferId(null);
           }
@@ -700,7 +703,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         .filter(Boolean);
       setFollowListRows(rows);
     } catch (err) {
-      Alert.alert('Lista', extractErrorMessage(err, 'Nuk u ngarkua lista'));
+      Alert.alert(t('Lista'), extractErrorMessage(err, t('Nuk u ngarkua lista')));
       setFollowListMode(null);
     } finally {
       setFollowListLoading(false);
@@ -720,7 +723,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       }
       await loadProfile({ silent: true });
     } catch (err) {
-      Alert.alert('Ndjekja', extractErrorMessage(err, 'Nuk u arrit përditësimi i statusit të ndjekjes'));
+      Alert.alert(t('Ndjekja'), extractErrorMessage(err, t('Nuk u arrit përditësimi i statusit të ndjekjes')));
     } finally {
       setBusy(false);
     }
@@ -743,7 +746,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         navigation.navigate('Messages', { screen: 'Conversation', params: convParams });
       }
     } catch (err) {
-      Alert.alert('Mesazh', extractErrorMessage(err, 'Nuk u arrit hapja e bisedës'));
+      Alert.alert(t('Mesazh'), extractErrorMessage(err, t('Nuk u arrit hapja e bisedës')));
     }
   };
 
@@ -776,23 +779,23 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const tabs = useMemo(() => {
     const base = [
-      { key: 'overview', label: 'Përmbledhje' },
-      { key: 'posts', label: 'Postime' },
+      { key: 'overview', label: t('Përmbledhje') },
+      { key: 'posts', label: t('Postime') },
     ];
     if (isAthlete) {
-      base.push({ key: 'matches', label: 'Ndeshje' });
-      base.push({ key: 'tournaments', label: 'Turne' });
-      base.push({ key: 'achievements', label: 'Arritje' });
+      base.push({ key: 'matches', label: t('Ndeshje') });
+      base.push({ key: 'tournaments', label: t('Turne') });
+      base.push({ key: 'achievements', label: t('Arritje') });
     }
     base.push(
-      { key: 'gallery', label: 'Galeria' },
-      { key: 'videos', label: 'Videot' },
-      { key: 'about', label: 'Rreth' },
-      { key: 'contact', label: 'Kontakt' }
+      { key: 'gallery', label: t('Galeria') },
+      { key: 'videos', label: t('Videot') },
+      { key: 'about', label: t('Rreth') },
+      { key: 'contact', label: t('Kontakt') }
     );
-    if (isSelf) base.push({ key: 'sponsors', label: 'Sponsorë' });
+    if (isSelf) base.push({ key: 'sponsors', label: t('Sponsorë') });
     return base;
-  }, [isSelf, isAthlete]);
+  }, [isSelf, isAthlete, t]);
 
   const onOpenInsights = useCallback(() => {
     const parent = navigation.getParent?.();
@@ -831,7 +834,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   if (!profile) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.bg }]}>
-        <Text style={{ color: theme.muted }}>Profili nuk u gjet</Text>
+        <Text style={{ color: theme.muted }}>{t('Profili nuk u gjet')}</Text>
       </View>
     );
   }
@@ -930,12 +933,12 @@ export default function PublicProfileScreen({ route, navigation }) {
             {profile.verificationStatus ? (
               <Text style={[styles.roleLine, { color: theme.muted }]}>
                 {profile.verificationStatus === 'VERIFIED'
-                  ? 'I verifikuar'
+                  ? t('I verifikuar')
                   : profile.verificationStatus === 'PENDING'
-                    ? 'Verifikimi në pritje'
+                    ? t('Verifikimi në pritje')
                     : profile.verificationStatus === 'REJECTED'
-                      ? 'Verifikimi u refuzua'
-                      : 'I paverifikuar'}
+                      ? t('Verifikimi u refuzua')
+                      : t('I paverifikuar')}
                 {profile.completeness?.percent != null ? ` · ${profile.completeness.percent}%` : ''}
               </Text>
             ) : null}
@@ -944,12 +947,12 @@ export default function PublicProfileScreen({ route, navigation }) {
               {isOrgProfileRole(profile.role) ? (
                 (profile.foundingYear || getFoundingYear(profile)) ? (
                   <ProfileChip theme={theme} accent={themeAccent} icon="flag-outline">
-                    Themeluar {profile.foundingYear || getFoundingYear(profile)}
+                    {t('Themeluar {year}').replace('{year}', profile.foundingYear || getFoundingYear(profile))}
                   </ProfileChip>
                 ) : null
               ) : profile.age != null && profile.ageGroup ? (
                 <ProfileChip theme={theme} accent={themeAccent} icon="calendar-outline">
-                  {profile.age} vjeç ({profile.ageGroup})
+                  {t('{age} years old ({group})').replace('{age}', profile.age).replace('{group}', profile.ageGroup)}
                 </ProfileChip>
               ) : null}
               {profile.position && !isOrgProfileRole(profile.role) ? (
@@ -985,15 +988,15 @@ export default function PublicProfileScreen({ route, navigation }) {
             <View style={styles.statsRow}>
               <View style={styles.statCell}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{postCount}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Postime</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>{t('Postime')}</Text>
               </View>
               <TouchableOpacity style={styles.statCell} onPress={() => openFollowList('followers')}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.followers ?? 0}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Ndjekës</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>{t('Ndjekës')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.statCell} onPress={() => openFollowList('following')}>
                 <Text style={[styles.statNum, { color: theme.text }]}>{profile.following ?? 0}</Text>
-                <Text style={[styles.statLabel, { color: theme.muted }]}>Duke ndjekur</Text>
+                <Text style={[styles.statLabel, { color: theme.muted }]}>{t('Duke ndjekur')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -1046,7 +1049,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                       following && { color: theme.muted },
                     ]}
                   >
-                    {busy ? '…' : following ? 'Duke ndjekur' : 'Ndiq'}
+                    {busy ? '…' : following ? t('Duke ndjekur') : t('Ndiq')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1057,7 +1060,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onPress={onSendMessage}
                 >
                   <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.text} />
-                  <Text style={[styles.msgBtnText, { color: theme.text }]}>Mesazh</Text>
+                  <Text style={[styles.msgBtnText, { color: theme.text }]}>{t('Mesazh')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.videoBtn} onPress={onVideoCall}>
                   <Ionicons name="videocam-outline" size={18} color="#fff" />
@@ -1073,7 +1076,7 @@ export default function PublicProfileScreen({ route, navigation }) {
                 ) : null}
                 <TouchableOpacity style={styles.goLiveBtn} onPress={onGoLive} activeOpacity={0.88}>
                   <Ionicons name="videocam" size={20} color="#fff" />
-                  <Text style={styles.goLiveBtnText}>Dil LIVE</Text>
+                  <Text style={styles.goLiveBtnText}>{t('Dil LIVE')}</Text>
                 </TouchableOpacity>
                 <View style={styles.selfActionsRow}>
                   <TouchableOpacity
@@ -1081,14 +1084,14 @@ export default function PublicProfileScreen({ route, navigation }) {
                     onPress={() => navigation.navigate('EditProfile')}
                   >
                     <Ionicons name="create-outline" size={18} color="#fff" />
-                    <Text style={styles.selfPrimaryBtnText}>Ndrysho profilin</Text>
+                    <Text style={styles.selfPrimaryBtnText}>{t('Ndrysho profilin')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.selfSecondaryBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                     onPress={() => navigation.navigate('BrowseProfiles')}
                   >
                     <Ionicons name="people-outline" size={18} color="#9A6B12" />
-                    <Text style={styles.selfSecondaryBtnText}>Shfleto</Text>
+                    <Text style={styles.selfSecondaryBtnText}>{t('Shfleto')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1217,48 +1220,48 @@ export default function PublicProfileScreen({ route, navigation }) {
     <Modal visible={transferModalOpen} transparent animationType="slide" onRequestClose={() => setTransferModalOpen(false)}>
       <View style={styles.transferModalBackdrop}>
         <View style={[styles.transferModalCard, { backgroundColor: theme.card }]}>
-          <Text style={[styles.transferModalTitle, { color: theme.text }]}>Add transfer</Text>
+          <Text style={[styles.transferModalTitle, { color: theme.text }]}>{t('Add transfer')}</Text>
           <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
-            Transferi mbetet në pritje derisa të dy klubet ta konfirmojnë. Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm.
+            {t('Transferi mbetet në pritje derisa të dy klubet ta konfirmojnë. Klubi aktual ndryshon vetëm pas konfirmimit të dyanshëm.')}
           </Text>
           <TextInput
             style={styles.transferInput}
-            placeholder="From club"
+            placeholder={t('From club')}
             placeholderTextColor="#94a3b8"
             value={transferForm.fromClub}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, fromClub: v }))}
           />
           <TextInput
             style={styles.transferInput}
-            placeholder="To club * (emri i saktë i klubit)"
+            placeholder={t('To club * (emri i saktë i klubit)')}
             placeholderTextColor="#94a3b8"
             value={transferForm.toClub}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, toClub: v }))}
           />
           <TextInput
             style={styles.transferInput}
-            placeholder="Position"
+            placeholder={t('Position')}
             placeholderTextColor="#94a3b8"
             value={transferForm.position}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, position: v }))}
           />
           <TextInput
             style={styles.transferInput}
-            placeholder="Season"
+            placeholder={t('Season')}
             placeholderTextColor="#94a3b8"
             value={transferForm.season}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, season: v }))}
           />
           <TextInput
             style={styles.transferInput}
-            placeholder="Date (YYYY-MM-DD)"
+            placeholder={t('Date (YYYY-MM-DD)')}
             placeholderTextColor="#94a3b8"
             value={transferForm.transferDate}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, transferDate: v }))}
           />
           <TextInput
             style={[styles.transferInput, { minHeight: 64 }]}
-            placeholder="Notes"
+            placeholder={t('Notes')}
             placeholderTextColor="#94a3b8"
             value={transferForm.notes}
             onChangeText={(v) => setTransferForm((f) => ({ ...f, notes: v }))}
@@ -1266,10 +1269,10 @@ export default function PublicProfileScreen({ route, navigation }) {
           />
           <View style={styles.transferModalActions}>
             <TouchableOpacity style={styles.transferCancelBtn} onPress={() => setTransferModalOpen(false)}>
-              <Text style={styles.transferCancelText}>Cancel</Text>
+              <Text style={styles.transferCancelText}>{t('Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.transferSaveBtn} onPress={onSaveTransfer} disabled={transferSaving}>
-              <Text style={styles.transferSaveText}>{transferSaving ? 'Saving...' : 'Save'}</Text>
+              <Text style={styles.transferSaveText}>{transferSaving ? t('Saving...') : t('Save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1278,7 +1281,7 @@ export default function PublicProfileScreen({ route, navigation }) {
 
     <Modal visible={!!headerImagePreview} transparent animationType="fade" onRequestClose={closeHeaderPreview}>
       <View style={styles.previewModalRoot}>
-        <Pressable style={styles.previewModalBackdrop} onPress={closeHeaderPreview} accessibilityLabel="Close preview" />
+        <Pressable style={styles.previewModalBackdrop} onPress={closeHeaderPreview} accessibilityLabel={t('Close preview')} />
         <View style={styles.previewModalLayer} pointerEvents="box-none">
           <Pressable
             onPress={closeHeaderPreview}
@@ -1288,7 +1291,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             ]}
             hitSlop={16}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('Close')}
           >
             <View style={styles.previewModalCloseInner}>
               <Ionicons name="close" size={28} color="#fff" />

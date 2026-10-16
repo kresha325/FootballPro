@@ -400,7 +400,7 @@ async function defaultEmail(user, title, message, link) {
   if (!user?.email) return { sent: false };
   try {
     const { sendEmail } = require('../emailService');
-    await sendEmail(user.email, 'importantNotice', user.firstName || 'there', title, message, link || '');
+    await sendEmail(user.email, 'importantNotice', user.firstName || 'there', title, message, link || '', user.language || 'sq');
     return { sent: true };
   } catch (err) {
     try { require('../admin/deliverySignals').note('email'); } catch (_noteErr) { /* ignore */ }

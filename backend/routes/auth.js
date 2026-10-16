@@ -132,6 +132,7 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
         'lastName',
         'email',
         'role',
+        'language',
         'points',
         'level',
         'premium',
@@ -164,6 +165,23 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
   } catch (err) {
     console.error('AUTH /me error:', err);
     res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+router.patch('/language', auth, async (req, res) => {
+  const supported = new Set(['sq', 'en', 'de', 'fr', 'it', 'es', 'ro', 'hr', 'tr']);
+  const language = String(req.body?.language || '').toLowerCase();
+  if (!supported.has(language)) return res.status(400).json({ msg: 'Unsupported language' });
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    user.language = language;
+    await user.save();
+    meCache.delete(req.user.id);
+    return res.json({ language });
+  } catch (err) {
+    console.error('AUTH language update error:', err);
+    return res.status(500).json({ msg: 'Could not update language' });
   }
 });
 

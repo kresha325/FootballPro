@@ -65,6 +65,7 @@ import { useCart } from '../context/CartContext';
 import { APP_BRAND_NAME } from '../config/branding';
 import { absoluteBackendUrl } from '../config/constants';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
+import { LANGUAGE_KEY, useLocale } from '../context/LocaleContext';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -481,6 +482,7 @@ function BadgeAwareTabBar(props) {
 
 function AppTabs() {
   const { colors, isDark } = useTheme();
+  const { t } = useLocale();
   const screenOptions = useCallback(
     ({ route }) => ({
       headerTitle: APP_BRAND_NAME,
@@ -510,32 +512,45 @@ function AppTabs() {
       screenOptions={screenOptions}
       tabBar={(props) => <BadgeAwareTabBar {...props} />}
     >
-      <Tabs.Screen name="Feed" component={FeedNavigator} options={feedTabOptions} />
-      <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={marketplaceTabOptions} />
+      <Tabs.Screen name="Feed" component={FeedNavigator} options={{ ...feedTabOptions, tabBarLabel: t('feed') }} />
+      <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={{ ...marketplaceTabOptions, tabBarLabel: t('marketplace') }} />
       <Tabs.Screen
         name="Profile"
         component={ProfileNavigator}
         options={profileTabOptions}
         listeners={profileTabListeners}
       />
-      <Tabs.Screen name="Messages" component={MessagingNavigator} options={messagesTabOptions} />
+      <Tabs.Screen name="Messages" component={MessagingNavigator} options={{ ...messagesTabOptions, tabBarLabel: t('messages') }} />
       <Tabs.Screen name="More" component={MoreNavigator} options={moreTabOptions} listeners={moreTabListeners} />
     </Tabs.Navigator>
   );
 }
 
 export default function AppNavigator() {
-  const { token, isBootstrapping, pendingOnboarding } = useAuth();
+  const { token, user, isBootstrapping, pendingOnboarding } = useAuth();
+  const { setLanguage } = useLocale();
   const { isDark, colors } = useTheme();
   const [welcomeReady, setWelcomeReady] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
+    if (!token || !user?.language) return;
+    let active = true;
+    AsyncStorage.getItem(LANGUAGE_KEY).then((saved) => {
+      if (active && !saved) setLanguage(user.language);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [token, user?.language, setLanguage]);
+
+  useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const done = await AsyncStorage.getItem(WELCOME_ONBOARDING_KEY);
-        if (alive) setShowWelcome(done !== '1');
+        const [done, language] = await Promise.all([
+          AsyncStorage.getItem(WELCOME_ONBOARDING_KEY),
+          AsyncStorage.getItem(LANGUAGE_KEY),
+        ]);
+        if (alive) setShowWelcome(done !== '1' || !language);
       } catch (_e) {
         if (alive) setShowWelcome(false);
       } finally {

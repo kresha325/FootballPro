@@ -11,12 +11,14 @@ import {
   updateMatchScoreRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import ListSearchBar from '../components/ListSearchBar';
 import { filterBySearch } from '../utils/listSearch';
 
 const CREATOR_ROLES = new Set(['liga', 'club', 'scout', 'admin']);
 
 export default function MatchesScreen() {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
@@ -188,20 +190,20 @@ export default function MatchesScreen() {
       ListHeaderComponent={
         <View>
           <View style={styles.headerCard}>
-            <Text style={styles.headerTitle}>Matches</Text>
-            <Text style={styles.headerSub}>Upcoming fixtures and scheduling</Text>
+            <Text style={styles.headerTitle}>{t('Matches')}</Text>
+            <Text style={styles.headerSub}>{t('Upcoming fixtures and scheduling')}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
           <ListSearchBar
             value={listSearch}
             onChangeText={setListSearch}
-            placeholder="Kërko ndeshje…"
+            placeholder={t('Kërko ndeshje…')}
             onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
           />
 
           {canCreate ? (
             <View style={styles.formCard}>
-              <Text style={styles.formTitle}>Schedule Match</Text>
+              <Text style={styles.formTitle}>{t('Schedule Match')}</Text>
               <TextInput
                 value={form.tournamentId}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, tournamentId: v, homeUserId: '', awayUserId: '' }))}
@@ -213,7 +215,7 @@ export default function MatchesScreen() {
               <TextInput
                 value={form.homeUserId}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, homeUserId: v }))}
-                placeholder="Home User ID"
+                placeholder={t('Home User ID')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
@@ -221,7 +223,7 @@ export default function MatchesScreen() {
               <TextInput
                 value={form.awayUserId}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, awayUserId: v }))}
-                placeholder="Away User ID"
+                placeholder={t('Away User ID')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
@@ -229,7 +231,7 @@ export default function MatchesScreen() {
               <TextInput
                 value={form.round}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, round: v }))}
-                placeholder="Round"
+                placeholder={t('Round')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
@@ -237,26 +239,26 @@ export default function MatchesScreen() {
               <TextInput
                 value={form.matchDate}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, matchDate: v }))}
-                placeholder="Match date: YYYY-MM-DDTHH:mm"
+                placeholder={t('Match date: YYYY-MM-DDTHH:mm')}
                 placeholderTextColor="#94a3b8"
                 style={styles.input}
               />
               {participants.length > 0 ? (
-                <Text style={styles.helper}>Participants loaded: {participants.length} (use these IDs)</Text>
+                <Text style={styles.helper}>{t('Participants loaded: {count} (use these IDs)').replace('{count}', participants.length)}</Text>
               ) : null}
               <TouchableOpacity style={styles.primaryBtn} onPress={editingMatchId ? handleSaveEdit : handleCreate}>
-                <Text style={styles.primaryBtnText}>{editingMatchId ? 'Save Match' : 'Create Match'}</Text>
+                <Text style={styles.primaryBtnText}>{editingMatchId ? t('Save Match') : t('Create Match')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
           {canCreate ? (
             <View style={styles.formCard}>
-              <Text style={styles.formTitle}>Update Score</Text>
+              <Text style={styles.formTitle}>{t('Update Score')}</Text>
               <TextInput
                 value={scoreForm.matchId}
                 onChangeText={(v) => setScoreForm((s) => ({ ...s, matchId: v }))}
-                placeholder="Match ID"
+                placeholder={t('Match ID')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
@@ -264,7 +266,7 @@ export default function MatchesScreen() {
               <TextInput
                 value={scoreForm.scoreHome}
                 onChangeText={(v) => setScoreForm((s) => ({ ...s, scoreHome: v }))}
-                placeholder="Home score"
+                placeholder={t('Home score')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
@@ -272,29 +274,29 @@ export default function MatchesScreen() {
               <TextInput
                 value={scoreForm.scoreAway}
                 onChangeText={(v) => setScoreForm((s) => ({ ...s, scoreAway: v }))}
-                placeholder="Away score"
+                placeholder={t('Away score')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 style={styles.input}
               />
               <TouchableOpacity style={styles.primaryBtn} onPress={handleUpdateScore}>
-                <Text style={styles.primaryBtnText}>Update Score</Text>
+                <Text style={styles.primaryBtnText}>{t('Update Score')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>Upcoming ({upcoming.length})</Text>
+          <Text style={styles.sectionTitle}>{t('Upcoming ({count})').replace('{count}', upcoming.length)}</Text>
         </View>
       }
       renderItem={({ item }) => (
         <View style={styles.matchCard}>
-          <Text style={styles.teams}>{item?.homeTeam || item?.homeUser?.firstName || 'Home'} vs {item?.awayTeam || item?.awayUser?.firstName || 'Away'}</Text>
+          <Text style={styles.teams}>{item?.homeTeam || item?.homeUser?.firstName || t('Home')} vs {item?.awayTeam || item?.awayUser?.firstName || t('Away')}</Text>
           <Text style={styles.meta}>ID: {item?.id || '-'}</Text>
           <Text style={styles.meta}>Round: {item?.round || '-'}</Text>
           <Text style={styles.meta}>Date: {new Date(item?.scheduledAt || item?.matchDate || Date.now()).toLocaleString()}</Text>
           <Text style={styles.meta}>Status: {item?.status || 'scheduled'}</Text>
           <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('MatchDetail', { matchId: item?.id })}>
-            <Text style={styles.editBtnText}>Match center</Text>
+            <Text style={styles.editBtnText}>{t('Match center')}</Text>
           </TouchableOpacity>
           {canCreate ? (
             <TouchableOpacity
@@ -311,12 +313,12 @@ export default function MatchesScreen() {
                 setScoreForm((s) => ({ ...s, matchId: String(item?.id || '') }));
               }}
             >
-              <Text style={styles.editBtnText}>Edit Match</Text>
+              <Text style={styles.editBtnText}>{t('Edit Match')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       )}
-      ListEmptyComponent={!loading ? <Text style={styles.empty}>No upcoming matches.</Text> : null}
+      ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('No upcoming matches.')}</Text> : null}
     />
   );
 }

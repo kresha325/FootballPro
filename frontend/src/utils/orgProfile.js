@@ -37,6 +37,7 @@ export function publicProfileInitials(profile = {}) {
 export function getFoundingYear(profile = {}) {
   const stats = profile.stats && typeof profile.stats === 'object' ? profile.stats : {};
   const candidates = [
+    profile.founded,
     profile.foundedYear,
     profile.foundingYear,
     stats.founded,

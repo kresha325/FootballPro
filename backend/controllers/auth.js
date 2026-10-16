@@ -19,7 +19,11 @@ function normalizeEmail(raw) {
 }
 
 exports.register = async (req, res) => {
-  const { email: rawEmail, password, role, firstName, lastName, dateOfBirth, city, country } = req.body;
+  const { email: rawEmail, password, role, firstName, lastName, dateOfBirth, foundedYear, city, country } = req.body;
+  const allowedLanguages = new Set(['sq', 'en', 'de', 'fr', 'it', 'es', 'ro', 'hr', 'tr']);
+  const language = allowedLanguages.has(String(req.body?.language || '').toLowerCase())
+    ? String(req.body.language).toLowerCase()
+    : 'sq';
   const email = normalizeEmail(rawEmail);
 
   try {
@@ -59,6 +63,10 @@ exports.register = async (req, res) => {
     }
 
     let parsedDob = null;
+    let parsedFoundedYear = null;
+    if (!isOrg && !dateOfBirth) {
+      return res.status(400).json({ msg: 'Datëlindja është e detyrueshme për profilet individuale' });
+    }
     if (dateOfBirth) {
       const dob = parseDateOnly(dateOfBirth);
       if (!dob.valid) {
@@ -68,6 +76,15 @@ exports.register = async (req, res) => {
       if (normalizedRole === 'athlete' && ageFromDateOnly(parsedDob) < 6) {
         return res.status(400).json({ msg: 'Atletët duhet të jenë të paktën 6 vjeç' });
       }
+    }
+    if (isOrg) {
+      const yearValue = String(foundedYear ?? '').trim();
+      const year = Number(yearValue);
+      const currentYear = new Date().getUTCFullYear();
+      if (!/^\d{4}$/.test(yearValue) || !Number.isInteger(year) || year < 1800 || year > currentYear) {
+        return res.status(400).json({ msg: `Viti i themelimit duhet të jetë mes 1800 dhe ${currentYear}` });
+      }
+      parsedFoundedYear = year;
     }
 
     // 2. Kontrollo nëse ekziston user
@@ -95,6 +112,7 @@ exports.register = async (req, res) => {
       role: normalizedRole,
       firstName: trimmedFirst,
       lastName: trimmedLast,
+      language,
     };
     if (parsedDob) {
       userPayload.dateOfBirth = parsedDob;
@@ -112,6 +130,7 @@ exports.register = async (req, res) => {
       // Organization accounts store their public name for consistent discovery and display.
       if (isOrg) {
         profilePayload.club = [trimmedFirst, trimmedLast].filter(Boolean).join(' ').trim() || trimmedFirst;
+        profilePayload.founded = parsedFoundedYear;
       }
       await Profile.create(profilePayload);
     } catch (profileErr) {
@@ -122,7 +141,7 @@ exports.register = async (req, res) => {
 
     // 4.6 Send welcome email in background (do not block auth flow)
     Promise.resolve()
-      .then(() => sendEmail(user.email, 'welcome', user.firstName))
+      .then(() => sendEmail(user.email, 'welcome', user.firstName, user.language))
       .then(() => {
         console.log('BACKEND: Welcome email sent');
       })
@@ -149,6 +168,7 @@ exports.register = async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
+        language: user.language || 'sq',
         firstName: user.firstName,
         lastName: user.lastName,
         dateOfBirth: user.dateOfBirth || null,
@@ -248,6 +268,7 @@ exports.login = async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
+        language: user.language || 'sq',
         firstName: user.firstName,
         lastName: user.lastName,
         verified: Boolean(user.verified),
@@ -299,7 +320,7 @@ exports.forgotPassword = async (req, res) => {
 
     let emailSent = false;
     try {
-      const emailResult = await sendEmail(user.email, 'passwordReset', user.firstName || 'User', resetUrl);
+      const emailResult = await sendEmail(user.email, 'passwordReset', user.firstName || 'User', resetUrl, user.language || 'sq');
       emailSent = !!(emailResult && emailResult.success);
     } catch (emailErr) {
       console.error('Password reset email error:', emailErr);

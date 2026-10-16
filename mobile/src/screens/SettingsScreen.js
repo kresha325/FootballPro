@@ -20,6 +20,8 @@ import {
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { LANGUAGES } from '../localization/catalog';
+import { useLocale } from '../context/LocaleContext';
 import { useNavigation } from '@react-navigation/native';
 import { needsYoutubeResolve, normalizeYoutubeChannelId } from '../utils/youtubeChannel';
 import {
@@ -28,7 +30,7 @@ import {
   getNotificationPermissionGranted,
   getPushPreference,
 } from '../notifications/push';
-import { notificationPreferencesRequest, updateNotificationPreferencesRequest } from '../api/client';
+import { notificationPreferencesRequest, updateNotificationPreferencesRequest, updateLanguageRequest } from '../api/client';
 import { hasTier } from '../utils/subscriptionAccess';
 import {
   PROFILE_THEMES,
@@ -62,6 +64,12 @@ export default function SettingsScreen() {
   const { user, refreshMe, logout } = useAuth();
   const navigation = useNavigation();
   const { colors, isDark, preference, setPreference, setDarkMode, darkModeEnabled } = useTheme();
+  const { language, setLanguage, t } = useLocale();
+  const selectLanguage = async (nextLanguage) => {
+    await setLanguage(nextLanguage);
+    if (!user?.id) return;
+    try { await updateLanguageRequest(nextLanguage); } catch { /* device preference remains available offline */ }
+  };
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushBusy, setPushBusy] = useState(false);
   const [prefRows, setPrefRows] = useState([]);
@@ -288,9 +296,21 @@ export default function SettingsScreen() {
       contentContainerStyle={styles.content}
     >
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Appearance</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('language')}</Text>
+        <Text style={[styles.hint, { color: colors.mutedSoft, marginBottom: 12 }]}>{t('languagePrompt')}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {LANGUAGES.map((item) => (
+            <TouchableOpacity key={item.code} onPress={() => selectLanguage(item.code)} accessibilityRole="button" accessibilityState={{ selected: language === item.code }}
+              style={{ borderWidth: 1, borderColor: language === item.code ? colors.primary : colors.border, backgroundColor: language === item.code ? colors.primarySoft : colors.card, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={{ color: colors.text, fontWeight: language === item.code ? '700' : '500' }}>{item.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('Appearance')}</Text>
         <View style={styles.rowBetween}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Dark mode</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('Dark mode')}</Text>
           <Switch
             value={darkModeEnabled}
             onValueChange={setDarkMode}
@@ -302,10 +322,10 @@ export default function SettingsScreen() {
           onPress={() => setPreference('system')}
           style={styles.systemBtn}
           accessibilityRole="button"
-          accessibilityLabel="Follow system appearance"
+          accessibilityLabel={t('Follow system appearance')}
         >
           <Text style={[styles.systemBtnText, { color: colors.primary }]}>
-            {preference === 'system' ? 'Duke ndjekur sistemin ✓' : 'Ndjek pamjen e sistemit'}
+            {preference === 'system' ? t('Following system ✓') : t('Use system appearance')}
           </Text>
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
@@ -314,9 +334,9 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('notifications')}</Text>
         <View style={styles.rowBetween}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Enable notifications</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('Enable notifications')}</Text>
           <Switch
             value={notificationsEnabled}
             onValueChange={handleNotificationsToggle}
@@ -333,7 +353,7 @@ export default function SettingsScreen() {
           <View key={row.category} style={{ marginTop: 10 }}>
             <Text style={[styles.label, { color: colors.text }]}>{row.category}</Text>
             <View style={styles.rowBetween}>
-              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Në app</Text>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>{t('In app')}</Text>
               <Switch
                 value={row.inApp !== false}
                 onValueChange={(value) => savePref(row.category, 'inApp', value)}

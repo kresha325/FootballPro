@@ -8,6 +8,8 @@ import { safeNextPath } from '../utils/safeNextPath';
 import { isOrgProfileRole } from '../utils/orgProfile';
 import { passwordPolicyMessage } from '../utils/passwordPolicy';
 import { BACKEND_URL } from '../config/api';
+import { useLocale } from '../contexts/LocaleContext';
+import { translateRole } from '../locales/catalog';
 
 const POST_AUTH_NEXT_KEY = 'xtalenti_post_auth_next';
 
@@ -112,9 +114,9 @@ export const REGISTER_ROLE_OPTIONS = [
   { label: 'Biznes', value: 'business', hint: 'Sponsor, shërbime' },
 ];
 
-function registerRoleLabel(value) {
+function registerRoleLabel(value, language) {
   const v = String(value || '').toLowerCase();
-  return REGISTER_ROLE_OPTIONS.find((o) => o.value === v)?.label || value || 'Lojtar';
+  return translateRole(language, v) || REGISTER_ROLE_OPTIONS.find((o) => o.value === v)?.label || value || 'Lojtar';
 }
 
 function modeFromPath(pathname) {
@@ -140,6 +142,7 @@ export default function AuthScreen({ initialMode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
+  const { language, t } = useLocale();
 
   const nextPath = safeNextPath(searchParams.get('next'));
   const resolvedInitial = initialMode || modeFromPath(location.pathname);
@@ -152,6 +155,7 @@ export default function AuthScreen({ initialMode }) {
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobYear, setDobYear] = useState('');
+  const [foundedYear, setFoundedYear] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -197,10 +201,10 @@ export default function AuthScreen({ initialMode }) {
   }, [rolePickerOpen]);
 
   const subtitle = useMemo(() => {
-    if (mode === 'login') return 'Hyr për të vazhduar';
-    if (mode === 'register') return 'Krijo llogarinë — karriera jote fillon këtu';
-    return 'Rikupero fjalëkalimin';
-  }, [mode]);
+    if (mode === 'login') return t('login');
+    if (mode === 'register') return t('submitRegister');
+    return t('sendReset');
+  }, [mode, t]);
 
   const switchMode = (next) => {
     setMode(next);
@@ -268,15 +272,20 @@ export default function AuthScreen({ initialMode }) {
 
       if (mode === 'register') {
         const normalizedRole = (role || 'athlete').trim().toLowerCase();
-        const isAthlete = normalizedRole === 'athlete';
         const isOrg = isOrgProfileRole(normalizedRole);
         let dateOfBirth;
-        if (isAthlete) {
+        if (!isOrg) {
           dateOfBirth = buildIsoDate(dobYear, dobMonth, dobDay);
           if (!dateOfBirth) {
             setInlineError('Vendos datëlindjen (ditë, muaj, vit).');
             return;
           }
+        }
+        const parsedFoundedYear = Number(foundedYear);
+        const currentYear = new Date().getFullYear();
+        if (isOrg && (!/^\d{4}$/.test(foundedYear) || parsedFoundedYear < 1800 || parsedFoundedYear > currentYear)) {
+          setInlineError(`Vendos vitin e themelimit (1800–${currentYear}).`);
+          return;
         }
         if (!acceptedTerms) {
           setInlineError('Duhet të pranosh kushtet e përdorimit.');
@@ -288,7 +297,9 @@ export default function AuthScreen({ initialMode }) {
           email: email.trim().toLowerCase(),
           password,
           role: normalizedRole,
+          language,
           ...(dateOfBirth ? { dateOfBirth } : {}),
+          ...(isOrg ? { foundedYear: parsedFoundedYear } : {}),
         });
         if (result.success) {
           setOnboardingPending();
@@ -345,9 +356,9 @@ export default function AuthScreen({ initialMode }) {
 
         <div className="mb-5 flex rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1" role="tablist" aria-label="Hyr ose krijo llogari">
           {[
-            { id: 'login', label: 'Hyr' },
-            { id: 'register', label: 'Regjistrohu' },
-            { id: 'forgot', label: 'Harruar?' },
+            { id: 'login', label: t('loginTab') },
+            { id: 'register', label: t('registerTab') },
+            { id: 'forgot', label: t('forgotTab') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -367,7 +378,7 @@ export default function AuthScreen({ initialMode }) {
         <form onSubmit={onSubmit} className="space-y-3">
           {mode === 'register' ? (
             <>
-              <label className="label">Lloji i llogarisë</label>
+              <label className="label">{t('accountType')}</label>
               <button
                 type="button"
                 onClick={() => setRolePickerOpen(true)}
@@ -375,14 +386,14 @@ export default function AuthScreen({ initialMode }) {
                 aria-haspopup="dialog"
                 aria-expanded={rolePickerOpen}
               >
-                <span>{registerRoleLabel(role)}</span>
+                <span>{registerRoleLabel(role, language)}</span>
                 <span className="text-[var(--xt-color-text-muted)]" aria-hidden="true">▾</span>
               </button>
 
               <input
                 className={inputClass}
-                aria-label={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
-                placeholder={String(role).toLowerCase() === 'club' ? 'Emri i klubit' : isOrgProfileRole(role) ? 'Emri i organizatës' : 'Emri'}
+                aria-label={isOrgProfileRole(role) ? t('organizationName') : t('firstName')}
+                placeholder={isOrgProfileRole(role) ? t('organizationName') : t('firstName')}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete={isOrgProfileRole(role) ? 'organization' : 'given-name'}
@@ -390,17 +401,17 @@ export default function AuthScreen({ initialMode }) {
               {!isOrgProfileRole(role) ? (
                 <input
                   className={inputClass}
-                  aria-label="Mbiemri"
-                  placeholder="Mbiemri"
+                  aria-label={t('lastName')}
+                  placeholder={t('lastName')}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   autoComplete="family-name"
                 />
               ) : null}
 
-              {String(role || '').toLowerCase() === 'athlete' ? (
+              {!isOrgProfileRole(role) ? (
                 <>
-                  <label className="label">Datëlindja</label>
+                  <label className="label">{t('dateOfBirth')}</label>
                   <div className="flex gap-2">
                     <input
                       className={`${inputClass} flex-1`}
@@ -433,19 +444,38 @@ export default function AuthScreen({ initialMode }) {
                       autoComplete="bday-year"
                     />
                   </div>
-                  <p className="text-xs leading-snug text-[var(--xt-color-text-muted)]">
-                    Nën 18 vjeç: do të kërkohet email i prindit pas regjistrimit.
-                  </p>
+                  {String(role || '').toLowerCase() === 'athlete' ? (
+                    <p className="text-xs leading-snug text-[var(--xt-color-text-muted)]">
+                      {t('parentMinorHint')}
+                    </p>
+                  ) : null}
                 </>
-              ) : null}
+              ) : (
+                <>
+                  <label className="label" htmlFor="register-founded-year">{t('foundingYear')}</label>
+                  <input
+                    id="register-founded-year"
+                    className={inputClass}
+                    type="number"
+                    inputMode="numeric"
+                    min="1800"
+                    max={new Date().getFullYear()}
+                    step="1"
+                    placeholder="p.sh. 1998"
+                    value={foundedYear}
+                    onChange={(e) => setFoundedYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    required
+                  />
+                </>
+              )}
             </>
           ) : null}
 
           <input
             className={inputClass}
-            aria-label="Email"
+            aria-label={t('email')}
             type="email"
-            placeholder="Email"
+            placeholder={t('email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -456,9 +486,9 @@ export default function AuthScreen({ initialMode }) {
             <>
               <input
                 className={inputClass}
-                aria-label="Fjalëkalimi"
+                aria-label={t('password')}
                 type="password"
-                placeholder="Fjalëkalimi"
+                placeholder={t('password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
@@ -466,9 +496,9 @@ export default function AuthScreen({ initialMode }) {
               {mode === 'register' ? (
                 <input
                   className={inputClass}
-                  aria-label="Përsërit fjalëkalimin"
+                  aria-label={t('confirmPassword')}
                   type="password"
-                  placeholder="Përsërit fjalëkalimin"
+                  placeholder={t('confirmPassword')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
@@ -486,13 +516,13 @@ export default function AuthScreen({ initialMode }) {
                 className="h-5 w-5 rounded border-[var(--xt-color-border-strong)] accent-[var(--xt-color-gold)] focus-visible:outline"
               />
               <span>
-                Pranoj{' '}
+                {t('agree')}{' '}
                 <Link to="/terms" className="font-semibold text-[var(--xt-color-gold-bright)] underline underline-offset-2">
-                  kushtet e përdorimit
+                  {t('terms')}
                 </Link>{' '}
                 dhe{' '}
                 <Link to="/privacy" className="font-semibold text-[var(--xt-color-gold-bright)] underline underline-offset-2">
-                  privatësinë
+                  {t('privacy')}
                 </Link>
               </span>
             </label>
@@ -504,12 +534,12 @@ export default function AuthScreen({ initialMode }) {
             className="btn btn-primary mt-2 w-full"
           >
             {loading
-              ? 'Duke u ngarkuar…'
+              ? t('loading')
               : mode === 'login'
-                ? 'Hyr'
+                ? t('submitLogin')
                 : mode === 'register'
-                  ? 'Krijo llogarinë'
-                  : 'Dërgo linkun'}
+                  ? t('submitRegister')
+                  : t('sendReset')}
           </button>
         </form>
 
@@ -527,9 +557,9 @@ export default function AuthScreen({ initialMode }) {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Lloji i llogarisë"
+            aria-label={t('accountType')}
           >
-            <h2 className="mb-2 px-5 text-lg font-extrabold text-[var(--xt-color-text)]">Lloji i llogarisë</h2>
+            <h2 className="mb-2 px-5 text-lg font-extrabold text-[var(--xt-color-text)]">{t('accountType')}</h2>
             <ul>
               {REGISTER_ROLE_OPTIONS.map((item) => (
                 <li key={item.value}>
@@ -548,10 +578,7 @@ export default function AuthScreen({ initialMode }) {
                     }`}
                   >
                     <span>
-                      <span className="block font-bold text-[var(--xt-color-text)]">{item.label}</span>
-                      {item.hint ? (
-                        <span className="mt-0.5 block text-xs text-[var(--xt-color-text-muted)]">{item.hint}</span>
-                      ) : null}
+                      <span className="block font-bold text-[var(--xt-color-text)]">{translateRole(language, item.value)}</span>
                     </span>
                     {role === item.value ? <span className="font-bold text-[var(--xt-color-gold-bright)]" aria-label="Zgjedhur">✓</span> : null}
                   </button>
