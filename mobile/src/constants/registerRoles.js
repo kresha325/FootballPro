@@ -7,6 +7,7 @@ export const REGISTER_ROLE_OPTIONS = [
   { label: 'Arbitër', value: 'referee', hint: 'Ndeshje, kampionate' },
   { label: 'Klub', value: 'club', hint: 'Roster, turne, staf' },
   { label: 'Federatë', value: 'federation', hint: 'Organizim zyrtar' },
+  { label: 'Ligë', value: 'liga', hint: 'Kampionate, klube, turne' },
   { label: 'Media', value: 'media', hint: 'Reportazh, live' },
   { label: 'Biznes', value: 'business', hint: 'Sponsor, shërbime' },
 ];

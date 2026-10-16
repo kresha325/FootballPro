@@ -23,6 +23,7 @@ import { ArrowRightIcon, ChartBarIcon, MagnifyingGlassIcon, PlusIcon, TrophyIcon
 import { isEarlyAccessEnabled, EARLY_ACCESS_LABS_KEY } from '../utils/profileThemes';
 import { tournamentIdFromNotification } from '../utils/notificationLinks';
 import { formatTotalsPoints } from '../utils/tournamentPoints';
+import { publicProfileName, publicProfileInitials } from '../utils/orgProfile';
 import './ProfileTheme.css';
 
 const Feed = () => {
@@ -855,7 +856,7 @@ const Feed = () => {
                             ? getCloudinarySafeUrl(getFullUrl(post.author.profilePhoto))
                             : getCloudinarySafeUrl(getFullUrl(user.profilePhoto))
                         }
-                        alt={post.author?.firstName || user?.firstName || 'User'}
+                        alt={publicProfileName(post.author) || user?.firstName || 'User'}
                         className="h-10 w-10 rounded-full border border-white/15 object-cover"
                         loading="lazy"
                         decoding="async"
@@ -863,15 +864,13 @@ const Feed = () => {
                       />
                     ) : (
                       <div className="xt-avatar h-10 w-10">
-                        {`${post.author?.firstName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || 'U'}${post.author?.lastName?.charAt(0).toUpperCase() || user?.lastName?.charAt(0).toUpperCase() || ''}`}
+                        {publicProfileInitials(post.author || user)}
                       </div>
                     )}
                     <div className="ml-3 min-w-0">
                       <p className="inline-flex items-center gap-1 font-semibold text-[var(--xt-color-text)] hover:underline">
                         <PersonName>
-                          {post.author?.firstName && post.author?.lastName
-                            ? `${post.author.firstName} ${post.author.lastName}`
-                            : 'I panjohur'}
+                          {publicProfileName(post.author) || 'I panjohur'}
                         </PersonName>
                         <VerifiedBadge verified={post.author?.verified} size="sm" />
                       </p>
