@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
@@ -178,6 +178,7 @@ function Messaging() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const location = useLocation();
+  const navigate = useNavigate();
   // Lexo userId dhe conversationId nga query me URLSearchParams
   const query = new URLSearchParams(location.search);
   const userId = query.get('userId');
@@ -359,9 +360,6 @@ function Messaging() {
             console.error('[Messaging] Auto-open conversation error:', err);
           });
       }
-    } else if (!userId && !conversationId && conversations.length > 0 && !selectedConversation) {
-      // Asnjë query param, zgjidh automatikisht të parën
-      setSelectedConversation(conversations[0]);
     }
   }, [location.state, location.search, conversations, conversationId, userId, selectedConversation]);
 
@@ -1564,7 +1562,15 @@ function Messaging() {
                   const other = getOtherMember(selectedConversation);
                   return (
                     <>
-                      <button type="button" onClick={() => setSelectedConversation(null)} className="btn btn-quiet min-h-10 px-3 md:hidden" aria-label="Kthehu te bisedat">‹</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedConversation(null);
+                          navigate('/messaging', { replace: true });
+                        }}
+                        className="btn btn-quiet min-h-10 px-3 md:hidden"
+                        aria-label="Kthehu te bisedat"
+                      >‹</button>
                       <div className="relative flex-shrink-0">
                         {other.profilePhoto ? (
                           <img
