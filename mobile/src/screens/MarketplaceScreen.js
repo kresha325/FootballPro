@@ -22,10 +22,12 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
 import OptimizedImage from '../components/media/OptimizedImage';
+import { useLocale } from '../context/LocaleContext';
 
 const PAGE_SIZE = 8;
 
 function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
+  const { t } = useLocale();
   const [qty, setQty] = useState('1');
   const imageUri = absoluteBackendUrl(item?.imageUrl);
   const stock = Math.max(0, parseInt(String(item?.stock ?? 0), 10) || 0);
@@ -46,21 +48,21 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
       <TouchableOpacity onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}>
         <Text style={styles.name}>{item?.name || 'Product'}</Text>
       </TouchableOpacity>
-      <Text style={styles.description}>{item?.description || 'No description'}</Text>
+        <Text style={styles.description}>{item?.description || t('No description')}</Text>
       <View style={styles.rowBetween}>
         <Text style={styles.price}>
-          {priceN} XCoin {stock > 0 ? <Text style={styles.perUnit}>/ copë</Text> : null}
+          {priceN} XCoin {stock > 0 ? <Text style={styles.perUnit}>/ {t('copë')}</Text> : null}
         </Text>
-        <Text style={styles.stock}>Stok: {stock}</Text>
+        <Text style={styles.stock}>{t('Stok')}: {stock}</Text>
       </View>
       {stock < 1 && hoursLeft != null ? (
         <Text style={styles.oosHint}>
-          Pa stok. Listimi arkivohet pas ~{hoursLeft}h nëse nuk e rimbush.
+          {t('Pa stok. Listimi arkivohet pas ~{hours}h nëse nuk e rimbush.').replace('{hours}', String(hoursLeft))}
         </Text>
       ) : null}
       {!isOwn && stock > 0 ? (
         <View style={styles.qtyRow}>
-          <Text style={styles.qtyLabel}>Sasia</Text>
+          <Text style={styles.qtyLabel}>{t('Sasia')}</Text>
           <TextInput
             style={styles.qtyInput}
             value={qty}
@@ -74,12 +76,12 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
       ) : null}
       {isOwn ? (
         <View>
-          <Text style={styles.ownNote}>Kjo është listimi yt — nuk mund ta blihesh vetes.</Text>
+          <Text style={styles.ownNote}>{t('Kjo është listimi yt — nuk mund ta blihesh vetes.')}</Text>
           <TouchableOpacity
             style={styles.editBtn}
             onPress={() => navigation.navigate('EditProduct', { productId: item.id })}
           >
-            <Text style={styles.editBtnText}>Ndrysho / stok / fshi</Text>
+            <Text style={styles.editBtnText}>{t('Ndrysho / stok / fshi')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -88,7 +90,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
           onPress={onPressAdd}
           disabled={stock < 1}
         >
-          <Text style={styles.buyBtnText}>{stock < 1 ? 'Nuk ka stok' : 'Shto në shportë'}</Text>
+          <Text style={styles.buyBtnText}>{stock < 1 ? t('Nuk ka stok') : t('Shto në shportë')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -96,6 +98,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
 }
 
 export default function MarketplaceScreen() {
+  const { t } = useLocale();
   useRenderLog('MarketplaceScreen');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -227,19 +230,19 @@ export default function MarketplaceScreen() {
         ListHeaderComponent={
           <View>
             <View style={styles.balanceWrap}>
-              <Text style={styles.balanceLabel}>XCoin Balance</Text>
+              <Text style={styles.balanceLabel}>{t('XCoin Balance')}</Text>
               <Text style={styles.balanceValue}>{balance}</Text>
             </View>
             <ListSearchBar
               value={listSearch}
               onChangeText={setListSearch}
-              placeholder="Kërko produkte…"
+              placeholder={t('Kërko produkte…')}
               onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
             />
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {['all', 'gear', 'tickets', 'merchandise'].map((value) => (
                 <TouchableOpacity key={value} onPress={() => setCategory(value)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: category === value ? '#9A6B12' : '#fff' }}>
-                  <Text style={{ color: category === value ? '#fff' : '#334155', fontSize: 12 }}>{value}</Text>
+                  <Text style={{ color: category === value ? '#fff' : '#334155', fontSize: 12 }}>{t(value === 'all' ? 'Të gjitha' : value === 'gear' ? 'Pajisje' : value === 'tickets' ? 'Bileta' : 'Merchandise')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -254,7 +257,7 @@ export default function MarketplaceScreen() {
             setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, displayProducts.length));
           }
         }}
-        ListFooterComponent={visibleCount < displayProducts.length ? <Text style={styles.footer}>Loading more...</Text> : null}
+        ListFooterComponent={visibleCount < displayProducts.length ? <Text style={styles.footer}>{t('Loading more...')}</Text> : null}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -265,13 +268,13 @@ export default function MarketplaceScreen() {
             colors={['#9A6B12']}
           />
         }
-        ListEmptyComponent={<Text style={styles.empty}>No products found.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('No products found.')}</Text>}
       />
       {user?.id ? (
         <TouchableOpacity
           style={[styles.fab, { bottom: 18 + insets.bottom }]}
           onPress={() => navigation.navigate('CreateProduct')}
-          accessibilityLabel="Shto produkt"
+          accessibilityLabel={t('Shto Produkt')}
         >
           <Ionicons name="add" size={30} color="#fff" />
         </TouchableOpacity>

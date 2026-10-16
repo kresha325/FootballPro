@@ -1,6 +1,8 @@
 import React from 'react';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const BusinessProfile = ({ profile = {} }) => {
+  const { t } = useLocale();
   const businessData = profile.stats || {};
 
   return (
@@ -11,22 +13,22 @@ const BusinessProfile = ({ profile = {} }) => {
       </div>
       {/* Business Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Business Information</h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Business Information')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Company Name</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('Company Name')}</label>
             <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{profile.club || profile.firstName + ' ' + profile.lastName}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Industry</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('Industry')}</label>
             <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{businessData.industry || 'Sports & Recreation'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Founded</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('Founded')}</label>
             <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{businessData.founded || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Company Size</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('Company Size')}</label>
             <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{businessData.companySize || 'N/A'}</p>
           </div>
         </div>
@@ -34,7 +36,7 @@ const BusinessProfile = ({ profile = {} }) => {
 
       {/* Business Stats */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Key Metrics</h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Key Metrics')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">💰</div>

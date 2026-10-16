@@ -24,6 +24,7 @@ import {
   trendingTournamentsRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import {
   formatTournamentTitle,
   previewTournamentSeason,
@@ -48,6 +49,7 @@ function canUserJoinTournament(item, user) {
 }
 
 function TournamentCard({ item, user, onJoin, onOpen, mineOnly }) {
+  const { t } = useLocale();
   const participants = Array.isArray(item?.participants) ? item.participants.length : 0;
   const isJoined =
     item?.isJoined === true ||
@@ -59,7 +61,7 @@ function TournamentCard({ item, user, onJoin, onOpen, mineOnly }) {
   return (
     <View style={styles.card}>
       <Text style={styles.name}>{formatTournamentTitle(item)}</Text>
-      <Text style={styles.description}>{item?.description || 'No description'}</Text>
+      <Text style={styles.description}>{item?.description || t('No description')}</Text>
       <Text style={styles.meta}>
         Type: {item?.type || 'N/A'} | Status: {item?.status || 'open'}
         {item?.season ? ` | Season: ${item.season}` : ''}
@@ -72,14 +74,14 @@ function TournamentCard({ item, user, onJoin, onOpen, mineOnly }) {
       ) : null}
       <View style={styles.cardActions}>
         <TouchableOpacity style={styles.detailBtn} onPress={() => onOpen(item)}>
-          <Text style={styles.detailBtnText}>Details</Text>
+          <Text style={styles.detailBtnText}>{t('Details')}</Text>
         </TouchableOpacity>
         {showJoin ? (
           <TouchableOpacity style={styles.joinBtn} onPress={() => onJoin(item)}>
-            <Text style={styles.joinBtnText}>Join</Text>
+            <Text style={styles.joinBtnText}>{t('Join')}</Text>
           </TouchableOpacity>
         ) : isJoined ? (
-          <Text style={styles.joinedTag}>Joined</Text>
+          <Text style={styles.joinedTag}>{t('Joined')}</Text>
         ) : null}
       </View>
     </View>
@@ -88,6 +90,7 @@ function TournamentCard({ item, user, onJoin, onOpen, mineOnly }) {
 
 export default function TournamentsScreen({ navigation }) {
   const route = useRoute();
+  const { t } = useLocale();
   const { user } = useAuth();
   const mineOnly = route?.params?.filter === 'mine';
   const [loading, setLoading] = useState(true);
@@ -303,25 +306,25 @@ export default function TournamentsScreen({ navigation }) {
         ListHeaderComponent={
           <View>
             <View style={styles.headerCard}>
-              <Text style={styles.headerTitle}>{mineOnly ? 'Turnetë e mia' : 'Tournaments'}</Text>
+              <Text style={styles.headerTitle}>{mineOnly ? t('Turnetë e mia') : t('Turnetë')}</Text>
               <Text style={styles.headerSub}>
                 {mineOnly
                   ? 'Vetëm turnet ku merrni pjesë (si klub, atlet i skuadrës, ose pjesëmarrës).'
                   : canCreateTournament
-                    ? 'Browse, join, or create a tournament.'
-                    : 'Browse and join tournaments. Only liga, club, or scout can create.'}
+                    ? t('Browse, join, or create a tournament.')
+                    : t('Browse and join tournaments. Only liga, club, or scout can create.')}
               </Text>
               {error ? <Text style={styles.error}>{error}</Text> : null}
               {!mineOnly && canCreateTournament ? (
                 <TouchableOpacity style={styles.createHeaderBtn} onPress={() => setShowCreate(true)}>
-                  <Text style={styles.createHeaderBtnText}>+ Create tournament</Text>
+                  <Text style={styles.createHeaderBtnText}>+ {t('Krijo turne')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
             <ListSearchBar
               value={listSearch}
               onChangeText={setListSearch}
-              placeholder={mineOnly ? 'Kërko te turnetë e mia…' : 'Kërko turne…'}
+              placeholder={mineOnly ? t('Kërko te turnetë e mia…') : t('Kërko turne sipas emrit, sezonit, statusit…')}
             />
           </View>
         }
@@ -335,11 +338,11 @@ export default function TournamentsScreen({ navigation }) {
           }
         }}
         ListFooterComponent={
-          visibleCount < merged.length ? <Text style={styles.footer}>Loading more...</Text> : null
+          visibleCount < merged.length ? <Text style={styles.footer}>{t('Loading more...')}</Text> : null
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {mineOnly ? 'Ende nuk jeni në asnjë turne.' : 'No tournaments available.'}
+            {mineOnly ? t('Ende nuk jeni në asnjë turne.') : t('Nuk ka turne')}
           </Text>
         }
       />
@@ -353,13 +356,13 @@ export default function TournamentsScreen({ navigation }) {
         <View style={styles.modalBackdrop}>
           <ScrollView contentContainerStyle={styles.modalScroll}>
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Create tournament</Text>
+              <Text style={styles.modalTitle}>{t('Krijo Turne të Ri')}</Text>
               {isLigaCreator ? (
-                <Text style={styles.seasonPreview}>Liga tournaments use your liga name automatically.</Text>
+                <Text style={styles.seasonPreview}>{t('Liga tournaments use your liga name automatically.')}</Text>
               ) : (
                 <TextInput
                   style={styles.input}
-                  placeholder="Name"
+                  placeholder={t('Emri')}
                   placeholderTextColor="#94a3b8"
                   value={form.name}
                   onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -367,7 +370,7 @@ export default function TournamentsScreen({ navigation }) {
               )}
               <TextInput
                 style={[styles.input, styles.textArea]}
-                placeholder="Description"
+                placeholder={t('Përshkrimi')}
                 placeholderTextColor="#94a3b8"
                 value={form.description}
                 onChangeText={(v) => setForm((f) => ({ ...f, description: v }))}

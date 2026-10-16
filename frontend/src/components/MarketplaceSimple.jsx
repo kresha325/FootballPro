@@ -8,6 +8,7 @@ import { getJonCoinBalance } from '../services/joncoin';
 import { useNavigate } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { ShoppingBagIcon } from '@heroicons/react/24/outline';
+import { useLocale } from '../contexts/LocaleContext';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -30,6 +31,7 @@ function productImageSrc(url) {
 }
 
 export default function MarketplaceSimple() {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [jonCoinBalance, setJonCoinBalance] = useState(null);
   const { user } = useAuth();
@@ -332,8 +334,8 @@ export default function MarketplaceSimple() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Marketplace</p><h1 className="mt-1 text-3xl font-black text-white mb-2">Tregu</h1>
-          <p className="text-[var(--xt-color-text-muted)]">Bli dhe shit pajisje sportive</p>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('marketplace')}</p><h1 className="mt-1 text-3xl font-black text-white mb-2">{t('marketplace')}</h1>
+          <p className="text-[var(--xt-color-text-muted)]">{t('Bli dhe shit pajisje sportive')}</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -461,7 +463,7 @@ export default function MarketplaceSimple() {
                 {!isOwner && !isSold && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-[var(--xt-color-text-muted)] whitespace-nowrap">Sasia</label>
+                      <label className="text-sm text-[var(--xt-color-text-muted)] whitespace-nowrap">{t('Sasia')}</label>
                       <input
                         type="number"
                         min={1}
@@ -490,7 +492,7 @@ export default function MarketplaceSimple() {
         })}
       </div>
 
-      {productsError && <div className="xt-error-state xt-card" role="alert"><p>{productsError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchProducts(); }}>Provo përsëri</button></div>}
+      {productsError && <div className="xt-error-state xt-card" role="alert"><p>{productsError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchProducts(); }}>{t('Provo përsëri')}</button></div>}
 
       {!productsError && products.length === 0 && (
         <div className="text-center py-20">
@@ -516,7 +518,7 @@ export default function MarketplaceSimple() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="xt-card w-full max-w-md rounded-xl p-4 shadow-2xl sm:p-6 max-h-[90dvh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">Shto Produkt të Ri</h2>
+            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">{t('Shto Produkt të Ri')}</h2>
 
             <form onSubmit={createProduct} className="space-y-4">
                             <div>
@@ -648,7 +650,7 @@ export default function MarketplaceSimple() {
       {showEditModal && editProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="xt-card w-full max-w-md rounded-xl p-4 shadow-2xl sm:p-6 max-h-[90dvh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">Ndrysho produktin</h2>
+            <h2 className="text-2xl font-bold text-[var(--xt-color-text)] mb-6">{t('Ndrysho produktin')}</h2>
             <form onSubmit={saveProductEdit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
@@ -780,7 +782,7 @@ export default function MarketplaceSimple() {
             </div>
             <div className="overflow-y-auto p-4 flex-1 min-h-0">
               {items.length === 0 ? (
-                <p className="text-center text-[var(--xt-color-text-muted)] py-8">Shporta është bosh.</p>
+                <p className="text-center text-[var(--xt-color-text-muted)] py-8">{t('Shporta është bosh.')}</p>
               ) : (
                 <ul className="space-y-3">
                   {items.map((line) => {
@@ -891,7 +893,7 @@ export default function MarketplaceSimple() {
                 />
               </div>
               <div className="flex justify-between text-[var(--xt-color-text)] font-bold">
-                <span>Total</span>
+                <span>{t('Total')}</span>
                 <span>{subtotalJonCoin} XCoin</span>
               </div>
               <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -970,7 +972,7 @@ export default function MarketplaceSimple() {
 
               {selectedProduct.description && (
                 <div>
-                  <h3 className="font-semibold text-[var(--xt-color-text)] mb-2">Përshkrimi</h3>
+                  <h3 className="font-semibold text-[var(--xt-color-text)] mb-2">{t('Përshkrimi')}</h3>
                   <p className="text-[var(--xt-color-text-muted)]">{selectedProduct.description}</p>
                 </div>
               )}

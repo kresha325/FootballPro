@@ -5,6 +5,7 @@ import { notificationsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { resolveNotificationNavigatePath } from '../utils/notificationLinks';
 import { BellIcon, PhoneIcon, UserGroupIcon, HandThumbUpIcon, ChatBubbleLeftRightIcon, UserIcon, EnvelopeIcon, TrophyIcon, FlagIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
+import { useLocale } from '../contexts/LocaleContext';
 
 const notificationDateGroup = (date) => {
   if (Number.isNaN(date.getTime())) return 'Më herët';
@@ -28,6 +29,7 @@ const FILTERS = [
 ];
 
 const Notifications = () => {
+  const { t } = useLocale();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -219,18 +221,18 @@ const Notifications = () => {
     <main className="mx-auto min-h-screen max-w-4xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · Aktivitet</p><h1 className="mt-1 text-3xl font-black text-white">Njoftime</h1><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Përditësime për llogarinë dhe komunitetin tënd.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Aktivitet')}</p><h1 className="mt-1 text-3xl font-black text-white">{t('Njoftime')}</h1><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{t('Përditësime për llogarinë dhe komunitetin tënd.')}</p></div>
         <div className="flex items-center gap-3">
           {unreadCount > 0 && (
             <>
               <span className="xt-badge xt-badge-gold">
-                {unreadCount} të palexuara
+                {unreadCount} {t('të palexuara')}
               </span>
               <button
                 onClick={markAllAsRead}
                 className="btn btn-quiet min-h-10 text-sm"
               >
-                Shëno të gjitha si të lexuara
+                {t('Shëno të gjitha si të lexuara')}
               </button>
             </>
           )}
@@ -240,7 +242,7 @@ const Notifications = () => {
       <ListSearchBar
         value={listSearch}
         onChange={setListSearch}
-        placeholder="Kërko njoftime…"
+        placeholder={t('Kërko njoftime…')}
       />
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -255,7 +257,7 @@ const Notifications = () => {
                 : 'bg-white/5 text-[var(--xt-color-text-muted)]'
             }`}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
@@ -263,7 +265,7 @@ const Notifications = () => {
       {error ? (
         <div className="xt-card border border-red-500/40 p-4 text-sm">
           <p>{error}</p>
-          <button type="button" className="btn btn-quiet mt-2" onClick={() => fetchNotifications(1, filter)}>Provo përsëri</button>
+          <button type="button" className="btn btn-quiet mt-2" onClick={() => fetchNotifications(1, filter)}>{t('Provo përsëri')}</button>
         </div>
       ) : null}
 
@@ -332,8 +334,8 @@ const Notifications = () => {
         ) : (
           <div className="xt-empty-state xt-card">
             <BellIcon className="h-12 w-12 text-[var(--xt-color-gold)]" />
-            <p className="text-xl font-semibold">Nuk ka njoftime</p>
-            <p className="text-sm">Njoftimet do të shfaqen këtu kur dikush ndërvepron me përmbajtjen tënde</p>
+            <p className="text-xl font-semibold">{t('Nuk ka njoftime')}</p>
+            <p className="text-sm">{t('Njoftimet do të shfaqen këtu kur dikush ndërvepron me përmbajtjen tënde')}</p>
           </div>
         )}
       </div>

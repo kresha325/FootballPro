@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { clubStaffAPI } from '../../services/api';
 import { getFullUrl } from '../../utils/mediaUrl';
 import { ClubBadge } from '../../utils/clubLogos';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const CoachProfile = ({ profile = {} }) => {
+  const { t } = useLocale();
   const coachData = profile.stats || {};
   const [clubStaffAssignments, setClubStaffAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
@@ -101,11 +103,11 @@ const CoachProfile = ({ profile = {} }) => {
       {/* Coach Type & Category */}
       {(profile.coachAffiliation || profile.coachCategory) && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Coach Information</h3>
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Coach Information')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {profile.coachAffiliation && (
               <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Affiliation</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('Affiliation')}</div>
                 <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
                   {profile.coachAffiliation === 'club' && '🏟️ '}
                   {profile.coachAffiliation === 'independent' && '⚡ '}
@@ -116,7 +118,7 @@ const CoachProfile = ({ profile = {} }) => {
             )}
             {profile.coachCategory && (
               <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Specialization</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('Specialization')}</div>
                 <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
                   📋 {getCategoryLabel(profile.coachCategory)}
                 </div>
@@ -128,23 +130,23 @@ const CoachProfile = ({ profile = {} }) => {
 
       {/* Coaching Experience */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Coaching Experience</h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Coaching Experience')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{coachData.yearsExperience || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Years Experience</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Years Experience')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">{coachData.teamsCoached || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Teams Coached</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Teams Coached')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
             <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{coachData.trophies || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Trophies</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Trophies')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{coachData.winRate || 0}%</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Win Rate</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Win Rate')}</div>
           </div>
         </div>
       </div>

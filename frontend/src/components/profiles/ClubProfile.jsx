@@ -3,8 +3,10 @@ import { clubMembersAPI, clubStaffAPI } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { getFullUrl } from '../../utils/mediaUrl';
 import MediaSection from '../media/MediaSection';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const ClubProfile = ({ profile = {}, isOwner }) => {
+  const { t } = useLocale();
   const clubData = (profile && profile.stats) ? profile.stats : {};
 
   const [clubMembers, setClubMembers] = useState([]);
@@ -204,21 +206,21 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
             {profile.profilePhoto ? <img src={getFullUrl(profile.profilePhoto)} alt={`${profile.club || 'Klubi'} logo`} className="h-full w-full object-cover" /> : (profile.club || 'KL').slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">Klub futbolli</p>
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">{t('Klub futbolli')}</p>
             <h2 className="mt-1 text-2xl font-bold">{profile.club || 'Organizata e klubit'}</h2>
             <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">{[profile.city, profile.country].filter(Boolean).join(', ') || 'Vendndodhja nuk është shtuar'}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {profile.verified && <span className="xt-badge xt-badge-gold">I verifikuar</span>}
+              {profile.verified && <span className="xt-badge xt-badge-gold">{t('I verifikuar')}</span>}
               {clubData.clubType && <span className="xt-badge">{clubData.clubType}</span>}
             </div>
           </div>
-          {isOwner && <Link to="/club-roster" className="btn btn-primary">Hap menaxhimin e klubit</Link>}
+          {isOwner && <Link to="/club-roster" className="btn btn-primary">{t('Hap menaxhimin e klubit')}</Link>}
         </div>
       </section>
       {/* Gallery Photos */}
       {Array.isArray(profile.gallery) && profile.gallery.length > 0 && (
         <div className="xt-card p-4 sm:p-6">
-          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Galeria e klubit</h3>
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">{t('Galeria e klubit')}</h3>
           <div className="flex flex-wrap gap-4">
             {profile.gallery.map((img, idx) => (
               <img
@@ -235,7 +237,7 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
       {/* Club Videos */}
       {Array.isArray(profile.videos) && profile.videos.length > 0 && (
         <div className="xt-card p-4 sm:p-6">
-          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Videot e klubit</h3>
+          <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">{t('Videot e klubit')}</h3>
           <div className="flex flex-wrap gap-4">
             {profile.videos.map((vid, idx) => (
               <video
@@ -251,16 +253,16 @@ const ClubProfile = ({ profile = {}, isOwner }) => {
 
       {/* Club Information */}
       <div className="xt-card p-4 sm:p-6">
-        <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">Informacioni i klubit</h3>
+        <h3 className="text-xl font-bold mb-4 text-[var(--xt-color-text)]">{t('Informacioni i klubit')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Founded</label>
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">{t('Founded')}</label>
             <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
               {profile.founded || clubData.founded || profile.foundingYear || 'Nuk është shtuar'}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">Stadium</label>
+            <label className="text-sm font-medium text-[var(--xt-color-text-muted)]">{t('Stadium')}</label>
             <p className="text-lg font-semibold text-[var(--xt-color-text)] mt-1">
               {profile.stadium || clubData.stadium || 'Nuk është shtuar'}
             </p>

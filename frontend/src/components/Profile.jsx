@@ -28,9 +28,11 @@ import VerifiedBadge from './VerifiedBadge';
 import ParentVerificationModal from './ParentVerificationModal';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import { hasTier } from '../utils/subscriptionAccess';
+import { useLocale } from '../contexts/LocaleContext';
 import './ProfileTheme.css';
 
 const Profile = () => {
+  const { t } = useLocale();
     // const [streams, setStreams] = useState([]);
     // const [streamsLoading, setStreamsLoading] = useState(true);
   const { id } = useParams();
@@ -571,7 +573,7 @@ const Profile = () => {
     <div className="flex items-center justify-center h-screen px-4">
       <div className="xt-error-state xt-card max-w-md p-6 text-center">
         <p className="text-xl">{profileError || 'Profili nuk u gjet'}</p>
-        <button type="button" className="btn btn-outline mt-4" onClick={() => window.location.reload()}>Provo përsëri</button>
+        <button type="button" className="btn btn-outline mt-4" onClick={() => window.location.reload()}>{t('Provo përsëri')}</button>
       </div>
     </div>
   );
@@ -644,7 +646,7 @@ const Profile = () => {
         {isOwner && (
           <div className="absolute bottom-4 right-4">
             <input type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" id="cover-upload-input" />
-            <label htmlFor="cover-upload-input" className="btn btn-quiet cursor-pointer">Ndrysho kopertinën</label>
+            <label htmlFor="cover-upload-input" className="btn btn-quiet cursor-pointer">{t('Ndrysho kopertinën')}</label>
           </div>
         )}
       </div>
@@ -877,7 +879,7 @@ const Profile = () => {
               <div className="flex items-center justify-center md:justify-start gap-6 mt-10">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.posts}</div>
-                  <div className="text-sm text-gray-500">Postime</div>
+                  <div className="text-sm text-gray-500">{t('Postime')}</div>
                 </div>
                 <button
                   type="button"
@@ -885,7 +887,7 @@ const Profile = () => {
                   className="text-center cursor-pointer hover:text-blue-600 transition"
                 >
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.followers}</div>
-                  <div className="text-sm text-gray-500">Ndjekës</div>
+                  <div className="text-sm text-gray-500">{t('Ndjekës')}</div>
                 </button>
                 <button
                   type="button"
@@ -893,7 +895,7 @@ const Profile = () => {
                   className="text-center cursor-pointer hover:text-blue-600 transition"
                 >
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.following}</div>
-                  <div className="text-sm text-gray-500">Duke ndjekur</div>
+                  <div className="text-sm text-gray-500">{t('Duke ndjekur')}</div>
                 </button>
               </div>
               
@@ -945,7 +947,7 @@ const Profile = () => {
               {isOwner && isAthlete && (
                 <div className="mx-auto mt-5 max-w-md md:mx-0">
                   <div className="mb-1 flex items-center justify-between text-xs text-[var(--xt-color-text-muted)]">
-                    <span>Plotësia e profilit</span><span>{profileCompletion}%</span>
+                    <span>{t('Plotësia e profilit')}</span><span>{profileCompletion}%</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-[var(--xt-color-surface-raised)]" role="progressbar" aria-label="Plotësia e profilit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileCompletion}>
                     <div className="h-full rounded-full bg-[var(--xt-color-gold)] transition-[width]" style={{ width: `${profileCompletion}%` }} />
@@ -996,7 +998,7 @@ const Profile = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                     </svg>
-                    <span className="hidden md:inline">Message</span>
+                    <span className="hidden md:inline">{t('Mesazh')}</span>
                   </button>
                   <button 
                     onClick={() => setShowVideoCall(true)}
@@ -1006,7 +1008,7 @@ const Profile = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                     </svg>
-                    <span className="hidden md:inline">Video Call</span>
+                    <span className="hidden md:inline">{t('Video thirrje')}</span>
                   </button>
                 </div>
               )}
@@ -1176,7 +1178,7 @@ const Profile = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500 py-8">No posts yet</p>
+                  <p className="text-center text-gray-500 py-8">{t('Nuk ka postime ende')}</p>
                 )}
               </div>
             )}
@@ -1213,7 +1215,7 @@ const Profile = () => {
                 />
                 {profile?.liveVideos?.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold mb-2">Live Videos</h3>
+                    <h3 className="text-xl font-bold mb-2">{t('Video LIVE')}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {profile.liveVideos.map((video, idx) => (
                         <div key={idx} className="bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden shadow">
@@ -1229,7 +1231,7 @@ const Profile = () => {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-xl font-bold mb-2">Uploaded Videos</h3>
+                  <h3 className="text-xl font-bold mb-2">{t('Video të ngarkuara')}</h3>
                   <Videos userId={id} onlyUserVideos />
                 </div>
               </div>
@@ -1269,13 +1271,13 @@ const Profile = () => {
 
                 {profile.bio && (
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">Bio</h3>
+                    <h3 className="font-semibold text-lg mb-2">{t('Bio')}</h3>
                     <p className="text-gray-600 dark:text-gray-400">{profile.bio}</p>
                   </div>
                 )}
                 
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Information</h3>
+                  <h3 className="font-semibold text-lg mb-2">{t('Informacion')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {profile.city && (
                       <div className="flex items-center gap-2">
@@ -1329,15 +1331,15 @@ const Profile = () => {
             {activeTab === 'stats' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="mb-4 text-lg font-semibold">Sezoni dhe garat</h2>
+                  <h2 className="mb-4 text-lg font-semibold">{t('Sezoni dhe garat')}</h2>
                   {profile.statisticsSource === 'matches' ? (
-                    <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">Totali i karrierës është te CV. Këtu është ndarja pa e përsëritur atë.</p>
+                    <p className="mb-3 text-sm text-[var(--xt-color-text-muted)]">{t('Totali i karrierës është te CV. Këtu është ndarja pa e përsëritur atë.')}</p>
                   ) : (
-                    <p className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] px-4 py-8 text-sm">Ende nuk ka statistika nga ndeshjet.</p>
+                    <p className="xt-empty-state rounded-lg border border-dashed border-[var(--xt-color-border-strong)] px-4 py-8 text-sm">{t('Ende nuk ka statistika nga ndeshjet.')}</p>
                   )}
                   {profile.statisticsSource === 'matches' && profile.performance?.season && Number(profile.performance.career?.appearances) !== Number(profile.performance.season?.appearances) && (
                   <div className="mb-6">
-                    <h3 className="mb-3 text-base font-semibold">Sezoni aktual</h3>
+                    <h3 className="mb-3 text-base font-semibold">{t('Sezoni aktual')}</h3>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {[
                         ['Ndeshje', profile.performance.season.appearances],
@@ -1356,11 +1358,11 @@ const Profile = () => {
                   </div>
                   )}
                   {profile.statisticsSource === 'matches' && Number(profile.performance?.career?.appearances) === Number(profile.performance?.season?.appearances) && (
-                    <p className="mb-4 text-sm text-[var(--xt-color-text-muted)]">Të gjitha ndeshjet e regjistruara janë të sezonit aktual, prandaj totali është vetëm te CV.</p>
+                    <p className="mb-4 text-sm text-[var(--xt-color-text-muted)]">{t('Të gjitha ndeshjet e regjistruara janë të sezonit aktual, prandaj totali është vetëm te CV.')}</p>
                   )}
                   {Array.isArray(profile.performance?.competitions) && profile.performance.competitions.length > 1 && (
                     <div className="mt-6">
-                      <h3 className="mb-3 text-base font-semibold">Sipas garës</h3>
+                      <h3 className="mb-3 text-base font-semibold">{t('Sipas garës')}</h3>
                       <div className="space-y-2">
                         {profile.performance.competitions.map((row) => (
                           <div key={`${row.id || row.name}`} className="rounded-lg border border-[var(--xt-color-border)] p-3 text-sm">

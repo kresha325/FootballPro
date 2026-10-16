@@ -15,6 +15,7 @@ import {
 import { useSocket } from '../context/AuthContext';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { getNotificationIcon, navigateFromNotification } from '../utils/navigateFromNotification';
+import { useLocale } from '../context/LocaleContext';
 
 function NotificationRow({ item, onPress, onDelete, deleting }) {
   const icon = getNotificationIcon(item);
@@ -47,6 +48,7 @@ function NotificationRow({ item, onPress, onDelete, deleting }) {
 }
 
 export default function NotificationsScreen() {
+  const { t } = useLocale();
   const navigation = useNavigation();
   const { getSocket, socketConnected } = useSocket();
   const { notificationsCount, refresh: refreshBadges } = useUnreadBadges(getSocket, socketConnected);
@@ -179,27 +181,27 @@ export default function NotificationsScreen() {
           onPress={goBackToMoreMenu}
           style={styles.backBtn}
           accessibilityRole="button"
-          accessibilityLabel="Kthehu te More"
+          accessibilityLabel={t('Kthehu te More')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={24} color="#9A6B12" />
-          <Text style={styles.backLabel}>Menu</Text>
+          <Text style={styles.backLabel}>{t('More')}</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Njoftimet</Text>
+          <Text style={styles.headerTitle}>{t('Njoftime')}</Text>
           {notificationsCount > 0 ? (
-            <Text style={styles.unreadHint}>{notificationsCount} të palexuara</Text>
+            <Text style={styles.unreadHint}>{notificationsCount} {t('të palexuara')}</Text>
           ) : null}
         </View>
         <TouchableOpacity onPress={onMarkAll} disabled={markingAll} style={styles.markAllBtn}>
-          <Text style={styles.headerAction}>{markingAll ? '...' : 'Shënoji të gjitha'}</Text>
+          <Text style={styles.headerAction}>{markingAll ? '...' : t('Shëno të gjitha si të lexuara')}</Text>
         </TouchableOpacity>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <ListSearchBar
         value={listSearch}
         onChangeText={setListSearch}
-        placeholder="Kërko njoftime…"
+        placeholder={t('Kërko njoftime…')}
         onGlobalPress={() => navigation.navigate('Search', { initialQuery: listSearch })}
       />
       <View style={styles.filters}>
@@ -215,7 +217,7 @@ export default function NotificationsScreen() {
           ['SYSTEM', 'Sistem'],
         ].map(([id, label]) => (
           <TouchableOpacity key={id} onPress={() => setFilter(id)} style={[styles.filterChip, filter === id && styles.filterChipOn]}>
-            <Text style={[styles.filterText, filter === id && styles.filterTextOn]}>{label}</Text>
+          <Text style={[styles.filterText, filter === id && styles.filterTextOn]}>{t(label)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -245,7 +247,7 @@ export default function NotificationsScreen() {
             deleting={deletingId === item.id}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Nuk ka njoftime.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('Nuk ka njoftime.')}</Text>}
       />
     </View>
   );

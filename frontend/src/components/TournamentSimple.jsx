@@ -16,6 +16,7 @@ import axios from 'axios';
 import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
 import { TrophyIcon, ShieldCheckIcon, BoltIcon } from '@heroicons/react/24/outline';
 import { clubMembersAPI } from '../services/api';
+import { useLocale } from '../contexts/LocaleContext';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -336,6 +337,7 @@ function MatchBroadcastModal({
 }
 
 export default function TournamentSimple() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -856,7 +858,7 @@ export default function TournamentSimple() {
       <div className="flex min-h-screen items-center justify-center bg-[var(--xt-color-canvas)]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-[var(--xt-color-gold)] border-t-transparent" />
-          <p className="text-sm font-semibold tracking-wide text-emerald-200/80">Duke ngarkuar turnetë…</p>
+          <p className="text-sm font-semibold tracking-wide text-emerald-200/80">{t('Duke ngarkuar turnetë…')}</p>
         </div>
       </div>
     );
@@ -871,12 +873,12 @@ export default function TournamentSimple() {
         <div className="relative flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[var(--xt-color-gold-bright)]">X TALENTI · Competition Center</p>
-            <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">Turnetë</h1>
+            <h1 className="mt-2 text-2xl sm:text-4xl font-black text-white tracking-tight">{t('Turnetë')}</h1>
             <p className="mt-2 sm:mt-3 max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed">
-              Turnetë, rezultatet, renditjet dhe performanca e regjistruar në platformë.
+              {t('Turnetë, rezultatet, renditjet dhe performanca e regjistruar në platformë.')}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="xt-badge xt-badge-gold">{tournaments.length} turne</span>
+              <span className="xt-badge xt-badge-gold">{tournaments.length} {t('turne')}</span>
               <span className="xt-badge">Liga · Kupa · Knockout</span>
             </div>
           </div>
@@ -886,7 +888,7 @@ export default function TournamentSimple() {
               onClick={() => setShowCreateModal(true)}
               className="btn btn-primary min-h-11 shrink-0"
             >
-              + Krijo turne
+              + {t('Krijo turne')}
             </button>
           )}
         </div>
@@ -895,10 +897,10 @@ export default function TournamentSimple() {
       <ListSearchBar
         value={listSearch}
         onChange={setListSearch}
-        placeholder="Kërko turne sipas emrit, sezonit, statusit…"
+        placeholder={t('Kërko turne sipas emrit, sezonit, statusit…')}
       />
 
-      {loadError && <div className="xt-error-state xt-card mb-5" role="alert"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchTournaments(); }}>Provo përsëri</button></div>}
+      {loadError && <div className="xt-error-state xt-card mb-5" role="alert"><p>{loadError}</p><button type="button" className="btn btn-quiet min-h-10" onClick={() => { setLoading(true); fetchTournaments(); }}>{t('Provo përsëri')}</button></div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTournaments.map((tournament) => {
@@ -1108,7 +1110,7 @@ export default function TournamentSimple() {
       {tournaments.length === 0 && (
         <div className="text-center py-20">
           <div className="text-6xl mb-4">🏆</div>
-          <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">Nuk ka turne</h3>
+          <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">{t('Nuk ka turne')}</h3>
           <p className="text-[var(--xt-color-text-muted)] mb-6">
             {canCreateTournament
               ? 'Bëhu i pari që krijon një turne!'

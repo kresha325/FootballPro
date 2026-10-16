@@ -1,7 +1,9 @@
 import React from 'react';
 import { getFullUrl } from '../../utils/mediaUrl';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const FederationProfile = ({ federation, profile }) => {
+  const { t } = useLocale();
   const data = federation || profile;
   if (!data) {
     return (
@@ -39,7 +41,7 @@ const FederationProfile = ({ federation, profile }) => {
       {data.bio ? <p className="mb-4 whitespace-pre-wrap text-gray-800">{data.bio}</p> : null}
       {contact ? (
         <div className="mb-4">
-          <h3 className="font-semibold mb-1">Contact</h3>
+          <h3 className="font-semibold mb-1">{t('Contact')}</h3>
           <ul className="text-sm text-gray-700 space-y-1">
             {Object.entries(contact).map(([k, v]) => (
               <li key={k}>
@@ -52,7 +54,7 @@ const FederationProfile = ({ federation, profile }) => {
       ) : null}
       {history ? (
         <div className="mb-4">
-          <h3 className="font-semibold mb-1">History</h3>
+          <h3 className="font-semibold mb-1">{t('History')}</h3>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">
             {typeof history === 'string' ? history : JSON.stringify(history, null, 2)}
           </p>

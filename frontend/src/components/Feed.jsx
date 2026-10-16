@@ -25,8 +25,10 @@ import { tournamentIdFromNotification } from '../utils/notificationLinks';
 import { formatTotalsPoints } from '../utils/tournamentPoints';
 import { publicProfileName, publicProfileInitials } from '../utils/orgProfile';
 import './ProfileTheme.css';
+import { useLocale } from '../contexts/LocaleContext';
 
 const Feed = () => {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [denseFeed, setDenseFeed] = useState(() => isEarlyAccessEnabled('dense_feed'));
 
@@ -604,11 +606,11 @@ const Feed = () => {
           <div className="min-w-0">
             <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">{roleName} dashboard · X TALENTI</p>
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Mirë se erdhe, {user?.firstName || roleName}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">Shiko aktivitetin e fundit, zbulo talentin që po kërkon dhe vazhdo hapin tënd të radhës në futboll.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">{t('Shiko aktivitetin e fundit, zbulo talentin që po kërkon dhe vazhdo hapin tënd të radhës në futboll.')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {quickActions.slice(0, 2).map(({ label, to, icon }) => <Link key={to} to={to} className="btn btn-quiet min-h-11 text-sm">{icon}{label}</Link>)}
-            <button type="button" onClick={() => document.getElementById('new-post')?.focus()} className="btn btn-primary min-h-11 text-sm"><PlusIcon className="h-4 w-4" />Ndaj përditësim</button>
+            <button type="button" onClick={() => document.getElementById('new-post')?.focus()} className="btn btn-primary min-h-11 text-sm"><PlusIcon className="h-4 w-4" />{t('Ndaj përditësim')}</button>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
@@ -619,21 +621,21 @@ const Feed = () => {
       <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Përmbledhje e aktivitetit">
         <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
           <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Përditësime në feed</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Përditësime në feed')}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{displayPosts.length}</p>
           </div>
           <ChartBarIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
         </div>
         <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
           <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ndeshje të ardhshme</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Ndeshje të ardhshme')}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{matchesError ? '—' : upcomingMatches.length}</p>
           </div>
           <TrophyIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
         </div>
         <div className="xt-stat-card flex items-center justify-between gap-3 bg-white dark:bg-[#121c2a]">
           <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Turne të listuara</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('Turne të listuara')}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{trendingError ? '—' : trending.length}</p>
           </div>
           <UserGroupIcon className="h-5 w-5 text-[var(--xt-color-gold)]" />
@@ -641,8 +643,8 @@ const Feed = () => {
       </section>
 
       {['athlete', 'player', 'coach'].includes(role) && <section className="xt-card mb-6 bg-white p-4 dark:bg-[#0d1420] sm:p-5" aria-labelledby="performance-title">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Your progress</p><h2 id="performance-title" className="mt-1 text-lg text-slate-900 dark:text-white">Përmbledhje e performancës</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Profili im <ArrowRightIcon className="h-4 w-4" /></Link></div>
-        {performanceError ? <p className="text-sm text-slate-500 dark:text-slate-400">Statistikat nuk mund të ngarkoheshin.</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Duke ngarkuar statistikat">{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">{t('Progresi yt')}</p><h2 id="performance-title" className="mt-1 text-lg text-slate-900 dark:text-white">{t('Përmbledhje e performancës')}</h2></div><Link to={`/profile/${user?.id}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">{t('Profili im')} <ArrowRightIcon className="h-4 w-4" /></Link></div>
+        {performanceError ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('Statistikat nuk mund të ngarkoheshin.')}</p> : !performanceSummary ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label={t('Duke ngarkuar statistikat')}>{Array.from({ length: 4 }, (_, index) => <div key={index} className="xt-skeleton h-16 rounded-xl" />)}</div> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[['Gola', performanceSummary.scorerGoals], ['Asistime', performanceSummary.scorerAssists], ['Pikë', formatTotalsPoints(performanceSummary)], ['Turne', performanceSummary.tournamentsPlayed]].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-[#121c2a]">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
@@ -661,16 +663,16 @@ const Feed = () => {
       {/* Player Cards Section */}
       <section aria-labelledby="featured-talents-title">
         <div className="xt-section-header mb-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Discover</p><h2 id="featured-talents-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Talente të veçuara</h2></div>
-          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Të gjithë <ArrowRightIcon className="h-4 w-4" /></Link>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">{t('Zbulo')}</p><h2 id="featured-talents-title" className="mt-1 text-lg text-[var(--xt-color-text)]">{t('Talente të veçuara')}</h2></div>
+          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">{t('Të gjithë')} <ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
         <UserCardsSection />
       </section>
 
       <section aria-labelledby="featured-clubs-title">
         <div className="xt-section-header mb-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Club network</p><h2 id="featured-clubs-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Klube të veçuara</h2></div>
-          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">Zbulo klube <ArrowRightIcon className="h-4 w-4" /></Link>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">{t('Rrjeti i klubeve')}</p><h2 id="featured-clubs-title" className="mt-1 text-lg text-[var(--xt-color-text)]">{t('Klube të veçuara')}</h2></div>
+          <Link to="/profiles" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--xt-color-gold-bright)]">{t('Zbulo klube')} <ArrowRightIcon className="h-4 w-4" /></Link>
         </div>
         <UserCardsSection role="club" />
       </section>
@@ -683,13 +685,13 @@ const Feed = () => {
 
       <section aria-labelledby="activity-title">
       <div className="xt-section-header mb-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">Community</p><h2 id="activity-title" className="mt-1 text-lg text-[var(--xt-color-text)]">Aktiviteti i fundit</h2></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold)]">{t('Komuniteti')}</p><h2 id="activity-title" className="mt-1 text-lg text-[var(--xt-color-text)]">{t('Aktiviteti i fundit')}</h2></div>
         <span className="xt-badge">{displayPosts.length} përditësime</span>
       </div>
       <ListSearchBar
         value={feedSearch}
         onChange={setFeedSearch}
-        placeholder="Kërko postime në feed…"
+        placeholder={t('Kërko postime në feed…')}
       />
       {postsError && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--xt-color-danger)]/35 bg-[var(--xt-color-danger)]/5 p-4 text-sm" role="alert"><span>{postsError}</span><button type="button" onClick={() => {
         const followedOnly = (() => { try { return localStorage.getItem('feed_followed_only') === 'true'; } catch { return false; } })();
@@ -700,7 +702,7 @@ const Feed = () => {
       <div className="xt-card mb-5 p-4 sm:p-5">
         <div className="relative">
         <form onSubmit={handleCreatePost}>
-          <label htmlFor="new-post" className="sr-only">Çfarë po mendon?</label>
+          <label htmlFor="new-post" className="sr-only">{t('Çfarë po mendon?')}</label>
           <div className="relative mx-auto max-w-3xl">
               <textarea
                 id="new-post"

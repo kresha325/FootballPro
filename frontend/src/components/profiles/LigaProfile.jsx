@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ligaAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFullUrl } from '../../utils/mediaUrl';
+import { useLocale } from '../../contexts/LocaleContext';
 
 function mapProfileToLiga(profile) {
   if (!profile) return null;
@@ -40,6 +41,7 @@ function clubDisplayName(entry) {
 }
 
 const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [data, setData] = useState(liga || mapProfileToLiga(profile));
   const [loading, setLoading] = useState(!liga);
@@ -261,7 +263,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
       <div className="mb-4">
         <h3 className="font-semibold mb-1">Klube ({clubs.length})</h3>
         {clubs.length === 0 ? (
-          <p className="text-sm text-gray-500">Nuk ka klube të bashkuara ende.</p>
+          <p className="text-sm text-gray-500">{t('Nuk ka klube të bashkuara ende.')}</p>
         ) : (
           <ul className="space-y-2">
             {clubs.map((club, idx) => {
@@ -310,7 +312,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
       </div>
       {competitions.length > 0 ? (
         <div className="mb-4">
-          <h3 className="font-semibold mb-1">Competitions</h3>
+          <h3 className="font-semibold mb-1">{t('Competitions')}</h3>
           <ul className="list-disc ml-6 text-sm text-gray-700">
             {competitions.map((comp, idx) => (
               <li key={`${comp}-${idx}`}>
@@ -322,7 +324,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
       ) : null}
       {contact ? (
         <div className="mb-4">
-          <h3 className="font-semibold mb-1">Contact</h3>
+          <h3 className="font-semibold mb-1">{t('Contact')}</h3>
           <ul className="text-sm text-gray-700 space-y-1">
             {Object.entries(contact).map(([k, v]) => (
               <li key={k}>
@@ -335,7 +337,7 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
       ) : null}
       {social.length > 0 ? (
         <div>
-          <h3 className="font-semibold mb-1">Social Links</h3>
+          <h3 className="font-semibold mb-1">{t('Social Links')}</h3>
           <ul className="flex flex-wrap gap-3">
             {social.map(([platform, url]) =>
               url ? (

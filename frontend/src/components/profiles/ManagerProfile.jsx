@@ -1,6 +1,8 @@
 import React from 'react';
+import { useLocale } from '../../contexts/LocaleContext';
 
 const ManagerProfile = ({ profile = {} }) => {
+  const { t } = useLocale();
   const managerData = profile.stats || {};
 
   return (
@@ -11,23 +13,23 @@ const ManagerProfile = ({ profile = {} }) => {
       </div>
       {/* Management Experience */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Management Experience</h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('Management Experience')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{managerData.yearsExperience || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Years Experience</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Years Experience')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">{managerData.playersManaged || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Players Managed</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Players Managed')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
             <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{managerData.dealsNegotiated || 0}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Deals Negotiated</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Deals Negotiated')}</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{managerData.totalValue || '0M'}€</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Deal Value</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('Total Deal Value')}</div>
           </div>
         </div>
       </div>
