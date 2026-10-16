@@ -49,7 +49,7 @@ export default function FeedLiveNow() {
         auth: {
           token: localStorage.getItem('token') || '',
         },
-        transports: ['polling', 'websocket'],
+        transports: ['websocket'],
         reconnectionAttempts: 10,
       });
       socketRef.current.on('connect', () => {

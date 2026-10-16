@@ -39,6 +39,7 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
     const token = localStorage.getItem('token') || '';
     socketRef.current = io(SOCKET_URL, {
       auth: { token, userId },
+      transports: ['websocket'],
     });
     return () => {
       socketRef.current.disconnect();

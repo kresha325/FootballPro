@@ -30,9 +30,9 @@ export const SocketProvider = ({ children }) => {
       : BACKEND_URL;
     console.log('🔗 Connecting to Socket.IO:', socketUrl);
 
-    // Keep the connection on polling when the deployment proxy cannot complete
-    // WebSocket upgrades. Socket.IO still provides real-time events without the
-    // failed upgrade/reconnect noise in the browser console.
+    // Render can route separate polling requests to different instances. That
+    // breaks Engine.IO sessions (400: unknown sid), so use one WebSocket
+    // connection for the lifetime of the Socket.IO session.
     const newSocket = io(socketUrl, {
       auth: {
         token: localStorage.getItem('token') || user.token || '',
@@ -41,8 +41,7 @@ export const SocketProvider = ({ children }) => {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
-      transports: ['polling'],
-      upgrade: false,
+      transports: ['websocket'],
       path: '/socket.io',
       withCredentials: true,
     });
