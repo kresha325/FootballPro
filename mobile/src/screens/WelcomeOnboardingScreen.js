@@ -8,6 +8,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_BRAND_NAME } from '../config/branding';
 import { useTheme } from '../context/ThemeContext';
