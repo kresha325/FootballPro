@@ -1271,6 +1271,8 @@ exports.updateProfile = async (req, res) => {
     let profile = await Profile.findOne({ where: { userId: req.user.id } });
     const previousProfilePhoto = profile?.profilePhoto || null;
     const previousCoverPhoto = profile?.coverPhoto || null;
+    const previousProfileClubId = profile?.clubId ? Number(profile.clubId) : null;
+    const previousProfileClubName = String(profile?.club || '').trim();
 
     if (updateData.stats && typeof updateData.stats === 'object' && !Array.isArray(updateData.stats)) {
       const { validateFootballStats } = require('../utils/playerProfileCv');
@@ -1453,82 +1455,90 @@ exports.updateProfile = async (req, res) => {
     }
 
     if (['coach', 'trajner'].includes(req.user?.role)) {
-      const clubName = req.body.club || updateData.club;
-      const clubId = req.body.clubId || updateData.clubId;
-
-      if (clubId || clubName) {
+      const hasClubInput = req.body.club !== undefined || req.body.clubId !== undefined;
+      if (hasClubInput) {
         try {
-          const clubUser = await resolveClubUser({ clubId, clubName });
+          const clubName = String(req.body.club ?? updateData.club ?? '').trim();
+          const requestedClubId = req.body.clubId ?? updateData.clubId;
+          const clubUser = (clubName || requestedClubId)
+            ? await resolveClubUser({ clubId: requestedClubId, clubName })
+            : null;
+          const previousClub = previousProfileClubId || previousProfileClubName
+            ? await resolveClubUser({ clubId: previousProfileClubId, clubName: previousProfileClubName })
+            : null;
+          const oldClubId = Number(previousClub?.id || previousProfileClubId) || null;
+          const sameName = (left, right) => String(left || '').trim().toLocaleLowerCase() === String(right || '').trim().toLocaleLowerCase();
+          const clubChanged = clubUser
+            ? (oldClubId ? oldClubId !== Number(clubUser.id) : !sameName(previousProfileClubName, clubUser.firstName || clubName))
+            : Boolean(oldClubId || previousProfileClubName) && (!clubName || !sameName(previousProfileClubName, clubName));
 
           if (clubUser) {
             const clubProfile = await Profile.findOne({ where: { userId: clubUser.id } });
             const clubPatch = { clubId: clubUser.id };
-            if (clubProfile?.profilePhoto) {
-              clubPatch.clubLogo = clubProfile.profilePhoto;
-            }
-            if (clubProfile?.club && !updateData.club && !req.body.club) {
-              clubPatch.club = clubProfile.club;
-            }
+            if (clubProfile?.profilePhoto) clubPatch.clubLogo = clubProfile.profilePhoto;
+            if (!clubName && clubProfile?.club) clubPatch.club = clubProfile.club;
             await profile.update(clubPatch);
+          } else if (clubChanged) {
+            await profile.update({ clubId: null, clubLogo: null });
+          }
 
-            const existing = await ClubStaff.findOne({
-              where: {
-                clubId: clubUser.id,
-                staffId: req.user.id,
-              },
-            });
-
-            const normalizeCoachCategory = (value) => {
-              const raw = String(value || '').toLowerCase();
-              const map = {
-                general_trainer: 'general_trainer',
-                assistant_trainer: 'assistant_trainer',
-                fitness_trainer: 'fitness_trainer',
-                goalkeeper_trainer: 'goalkeeper_trainer',
-                technical_trainer: 'technical_trainer',
-                tactical_trainer: 'tactical_trainer',
-                psychological_trainer: 'psychological_trainer',
-                youth_trainer: 'youth_trainer',
-                rehabilitation_trainer: 'rehabilitation_trainer',
-                trajner_i_pergjithshem: 'general_trainer',
-                trajner_i_përgjithshëm: 'general_trainer',
-                trajner_ndihmes: 'assistant_trainer',
-                trajner_ndihmës: 'assistant_trainer',
-                trajner_fizik: 'fitness_trainer',
-                trajner_i_portiereve: 'goalkeeper_trainer',
-                trajner_i_portierëve: 'goalkeeper_trainer',
-                trajner_teknik: 'technical_trainer',
-                trajner_taktik: 'tactical_trainer',
-                trajner_psikologjik: 'psychological_trainer',
-                trajner_i_te_rinjve: 'youth_trainer',
-                trajner_i_të_rinjve: 'youth_trainer',
-                trajner_rehabilitimi: 'rehabilitation_trainer',
-              };
-              return map[raw] || value;
+          const normalizeCoachCategory = (value) => {
+            const raw = String(value || '').toLowerCase();
+            const map = {
+              general_trainer: 'general_trainer', assistant_trainer: 'assistant_trainer',
+              fitness_trainer: 'fitness_trainer', goalkeeper_trainer: 'goalkeeper_trainer',
+              technical_trainer: 'technical_trainer', tactical_trainer: 'tactical_trainer',
+              psychological_trainer: 'psychological_trainer', youth_trainer: 'youth_trainer',
+              rehabilitation_trainer: 'rehabilitation_trainer',
+              trajner_i_pergjithshem: 'general_trainer', trajner_i_përgjithshëm: 'general_trainer',
+              trajner_ndihmes: 'assistant_trainer', trajner_ndihmës: 'assistant_trainer',
+              trajner_fizik: 'fitness_trainer', trajner_i_portiereve: 'goalkeeper_trainer',
+              trajner_i_portierëve: 'goalkeeper_trainer', trajner_teknik: 'technical_trainer',
+              trajner_taktik: 'tactical_trainer', trajner_psikologjik: 'psychological_trainer',
+              trajner_i_te_rinjve: 'youth_trainer', trajner_i_të_rinjve: 'youth_trainer',
+              trajner_rehabilitimi: 'rehabilitation_trainer',
             };
-            const category = normalizeCoachCategory(req.body.coachCategory || updateData.coachCategory);
-            const staffRoleMap = {
-              general_trainer: 'head_coach',
-              assistant_trainer: 'assistant_coach',
-              fitness_trainer: 'fitness_coach',
-              goalkeeper_trainer: 'goalkeeper_coach',
-              technical_trainer: 'technical_coach',
-              tactical_trainer: 'tactical_coach',
-              psychological_trainer: 'sports_psychologist',
-              youth_trainer: 'assistant_coach',
-              rehabilitation_trainer: 'physiotherapist',
-            };
+            return map[raw] || value;
+          };
+          const category = normalizeCoachCategory(req.body.coachCategory || updateData.coachCategory);
+          const staffRoleMap = {
+            general_trainer: 'head_coach', assistant_trainer: 'assistant_coach',
+            fitness_trainer: 'fitness_coach', goalkeeper_trainer: 'goalkeeper_coach',
+            technical_trainer: 'technical_coach', tactical_trainer: 'tactical_coach',
+            psychological_trainer: 'sports_psychologist', youth_trainer: 'assistant_coach',
+            rehabilitation_trainer: 'physiotherapist',
+          };
+          const assignedStaffRole = staffRoleMap[category] || 'assistant_coach';
 
+          if (clubChanged) {
+            const previousAssignments = await ClubStaff.findAll({ where: { staffId: req.user.id } });
+            for (const assignment of previousAssignments) {
+              if (
+                Number(assignment.clubId) !== Number(clubUser?.id) &&
+                ['active', 'pending'].includes(assignment.status)
+              ) {
+                assignment.status = 'inactive';
+                if (!assignment.leftAt) assignment.leftAt = new Date();
+                await assignment.save();
+              }
+            }
+          }
+
+          if (clubUser) {
+            const existing = await ClubStaff.findOne({ where: { clubId: clubUser.id, staffId: req.user.id } });
             if (existing) {
-              existing.status = 'pending';
-              existing.staffRole = staffRoleMap[category] || existing.staffRole || 'assistant_coach';
+              existing.staffRole = assignedStaffRole;
               existing.teamType = existing.teamType || 'first_team';
+              if (clubChanged) {
+                existing.status = 'pending';
+                existing.leftAt = null;
+              }
               await existing.save();
-            } else {
+            } else if (clubChanged) {
               await ClubStaff.create({
                 clubId: clubUser.id,
                 staffId: req.user.id,
-                staffRole: staffRoleMap[category] || 'assistant_coach',
+                staffRole: assignedStaffRole,
                 teamType: 'first_team',
                 status: 'pending',
               });

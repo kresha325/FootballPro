@@ -71,9 +71,8 @@ const EditCoachProfile = ({ user, onSave, loading, errors }) => {
     Object.entries(form).forEach(([key, value]) => {
       formData.append(key, value);
     });
-    if (selectedClubId) {
-      formData.append('clubId', selectedClubId);
-    }
+    // Submit an empty value when free-text changes so the backend can clear a stale club link.
+    formData.append('clubId', selectedClubId || '');
     if (profilePhoto) {
       formData.append('profilePhoto', profilePhoto);
     }

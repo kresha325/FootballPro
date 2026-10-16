@@ -10,6 +10,20 @@ function formatCoachCategory(cat) {
   return String(cat).replace(/_/g, ' ');
 }
 
+const ROLE_PRESENTATION = {
+  athlete: { label: 'Lojtar', icon: '⚽', accent: '#9A6B12', descriptor: 'Performanca, karriera dhe momentet e lojës.' },
+  coach: { label: 'Trajner', icon: '📋', accent: '#0284c7', descriptor: 'Specializimi, metodologjia dhe angazhimet profesionale.' },
+  trajner: { label: 'Trajner', icon: '📋', accent: '#0284c7', descriptor: 'Specializimi, metodologjia dhe angazhimet profesionale.' },
+  scout: { label: 'Skaut', icon: '⌕', accent: '#7c3aed', descriptor: 'Zbulimi i talenteve, fushat e vëzhgimit dhe rajonet aktive.' },
+  manager: { label: 'Menaxher', icon: '▤', accent: '#d97706', descriptor: 'Përfaqësimi dhe përvoja në menaxhimin e karrierave.' },
+  referee: { label: 'Arbitër', icon: '⚖', accent: '#059669', descriptor: 'Ndeshjet, niveli dhe certifikimet profesionale.' },
+  club: { label: 'Klub', icon: '♜', accent: '#2563eb', descriptor: 'Skuadra, stafi dhe identiteti i klubit.' },
+  federation: { label: 'Federatë', icon: '◈', accent: '#4f46e5', descriptor: 'Informacion zyrtar dhe organizim sportiv.' },
+  liga: { label: 'Ligë', icon: '🏆', accent: '#ca8a04', descriptor: 'Kompeticionet, klubet anëtare dhe niveli i ligës.' },
+  media: { label: 'Media sportive', icon: '▸', accent: '#e11d48', descriptor: 'Mbulimi sportiv, publikimet dhe platformat.' },
+  business: { label: 'Biznes sportiv', icon: '▣', accent: '#ea580c', descriptor: 'Shërbimet dhe bashkëpunimet në sport.' },
+};
+
 function formatAffiliation(a) {
   const labels = {
     club: 'Club trainer',
@@ -429,25 +443,25 @@ export default function PublicProfileOverviewTab({
   ].filter(([, value]) => hasValue(value));
 
   const scoutCards = [
-    { key: 'y', label: 'Years', value: String(stats.yearsExperience ?? 0), color: '#2563eb' },
-    { key: 'd', label: 'Discovered', value: String(stats.playersDiscovered ?? 0), color: '#16a34a' },
-    { key: 's', label: 'Signed', value: String(stats.successfulSigns ?? 0), color: '#9333ea' },
-    { key: 'r', label: 'Regions', value: String(stats.regionsActive ?? 0), color: '#ea580c' },
-  ];
+    { key: 'y', label: 'Vite përvojë', value: numberValue(stats.yearsExperience), color: '#7c3aed' },
+    { key: 'd', label: 'Talente të zbuluara', value: numberValue(stats.playersDiscovered), color: '#7c3aed' },
+    { key: 's', label: 'Transferime', value: numberValue(stats.successfulSigns), color: '#7c3aed' },
+    { key: 'r', label: 'Rajone aktive', value: numberValue(stats.regionsActive), color: '#7c3aed' },
+  ].filter((card) => card.value !== null);
 
   const managerCards = [
-    { key: 'y', label: 'Years', value: String(stats.yearsExperience ?? 0), color: '#2563eb' },
-    { key: 'p', label: 'Players', value: String(stats.playersManaged ?? 0), color: '#16a34a' },
-    { key: 'd', label: 'Deals', value: String(stats.dealsNegotiated ?? 0), color: '#9333ea' },
-    { key: 'v', label: 'Value', value: stats.totalValue != null ? `${stats.totalValue}` : '—', color: '#ea580c' },
-  ];
+    { key: 'y', label: 'Vite përvojë', value: numberValue(stats.yearsExperience), color: '#d97706' },
+    { key: 'p', label: 'Lojtarë të menaxhuar', value: numberValue(stats.playersManaged), color: '#d97706' },
+    { key: 'd', label: 'Marrëveshje', value: numberValue(stats.dealsNegotiated), color: '#d97706' },
+    { key: 'v', label: 'Vlera totale', value: hasValue(stats.totalValue) ? `${stats.totalValue} €` : null, color: '#d97706' },
+  ].filter((card) => card.value !== null);
 
   const refereeCards = [
-    { key: 'y', label: 'Years', value: String(stats.yearsExperience ?? 0), color: '#2563eb' },
-    { key: 'm', label: 'Matches', value: String(stats.matchesOfficiated ?? 0), color: '#16a34a' },
-    { key: 'c', label: 'Certs', value: String(stats.certifications ?? 0), color: '#9333ea' },
-    { key: 'l', label: 'Level', value: stats.currentLevel != null ? String(stats.currentLevel) : '—', color: '#ea580c' },
-  ];
+    { key: 'y', label: 'Vite përvojë', value: numberValue(stats.yearsExperience), color: '#059669' },
+    { key: 'm', label: 'Ndeshje', value: numberValue(stats.matchesOfficiated), color: '#059669' },
+    { key: 'c', label: 'Certifikime', value: hasValue(stats.certifications) ? String(stats.certifications) : null, color: '#059669' },
+    { key: 'l', label: 'Niveli', value: hasValue(stats.currentLevel) ? String(stats.currentLevel) : null, color: '#059669' },
+  ].filter((card) => card.value !== null);
 
   const hasRoleContent =
     (isAthlete &&
@@ -464,13 +478,40 @@ export default function PublicProfileOverviewTab({
     role === 'manager' ||
     role === 'referee' ||
     role === 'club' ||
+    role === 'liga' ||
     role === 'coach' ||
     role === 'trajner' ||
     ['business', 'media', 'federation'].includes(role) ||
     (!isAthlete && (careerItems?.length || careerText));
+  const rolePresentation = ROLE_PRESENTATION[role] || { label: 'Profil profesional', icon: '✦', accent: '#64748b', descriptor: 'Informacioni kryesor i profilit.' };
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() || profile.club || profile.name || rolePresentation.label;
+  const roleSpecialty = role === 'coach' || role === 'trajner'
+    ? formatCoachCategory(profile.coachCategory)
+    : role === 'scout'
+      ? (Array.isArray(stats.specializations) ? stats.specializations.slice(0, 2).join(' · ') : '')
+      : role === 'club'
+        ? (profile.league || stats.league || '')
+        : role === 'liga'
+          ? (profile.level || stats.level || '')
+          : role === 'media'
+            ? (stats.coverage || stats.industry || '')
+            : role === 'business'
+              ? (stats.industry || '')
+              : '';
 
   return (
     <View style={styles.wrap}>
+      <View style={[styles.roleHero, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={[styles.roleIcon, { backgroundColor: `${rolePresentation.accent}18` }]}>
+          <Text style={[styles.roleIconText, { color: rolePresentation.accent }]}>{rolePresentation.icon}</Text>
+        </View>
+        <View style={styles.roleHeroText}>
+          <Text style={[styles.roleLabel, { color: rolePresentation.accent }]}>{rolePresentation.label}</Text>
+          <Text style={[styles.roleName, { color: theme.text }]} numberOfLines={2}>{displayName}</Text>
+          <Text style={[styles.roleDescriptor, { color: theme.muted }]}>{rolePresentation.descriptor}</Text>
+          {roleSpecialty ? <Text style={[styles.roleSpecialty, { color: theme.text }]} numberOfLines={2}>{roleSpecialty}</Text> : null}
+        </View>
+      </View>
       {isAthlete && profile.completeness?.percent != null ? (
         <Text style={[styles.bio, { color: theme.muted, marginBottom: 12 }]}>
           Plotësia e profilit: {profile.completeness.percent}%
@@ -912,7 +953,10 @@ export default function PublicProfileOverviewTab({
       ) : null}
 
       {['business', 'media', 'federation'].includes(role) ? (
-        <Section title="Organization" theme={theme}>
+        <Section
+          title={role === 'business' ? 'Biznesi dhe shërbimet' : role === 'media' ? 'Media dhe mbulimi' : 'Federata dhe organizimi'}
+          theme={theme}
+        >
           {stats.industry ? (
             <Text style={[styles.line, { color: theme.muted }]}>
               <Text style={{ fontWeight: '700', color: theme.text }}>Industry: </Text>
@@ -943,6 +987,42 @@ export default function PublicProfileOverviewTab({
               {stats.founded}
             </Text>
           ) : null}
+          {stats.coverage ? (
+            <Text style={[styles.line, { color: theme.muted }]}>
+              <Text style={{ fontWeight: '700', color: theme.text }}>Mbulimi: </Text>
+              {stats.coverage}
+            </Text>
+          ) : null}
+          {stats.website ? (
+            <Text style={[styles.line, { color: theme.muted }]}>
+              <Text style={{ fontWeight: '700', color: theme.text }}>Website: </Text>
+              {stats.website}
+            </Text>
+          ) : null}
+          {stats.foundedYear || stats.founded ? (
+            <Text style={[styles.line, { color: theme.muted }]}>
+              <Text style={{ fontWeight: '700', color: theme.text }}>Themeluar: </Text>
+              {stats.foundedYear || stats.founded}
+            </Text>
+          ) : null}
+          {Array.isArray(stats.services) && stats.services.length ? (
+            <ChipList items={stats.services.map((item) => typeof item === 'object' ? item.name || item.title : String(item))} theme={theme} />
+          ) : null}
+        </Section>
+      ) : null}
+
+      {role === 'liga' ? (
+        <Section title="Të dhënat e ligës" eyebrow="Kompeticion zyrtar" theme={theme}>
+          {[
+            ['Niveli', profile.level || stats.level],
+            ['Shteti', profile.country || stats.country],
+            ['Viti i themelimit', profile.foundedYear || stats.foundedYear],
+            ['Website', profile.website || stats.website],
+          ].filter(([, value]) => hasValue(value)).map(([label, value]) => (
+            <Text key={label} style={[styles.line, { color: theme.muted }]}>
+              <Text style={{ fontWeight: '700', color: theme.text }}>{label}: </Text>{String(value)}
+            </Text>
+          ))}
         </Section>
       ) : null}
 
@@ -985,6 +1065,14 @@ export default function PublicProfileOverviewTab({
 
 const styles = StyleSheet.create({
   wrap: { paddingBottom: 8 },
+  roleHero: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 16 },
+  roleIcon: { width: 52, height: 52, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  roleIconText: { fontSize: 24, fontWeight: '800' },
+  roleHeroText: { flex: 1, minWidth: 0 },
+  roleLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+  roleName: { fontSize: 19, fontWeight: '800', marginTop: 2 },
+  roleDescriptor: { fontSize: 12, lineHeight: 17, marginTop: 3 },
+  roleSpecialty: { fontSize: 12, fontWeight: '700', marginTop: 5 },
   sectionTitle: { fontSize: 17, fontWeight: '800', marginBottom: 8 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },

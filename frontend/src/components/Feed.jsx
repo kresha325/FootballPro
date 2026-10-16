@@ -835,12 +835,13 @@ const Feed = () => {
               {/* Post Content */}
               <article className={`xt-card flex-1 p-4 transition-colors sm:p-5 ${post.sponsors?.length > 0 ? 'border-[var(--xt-color-gold)]/40 bg-[var(--xt-color-surface-raised)]' : ''} ${highlightedPostId === String(post.id) ? 'ring-2 ring-[var(--xt-color-gold)]' : ''}`}>
                 {post.sponsors?.length > 0 && (
-                  <div className="mb-2 flex items-center gap-2">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className="xt-badge xt-badge-gold">Sponsored</span>
+                    <SponsorBanner sponsors={post.sponsors} compact />
                   </div>
                 )}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center">
                   <div 
                     className="flex items-center cursor-pointer hover:opacity-80 transition-opacity" 
                     onClick={(e) => {
@@ -857,18 +858,18 @@ const Feed = () => {
                             : getCloudinarySafeUrl(getFullUrl(user.profilePhoto))
                         }
                         alt={publicProfileName(post.author) || user?.firstName || 'User'}
-                        className="h-10 w-10 rounded-full border border-white/15 object-cover"
+                        className="h-10 w-10 shrink-0 rounded-full border border-white/15 object-cover"
                         loading="lazy"
                         decoding="async"
                         onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="xt-avatar h-10 w-10">
+                      <div className="xt-avatar h-10 w-10 shrink-0">
                         {publicProfileInitials(post.author || user)}
                       </div>
                     )}
-                    <div className="ml-3 min-w-0">
-                      <p className="inline-flex items-center gap-1 font-semibold text-[var(--xt-color-text)] hover:underline">
+                    <div className="ml-3 min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-1 font-semibold text-[var(--xt-color-text)] hover:underline">
                         <PersonName>
                           {publicProfileName(post.author) || 'I panjohur'}
                         </PersonName>
@@ -879,12 +880,6 @@ const Feed = () => {
                       </p>
                     </div>
                   </div>
-                  {/* Sponsor Banner inline with user info */}
-                  {post.sponsors?.length > 0 && (
-                    <div className="ml-4">
-                      <SponsorBanner sponsors={post.sponsors} compact />
-                    </div>
-                  )}
                 </div>
                 {user && post.userId === user.id && (
                   <div className="flex items-center gap-2">

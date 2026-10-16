@@ -1,11 +1,7 @@
 import React from 'react';
 import PlayerProfile from './PlayerProfile';
-import CoachProfile from './CoachProfile';
-import ScoutProfile from './ScoutProfile';
-import ManagerProfile from './ManagerProfile';
-import RefereeProfile from './RefereeProfile';
+import RoleProfileOverview from './RoleProfileOverview';
 import ClubProfile from './ClubProfile';
-import BusinessProfile from './BusinessProfile';
 import LigaProfile from './LigaProfile';
 import FederationProfile from './FederationProfile';
 
@@ -46,19 +42,18 @@ const ProfileSelector = ({ user, profile, isOwner, onEdit, tournamentSummary, ga
       return <PlayerProfile profile={profile} tournamentSummary={tournamentSummary} gallery={gallery} onShowVideos={onShowVideos} onShowGallery={onShowGallery} />;
     case 'coach':
     case 'trajner':
-      return <CoachProfile profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'scout':
-      return <ScoutProfile profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'manager':
-      return <ManagerProfile profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'referee':
-      return <RefereeProfile profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'club':
       return <ClubProfile profile={profile} isOwner={isOwner} />;
     case 'business':
-      return <BusinessProfile profile={profile} />;
     case 'media':
-      return <BusinessProfile profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'liga':
       return (
         <LigaProfile
@@ -70,7 +65,7 @@ const ProfileSelector = ({ user, profile, isOwner, onEdit, tournamentSummary, ga
         />
       );
     case 'federation':
-      return <FederationProfile federation={profile} profile={profile} />;
+      return <RoleProfileOverview profile={profile} role={role} />;
     case 'admin':
       return <GeneralProfileOverview profile={profile} role={role} />;
     default:
