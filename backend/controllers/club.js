@@ -34,7 +34,7 @@ exports.getClub = async (req, res) => {
     const userId = req.params.id || req.user.id;
     const profile = await Club.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
     });
     if (!profile) {
       return res.status(404).json({ msg: 'Club profile not found' });
@@ -72,7 +72,7 @@ exports.updateClub = async (req, res) => {
 exports.getAllClubs = async (req, res) => {
   try {
     const clubs = await Club.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']]
     });
     res.json(clubs);

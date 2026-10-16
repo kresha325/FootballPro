@@ -36,7 +36,7 @@ exports.getAthlete = async (req, res) => {
     const userId = req.params.id || req.user.id;
     const profile = await Athlete.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
     });
     if (!profile) {
       return res.status(404).json({ msg: 'Athlete profile not found' });
@@ -76,7 +76,7 @@ exports.updateAthlete = async (req, res) => {
 exports.getAllAthletes = async (req, res) => {
   try {
     const athletes = await Athlete.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']]
     });
     res.json(athletes);

@@ -101,7 +101,7 @@ exports.getPost = async (req, res) => {
       include: [{ 
         model: User, 
         as: 'author',
-        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'] 
+        attributes: ['id', 'firstName', 'lastName', 'verified']
       }] 
     });
     if (!post) return res.status(404).json({ msg: 'Post not found' });
@@ -120,7 +120,7 @@ exports.getPost = async (req, res) => {
     if (postObj.imageUrl) postObj.imageUrl = toAbsoluteUploadsUrl(req, postObj.imageUrl);
     if (postObj.videoUrl) postObj.videoUrl = toAbsoluteUploadsUrl(req, postObj.videoUrl);
     res.json(postObj);
-  } catch (err) {
+  } catch {
     res.status(500).json({ msg: 'Server error' });
   }
 };

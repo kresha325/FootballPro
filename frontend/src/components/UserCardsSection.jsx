@@ -125,6 +125,7 @@ const UserCardsSection = ({ role = 'athlete' }) => {
   const getProfileAge = (profile) => {
     if (typeof profile?.age === 'number') return profile.age;
     if (typeof profile?.Profile?.age === 'number') return profile.Profile.age;
+    if (profile?.age != null) return Number(profile.age) || null;
     return getAgeFromDate(profile?.dateOfBirth || profile?.User?.dateOfBirth);
   };
 

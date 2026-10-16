@@ -19,7 +19,6 @@ import { getFoundingYear, isOrgProfileRole, publicProfileInitials, publicProfile
 import TransferHistory from './TransferHistory';
 import VideoCallSimple from './VideoCallSimple';
 import { getFullUrl } from '../utils/mediaUrl';
-import { formatTotalsPoints } from '../utils/tournamentPoints';
 import { LiveStreamChat, LiveStreamReactions, LiveStreamGuests } from './profile/LiveStreamWidgets';
 import ProfileSponsorsPanel from './profile/ProfileSponsorsPanel';
 import ProfileGalleryPanel from './profile/ProfileGalleryPanel';

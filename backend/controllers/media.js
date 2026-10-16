@@ -34,7 +34,7 @@ exports.getMedia = async (req, res) => {
     const userId = req.params.id || req.user.id;
     const profile = await Media.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
     });
     if (!profile) {
       return res.status(404).json({ msg: 'Media profile not found' });
@@ -72,7 +72,7 @@ exports.updateMedia = async (req, res) => {
 exports.getAllMedias = async (req, res) => {
   try {
     const medias = await Media.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']]
     });
     res.json(medias);

@@ -22,10 +22,10 @@ module.exports = ({ config }) => {
     );
   }
 
-  const allowMobileDigital =
-    process.env.ALLOW_MOBILE_DIGITAL_PURCHASES === 'true' ||
-    process.env.ALLOW_MOBILE_DIGITAL_PURCHASES === '1' ||
-    staticExtra.ALLOW_MOBILE_DIGITAL_PURCHASES === true;
+  // Keep real-money mobile purchases disabled in every build profile until
+  // payments are deliberately launched. An EAS environment override must not
+  // turn billing back on accidentally.
+  const allowMobileDigital = false;
 
   return {
     ...config,

@@ -66,18 +66,19 @@ export default function SponsorsAdsHub() {
     return { days: d, pricePerDay: perDay, displaySeconds, priceEur: perDay * d };
   }, [aDays, aMediaKind, aMediaDurationSec]);
 
+  const currentUserId = user?.id;
   const loadSponsors = useCallback(async () => {
-    if (!user?.id) {
+    if (!currentUserId) {
       setSponsors([]);
       return;
     }
     try {
-      const res = await sponsorAPI.getSponsorsByUser(user.id);
+      const res = await sponsorAPI.getSponsorsByUser(currentUserId);
       setSponsors(Array.isArray(res.data) ? res.data : []);
     } catch {
       setSponsors([]);
     }
-  }, [user?.id]);
+  }, [currentUserId]);
 
   const loadAds = useCallback(async () => {
     try {

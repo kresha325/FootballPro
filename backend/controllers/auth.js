@@ -71,7 +71,6 @@ exports.register = async (req, res) => {
     }
 
     // 2. Kontrollo nëse ekziston user
-    console.log('BACKEND: Checking if user exists with email:', email);
     const existingUser = await User.findOne({
       where: User.sequelize.where(
         User.sequelize.fn('LOWER', User.sequelize.col('email')),
@@ -366,6 +365,7 @@ exports.resetPassword = async (req, res) => {
     user.password = hashedPassword;
     user.resetPasswordToken = null;
     user.resetPasswordExpire = null;
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
 
     try {

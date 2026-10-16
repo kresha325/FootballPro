@@ -34,7 +34,7 @@ exports.getFederation = async (req, res) => {
     const userId = req.params.id || req.user.id;
     const profile = await Federation.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
     });
     if (!profile) {
       return res.status(404).json({ msg: 'Federation profile not found' });
@@ -72,7 +72,7 @@ exports.updateFederation = async (req, res) => {
 exports.getAllFederations = async (req, res) => {
   try {
     const federations = await Federation.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']]
     });
     res.json(federations);

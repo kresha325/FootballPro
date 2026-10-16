@@ -117,6 +117,9 @@ exports.getPendingRequests = async (req, res) => {
 // Get all roster requests (with filters)
 exports.getAllRequests = async (req, res) => {
   try {
+    if (!['athlete', 'club'].includes(String(req.user?.role || '').toLowerCase())) {
+      return res.status(403).json({ error: 'Vetëm atletët dhe klubet mund t’i shohin kërkesat e tyre' });
+    }
     const { status, clubId, athleteId } = req.query;
     const where = {};
 

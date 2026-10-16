@@ -225,7 +225,7 @@ const BrowseProfiles = () => {
               </div>
               <div className="flex-1 flex flex-col justify-between p-4 bg-gray-900/90 text-white">
                 <div className="mb-2">
-                  <div className="text-sm opacity-80">Datëlindja: {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('sq-AL') : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
+                  <div className="text-sm opacity-80">Mosha: {profile.age != null ? profile.age : '—'} {profile.country ? `🌍 ${profile.country}` : ''}</div>
                 </div>
                 <div className="flex gap-2 mt-auto">
                   <Link

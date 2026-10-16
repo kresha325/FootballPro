@@ -109,6 +109,8 @@ function applyProfilePrivacy(response, viewer, privacyInput) {
 
   if (!canView(privacy.dateOfBirth, viewer)) {
     response.dateOfBirth = null;
+    response.age = null;
+    response.ageGroup = null;
   }
 
   if (!canView(privacy.location, viewer)) {

@@ -24,7 +24,11 @@ Dev-client LAN Metro (`http://192.168.x.x:8081`) is runtime-only and not bundled
 
 ## Manual
 
-Confirm Render env has production LiveKit, Cloudinary, Stripe, JWT_SECRET, VAPID, Expo push credentials, plus IAP:
+Confirm Render env has production LiveKit, Cloudinary, JWT_SECRET, VAPID, and Expo push credentials.
+
+Payments are paused: `PAYMENTS_ENABLED=false` on the API and mobile digital purchases are hard-disabled in every build profile. Do not add Stripe or store purchase credentials until payments are deliberately launched.
+
+When payments are launched later, configure the IAP verification keys:
 
 | Key | Notes |
 |-----|--------|

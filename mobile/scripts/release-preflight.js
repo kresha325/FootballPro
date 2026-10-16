@@ -49,11 +49,16 @@ if (easJson.cli?.appVersionSource !== 'remote') {
 }
 console.log('- EAS autoIncrement + remote appVersionSource ... PASS');
 
-// IAP flag
-if (expo.extra?.ALLOW_MOBILE_DIGITAL_PURCHASES !== true) {
-  fail('ALLOW_MOBILE_DIGITAL_PURCHASES must be true for iOS digital goods');
+// Purchases remain disabled until a separate payment launch is approved.
+if (expo.extra?.ALLOW_MOBILE_DIGITAL_PURCHASES !== false) {
+  fail('ALLOW_MOBILE_DIGITAL_PURCHASES must be false while mobile payments are paused');
 }
-console.log('- ALLOW_MOBILE_DIGITAL_PURCHASES ... PASS');
+for (const profile of ['development', 'preview', 'production']) {
+  if (easJson.build?.[profile]?.env?.ALLOW_MOBILE_DIGITAL_PURCHASES !== 'false') {
+    fail(`ALLOW_MOBILE_DIGITAL_PURCHASES must be false in the ${profile} EAS profile`);
+  }
+}
+console.log('- Mobile purchases disabled in app + EAS profiles ... PASS');
 
 // Legal URLs exist in Settings
 const settingsPath = path.join(root, 'src/screens/SettingsScreen.js');

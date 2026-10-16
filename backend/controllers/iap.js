@@ -5,6 +5,7 @@ const { JonCoinTransaction } = require('../models');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 const { verifyAppleSignedPayload } = require('../utils/appleJws');
 const { verifyGooglePlayPurchase, getServiceAccount: getGoogleServiceAccount } = require('../utils/googlePlay');
+const { PLANS, activatePremiumForUser } = require('./premium');
 
 const APPLE_BUNDLE_ID = 'com.kresha325.xtalenti';
 

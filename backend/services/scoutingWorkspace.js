@@ -6,7 +6,6 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const Match = require('../models/Match');
 const { Tournament } = require('../models/Tournament');
-const PlayerMatchStat = require('../models/PlayerMatchStat');
 const MediaItem = require('../models/MediaItem');
 const ScoutShortlist = require('../models/ScoutShortlist');
 const ScoutWatchlist = require('../models/ScoutWatchlist');
@@ -846,7 +845,7 @@ async function resolveMatchContext(body) {
     const tournament = await Tournament.findByPk(tournamentId, { attributes: ['id'] });
     if (!tournament) return { ok: false, status: 400, msg: 'Kompeticioni nuk u gjet.' };
   }
-  return { ok: true, matchId: null, tournamentId: tournamentId || null, playerId };
+  return { ok: true, matchId: null, tournamentId: tournamentId || null };
 }
 
 async function listReports(user, query) {

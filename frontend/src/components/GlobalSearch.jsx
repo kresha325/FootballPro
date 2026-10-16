@@ -93,14 +93,15 @@ export default function GlobalSearch() {
   const [trendingPosts, setTrendingPosts] = useState([]);
   const [trendingUsers, setTrendingUsers] = useState([]);
 
+  const currentUserId = user?.id;
   const fetchFollowing = useCallback(async () => {
-    if (!user?.id) {
+    if (!currentUserId) {
       setFollowingUsers([]);
       return;
     }
     setLoading(true);
     try {
-      const res = await profileAPI.getFollowing(user.id);
+      const res = await profileAPI.getFollowing(currentUserId);
       setFollowingUsers(mapFollowingRows(res.data));
     } catch (err) {
       console.error('Following list error:', err);
@@ -108,7 +109,7 @@ export default function GlobalSearch() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [currentUserId]);
 
   const fetchBrowse = useCallback(async () => {
     setLoading(true);

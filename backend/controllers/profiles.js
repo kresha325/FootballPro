@@ -459,8 +459,7 @@ exports.createProfile = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    console.log('🔎 [getProfile] req.user:', req.user);
-    console.log('🔎 [getProfile] req.params.id:', req.params.id);
+    console.log('🔎 [getProfile] viewerId:', req.user?.id, 'profileId:', req.params.id);
     const userId = parseInt(req.params.id || req.user.id, 10);
     if (!Number.isFinite(userId) || userId <= 0) {
       return res.status(400).json({ msg: 'ID e pavlefshme' });
@@ -523,12 +522,17 @@ exports.getProfile = async (req, res) => {
     delete plainProfile.User;
 
     // Merge user data into profile response
-    // Add matches, achievements, media (dummy for now, replace with real fetch if needed)
-    let joncoinBalance = 0;
-    try {
-      joncoinBalance = await getCompletedLedgerBalance(userId);
-    } catch (_e) {
-      joncoinBalance = user ? Math.round(parseFloat(user.joncoinBalance || 0) * 100) / 100 : 0;
+    // Account email, full birth date and wallet balance are private. Only load
+    // the balance for the account owner; other profile fields remain public to
+    // authenticated viewers.
+    const isSelf = Number(req.user?.id) === Number(userId);
+    let joncoinBalance;
+    if (isSelf) {
+      try {
+        joncoinBalance = await getCompletedLedgerBalance(userId);
+      } catch (_e) {
+        joncoinBalance = user ? Math.round(parseFloat(user.joncoinBalance || 0) * 100) / 100 : 0;
+      }
     }
 
     let ligaFoundedYear = null;
@@ -550,8 +554,6 @@ exports.getProfile = async (req, res) => {
       id: plainProfile.userId,
       firstName: user ? user.firstName : null,
       lastName: user ? user.lastName : null,
-      email: user ? user.email : null,
-      dateOfBirth: user ? user.dateOfBirth : null,
       gender: user ? user.gender : null,
       verified: (() => {
         try {
@@ -584,7 +586,11 @@ exports.getProfile = async (req, res) => {
       achievements: plainProfile.achievements || [],
       media: plainProfile.media || [],
       performanceTrend: plainProfile.performanceTrend || [],
-      joncoinBalance,
+      ...(isSelf ? {
+        email: user ? user.email : null,
+        dateOfBirth: user ? user.dateOfBirth : null,
+        joncoinBalance,
+      } : {}),
     };
 
     try {
@@ -761,7 +767,6 @@ exports.getPublicProfileCv = async (req, res) => {
       premium: Boolean(user.premium),
       adminVerified: Boolean(user.adminVerified),
       gender: user.gender || null,
-      dateOfBirth: isOrg ? null : user.dateOfBirth || null,
       age,
       ageGroup,
       foundedYear: ligaFoundedYear || plainProfile.foundedYear || null,
@@ -1586,7 +1591,10 @@ exports.getAllProfiles = async (req, res) => {
       console.warn('Get all profiles include error, falling back:', includeError.message);
       const baseProfiles = await Profile.findAll({ order: [['createdAt', 'DESC']] });
       const userIds = baseProfiles.map(p => p.userId).filter(Boolean);
-      const users = await User.findAll({ where: { id: userIds } });
+      const users = await User.findAll({
+        where: { id: userIds },
+        attributes: userInclude.attributes,
+      });
       const userMap = new Map(users.map(u => [u.id, u]));
       profiles = baseProfiles
         .map(p => {
@@ -1598,17 +1606,27 @@ exports.getAllProfiles = async (req, res) => {
 
 
     // Merge user data into each profile dhe standardizo path-in e profilePhoto
+    const { normalizePrivacy, isProfessionalRole } = require('../utils/profilePrivacy');
+    const viewerIsProfessional = isProfessionalRole(req.user?.role);
     let profilesWithUserData = profiles
       .filter(profile => profile && profile.User)
+      .filter(profile => !String(profile.User.email || '').includes('@footballpro-smoke.invalid'))
       .map(profile => {
+      const profileData = profile.toJSON();
+      delete profileData.User;
+      const privacy = normalizePrivacy(profileData.privacy);
+      const birthDateVisible = privacy.dateOfBirth === 'public' ||
+        (privacy.dateOfBirth === 'followers' && viewerIsProfessional);
       const obj = {
-        ...profile.toJSON(),
+        ...profileData,
         id: profile.userId,
         firstName: profile.User.firstName,
         lastName: profile.User.lastName,
-        email: profile.User.email,
         role: profile.User.role,
-        verified: profile.User.verified
+        verified: profile.User.verified,
+        age: birthDateVisible && typeof profile.User.getAge === 'function'
+          ? profile.User.getAge()
+          : null,
       };
       // Standardizo path-in e profilePhoto si në getProfile
       let photo = obj.profilePhoto;
@@ -1632,10 +1650,6 @@ exports.getAllProfiles = async (req, res) => {
     if (excludeUserId) {
       profilesWithUserData = profilesWithUserData.filter(p => p.id !== excludeUserId);
     }
-
-    profilesWithUserData = profilesWithUserData.filter(
-      (p) => !String(p.email || '').includes('@footballpro-smoke.invalid')
-    );
 
     // Apply search filter if provided
     if (search) {
@@ -1804,7 +1818,7 @@ exports.getFollowers = async (req, res) => {
       include: [{
         model: User,
         as: 'follower',
-        attributes: ['id', 'firstName', 'lastName', 'email', 'verified'],
+        attributes: ['id', 'firstName', 'lastName', 'verified'],
         required: true,
         where: { deletedAt: null },
         include: [{
@@ -1842,7 +1856,7 @@ exports.getFollowing = async (req, res) => {
       include: [{
         model: User,
         as: 'following',
-        attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified'],
+        attributes: ['id', 'firstName', 'lastName', 'role', 'verified'],
         required: true,
         where: { deletedAt: null },
         include: [{

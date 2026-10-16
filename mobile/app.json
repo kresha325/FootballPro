@@ -136,7 +136,7 @@
     "extra": {
       "BACKEND_URL": "https://footballpro.onrender.com",
       "WEB_APP_URL": "https://xtalenti.com",
-      "ALLOW_MOBILE_DIGITAL_PURCHASES": true,
+      "ALLOW_MOBILE_DIGITAL_PURCHASES": false,
       "eas": {
         "projectId": "3352bbbe-2f86-4665-9a67-e0499d1051bc"
       }

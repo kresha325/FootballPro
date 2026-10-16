@@ -3,12 +3,6 @@ import { getFullUrl, getVideoPosterUrl, isVideoMedia } from '../../utils/mediaUr
 import { formatTotalsPoints } from '../../utils/tournamentPoints';
 
 const hasValue = (value) => value !== null && value !== undefined && value !== '';
-const numberValue = (value) => {
-  if (value === null || value === undefined || value === '') return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
 function Section({ title, eyebrow, action, children }) {
   return (
     <section className="xt-card p-4 sm:p-6">

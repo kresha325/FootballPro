@@ -103,7 +103,7 @@ exports.getLiga = async (req, res) => {
     const userId = req.params.id || req.user.id;
     const liga = await Liga.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
     });
     if (!liga) {
       return res.status(404).json({ msg: 'Liga profile not found' });
@@ -315,7 +315,7 @@ exports.deleteLiga = async (req, res) => {
 exports.getAllLigas = async (req, res) => {
   try {
     const ligas = await Liga.findAll({
-      include: [{ model: User, attributes: ['id', 'role', 'email'] }],
+      include: [{ model: User, attributes: ['id', 'role', 'firstName', 'lastName'] }],
       order: [['createdAt', 'DESC']]
     });
     res.json(ligas);

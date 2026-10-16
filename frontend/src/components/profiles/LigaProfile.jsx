@@ -48,12 +48,6 @@ const LigaProfile = ({ liga, profile, userId, isOwner, onEdit }) => {
 
   const ligaUserId = userId || data?.userId || data?.User?.id || profile?.userId || profile?.User?.id;
 
-  const refresh = async () => {
-    if (!ligaUserId) return;
-    const res = await ligaAPI.getLiga(ligaUserId);
-    setData(res.data);
-  };
-
   useEffect(() => {
     let cancelled = false;
     const uid = ligaUserId;
