@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../components/UserAvatar';
 import NotificationHeaderButton from '../components/NotificationHeaderButton';
 import CreateGroupModal from '../components/messaging/CreateGroupModal';
+import StartConversationModal from '../components/messaging/StartConversationModal';
 import { conversationsRequest, extractErrorMessage } from '../api/client';
 import { useAuth, useSocket } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -123,7 +124,7 @@ function ConversationRow({ item, onPress, currentUserId, onOpenProfile, colors }
             </View>
           </View>
           <Text style={[styles.preview, { color: colors.muted }]} numberOfLines={1}>
-            {groupMembersLabel || item.lastMessage || 'Ende pa mesazhe.'}
+            {item.lastMessage || groupMembersLabel || 'Ende pa mesazhe.'}
           </Text>
         </View>
       </View>
@@ -142,6 +143,7 @@ export default function MessagingScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
   const hasFocusedOnce = useRef(false);
   const conversationsLoadedAt = useRef(0);
 
@@ -149,6 +151,14 @@ export default function MessagingScreen({ navigation }) {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => setShowNewMessage(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Mesazh i ri"
+          >
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconBtn}
             onPress={() => setShowCreateGroup(true)}
@@ -227,7 +237,8 @@ export default function MessagingScreen({ navigation }) {
     return conversations.filter((c) => {
       const members = Array.isArray(c.members) ? c.members : [];
       if (c.isGroup) {
-        return (c.name || '').toLowerCase().includes(q);
+        const groupNames = members.map((m) => `${m.firstName || ''} ${m.lastName || ''}`.trim()).join(' ').toLowerCase();
+        return (c.name || '').toLowerCase().includes(q) || groupNames.includes(q);
       }
       const other = user?.id != null ? members.find((m) => Number(m.id) !== Number(user.id)) : null;
       const label = other
@@ -266,6 +277,7 @@ export default function MessagingScreen({ navigation }) {
       ListHeaderComponent={
         <View style={styles.headerBlock}>
           {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <TouchableOpacity onPress={() => loadConversations()} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>Provo përsëri</Text></TouchableOpacity> : null}
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -284,9 +296,13 @@ export default function MessagingScreen({ navigation }) {
         </View>
       }
       ListEmptyComponent={
-        <Text style={[styles.empty, { color: colors.muted }]}>
-          {conversations.length === 0 ? 'Ende nuk ke biseda.' : 'Nuk u gjet asgjë për këtë kërkim.'}
-        </Text>
+        <View style={styles.emptyState}>
+          <Ionicons name={conversations.length === 0 ? 'chatbubbles-outline' : 'search-outline'} size={42} color={colors.mutedSoft} />
+          <Text style={[styles.empty, { color: colors.muted }]}>
+            {conversations.length === 0 ? 'Ende nuk ke biseda.' : 'Nuk u gjet asgjë për këtë kërkim.'}
+          </Text>
+          {conversations.length === 0 ? <TouchableOpacity style={[styles.emptyCta, { backgroundColor: colors.primary }]} onPress={() => setShowNewMessage(true)} accessibilityRole="button"><Text style={styles.emptyCtaText}>Nis bisedë të re</Text></TouchableOpacity> : null}
+        </View>
       }
       renderItem={({ item }) => (
         <ConversationRow
@@ -326,6 +342,21 @@ export default function MessagingScreen({ navigation }) {
           title: created.name || 'Grup',
           isGroup: true,
           otherUserId: null,
+        });
+      }}
+    />
+    <StartConversationModal
+      visible={showNewMessage}
+      currentUserId={user?.id}
+      colors={colors}
+      onClose={() => setShowNewMessage(false)}
+      onOpen={(conversation, person) => {
+        setConversations((prev) => [conversation, ...prev.filter((c) => String(c.id) !== String(conversation.id))]);
+        navigation.navigate('Conversation', {
+          conversationId: conversation.id,
+          title: `${person.firstName || ''} ${person.lastName || ''}`.trim() || undefined,
+          otherUserId: person.id,
+          isGroup: false,
         });
       }}
     />
@@ -374,5 +405,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   empty: { textAlign: 'center', marginTop: 26 },
+  emptyState: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 24 },
+  emptyCta: { marginTop: 16, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 12 },
+  emptyCtaText: { color: '#fff', fontWeight: '700' },
+  retryBtn: { alignSelf: 'center', marginBottom: 10, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: '#fee2e2' },
+  retryText: { color: '#991b1b', fontWeight: '700' },
   error: { color: '#b91c1c', marginBottom: 10, textAlign: 'center' },
 });

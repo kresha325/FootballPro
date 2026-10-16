@@ -341,6 +341,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
+  const [messageLoadError, setMessageLoadError] = useState(false);
   const [editing, setEditing] = useState(null);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
@@ -800,6 +801,7 @@ export default function ConversationScreen({ route, navigation }) {
       try {
         const response = await conversationMessagesRequest(conversationId, { limit: 50, page: 1 });
         const list = Array.isArray(response?.data?.messages) ? response.data.messages : [];
+        setMessageLoadError(false);
         setMessages(list);
         if (Array.isArray(response?.data?.othersRead)) {
           setOthersRead(response.data.othersRead);
@@ -811,6 +813,7 @@ export default function ConversationScreen({ route, navigation }) {
         });
         await markConversationReadRequest(conversationId);
       } catch (err) {
+        setMessageLoadError(true);
         setError(extractErrorMessage(err, 'Failed to load messages'));
       } finally {
         if (!skipFullScreenLoading) setLoading(false);
@@ -1268,7 +1271,12 @@ export default function ConversationScreen({ route, navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner} accessibilityRole="alert">
+          <Text style={styles.error}>{error}</Text>
+          {messageLoadError ? <TouchableOpacity onPress={() => loadMessages({ skipFullScreenLoading: true })} style={styles.retryBtn} accessibilityRole="button"><Text style={styles.retryText}>Provo përsëri</Text></TouchableOpacity> : null}
+        </View>
+      ) : null}
       <TextInput
         value={threadQuery}
         onChangeText={setThreadQuery}
@@ -1913,6 +1921,9 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.45 },
   empty: { color: '#64748b', textAlign: 'center', marginTop: 28 },
   error: { color: '#b91c1c', textAlign: 'center', marginTop: 8, paddingHorizontal: 12 },
+  errorBanner: { alignItems: 'center', paddingHorizontal: 12 },
+  retryBtn: { marginTop: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#fee2e2' },
+  retryText: { color: '#991b1b', fontSize: 13, fontWeight: '700' },
   threadSearch: { marginHorizontal: 12, marginTop: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
   loadOlder: { alignSelf: 'center', marginVertical: 10, paddingVertical: 8, paddingHorizontal: 14 },
   loadOlderText: { color: '#9A6B12', fontWeight: '600', fontSize: 13 },

@@ -136,6 +136,14 @@ function Messaging() {
   const [showCall, setShowCall] = useState(false);
   const [callType, setCallType] = useState('video'); // 'video' or 'audio'
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
+  const [newMessageQuery, setNewMessageQuery] = useState('');
+  const [newMessageResults, setNewMessageResults] = useState([]);
+  const [newMessageLoading, setNewMessageLoading] = useState(false);
+  const [newMessageError, setNewMessageError] = useState('');
+  const [openingUserId, setOpeningUserId] = useState(null);
+  const [inboxError, setInboxError] = useState('');
+  const [messageLoadError, setMessageLoadError] = useState(false);
   const [showGroupMembersPanel, setShowGroupMembersPanel] = useState(false);
   const [showInviteMembersPanel, setShowInviteMembersPanel] = useState(false);
   const [inviteMemberIds, setInviteMemberIds] = useState([]);
@@ -243,14 +251,14 @@ function Messaging() {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (messageDate.toDateString() === today.toDateString()) {
-      return messageDate.toLocaleTimeString('en-US', {
+      return messageDate.toLocaleTimeString('sq-AL', {
         hour: '2-digit',
         minute: '2-digit',
       });
     } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+      return 'Dje';
     } else {
-      return messageDate.toLocaleDateString('en-US', {
+      return messageDate.toLocaleDateString('sq-AL', {
         month: 'short',
         day: 'numeric',
       });
@@ -262,7 +270,11 @@ function Messaging() {
     if (!q) return conversations;
     return conversations.filter(conv => {
       const other = getOtherMember(conv);
-      return (other.name || '').toLowerCase().includes(q);
+      const memberNames = (Array.isArray(conv.members) ? conv.members : [])
+        .map((member) => `${member.firstName || ''} ${member.lastName || ''}`.trim())
+        .join(' ')
+        .toLowerCase();
+      return (other.name || '').toLowerCase().includes(q) || memberNames.includes(q);
     });
   }, [conversations, conversationSearch, user?.id]);
 
@@ -503,10 +515,69 @@ function Messaging() {
     try {
       const response = await api.get('/messaging/conversations');
       setConversations(response.data);
+      setInboxError('');
       setLoading(false);
     } catch (err) {
       console.error('Fetch conversations error:', err);
+      setInboxError(err?.response?.data?.msg || 'Bisedat nuk u ngarkuan. Kontrollo lidhjen dhe provo përsëri.');
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!showNewMessage) return undefined;
+    const term = newMessageQuery.trim();
+    if (term.length < 2) {
+      setNewMessageResults([]);
+      setNewMessageError('');
+      setNewMessageLoading(false);
+      return undefined;
+    }
+    setNewMessageResults([]);
+    let active = true;
+    const timer = setTimeout(async () => {
+      setNewMessageLoading(true);
+      setNewMessageError('');
+      try {
+        const response = await api.searchUsers({ q: term, limit: 20 });
+        if (!active) return;
+        const rows = response.data?.users ?? response.data ?? [];
+        setNewMessageResults((Array.isArray(rows) ? rows : []).filter((person) =>
+          String(person.id ?? person.userId) !== String(user?.id)
+        ));
+      } catch (err) {
+        if (active) setNewMessageError(err?.response?.data?.msg || 'Kërkimi dështoi. Provo përsëri.');
+      } finally {
+        if (active) setNewMessageLoading(false);
+      }
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [showNewMessage, newMessageQuery, user?.id]);
+
+  const closeNewMessage = () => {
+    setShowNewMessage(false);
+    setNewMessageQuery('');
+    setNewMessageResults([]);
+    setNewMessageError('');
+    setOpeningUserId(null);
+  };
+
+  const startConversationWith = async (person) => {
+    const personId = person?.id ?? person?.userId;
+    if (!personId || openingUserId) return;
+    setOpeningUserId(personId);
+    setNewMessageError('');
+    try {
+      const response = await api.getOrCreateConversation(personId);
+      const conversation = response.data;
+      if (!conversation?.id) throw new Error('Biseda nuk u hap. Provo përsëri.');
+      setConversations((prev) => [conversation, ...prev.filter((item) => String(item.id) !== String(conversation.id))]);
+      setSelectedConversation(conversation);
+      closeNewMessage();
+    } catch (err) {
+      setNewMessageError(err?.response?.data?.msg || err.message || 'Biseda nuk u hap. Provo përsëri.');
+    } finally {
+      setOpeningUserId(null);
     }
   };
 
@@ -522,6 +593,8 @@ function Messaging() {
         params: { page: 1, limit: 50 },
       });
       const { messages: rows, page, pages, total, othersRead: readRows } = response.data;
+      setMessageLoadError(false);
+      setActionError('');
       setMessages(rows || []);
       setOthersRead(Array.isArray(readRows) ? readRows : []);
       setMessagePagination({ page: page || 1, pages: pages || 1, total: total || 0 });
@@ -534,6 +607,8 @@ function Messaging() {
       requestAnimationFrame(() => scrollToBottom(true));
     } catch (err) {
       console.error('Fetch messages error:', err);
+      setMessageLoadError(true);
+      setActionError(err?.response?.data?.msg || 'Mesazhet nuk u ngarkuan. Provo përsëri.');
     }
   };
 
@@ -1108,14 +1183,14 @@ function Messaging() {
         <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-xl font-bold dark:text-white">Mesazhet</h2>
-            <button
-              type="button"
-              onClick={() => setShowCreateGroup(true)}
-              className="btn btn-primary min-h-10 gap-1 px-3 text-xs"
-            >
-              <FiUsers className="w-4 h-4" />
-              New Group
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary min-h-10 gap-1 px-3 text-xs" aria-label="Mesazh i ri">
+                <FiSearch className="w-4 h-4" /> Mesazh i ri
+              </button>
+              <button type="button" onClick={() => setShowCreateGroup(true)} className="btn min-h-10 gap-1 px-3 text-xs" aria-label="Krijo grup">
+                <FiUsers className="w-4 h-4" /> Grup i ri
+              </button>
+            </div>
           </div>
           <div className="relative">
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -1129,13 +1204,20 @@ function Messaging() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0">
-        {conversations.length === 0 ? (
+        {inboxError ? (
+          <div role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <p>{inboxError}</p>
+            <button type="button" onClick={() => { setLoading(true); fetchConversations(); }} className="mt-2 font-semibold underline">Provo përsëri</button>
+          </div>
+        ) : null}
+        {inboxError ? null : conversations.length === 0 ? (
           <div className="p-8 text-center">
             <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             <p className="text-[var(--xt-color-text-subtle)] mb-2">Ende nuk ke biseda</p>
-            <p className="text-sm text-[var(--xt-color-text-subtle)]">Fillo nga profili i një përdoruesi</p>
+            <p className="text-sm text-[var(--xt-color-text-subtle)]">Nis një bisedë të re ose zgjidh dikë nga profili i tij.</p>
+            <button type="button" onClick={() => setShowNewMessage(true)} className="btn btn-primary mt-4 min-h-11 px-4">Nis bisedë të re</button>
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="p-6 text-center text-sm text-[var(--xt-color-text-subtle)]">Nuk u gjet asnjë bisedë për këtë kërkim.</div>
@@ -1187,9 +1269,7 @@ function Messaging() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate dark:text-white">{other.name}</h3>
                     <p className="text-sm text-[var(--xt-color-text-subtle)] truncate">
-                      {conv.isGroup && other.memberLabel
-                        ? other.memberLabel
-                        : conv.lastMessage || 'Start the conversation'}
+                      {conv.lastMessage || (conv.isGroup && other.memberLabel ? other.memberLabel : 'Ende pa mesazhe')}
                     </p>
                   </div>
                   {conv.lastMessageAt && (
@@ -1749,7 +1829,10 @@ function Messaging() {
           {actionError ? (
             <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <span>{actionError}</span>
-              <button type="button" className="font-semibold" onClick={() => setActionError('')}>Mbyll</button>
+              <div className="flex shrink-0 gap-3">
+                {messageLoadError && selectedConversation ? <button type="button" className="font-semibold underline" onClick={() => fetchMessages(selectedConversation.id)}>Provo përsëri</button> : null}
+                <button type="button" className="font-semibold" onClick={() => setActionError('')}>Mbyll</button>
+              </div>
             </div>
           ) : null}
           <form
@@ -1901,6 +1984,32 @@ function Messaging() {
           </div>
         </div>
       )}
+      {showNewMessage ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeNewMessage(); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="new-message-title" className="flex max-h-[85dvh] min-h-[340px] w-full max-w-lg flex-col rounded-t-2xl bg-[var(--xt-color-surface)] p-5 shadow-2xl sm:rounded-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div><h2 id="new-message-title" className="text-lg font-bold">Mesazh i ri</h2><p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Kërko personin që dëshiron t’i shkruash.</p></div>
+              <button type="button" onClick={closeNewMessage} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Mbyll"><span aria-hidden="true">✕</span></button>
+            </div>
+            <input autoFocus type="search" value={newMessageQuery} onChange={(event) => setNewMessageQuery(event.target.value)} placeholder="Kërko sipas emrit…" className="input mb-3" aria-label="Kërko përdorues" />
+            {newMessageError ? <p role="alert" className="mb-2 text-sm text-red-700">{newMessageError}</p> : null}
+            <div className="min-h-0 flex-1 overflow-y-auto" aria-live="polite">
+              {newMessageLoading ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Duke kërkuar…</p> : null}
+              {!newMessageLoading && newMessageQuery.trim().length < 2 ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Shkruaj të paktën 2 shkronja për të kërkuar.</p> : null}
+              {!newMessageLoading && newMessageQuery.trim().length >= 2 && newMessageResults.length === 0 && !newMessageError ? <p className="py-8 text-center text-sm text-[var(--xt-color-text-muted)]">Nuk u gjet asnjë përdorues.</p> : null}
+              {newMessageResults.map((person) => {
+                const id = person.id ?? person.userId;
+                const name = `${person.firstName || ''} ${person.lastName || ''}`.trim() || 'Përdorues';
+                return <button type="button" key={id} onClick={() => startConversationWith(person)} disabled={openingUserId != null} className="flex w-full items-center gap-3 border-b border-[var(--xt-color-border)] px-1 py-3 text-left hover:bg-[var(--xt-color-canvas)] disabled:opacity-60" aria-label={`Hap bisedë me ${name}`}>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--xt-color-gold)] font-bold text-slate-950">{name.charAt(0).toUpperCase()}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{name}</span><span className="block truncate text-xs text-[var(--xt-color-text-muted)]">{person.role || person.club || ''}</span></span>
+                  {openingUserId === id ? <span className="text-sm">Duke hapur…</span> : <span aria-hidden="true">›</span>}
+                </button>;
+              })}
+            </div>
+          </section>
+        </div>
+      ) : null}
       {reportTarget ? (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setReportTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
