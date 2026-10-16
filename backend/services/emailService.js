@@ -14,6 +14,10 @@ function getTransporter() {
         host: process.env.SMTP_HOST,
         port: port || 587,
         secure: port === 465,
+        // Some hosts (including container platforms) expose only an internal
+        // IPv4 interface. Let Nodemailer still resolve the SMTP host's IPv4
+        // address instead of selecting an unreachable IPv6 address.
+        allowInternalNetworkInterfaces: true,
         auth: {
           user: process.env.SMTP_USER || process.env.EMAIL_USER,
           pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
@@ -22,6 +26,7 @@ function getTransporter() {
     } else {
       transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE || 'gmail',
+        allowInternalNetworkInterfaces: true,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASSWORD,
