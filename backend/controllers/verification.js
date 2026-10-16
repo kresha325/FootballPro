@@ -150,7 +150,7 @@ exports.parentRequest = async (req, res) => {
       confirmUrl,
       warning: isEmailConfigured()
         ? `Email-i nuk u dërgua (${emailResult.error || 'gabim SMTP'}). Kopjo linkun më poshtë dhe ia dërgo prindit në WhatsApp.`
-        : 'Serveri nuk ka EMAIL_USER / EMAIL_PASSWORD (Gmail). Kopjo linkun dhe ia dërgo prindit (WhatsApp/SMS).',
+        : 'Shërbimi i emailit nuk është konfiguruar. Kopjo linkun dhe ia dërgo prindit (WhatsApp/SMS).',
       msg: 'Linku i konfirmimit u krijua',
     });
   } catch (err) {

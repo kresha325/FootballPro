@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const { isEmailConfigured, buildParentConfirmUrl } = require('../config/email');
+const { isEmailConfigured, isResendConfigured, buildParentConfirmUrl } = require('../config/email');
 
 let transporter = null;
 
@@ -261,18 +261,50 @@ const emailTemplates = {
 
 // Send email function
 const sendEmail = async (to, templateName, ...params) => {
-  if (!isEmailConfigured()) {
-    console.warn('📧 Email skipped — EMAIL_USER / EMAIL_PASSWORD not set on server');
-    return { success: false, error: 'EMAIL_NOT_CONFIGURED', skipped: true };
+  const resendApiKey = String(process.env.RESEND_API_KEY || '').trim();
+  if (resendApiKey && !isResendConfigured()) {
+    console.error('❌ Email error: RESEND_FROM is required when RESEND_API_KEY is set');
+    return { success: false, error: 'RESEND_FROM_NOT_CONFIGURED' };
   }
 
-  const transport = getTransporter();
-  if (!transport) {
-    return { success: false, error: 'EMAIL_TRANSPORT_UNAVAILABLE' };
+  if (!isEmailConfigured()) {
+    console.warn('📧 Email skipped — configure Resend or SMTP credentials on server');
+    return { success: false, error: 'EMAIL_NOT_CONFIGURED', skipped: true };
   }
 
   try {
     const template = emailTemplates[templateName](...params);
+
+    if (resendApiKey) {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM.trim(),
+          to: [to],
+          subject: template.subject,
+          html: template.html,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const reason = result.message || result.error || `HTTP ${response.status}`;
+        console.error('❌ Email API error:', templateName, '→', to, reason);
+        return { success: false, error: String(reason) };
+      }
+
+      console.log('✅ Email sent:', templateName, '→', to, result.id || 'accepted by Resend');
+      return { success: true, messageId: result.id || null };
+    }
+
+    const transport = getTransporter();
+    if (!transport) {
+      return { success: false, error: 'EMAIL_TRANSPORT_UNAVAILABLE' };
+    }
 
     const mailOptions = {
       from: `"X TALENTI" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
