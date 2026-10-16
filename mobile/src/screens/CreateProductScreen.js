@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import OptimizedImage from '../components/media/OptimizedImage';
 import { createProductRequest, extractErrorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 
 const CATEGORIES = [
   { value: 'gear', label: 'Gear' },
@@ -21,6 +22,7 @@ const CATEGORIES = [
 ];
 
 export default function CreateProductScreen({ navigation }) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -93,17 +95,17 @@ export default function CreateProductScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.label}>Emri *</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="P.sh. Top futbolli" />
-      <Text style={styles.label}>Përshkrimi</Text>
+      <Text style={styles.label}>{t("Emri *")}</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder={t("P.sh. Top futbolli")} />
+      <Text style={styles.label}>{t("Përshkrimi")}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Përshkrim i shkurtër"
+        placeholder={t("Përshkrim i shkurtër")}
         multiline
       />
-      <Text style={styles.label}>Çmim (XCoin) *</Text>
+      <Text style={styles.label}>{t("Çmim (XCoin) *")}</Text>
       <TextInput
         style={styles.input}
         value={price}
@@ -111,7 +113,7 @@ export default function CreateProductScreen({ navigation }) {
         placeholder="0"
         keyboardType="decimal-pad"
       />
-      <Text style={styles.label}>Gjendje *</Text>
+      <Text style={styles.label}>{t("Gjendje *")}</Text>
       <TextInput
         style={styles.input}
         value={stock}
@@ -120,9 +122,9 @@ export default function CreateProductScreen({ navigation }) {
         keyboardType="number-pad"
       />
       <Text style={styles.hint}>
-        Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.
+        {t("Stoku krijohet me produktin. Nëse mbaron dhe nuk e përditëson, listimi fshihet pas 48 orësh.")}
       </Text>
-      <Text style={styles.label}>Kategoria *</Text>
+      <Text style={styles.label}>{t("Kategoria *")}</Text>
       <View style={styles.categoryRow}>
         {CATEGORIES.map((c) => (
           <TouchableOpacity
@@ -134,7 +136,7 @@ export default function CreateProductScreen({ navigation }) {
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.label}>Foto (opsionale)</Text>
+      <Text style={styles.label}>{t("Foto (opsionale)")}</Text>
       <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
         <Text style={styles.imageBtnText}>{image ? 'Ndrysho foton' : 'Zgjidh nga galeria'}</Text>
       </TouchableOpacity>
@@ -145,7 +147,7 @@ export default function CreateProductScreen({ navigation }) {
         {saving ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitBtnText}>Shto produktin</Text>
+          <Text style={styles.submitBtnText}>{t("Shto produktin")}</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

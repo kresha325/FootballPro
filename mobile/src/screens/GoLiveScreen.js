@@ -13,6 +13,7 @@ import {
   uploadStreamRecordingRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { useTheme } from '../context/ThemeContext';
 import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
@@ -22,6 +23,7 @@ const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
 
 export default function GoLiveScreen({ route, navigation }) {
+  const { t } = useLocale();
   const { user, refreshMe } = useAuth();
   const [profileYoutubeId, setProfileYoutubeId] = useState(() => getProfileYoutubeChannelId(user));
   const { isDark } = useTheme();
@@ -283,22 +285,22 @@ export default function GoLiveScreen({ route, navigation }) {
     <View style={styles.streamCard}>
       <Text style={[styles.streamTitle, isDark && styles.textPrimaryDark]}>{item.title || 'Untitled stream'}</Text>
       <Text style={[styles.streamMeta, isDark && styles.textMutedDark]}>
-        ID: {item.id} | {item.isLive ? 'Live' : item.videoUrl ? 'Recording' : 'Offline'} | Viewers: {item.viewers || 0}
+        {t("ID:")} {item.id} | {item.isLive ? t('Live') : item.videoUrl ? t('Recording') : t('Offline')} {t("| Viewers:")} {item.viewers || 0}
       </Text>
       <View style={styles.streamActions}>
         {item.isLive ? (
           <TouchableOpacity style={styles.viewBtn} onPress={() => openViewer(item.id)}>
-            <Text style={styles.viewBtnText}>View Live</Text>
+            <Text style={styles.viewBtnText}>{t("View Live")}</Text>
           </TouchableOpacity>
         ) : null}
         {!item.isLive && item.videoUrl ? (
           <TouchableOpacity style={styles.viewBtn} onPress={() => openViewer(item.id)}>
-            <Text style={styles.viewBtnText}>Play</Text>
+            <Text style={styles.viewBtnText}>{t("Play")}</Text>
           </TouchableOpacity>
         ) : null}
         {own && item.isLive ? (
           <TouchableOpacity style={styles.endBtn} onPress={() => onEndStream(item.id)}>
-            <Text style={styles.endBtnText}>End Stream</Text>
+            <Text style={styles.endBtnText}>{t("End Stream")}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -311,17 +313,16 @@ export default function GoLiveScreen({ route, navigation }) {
       contentContainerStyle={[styles.content, isDark && styles.screenDark]}
       refreshControl={<RefreshControl refreshing={loadingLists} onRefresh={loadStreams} colors={['#9A6B12']} />}
     >
-      <Text style={[styles.title, isDark && styles.textPrimaryDark]}>Streams & Go Live</Text>
+      <Text style={[styles.title, isDark && styles.textPrimaryDark]}>{t("Streams & Go Live")}</Text>
       <Text style={[styles.subtitle, isDark && styles.textMutedDark]}>
-        Nis transmetimin me kamerë (LiveKit) ose YouTube; ngarko regjistrime video më poshtë.
-        Shikuesit në app përdorin LiveKit native kur është e disponueshme (EAS Dev Client).
+        {t("Nis transmetimin me kamerë (LiveKit) ose YouTube; ngarko regjistrime video më poshtë. Shikuesit në app përdorin LiveKit native kur është e disponueshme (EAS Dev Client).")}
       </Text>
       <Text style={[styles.hint, isDark && styles.textMutedDark]}>
-        Kërkon WEB_APP_URL. YouTube Channel ID merret automatikisht nga Settings kur nis LIVE.
+        {t("Kërkon WEB_APP_URL. YouTube Channel ID merret automatikisht nga Settings kur nis LIVE.")}
       </Text>
       {profileYoutubeId ? (
         <View style={[styles.ytBadge, isDark && styles.ytBadgeDark]}>
-          <Text style={[styles.ytBadgeLabel, isDark && styles.textMutedDark]}>YouTube (nga profili):</Text>
+          <Text style={[styles.ytBadgeLabel, isDark && styles.textMutedDark]}>{t("YouTube (nga profili):")}</Text>
           <Text style={[styles.ytBadgeId, isDark && styles.textPrimaryDark]}>{profileYoutubeId}</Text>
         </View>
       ) : (
@@ -334,7 +335,7 @@ export default function GoLiveScreen({ route, navigation }) {
             }
           }}
         >
-          <Text style={styles.ytLink}>Vendos YouTube Channel ID te Settings →</Text>
+          <Text style={styles.ytLink}>{t("Vendos YouTube Channel ID te Settings →")}</Text>
         </TouchableOpacity>
       )}
 
@@ -342,47 +343,47 @@ export default function GoLiveScreen({ route, navigation }) {
         style={[styles.input, isDark && styles.inputDark]}
         value={title}
         onChangeText={setTitle}
-        placeholder="Stream title"
+        placeholder={t("Stream title")}
         placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
       />
       <TextInput
         style={[styles.input, styles.multiline, isDark && styles.inputDark]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Description"
+        placeholder={t("Description")}
         placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
         multiline
       />
 
       <TouchableOpacity style={styles.button} onPress={onGoLive} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nis LIVE</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("Nis LIVE")}</Text>}
       </TouchableOpacity>
 
       <View style={[styles.uploadSection, isDark && styles.cardDark]}>
-        <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>Ngarko regjistrim</Text>
+        <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>{t("Ngarko regjistrim")}</Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={recordingTitle}
           onChangeText={setRecordingTitle}
-          placeholder="Titulli i regjistrimit"
+          placeholder={t("Titulli i regjistrimit")}
           placeholderTextColor={isDark ? '#94a3b8' : '#64748b'}
         />
         <TouchableOpacity style={styles.uploadBtn} onPress={onUploadRecording} disabled={uploadingRecording}>
           {uploadingRecording ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.uploadBtnText}>Zgjidh video nga galeria</Text>
+            <Text style={styles.uploadBtnText}>{t("Zgjidh video nga galeria")}</Text>
           )}
         </TouchableOpacity>
       </View>
 
       {lastStream ? (
         <View style={[styles.result, isDark && styles.cardDark]}>
-          <Text style={[styles.resultTitle, isDark && styles.textPrimaryDark]}>Last stream</Text>
-          <Text style={isDark && styles.textMutedDark}>ID: {lastStream.id}</Text>
-          <Text style={isDark && styles.textMutedDark}>Title: {lastStream.title}</Text>
-          <Text style={isDark && styles.textMutedDark}>Live: {String(lastStream.isLive)}</Text>
-          <Text style={isDark && styles.textMutedDark}>Stream key: {lastStream.streamKey || 'N/A'}</Text>
+          <Text style={[styles.resultTitle, isDark && styles.textPrimaryDark]}>{t("Last stream")}</Text>
+          <Text style={isDark && styles.textMutedDark}>{t("ID:")} {lastStream.id}</Text>
+          <Text style={isDark && styles.textMutedDark}>{t("Title:")} {lastStream.title}</Text>
+          <Text style={isDark && styles.textMutedDark}>{t("Live:")} {String(lastStream.isLive)}</Text>
+          <Text style={isDark && styles.textMutedDark}>{t("Stream key:")} {lastStream.streamKey || 'N/A'}</Text>
         </View>
       ) : null}
 
@@ -401,18 +402,18 @@ export default function GoLiveScreen({ route, navigation }) {
         <View style={styles.errorWrap}>
           <Text style={styles.errorText}>{loadError}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadStreams}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t("Retry")}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
-          <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>My Streams</Text>
-          {myStreams.length === 0 ? <Text style={[styles.empty, isDark && styles.textMutedDark]}>No streams created yet.</Text> : myStreams.map((item) => (
+          <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>{t("My Streams")}</Text>
+          {myStreams.length === 0 ? <Text style={[styles.empty, isDark && styles.textMutedDark]}>{t("No streams created yet.")}</Text> : myStreams.map((item) => (
             <View key={`my-${item.id}`}>{renderStreamItem({ item, own: true })}</View>
           ))}
 
-          <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>Live Now</Text>
-          {liveStreams.length === 0 ? <Text style={[styles.empty, isDark && styles.textMutedDark]}>No active streams right now.</Text> : null}
+          <Text style={[styles.sectionTitle, isDark && styles.textPrimaryDark]}>{t("Live Now")}</Text>
+          {liveStreams.length === 0 ? <Text style={[styles.empty, isDark && styles.textMutedDark]}>{t("No active streams right now.")}</Text> : null}
           {[...liveStreams]
             .sort((a, b) => {
               if (!focusStreamId) return 0;

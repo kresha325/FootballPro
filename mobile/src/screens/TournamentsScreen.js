@@ -390,7 +390,7 @@ export default function TournamentsScreen({ navigation }) {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="Start date (YYYY-MM-DD)"
+                placeholder={t('Start date (YYYY-MM-DD)')}
                 placeholderTextColor="#94a3b8"
                 value={form.startDate}
                 onChangeText={(v) => setForm((f) => ({ ...f, startDate: v }))}
@@ -434,7 +434,7 @@ export default function TournamentsScreen({ navigation }) {
               <Text style={styles.label}>Numri i pjesëmarrësve</Text>
               <TextInput
                 style={styles.input}
-                placeholder="p.sh. 7"
+                placeholder={t('p.sh. 7')}
                 placeholderTextColor="#94a3b8"
                 keyboardType="number-pad"
                 value={String(form.maxParticipants ?? '')}

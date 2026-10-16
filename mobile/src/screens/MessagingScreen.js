@@ -283,7 +283,7 @@ export default function MessagingScreen({ navigation }) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Kërko bisedë…"
+            placeholder={t('Kërko bisedë…')}
             placeholderTextColor={colors.mutedSoft}
             style={[
               styles.search,

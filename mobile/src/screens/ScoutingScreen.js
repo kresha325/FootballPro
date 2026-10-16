@@ -17,6 +17,7 @@ import {
   scoutingWatchlistRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { useNavigation } from '@react-navigation/native';
 import { hasTier } from '../utils/subscriptionAccess';
 
@@ -38,6 +39,7 @@ function scoreLine(player) {
 }
 
 export default function ScoutingScreen() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const navigation = useNavigation();
   const roleOk = ['scout', 'club', 'manager'].includes(String(user?.role || '').toLowerCase());
@@ -130,13 +132,13 @@ export default function ScoutingScreen() {
   if (!canUse) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.accessTitle}>Qasja e scouting është e kufizuar</Text>
+        <Text style={styles.accessTitle}>{t("Qasja e scouting është e kufizuar")}</Text>
         <Text style={styles.accessText}>
           {roleOk ? 'Scouting kërkon planin Pro.' : 'Vetëm Scout, Club dhe Manager me planin Pro.'}
         </Text>
         {roleOk ? (
           <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('Premium')}>
-            <Text style={styles.primaryText}>Përmirëso në Pro</Text>
+            <Text style={styles.primaryText}>{t("Përmirëso në Pro")}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -154,12 +156,12 @@ export default function ScoutingScreen() {
       </View>
       {mode === 'discover' ? (
         <View style={styles.card}>
-          <TextInput style={styles.input} placeholder="Emri" value={filters.q} onChangeText={(q) => setFilters((current) => ({ ...current, q }))} />
-          <TextInput style={styles.input} placeholder="Pozicioni" value={filters.position} onChangeText={(position) => setFilters((current) => ({ ...current, position }))} />
-          <TextInput style={styles.input} placeholder="Klubi" value={filters.club} onChangeText={(club) => setFilters((current) => ({ ...current, club }))} />
+          <TextInput style={styles.input} placeholder={t("Emri")} value={filters.q} onChangeText={(q) => setFilters((current) => ({ ...current, q }))} />
+          <TextInput style={styles.input} placeholder={t("Pozicioni")} value={filters.position} onChangeText={(position) => setFilters((current) => ({ ...current, position }))} />
+          <TextInput style={styles.input} placeholder={t("Klubi")} value={filters.club} onChangeText={(club) => setFilters((current) => ({ ...current, club }))} />
           <View style={styles.row}>
-            <TextInput style={[styles.input, styles.half]} placeholder="Mosha min" keyboardType="number-pad" value={filters.minAge} onChangeText={(minAge) => setFilters((current) => ({ ...current, minAge }))} />
-            <TextInput style={[styles.input, styles.half]} placeholder="Mosha max" keyboardType="number-pad" value={filters.maxAge} onChangeText={(maxAge) => setFilters((current) => ({ ...current, maxAge }))} />
+            <TextInput style={[styles.input, styles.half]} placeholder={t("Mosha min")} keyboardType="number-pad" value={filters.minAge} onChangeText={(minAge) => setFilters((current) => ({ ...current, minAge }))} />
+            <TextInput style={[styles.input, styles.half]} placeholder={t("Mosha max")} keyboardType="number-pad" value={filters.maxAge} onChangeText={(maxAge) => setFilters((current) => ({ ...current, maxAge }))} />
           </View>
           <View style={styles.row}>
             {['', 'left', 'right', 'both'].map((foot) => (
@@ -168,13 +170,13 @@ export default function ScoutingScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={styles.primary} onPress={() => load({ nextPage: 1 })}><Text style={styles.primaryText}>Filtro</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.primary} onPress={() => load({ nextPage: 1 })}><Text style={styles.primaryText}>{t("Filtro")}</Text></TouchableOpacity>
         </View>
       ) : null}
       {mode === 'reports' ? (
         <View style={styles.card}>
-          <TextInput style={styles.input} placeholder="ID e lojtarit" keyboardType="number-pad" value={reportPlayerId} onChangeText={setReportPlayerId} />
-          <TextInput style={styles.input} placeholder="Shënime" value={reportNotes} onChangeText={setReportNotes} />
+          <TextInput style={styles.input} placeholder={t("ID e lojtarit")} keyboardType="number-pad" value={reportPlayerId} onChangeText={setReportPlayerId} />
+          <TextInput style={styles.input} placeholder={t("Shënime")} value={reportNotes} onChangeText={setReportNotes} />
           <View style={styles.row}>
             {['WATCH', 'SHORTLIST', 'TRIAL', 'PASS'].map((option) => (
               <TouchableOpacity key={option} style={[styles.tab, reportRecommendation === option && styles.tabOn]} onPress={() => setReportRecommendation(option)}>
@@ -191,13 +193,13 @@ export default function ScoutingScreen() {
               status: 'draft',
             }))}
           >
-            <Text style={styles.primaryText}>Ruaj draft</Text>
+            <Text style={styles.primaryText}>{t("Ruaj draft")}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
       {mode === 'compare' ? (
         <View style={styles.card}>
-          <TextInput style={styles.input} placeholder="ID, p.sh. 12,18" value={compareIds} onChangeText={setCompareIds} />
+          <TextInput style={styles.input} placeholder={t("ID, p.sh. 12,18")} value={compareIds} onChangeText={setCompareIds} />
           <View style={styles.row}>
             {['season', 'career', 'last5', 'last10'].map((option) => (
               <TouchableOpacity key={option} style={[styles.tab, compareWindow === option && styles.tabOn]} onPress={() => setCompareWindow(option)}>
@@ -205,7 +207,7 @@ export default function ScoutingScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={styles.primary} onPress={compare}><Text style={styles.primaryText}>Krahaso</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.primary} onPress={compare}><Text style={styles.primaryText}>{t("Krahaso")}</Text></TouchableOpacity>
           {comparison?.players?.map((player) => (
             <Text key={player.playerId} style={styles.meta}>
               {player.playerName}: {player.stats?.sampleSize ? `${player.stats.goals} gola, ${player.stats.assists} asiste, ${player.stats.minutes} min` : 'Pa ndeshje në këtë periudhë'} ({comparison.period?.label})
@@ -245,35 +247,35 @@ export default function ScoutingScreen() {
             {mode === 'reports' ? <Text style={styles.meta}>{item.status} · {item.recommendation || 'pa rekomandim'} · {item.overallRating == null ? 'pa notë' : `nota ${item.overallRating}`}</Text> : null}
             <View style={styles.row}>
               <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('PublicProfile', { userId: playerId })}>
-                <Text style={styles.linkText}>Profili</Text>
+                <Text style={styles.linkText}>{t("Profili")}</Text>
               </TouchableOpacity>
               {mode === 'discover' ? (
                 <>
-                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingAddShortlistRequest({ playerId }))}><Text style={styles.linkText}>Shortlist</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingAddWatchlistRequest({ playerId }))}><Text style={styles.linkText}>Watchlist</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingAddShortlistRequest({ playerId }))}><Text style={styles.linkText}>{t("Shortlist")}</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingAddWatchlistRequest({ playerId }))}><Text style={styles.linkText}>{t("Watchlist")}</Text></TouchableOpacity>
                   <TouchableOpacity style={styles.linkBtn} onPress={() => aiScoutSummaryRequest(playerId).then((response) => Alert.alert('AI', response.data?.summary || 'Pa përmbledhje')).catch((err) => Alert.alert('AI', extractErrorMessage(err, 'Dështoi')))}>
-                    <Text style={styles.linkText}>AI</Text>
+                    <Text style={styles.linkText}>{t("AI")}</Text>
                   </TouchableOpacity>
                 </>
               ) : null}
               {mode === 'shortlist' ? (
                 <>
-                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingUpdateShortlistRequest(item.id, { status: 'WATCHING', priority: 'HIGH' }))}><Text style={styles.linkText}>Prioritet</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveShortlistRequest(item.id))}><Text style={styles.linkText}>Hiq</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingUpdateShortlistRequest(item.id, { status: 'WATCHING', priority: 'HIGH' }))}><Text style={styles.linkText}>{t("Prioritet")}</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveShortlistRequest(item.id))}><Text style={styles.linkText}>{t("Hiq")}</Text></TouchableOpacity>
                 </>
               ) : null}
               {mode === 'watchlist' ? (
-                <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveWatchlistRequest(item.id))}><Text style={styles.linkText}>Hiq</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveWatchlistRequest(item.id))}><Text style={styles.linkText}>{t("Hiq")}</Text></TouchableOpacity>
               ) : null}
               {mode === 'reports' ? (
-                <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveReportRequest(item.id))}><Text style={styles.linkText}>Fshi</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.linkBtn} onPress={() => act(() => scoutingRemoveReportRequest(item.id))}><Text style={styles.linkText}>{t("Fshi")}</Text></TouchableOpacity>
               ) : null}
             </View>
           </View>
         );
       }}
       ListFooterComponent={total > page * 20 ? (
-        <TouchableOpacity style={styles.primary} onPress={() => load({ nextPage: page + 1 })}><Text style={styles.primaryText}>Faqja tjetër</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.primary} onPress={() => load({ nextPage: page + 1 })}><Text style={styles.primaryText}>{t("Faqja tjetër")}</Text></TouchableOpacity>
       ) : null}
     />
   );

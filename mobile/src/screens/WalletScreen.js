@@ -264,7 +264,7 @@ export default function WalletScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t('Tërhiq XCoin')}</Text>
             <Text style={styles.feeHint}>{withdrawFeePct}% withdrawal fee applies to the amount you cash out.</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={withdrawAmount} onChangeText={setWithdrawAmount} placeholder="Amount" />
+            <TextInput style={styles.input} keyboardType="numeric" value={withdrawAmount} onChangeText={setWithdrawAmount} placeholder={t('Amount')} />
             <TouchableOpacity style={styles.warningBtn} onPress={withdraw}>
               <Text style={styles.primaryBtnText}>{t('Tërhiq')}</Text>
             </TouchableOpacity>
@@ -272,8 +272,8 @@ export default function WalletScreen() {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t('Transfero XCoin')}</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={toUserId} onChangeText={setToUserId} placeholder="To User ID" />
-            <TextInput style={styles.input} keyboardType="numeric" value={transferAmount} onChangeText={setTransferAmount} placeholder="Amount" />
+            <TextInput style={styles.input} keyboardType="numeric" value={toUserId} onChangeText={setToUserId} placeholder={t('To User ID')} />
+            <TextInput style={styles.input} keyboardType="numeric" value={transferAmount} onChangeText={setTransferAmount} placeholder={t('Amount')} />
             <TouchableOpacity style={styles.infoBtn} onPress={transfer}>
               <Text style={styles.primaryBtnText}>{t('Transfero')}</Text>
             </TouchableOpacity>

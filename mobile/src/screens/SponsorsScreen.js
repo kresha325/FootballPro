@@ -20,9 +20,11 @@ import {
   updateSponsorRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { alertMediaLibraryDenied, ensureMediaLibraryPermission } from '../utils/mediaPermissions';
 
 function SponsorRow({ item, onEdit, onDelete, deleting }) {
+  const { t } = useLocale();
   return (
     <View style={styles.row}>
       <View style={styles.rowBody}>
@@ -45,6 +47,7 @@ function SponsorRow({ item, onEdit, onDelete, deleting }) {
 }
 
 export default function SponsorsScreen() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
@@ -209,11 +212,11 @@ export default function SponsorsScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{editingId ? 'Edit Sponsor' : 'Create Sponsor'}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" />
-          <TextInput style={styles.input} value={link} onChangeText={setLink} placeholder="Website link" autoCapitalize="none" />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder={t("Name")} />
+          <TextInput style={styles.input} value={link} onChangeText={setLink} placeholder={t("Website link")} autoCapitalize="none" />
           {!editingId ? (
             <Text style={styles.autoHint}>
-              Afati: sot → +12 muaj. 1 sponsor = abonim Basic · 2 sponsore = Premium.
+              {t("Afati: sot → +12 muaj. 1 sponsor = abonim Basic · 2 sponsore = Premium.")}
             </Text>
           ) : null}
           <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
@@ -221,7 +224,7 @@ export default function SponsorsScreen() {
           </TouchableOpacity>
           {editingId ? (
             <TouchableOpacity style={styles.secondaryBtn} onPress={resetForm}>
-              <Text style={styles.secondaryText}>Cancel edit</Text>
+              <Text style={styles.secondaryText}>{t("Cancel edit")}</Text>
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity style={[styles.primaryBtn, saving && styles.btnDisabled]} onPress={onSave} disabled={saving}>
@@ -242,7 +245,7 @@ export default function SponsorsScreen() {
       renderItem={({ item }) => (
         <SponsorRow item={item} onEdit={onEdit} onDelete={onDelete} deleting={deletingId === item.id} />
       )}
-      ListEmptyComponent={<Text style={styles.empty}>No sponsors yet.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{t("No sponsors yet.")}</Text>}
     />
   );
 }

@@ -18,6 +18,7 @@ import {
   updateProductRequest,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useLocale } from '../context/LocaleContext';
 import { absoluteBackendUrl } from '../config/constants';
 
 const CATEGORIES = [
@@ -27,6 +28,7 @@ const CATEGORIES = [
 ];
 
 export default function EditProductScreen({ route, navigation }) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const productId = route.params?.productId;
   const [loading, setLoading] = useState(true);
@@ -168,30 +170,30 @@ export default function EditProductScreen({ route, navigation }) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {outOfStockHoursLeft != null ? (
         <View style={styles.warnBox}>
-          <Text style={styles.warnTitle}>Pa stok</Text>
+          <Text style={styles.warnTitle}>{t("Pa stok")}</Text>
           <Text style={styles.warnText}>
-            Nëse nuk e rrit stokun, listimi fshihet automatikisht pas ~{outOfStockHoursLeft} orësh (max 48h).
+            {t("Nëse nuk e rrit stokun, listimi fshihet automatikisht pas ~")}{outOfStockHoursLeft} {t("orësh (max 48h).")}
           </Text>
         </View>
       ) : null}
-      <Text style={styles.label}>Emri *</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Emri i produktit" />
-      <Text style={styles.label}>Përshkrimi</Text>
+      <Text style={styles.label}>{t("Emri *")}</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder={t("Emri i produktit")} />
+      <Text style={styles.label}>{t("Përshkrimi")}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Përshkrim"
+        placeholder={t("Përshkrim")}
         multiline
       />
-      <Text style={styles.label}>Çmim (XCoin) *</Text>
+      <Text style={styles.label}>{t("Çmim (XCoin) *")}</Text>
       <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-      <Text style={styles.label}>Gjendje (stok) *</Text>
+      <Text style={styles.label}>{t("Gjendje (stok) *")}</Text>
       <TextInput style={styles.input} value={stock} onChangeText={setStock} keyboardType="number-pad" />
       <Text style={styles.hint}>
-        Kur shton produktin, stoku krijohet këtu. Ndryshoje kur shet ose merr mall të ri.
+        {t("Kur shton produktin, stoku krijohet këtu. Ndryshoje kur shet ose merr mall të ri.")}
       </Text>
-      <Text style={styles.label}>Kategoria *</Text>
+      <Text style={styles.label}>{t("Kategoria *")}</Text>
       <View style={styles.categoryRow}>
         {CATEGORIES.map((c) => (
           <TouchableOpacity
@@ -203,7 +205,7 @@ export default function EditProductScreen({ route, navigation }) {
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={styles.label}>Foto e re (opsionale)</Text>
+      <Text style={styles.label}>{t("Foto e re (opsionale)")}</Text>
       <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
         <Text style={styles.imageBtnText}>{image ? 'Ndrysho foton e zgjedhur' : 'Zgjidh foto të re'}</Text>
       </TouchableOpacity>
@@ -213,10 +215,10 @@ export default function EditProductScreen({ route, navigation }) {
         <OptimizedImage uri={existingImageUrl} style={styles.preview} width={600} contentFit="cover" />
       ) : null}
       <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={saving || deleting}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Ruaj ndryshimet</Text>}
+        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>{t("Ruaj ndryshimet")}</Text>}
       </TouchableOpacity>
       <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} disabled={saving || deleting}>
-        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteBtnText}>Fshi produktin</Text>}
+        {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteBtnText}>{t("Fshi produktin")}</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

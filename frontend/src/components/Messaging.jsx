@@ -96,6 +96,7 @@ function dayDividerLabel(d, language, t) {
 
 // Modal për shfaqjen e fotove të mëdha
 function MediaModal({ src, alt, onClose }) {
+  const { t } = useLocale();
   const isVideo = typeof src === 'string' && /\.(mp4|mov|webm|avi)$/i.test(src);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>

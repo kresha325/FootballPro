@@ -12,6 +12,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { adsRequest, createAdRequest, extractErrorMessage } from '../api/client';
 import { alertMediaLibraryDenied, ensureMediaLibraryPermission } from '../utils/mediaPermissions';
+import { useLocale } from '../context/LocaleContext';
 
 const EUR_PER_UNIT = 1;
 const SECONDS_PER_UNIT = 3;
@@ -24,6 +25,7 @@ function pricePerDayFromSeconds(sec) {
 }
 
 function AdRow({ item }) {
+  const { t } = useLocale();
   const days =
     item?.startDate && item?.endDate
       ? Math.max(1, Math.round((new Date(item.endDate) - new Date(item.startDate)) / 86400000))
@@ -43,6 +45,7 @@ function AdRow({ item }) {
 }
 
 export default function AdsScreen() {
+  const { t } = useLocale();
   const [items, setItems] = useState([]);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
@@ -186,27 +189,26 @@ export default function AdsScreen() {
       contentContainerStyle={styles.list}
       ListHeaderComponent={
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Create Ad</Text>
+          <Text style={styles.sectionTitle}>{t("Create Ad")}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Title" />
-          <TextInput style={styles.input} value={text} onChangeText={setText} placeholder="Text" />
+          <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder={t("Title")} />
+          <TextInput style={styles.input} value={text} onChangeText={setText} placeholder={t("Text")} />
           <TextInput
             style={styles.input}
             value={color}
             onChangeText={setColor}
-            placeholder="Color (hex, optional)"
+            placeholder={t("Color (hex, optional)")}
             autoCapitalize="none"
           />
           <TextInput
             style={styles.input}
             value={days}
             onChangeText={onDaysChange}
-            placeholder="Ditë (duration)"
+            placeholder={t("Ditë (duration)")}
             keyboardType="number-pad"
           />
           <Text style={styles.pricingHint}>
-            €{EUR_PER_UNIT}/ditë = {SECONDS_PER_UNIT}s media. Video 12s → €4/ditë. Total = çmimi ditor ×
-            ditët e kampanjës.
+            €{EUR_PER_UNIT}{t("/ditë =")} {SECONDS_PER_UNIT}{t("s media. Video 12s → €4/ditë. Total = çmimi ditor × ditët e kampanjës.")}
           </Text>
           <Text style={styles.pricingCalc}>
             {media?.kind === 'video' && mediaDurationSec
@@ -230,7 +232,7 @@ export default function AdsScreen() {
                 setMediaDurationSec(null);
               }}
             >
-              <Text style={styles.clearText}>Hiq median</Text>
+              <Text style={styles.clearText}>{t("Hiq median")}</Text>
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -255,7 +257,7 @@ export default function AdsScreen() {
         />
       }
       renderItem={({ item }) => <AdRow item={item} />}
-      ListEmptyComponent={<Text style={styles.empty}>No active ads.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{t("No active ads.")}</Text>}
     />
   );
 }

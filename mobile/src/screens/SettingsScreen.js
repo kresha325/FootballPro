@@ -329,7 +329,7 @@ export default function SettingsScreen() {
           </Text>
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
-          Dark mode vlen për tab-in, header-at dhe ekranet e përshtatura. Disa module përditësohen gradualisht.
+          {t("Dark mode vlen për tab-in, header-at dhe ekranet e përshtatura. Disa module përditësohen gradualisht.")}
         </Text>
       </View>
 
@@ -346,8 +346,7 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
-          Njoftime push për like, komente, ndjekje, thirrje. Kërkon build me njoftime (jo Expo Go).
-          Njoftimet e sigurisë mbeten të aktivizuara.
+          {t("Njoftime push për like, komente, ndjekje, thirrje. Kërkon build me njoftime (jo Expo Go). Njoftimet e sigurisë mbeten të aktivizuara.")}
         </Text>
         {prefRows.map((row) => (
           <View key={row.category} style={{ marginTop: 10 }}>
@@ -361,7 +360,7 @@ export default function SettingsScreen() {
               />
             </View>
             <View style={styles.rowBetween}>
-              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Push</Text>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>{t("Push")}</Text>
               <Switch
                 value={row.push !== false}
                 onValueChange={(value) => savePref(row.category, 'push', value)}
@@ -369,7 +368,7 @@ export default function SettingsScreen() {
               />
             </View>
             <View style={styles.rowBetween}>
-              <Text style={[styles.hint, { color: colors.mutedSoft }]}>Email</Text>
+              <Text style={[styles.hint, { color: colors.mutedSoft }]}>{t("Email")}</Text>
               <Switch
                 value={Boolean(row.email)}
                 onValueChange={(value) => savePref(row.category, 'email', value)}
@@ -392,31 +391,31 @@ export default function SettingsScreen() {
       >
         <View style={styles.youtubeHeader}>
           <Ionicons name="logo-youtube" size={22} color="#dc2626" />
-          <Text style={[styles.title, { color: colors.text }]}>YouTube Live</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t("YouTube Live")}</Text>
         </View>
         <Text style={[styles.youtubeLead, { color: colors.muted }]}>
-          Për Go Live me OBS ose YouTube Studio — shikuesit në app shohin live-in të kanalit tënd.
+          {t("Për Go Live me OBS ose YouTube Studio — shikuesit në app shohin live-in të kanalit tënd.")}
         </Text>
 
-        <Text style={[styles.fieldLabel, { color: colors.text }]}>Çfarë të vendosësh këtu</Text>
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>{t("Çfarë të vendosësh këtu")}</Text>
         <Text style={[styles.bullet, { color: colors.muted }]}>
-          • <Text style={[styles.mono, { color: colors.primary }]}>Channel ID</Text> — fillon me{' '}
-          <Text style={[styles.mono, { color: colors.primary }]}>UC</Text> (~24 shkronja gjithsej, jo 22)
+          • <Text style={[styles.mono, { color: colors.primary }]}>{t("Channel ID")}</Text> {t("— fillon me")}{' '}
+          <Text style={[styles.mono, { color: colors.primary }]}>{t("UC")}</Text> {t("(~24 shkronja gjithsej, jo 22)")}
         </Text>
         <Text style={[styles.bullet, { color: colors.muted }]}>
-          • Ose linku @emri / Share → shtyp «Gjej ID nga linku»
+          {t("• Ose linku @emri / Share → shtyp «Gjej ID nga linku»")}
         </Text>
         <Text style={[styles.bullet, { color: colors.muted }]}>
-          • <Text style={styles.bold}>Jo</Text> video ID, jo stream key OBS
+          • <Text style={styles.bold}>{t("Jo")}</Text> {t("video ID, jo stream key OBS")}
         </Text>
 
-        <Text style={[styles.fieldLabel, styles.fieldLabelTop, { color: colors.text }]}>Ku e gjen në YouTube</Text>
-        <Text style={[styles.step, { color: colors.muted }]}>1. Hap YouTube → avatar → Settings → Advanced settings</Text>
-        <Text style={[styles.step, { color: colors.muted }]}>2. Kopjo “YouTube channel ID” (UC…)</Text>
-        <Text style={[styles.step, { color: colors.muted }]}>3. Ngjite më poshtë dhe shtyp Ruaj</Text>
+        <Text style={[styles.fieldLabel, styles.fieldLabelTop, { color: colors.text }]}>{t("Ku e gjen në YouTube")}</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>{t("1. Hap YouTube → avatar → Settings → Advanced settings")}</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>{t("2. Kopjo “YouTube channel ID” (UC…)")}</Text>
+        <Text style={[styles.step, { color: colors.muted }]}>{t("3. Ngjite më poshtë dhe shtyp Ruaj")}</Text>
 
         <TouchableOpacity onPress={openYoutubeHelp} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Hap Advanced settings në YouTube</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Hap Advanced settings në YouTube")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -437,7 +436,7 @@ export default function SettingsScreen() {
           ]}
           value={profile.youtubeChannelId}
           onChangeText={(v) => setProfile((p) => ({ ...p, youtubeChannelId: v }))}
-          placeholder="UCflsCrcGKQ85RYdNM5oW27w ose link @emri"
+          placeholder={t("UCflsCrcGKQ85RYdNM5oW27w ose link @emri")}
           placeholderTextColor={colors.mutedSoft}
           autoCapitalize="none"
           autoCorrect={false}
@@ -445,52 +444,52 @@ export default function SettingsScreen() {
 
         {profile.youtubeChannelId?.trim() ? (
           resolvingYoutube ? (
-            <Text style={styles.pendingHint}>Duke gjetur Channel ID nga linku…</Text>
+            <Text style={styles.pendingHint}>{t("Duke gjetur Channel ID nga linku…")}</Text>
           ) : normalizedYoutube ? (
-            <Text style={styles.okHint}>✓ ID valid: {normalizedYoutube}</Text>
+            <Text style={styles.okHint}>{t("✓ ID valid:")} {normalizedYoutube}</Text>
           ) : resolveError ? (
             <Text style={styles.errHint}>{resolveError}</Text>
           ) : needsYoutubeResolve(profile.youtubeChannelId) ? (
             <Text style={styles.pendingHint}>
-              Link @ i saktë — shtyp butonin e gjelbër ose prit pak sekonda…
+              {t("Link @ i saktë — shtyp butonin e gjelbër ose prit pak sekonda…")}
             </Text>
           ) : (
             <Text style={styles.errHint}>
-              Jo valid — duhet UC… (~24 karaktere) ose link @ nga Share
+              {t("Jo valid — duhet UC… (~24 karaktere) ose link @ nga Share")}
             </Text>
           )
         ) : (
           <Text style={[styles.hint, { color: colors.mutedSoft }]}>
-            Lëre bosh nëse përdor vetëm LiveKit (kamera në app).
+            {t("Lëre bosh nëse përdor vetëm LiveKit (kamera në app).")}
           </Text>
         )}
 
         <Text style={[styles.obsNote, { color: colors.muted }]}>
-          Stream key nga YouTube Studio përdoret vetëm në OBS — nuk vendoset këtu.
+          {t("Stream key nga YouTube Studio përdoret vetëm në OBS — nuk vendoset këtu.")}
         </Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t("Profile")}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.firstName}
           onChangeText={(v) => setProfile((p) => ({ ...p, firstName: v }))}
-          placeholder="First name"
+          placeholder={t("First name")}
           placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.lastName}
           onChangeText={(v) => setProfile((p) => ({ ...p, lastName: v }))}
-          placeholder="Last name"
+          placeholder={t("Last name")}
           placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.bio}
           onChangeText={(v) => setProfile((p) => ({ ...p, bio: v }))}
-          placeholder="Bio"
+          placeholder={t("Bio")}
           placeholderTextColor={colors.mutedSoft}
           multiline
         />
@@ -498,14 +497,14 @@ export default function SettingsScreen() {
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.city}
           onChangeText={(v) => setProfile((p) => ({ ...p, city: v }))}
-          placeholder="City"
+          placeholder={t("City")}
           placeholderTextColor={colors.mutedSoft}
         />
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={profile.country}
           onChangeText={(v) => setProfile((p) => ({ ...p, country: v }))}
-          placeholder="Country"
+          placeholder={t("Country")}
           placeholderTextColor={colors.mutedSoft}
         />
 
@@ -515,14 +514,14 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Përfitime Pro</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t("Përfitime Pro")}</Text>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
           {isPro
             ? 'Tema, Labs dhe suport prioritar.'
             : 'Aktivizo Pro për tema, akses të hershëm dhe suport prioritar.'}
         </Text>
 
-        <Text style={[styles.fieldLabel, { color: colors.muted, marginTop: 10 }]}>Tema e profilit</Text>
+        <Text style={[styles.fieldLabel, { color: colors.muted, marginTop: 10 }]}>{t("Tema e profilit")}</Text>
         <View style={styles.themeRow}>
           {PROFILE_THEMES.map((t) => {
             const selected = profileTheme === t.id;
@@ -564,7 +563,7 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={[styles.fieldLabel, { color: colors.muted, marginTop: 14 }]}>
-          Akses i hershëm (Labs)
+          {t("Akses i hershëm (Labs)")}
         </Text>
         {EARLY_ACCESS_FEATURES.map((f) => (
           <View key={f.id} style={styles.labRow}>
@@ -643,44 +642,44 @@ export default function SettingsScreen() {
               );
             }}
           >
-            <Text style={[styles.linkBtnText, { color: colors.primary }]}>Email prioritar</Text>
+            <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Email prioritar")}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Ndihmë, info & ligjore</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t("Ndihmë, info & ligjore")}</Text>
         <TouchableOpacity onPress={() => openLegal(navigation, 'help')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Ndihmë & FAQ</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Ndihmë & FAQ")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'about')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Rreth X TALENTI</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Rreth X TALENTI")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'community-guidelines')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Udhëzuesit e komunitetit</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Udhëzuesit e komunitetit")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'privacy')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e privatësisë</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Politika e privatësisë")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'terms')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Kushtet e përdorimit</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Kushtet e përdorimit")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'cookies')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Politika e cookies</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Politika e cookies")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => openLegal(navigation, 'data')} style={styles.linkBtn}>
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>Të dhënat e tua (akses / fshirje)</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("Të dhënat e tua (akses / fshirje)")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => Linking.openURL('mailto:support@xtalenti.com')}
           style={styles.linkBtn}
         >
-          <Text style={[styles.linkBtnText, { color: colors.primary }]}>support@xtalenti.com</Text>
+          <Text style={[styles.linkBtnText, { color: colors.primary }]}>{t("support@xtalenti.com")}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Llogaria</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t("Llogaria")}</Text>
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={() => {
@@ -690,7 +689,7 @@ export default function SettingsScreen() {
             ]);
           }}
         >
-          <Text style={styles.logoutButtonText}>Dil nga llogaria</Text>
+          <Text style={styles.logoutButtonText}>{t("Dil nga llogaria")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -701,15 +700,15 @@ export default function SettingsScreen() {
           { backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder },
         ]}
       >
-        <Text style={[styles.title, { color: colors.text }]}>Fshi llogarinë</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t("Fshi llogarinë")}</Text>
         <Text style={[styles.hint, { color: colors.mutedSoft }]}>
-          Anonimizohen të dhënat personale. Transaksionet financiare ruhen sipas ligjit. Ky veprim nuk kthehet.
+          {t("Anonimizohen të dhënat personale. Transaksionet financiare ruhen sipas ligjit. Ky veprim nuk kthehet.")}
         </Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
           value={deletePassword}
           onChangeText={setDeletePassword}
-          placeholder="Fjalëkalimi yt"
+          placeholder={t("Fjalëkalimi yt")}
           placeholderTextColor={colors.mutedSoft}
           secureTextEntry
           autoCapitalize="none"

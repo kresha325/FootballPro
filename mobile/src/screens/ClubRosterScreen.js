@@ -223,7 +223,7 @@ export default function ClubRosterScreen() {
                 <TextInput
                   value={athleteForm.clubId}
                   onChangeText={(v) => setAthleteForm((f) => ({ ...f, clubId: v }))}
-                  placeholder="Club ID"
+                  placeholder={t('Club ID')}
                   placeholderTextColor="#94a3b8"
                   keyboardType="numeric"
                   style={styles.input}
@@ -231,14 +231,14 @@ export default function ClubRosterScreen() {
                 <TextInput
                   value={athleteForm.position}
                   onChangeText={(v) => setAthleteForm((f) => ({ ...f, position: v }))}
-                  placeholder="Position"
+                  placeholder={t('Position')}
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                 />
                 <TextInput
                   value={athleteForm.jerseyNumber}
                   onChangeText={(v) => setAthleteForm((f) => ({ ...f, jerseyNumber: v }))}
-                  placeholder="Jersey Number"
+                  placeholder={t('Jersey Number')}
                   placeholderTextColor="#94a3b8"
                   keyboardType="numeric"
                   style={styles.input}
@@ -246,7 +246,7 @@ export default function ClubRosterScreen() {
                 <TextInput
                   value={athleteForm.message}
                   onChangeText={(v) => setAthleteForm((f) => ({ ...f, message: v }))}
-                  placeholder="Message"
+                  placeholder={t('Message')}
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                 />

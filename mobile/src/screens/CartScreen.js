@@ -14,6 +14,7 @@ import { createOrderRequest, extractErrorMessage, joncoinBalanceRequest } from '
 import OptimizedImage from '../components/media/OptimizedImage';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
+import { useLocale } from '../context/LocaleContext';
 
 const METHODS = [
   { value: 'meetup', label: 'Takim' },
@@ -22,6 +23,7 @@ const METHODS = [
 ];
 
 export default function CartScreen({ navigation }) {
+  const { t } = useLocale();
   const { items, setLineQuantity, removeItem, clearCart, orderPayload, subtotalJonCoin, totalPieces } = useCart();
   const [paying, setPaying] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('meetup');
@@ -137,21 +139,21 @@ export default function CartScreen({ navigation }) {
               style={styles.input}
               value={buyerContact}
               onChangeText={setBuyerContact}
-              placeholder="Kontakt (tel / email) *"
+              placeholder={t('Kontakt (tel / email) *')}
               autoCapitalize="none"
             />
             <TextInput
               style={[styles.input, styles.inputMulti]}
               value={deliveryAddress}
               onChangeText={setDeliveryAddress}
-              placeholder={deliveryMethod === 'shipping' ? 'Adresa e dërgesës *' : 'Vendtakimi / adresa (opsionale)'}
+              placeholder={deliveryMethod === 'shipping' ? t('Adresa e dërgesës *') : t('Vendtakimi / adresa (opsionale)')}
               multiline
             />
             <TextInput
               style={styles.input}
               value={deliveryNotes}
               onChangeText={setDeliveryNotes}
-              placeholder="Shënim (opsionale)"
+              placeholder={t('Shënim (opsionale)')}
             />
           </View>
         }

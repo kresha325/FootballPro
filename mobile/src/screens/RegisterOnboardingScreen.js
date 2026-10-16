@@ -16,11 +16,13 @@ import { updateMyProfileRequest } from '../api/client';
 import AiBioButton from '../components/AiBioButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 import { registerRoleLabel } from '../constants/registerRoles';
 
 const COUNTRY_SUGGESTIONS = ['Kosovë', 'Shqipëri', 'Maqedoni e Veriut', 'Zvicër', 'Gjermani', 'Tjetër'];
 
 export default function RegisterOnboardingScreen({ navigation }) {
+  const { t } = useLocale();
   const { user, completeOnboarding, requiresParentVerification } = useAuth();
   const { colors } = useTheme();
   const [step, setStep] = useState(1);
@@ -160,7 +162,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
             </Text>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder="Qyteti (p.sh. Prishtinë)"
+              placeholder={t('Qyteti (p.sh. Prishtinë)')}
               placeholderTextColor={colors.mutedSoft}
               value={city}
               onChangeText={setCity}
@@ -181,7 +183,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
             </View>
             <TextInput
               style={[styles.input, themed.input]}
-              placeholder="Ose shkruaj shtetin"
+              placeholder={t('Ose shkruaj shtetin')}
               placeholderTextColor={colors.mutedSoft}
               value={country}
               onChangeText={setCountry}
@@ -204,7 +206,7 @@ export default function RegisterOnboardingScreen({ navigation }) {
             />
             <TextInput
               style={[styles.input, themed.input, styles.bio]}
-              placeholder="Bio (opsionale)"
+              placeholder={t('Bio (opsionale)')}
               placeholderTextColor={colors.mutedSoft}
               value={bio}
               onChangeText={setBio}

@@ -19,6 +19,7 @@ import {
   parseYouTubeUrl,
 } from '../../utils/youtubeVideo';
 import YouTubeWebPlayer from './YouTubeWebPlayer';
+import { useLocale } from '../../context/LocaleContext';
 
 export default function AddMediaSheet({
   visible,
@@ -26,6 +27,7 @@ export default function AddMediaSheet({
   onSaved,
   defaults = {},
 }) {
+  const { t } = useLocale();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -91,18 +93,18 @@ export default function AddMediaSheet({
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Shto video YouTube</Text>
+            <Text style={styles.headerTitle}>{t("Shto video YouTube")}</Text>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.close}>✕</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             <Text style={styles.hint}>
-              Ngarko ndeshjen në YouTube, pastaj ngjit linkun. X TALENTI nuk ruan video 90-minutëshe.
+              {t("Ngarko ndeshjen në YouTube, pastaj ngjit linkun. X TALENTI nuk ruan video 90-minutëshe.")}
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="YouTube URL"
+              placeholder={t("YouTube URL")}
               value={youtubeUrl}
               onChangeText={setYoutubeUrl}
               autoCapitalize="none"
@@ -117,18 +119,18 @@ export default function AddMediaSheet({
             ) : null}
             <TextInput
               style={styles.input}
-              placeholder="Titulli"
+              placeholder={t("Titulli")}
               value={title}
               onChangeText={setTitle}
             />
             <TextInput
               style={[styles.input, styles.area]}
-              placeholder="Përshkrimi"
+              placeholder={t("Përshkrimi")}
               value={description}
               onChangeText={setDescription}
               multiline
             />
-            <Text style={styles.label}>Kategoria</Text>
+            <Text style={styles.label}>{t("Kategoria")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
               {MEDIA_CATEGORIES.map((c) => (
                 <TouchableOpacity
@@ -140,7 +142,7 @@ export default function AddMediaSheet({
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <Text style={styles.label}>Visibility</Text>
+            <Text style={styles.label}>{t("Visibility")}</Text>
             <View style={styles.row}>
               {MEDIA_VISIBILITIES.map((v) => (
                 <TouchableOpacity
@@ -157,7 +159,7 @@ export default function AddMediaSheet({
             </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder="Sezoni (opsionale)"
+              placeholder={t("Sezoni (opsionale)")}
               value={season}
               onChangeText={setSeason}
             />
@@ -167,7 +169,7 @@ export default function AddMediaSheet({
               onPress={onSubmit}
               disabled={saving}
             >
-              {saving ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.saveText}>Ruaj videon</Text>}
+              {saving ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.saveText}>{t("Ruaj videon")}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </View>

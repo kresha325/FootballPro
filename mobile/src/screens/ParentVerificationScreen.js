@@ -10,8 +10,10 @@ import {
 } from '../theme/nativeComponents';
 import { Share } from 'react-native';
 import { extractErrorMessage, parentVerificationRequest } from '../api/client';
+import { useLocale } from '../context/LocaleContext';
 
 export default function ParentVerificationScreen({ navigation }) {
+  const { t } = useLocale();
   const [parentEmail, setParentEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmUrl, setConfirmUrl] = useState('');
@@ -106,7 +108,7 @@ export default function ParentVerificationScreen({ navigation }) {
         <TextInput
           value={parentEmail}
           onChangeText={setParentEmail}
-          placeholder="Email i prindit"
+          placeholder={t('Email i prindit')}
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
           keyboardType="email-address"

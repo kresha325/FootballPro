@@ -1282,7 +1282,7 @@ export default function ConversationScreen({ route, navigation }) {
       <TextInput
         value={threadQuery}
         onChangeText={setThreadQuery}
-        placeholder="Kërko në bisedë"
+        placeholder={t('Kërko në bisedë')}
         placeholderTextColor={colors.muted}
         style={[styles.threadSearch, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
       />
@@ -1541,7 +1541,7 @@ export default function ConversationScreen({ route, navigation }) {
             {canManageGroup ? (
               <View style={[styles.membersActions, { paddingBottom: 0 }]}>
                 <TextInput
-                  placeholder="Emër i ri i grupit"
+                  placeholder={t('Emër i ri i grupit')}
                   placeholderTextColor={colors.muted}
                   style={[styles.threadSearch, { flex: 1, marginHorizontal: 0, color: colors.text, borderColor: colors.border }]}
                   onSubmitEditing={(event) => {

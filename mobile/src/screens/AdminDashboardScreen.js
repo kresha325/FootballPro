@@ -44,6 +44,7 @@ import {
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLocale } from '../context/LocaleContext';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -81,6 +82,7 @@ function StatChip({ label, value, colors }) {
 }
 
 export default function AdminDashboardScreen() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { colors } = useTheme();
   const [analytics, setAnalytics] = useState(null);
@@ -423,7 +425,7 @@ export default function AdminDashboardScreen() {
           <TextInput
             value={newRole}
             onChangeText={setNewRole}
-            placeholder="role"
+            placeholder={t('role')}
             placeholderTextColor={colors.muted}
             style={[
               styles.inlineInput,
@@ -433,7 +435,7 @@ export default function AdminDashboardScreen() {
           <TextInput
             value={passwordDraft}
             onChangeText={setPasswordDraft}
-            placeholder="New password"
+            placeholder={t('New password')}
             placeholderTextColor={colors.muted}
             style={[
               styles.inlineInput,
@@ -728,7 +730,7 @@ export default function AdminDashboardScreen() {
                 setSearch(v);
                 setPage(1);
               }}
-              placeholder="Search"
+              placeholder={t('Search')}
               placeholderTextColor={colors.muted}
               style={[
                 styles.searchInput,
@@ -915,7 +917,7 @@ export default function AdminDashboardScreen() {
                   <TextInput
                     value={stadiumForm.name}
                     onChangeText={(v) => setStadiumForm((p) => ({ ...p, name: v }))}
-                    placeholder="Emri *"
+                    placeholder={t('Emri *')}
                     placeholderTextColor={colors.muted}
                     style={[
                       styles.inlineInput,
@@ -929,7 +931,7 @@ export default function AdminDashboardScreen() {
                   <TextInput
                     value={stadiumForm.city}
                     onChangeText={(v) => setStadiumForm((p) => ({ ...p, city: v }))}
-                    placeholder="Qyteti"
+                    placeholder={t('Qyteti')}
                     placeholderTextColor={colors.muted}
                     style={[
                       styles.inlineInput,
@@ -943,7 +945,7 @@ export default function AdminDashboardScreen() {
                   <TextInput
                     value={stadiumForm.country}
                     onChangeText={(v) => setStadiumForm((p) => ({ ...p, country: v }))}
-                    placeholder="Shteti"
+                    placeholder={t('Shteti')}
                     placeholderTextColor={colors.muted}
                     style={[
                       styles.inlineInput,
@@ -957,7 +959,7 @@ export default function AdminDashboardScreen() {
                   <TextInput
                     value={stadiumForm.capacity}
                     onChangeText={(v) => setStadiumForm((p) => ({ ...p, capacity: v }))}
-                    placeholder="Kapaciteti"
+                    placeholder={t('Kapaciteti')}
                     keyboardType="number-pad"
                     placeholderTextColor={colors.muted}
                     style={[
@@ -972,7 +974,7 @@ export default function AdminDashboardScreen() {
                   <TextInput
                     value={stadiumForm.address}
                     onChangeText={(v) => setStadiumForm((p) => ({ ...p, address: v }))}
-                    placeholder="Adresa"
+                    placeholder={t('Adresa')}
                     placeholderTextColor={colors.muted}
                     style={[
                       styles.inlineInput,
@@ -995,7 +997,7 @@ export default function AdminDashboardScreen() {
                     <TextInput
                       value={stadiumForm.days}
                       onChangeText={(v) => setStadiumForm((p) => ({ ...p, days: v }))}
-                      placeholder="Ditë featured"
+                      placeholder={t('Ditë featured')}
                       keyboardType="number-pad"
                       placeholderTextColor={colors.muted}
                       style={[

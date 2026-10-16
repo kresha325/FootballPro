@@ -54,6 +54,7 @@ function Empty({ text }) {
 }
 
 function PlayerPanel({ data }) {
+  const { t } = useLocale();
   if (!data?.hasOfficial) {
     return <Empty text="Nuk ka ndeshje zyrtare për këtë lojtar. Statistikat shfaqen vetëm nga ndeshjet e regjistruara." />;
   }
