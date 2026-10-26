@@ -244,9 +244,6 @@ export const messagingAPI = {
   getConversationMessages: (conversationId) => API.get(`/messaging/conversations/${conversationId}/messages`),
   sendConversationMessage: (conversationId, data) => API.post(`/messaging/conversations/${conversationId}/messages`, data),
   markAsRead: (conversationId) => API.put(`/messaging/conversations/${conversationId}/read`),
-  // Legacy endpoints (keep for backwards compatibility)
-  getMessages: (id) => API.get(`/messaging/${id}`),
-  sendMessage: (id, data) => API.post(`/messaging/${id}`, data),
   getUnreadCount: () => API.get('/messaging/unread-count'),
 };
 

@@ -46,6 +46,7 @@ import SharePostPanel from '../components/SharePostPanel';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLocale } from '../context/LocaleContext';
+import { usePlatform } from '../context/PlatformContext';
 import { logNav, perfStart, useRenderLog } from '../utils/perfLog';
 import { publishFeedPagerSession } from '../navigation/feedPagerStore';
 
@@ -391,6 +392,7 @@ export default function FeedScreen({ navigation }) {
   const { t } = useLocale();
   useRenderLog('FeedScreen');
   const { user } = useAuth();
+  const { isEnabled } = usePlatform();
   const { isDark } = useTheme();
   const navigateToMoreScreen = useCallback(
     (screen, params) => {
@@ -629,16 +631,16 @@ export default function FeedScreen({ navigation }) {
             setFeedAds(shuffleAds(raw));
           })
           .catch(() => setFeedAds([])),
-        streamsRequest({ isLive: true, limit: 12 })
+        isEnabled('LIVE_STREAMING') ? streamsRequest({ isLive: true, limit: 12 })
           .then((liveRes) => {
             setLiveStreams(Array.isArray(liveRes.data) ? liveRes.data : []);
           })
-          .catch(() => setLiveStreams([])),
+          .catch(() => setLiveStreams([])) : Promise.resolve().then(() => setLiveStreams([])),
       ]).finally(() => {
         lastExtrasAt.current = Date.now();
       });
     });
-  }, [feedScope, user?.id]);
+  }, [feedScope, isEnabled, user?.id]);
 
   useEffect(() => {
     AsyncStorage.getItem(FEED_FILTER_KEY)
@@ -942,7 +944,7 @@ export default function FeedScreen({ navigation }) {
             onPressMyTournaments={() => navigateToMoreScreen('Tournaments', { filter: 'mine' })}
             myTournamentsBadge={myTournamentsBadge}
           />
-          {liveStreams.length > 0 ? (
+          {isEnabled('LIVE_STREAMING') && liveStreams.length > 0 ? (
             <View style={[styles.liveWidget, isDark && styles.liveWidgetDark]}>
               <View style={styles.liveHeaderRow}>
                 <Text style={[styles.liveTitle, isDark && styles.textPrimaryDark]}>{t('Live Now')}</Text>

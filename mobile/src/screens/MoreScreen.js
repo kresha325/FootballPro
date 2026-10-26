@@ -6,6 +6,7 @@ import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { hasTier, getEffectiveTier, tierLabel } from '../utils/subscriptionAccess';
 import { useRenderLog } from '../utils/perfLog';
 import { useLocale } from '../context/LocaleContext';
+import { usePlatform } from '../context/PlatformContext';
 
 function MenuButton({ title, subtitle, onPress, badge, colors }) {
   const badgeNum = Number(badge || 0);
@@ -36,6 +37,7 @@ export default function MoreScreen({ navigation }) {
   const { getSocket, socketConnected } = useSocket();
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { isEnabled } = usePlatform();
   const { notificationsCount, messagesCount } = useUnreadBadges(getSocket, socketConnected);
 
   const alertLines = useMemo(() => {
@@ -125,12 +127,12 @@ export default function MoreScreen({ navigation }) {
       })}
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>{t('Modules')}</Text>
-      {btn({ title: t('Wallet'), subtitle: t('XCoin balance and transactions'), onPress: () => navigation.navigate('Wallet') })}
-      {btn({
+      {isEnabled('JONCOIN') ? btn({ title: t('Wallet'), subtitle: t('XCoin balance and transactions'), onPress: () => navigation.navigate('Wallet') }) : null}
+      {isEnabled('ANALYTICS') ? btn({
         title: t('Performance'),
         subtitle: t('Statistics, form, sales and wallet'),
         onPress: () => navigation.navigate('Performance'),
-      })}
+      }) : null}
       {canUseInsights
         ? btn({
             title: t('Insights'),
@@ -142,7 +144,7 @@ export default function MoreScreen({ navigation }) {
         : null}
       {btn({ title: t('Tournaments'), subtitle: t('Trending tournaments and joining'), onPress: () => navigation.navigate('Tournaments') })}
       {btn({ title: t('Videos'), subtitle: t('Popular uploads and likes'), onPress: () => navigation.navigate('Videos') })}
-      {canUseScouting
+      {canUseScouting && isEnabled('SCOUTING')
         ? btn({
             title: t('Scouting'),
             subtitle: hasScoutingPlan ? t('Discovery, shortlist, reports') : t('Requires the Pro plan'),
@@ -152,17 +154,17 @@ export default function MoreScreen({ navigation }) {
       {btn({ title: t('Search'), subtitle: t('Users, posts and discovery'), onPress: () => navigation.navigate('Search') })}
       {btn({ title: t('Matches'), subtitle: t('View and schedule matches'), onPress: () => navigation.navigate('Matches') })}
       {btn({ title: t('Calendar'), subtitle: t('Upcoming, today, and results'), onPress: () => navigation.navigate('Calendar') })}
-      {btn({
+      {isEnabled('LIVE_STREAMING') ? btn({
         title: t('Streams'),
         subtitle: t('Live now, recordings, Go Live'),
         onPress: () => navigation.navigate('Streams'),
-      })}
-      {btn({
+      }) : null}
+      {isEnabled('LIVE_STREAMING') ? btn({
         title: t('Go Live'),
         subtitle: t('Start a LiveKit / YouTube stream'),
         onPress: () => navigation.navigate('GoLive'),
-      })}
-      {btn({ title: t('Premium'), subtitle: t('Membership plans and perks'), onPress: () => navigation.navigate('Premium') })}
+      }) : null}
+      {isEnabled('PREMIUM') ? btn({ title: t('Premium'), subtitle: t('Membership plans and perks'), onPress: () => navigation.navigate('Premium') }) : null}
       {btn({ title: t('Sponsors'), subtitle: t('Manage your sponsor deals'), onPress: () => navigation.navigate('Sponsors') })}
       {btn({ title: t('Ads'), subtitle: t('Create and view active ads'), onPress: () => navigation.navigate('Ads') })}
       {btn({ title: t('Settings'), subtitle: t('Profile and app preferences'), onPress: () => navigation.navigate('Settings') })}

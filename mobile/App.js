@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { MaintenanceBanner, PlatformProvider } from './src/context/PlatformContext';
 import { LocaleProvider } from './src/context/LocaleContext';
 import { CartProvider } from './src/context/CartContext';
 import { ThemeProvider } from './src/context/ThemeContext';
@@ -22,11 +23,14 @@ export default function App() {
         <ThemeProvider>
           <LocaleProvider>
             <AuthProvider>
-              <CartProvider>
-                <AppNavigator />
-                <XPNotificationManager />
-                <PushNotificationManager />
-              </CartProvider>
+              <PlatformProvider>
+                <CartProvider>
+                  <MaintenanceBanner />
+                  <AppNavigator />
+                  <XPNotificationManager />
+                  <PushNotificationManager />
+                </CartProvider>
+              </PlatformProvider>
             </AuthProvider>
           </LocaleProvider>
         </ThemeProvider>

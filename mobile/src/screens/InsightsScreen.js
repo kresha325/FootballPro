@@ -25,6 +25,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { getEffectiveTier, hasTier, tierLabel } from '../utils/subscriptionAccess';
 import { useNavigation } from '@react-navigation/native';
+import { usePlatform } from '../context/PlatformContext';
 
 const PERIODS = [
   { key: 7, label: '7 ditë' },
@@ -95,11 +96,11 @@ function ProgressBar({ progress, color, colors }) {
   );
 }
 
-function SegmentTabs({ value, onChange, colors }) {
+function SegmentTabs({ value, onChange, colors, showAnalytics }) {
   return (
     <View style={[styles.segment, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
       {[
-        { key: 'analytics', label: 'Analitika', icon: 'stats-chart-outline' },
+        ...(showAnalytics ? [{ key: 'analytics', label: 'Analitika', icon: 'stats-chart-outline' }] : []),
         { key: 'gamification', label: 'Gamifikim', icon: 'trophy-outline' },
       ].map((tab) => {
         const active = value === tab.key;
@@ -122,9 +123,10 @@ function SegmentTabs({ value, onChange, colors }) {
 export default function InsightsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isEnabled } = usePlatform();
   const navigation = useNavigation();
-  const canUseAnalytics = hasTier(user, 'basic');
-  const [tab, setTab] = useState('analytics');
+  const canUseAnalytics = hasTier(user, 'basic') && isEnabled('ANALYTICS');
+  const [tab, setTab] = useState(canUseAnalytics ? 'analytics' : 'gamification');
   const [period, setPeriod] = useState(30);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -213,6 +215,10 @@ export default function InsightsScreen() {
   }, [period, canUseAnalytics]);
 
   useEffect(() => {
+    if (!canUseAnalytics) setTab('gamification');
+  }, [canUseAnalytics]);
+
+  useEffect(() => {
     loadData();
   }, [loadData]);
 
@@ -268,7 +274,7 @@ export default function InsightsScreen() {
         <Text style={[styles.heroEyebrow, { color: colors.primaryText }]}>Performanca jote</Text>
         <Text style={[styles.heroTitle, { color: colors.text }]}>Insights</Text>
         <Text style={[styles.heroSub, { color: colors.muted }]}>Analitika e profilit dhe progresi XP në një vend.</Text>
-        <SegmentTabs value={tab} onChange={setTab} colors={colors} />
+        <SegmentTabs value={tab} onChange={setTab} colors={colors} showAnalytics={canUseAnalytics} />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}

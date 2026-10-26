@@ -66,6 +66,7 @@ import { APP_BRAND_NAME } from '../config/branding';
 import { absoluteBackendUrl } from '../config/constants';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
 import { LANGUAGE_KEY, useLocale } from '../context/LocaleContext';
+import { FeatureUnavailable, usePlatform } from '../context/PlatformContext';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -135,6 +136,22 @@ function HeaderNotifications() {
 function HeaderNone() {
   return null;
 }
+
+function featureScreen(Component, flag) {
+  return function GatedScreen(props) {
+    const { isEnabled } = usePlatform();
+    return isEnabled(flag) ? <Component {...props} /> : <FeatureUnavailable flag={flag} />;
+  };
+}
+
+const WalletFeatureScreen = featureScreen(WalletScreen, 'JONCOIN');
+const PerformanceFeatureScreen = featureScreen(PerformanceScreen, 'ANALYTICS');
+const ScoutingFeatureScreen = featureScreen(ScoutingScreen, 'SCOUTING');
+const GoLiveFeatureScreen = featureScreen(GoLiveScreen, 'LIVE_STREAMING');
+const GoLiveBroadcastFeatureScreen = featureScreen(GoLiveBroadcastScreen, 'LIVE_STREAMING');
+const StreamsFeatureScreen = featureScreen(StreamsScreen, 'LIVE_STREAMING');
+const LiveViewerFeatureScreen = featureScreen(LiveViewerScreen, 'LIVE_STREAMING');
+const PremiumFeatureScreen = featureScreen(PremiumScreen, 'PREMIUM');
 
 const screenWithNotifications = { title: APP_BRAND_NAME, headerRight: HeaderNotifications };
 
@@ -292,6 +309,7 @@ function FeedNavigator() {
 
 function MarketplaceNavigator() {
   const themed = useThemedStackOptions();
+  const { isEnabled } = usePlatform();
   const screenOptions = useCallback(
     ({ route }) => ({
       ...themed,
@@ -299,6 +317,7 @@ function MarketplaceNavigator() {
     }),
     [themed]
   );
+  if (!isEnabled('MARKETPLACE')) return <FeatureUnavailable flag="MARKETPLACE" />;
   return (
     <MarketplaceStack.Navigator screenOptions={screenOptions}>
       <MarketplaceStack.Screen name="MarketplaceHome" component={MarketplaceScreen} options={{ title: 'Tregu' }} />
@@ -343,17 +362,17 @@ function ProfileNavigator() {
       />
       <ProfileStack.Screen
         name="GoLive"
-        component={GoLiveScreen}
+        component={GoLiveFeatureScreen}
         options={{ title: 'Dil LIVE', headerShown: true, headerBackTitleVisible: true }}
       />
       <ProfileStack.Screen
         name="GoLiveBroadcast"
-        component={GoLiveBroadcastScreen}
+        component={GoLiveBroadcastFeatureScreen}
         options={{ title: 'Transmetim LIVE', headerShown: true, headerBackTitleVisible: true }}
       />
       <ProfileStack.Screen
         name="LiveViewer"
-        component={LiveViewerScreen}
+        component={LiveViewerFeatureScreen}
         options={{ title: 'LIVE', headerBackTitleVisible: true }}
       />
       <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
@@ -367,9 +386,9 @@ function MoreNavigator() {
   return (
     <MoreStack.Navigator screenOptions={themed}>
       <MoreStack.Screen name="MoreHome" component={MoreScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Wallet" component={WalletScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Wallet" component={WalletFeatureScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
-      <MoreStack.Screen name="Performance" component={PerformanceScreen} options={{ title: 'Performanca' }} />
+      <MoreStack.Screen name="Performance" component={PerformanceFeatureScreen} options={{ title: 'Performanca' }} />
       <MoreStack.Screen name="Tournaments" component={TournamentsScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen
         name="TournamentDetail"
@@ -377,17 +396,17 @@ function MoreNavigator() {
         options={{ title: 'Turneu', headerBackTitleVisible: true }}
       />
       <MoreStack.Screen name="Videos" component={VideosScreen} options={{ title: 'Videot' }} />
-      <MoreStack.Screen name="Scouting" component={ScoutingScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Scouting" component={ScoutingFeatureScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen
         name="Notifications"
         component={NotificationsScreen}
         options={{ title: 'Njoftimet', headerBackTitle: 'Menu' }}
       />
-      <MoreStack.Screen name="GoLive" component={GoLiveScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="Streams" component={StreamsScreen} options={{ title: 'Streams' }} />
+      <MoreStack.Screen name="GoLive" component={GoLiveFeatureScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Streams" component={StreamsFeatureScreen} options={{ title: 'Streams' }} />
       <MoreStack.Screen
         name="GoLiveBroadcast"
-        component={GoLiveBroadcastScreen}
+        component={GoLiveBroadcastFeatureScreen}
         options={{ title: 'Transmetim LIVE', headerBackTitleVisible: true }}
       />
       <MoreStack.Screen name="Sponsors" component={SponsorsScreen} options={{ title: APP_BRAND_NAME }} />
@@ -396,13 +415,13 @@ function MoreNavigator() {
       <MoreStack.Screen name="Matches" component={MatchesScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Calendar" component={CalendarScreen} options={{ title: 'Calendar' }} />
       <MoreStack.Screen name="MatchDetail" component={MatchDetailScreen} options={{ title: 'Match' }} />
-      <MoreStack.Screen name="Premium" component={PremiumScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="Premium" component={PremiumFeatureScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cilësimet' }} />
       <MoreStack.Screen name="Legal" component={LegalScreen} options={{ title: 'Info & ligjore' }} />
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />
-      <MoreStack.Screen name="LiveViewer" component={LiveViewerScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="LiveViewer" component={LiveViewerFeatureScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="PublicCv" component={PublicCvScreen} options={{ title: 'CV dixhitale' }} />
     </MoreStack.Navigator>
@@ -483,6 +502,7 @@ function BadgeAwareTabBar(props) {
 function AppTabs() {
   const { colors, isDark } = useTheme();
   const { t } = useLocale();
+  const { isEnabled } = usePlatform();
   const screenOptions = useCallback(
     ({ route }) => ({
       headerTitle: APP_BRAND_NAME,
@@ -513,7 +533,7 @@ function AppTabs() {
       tabBar={(props) => <BadgeAwareTabBar {...props} />}
     >
       <Tabs.Screen name="Feed" component={FeedNavigator} options={{ ...feedTabOptions, tabBarLabel: t('feed') }} />
-      <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={{ ...marketplaceTabOptions, tabBarLabel: t('marketplace') }} />
+      {isEnabled('MARKETPLACE') ? <Tabs.Screen name="Marketplace" component={MarketplaceNavigator} options={{ ...marketplaceTabOptions, tabBarLabel: t('marketplace') }} /> : null}
       <Tabs.Screen
         name="Profile"
         component={ProfileNavigator}

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useLocale } from '../context/LocaleContext';
+import { usePlatform } from '../context/PlatformContext';
 import { PROFILE_THEMES } from '../utils/profileThemes';
 import {
   addTransferHistoryRequest,
@@ -113,6 +114,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user: me, logout } = useAuth();
+  const { isEnabled } = usePlatform();
 
   const [profile, setProfile] = useState(null);
   const [postCount, setPostCount] = useState(0);
@@ -341,7 +343,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     setError('');
     const done = perfStart('Profile core');
     const followPromise = isSelf ? null : followStatusRequest(userId).catch(() => null);
-    const balancePromise = isSelf ? joncoinBalanceRequest().catch(() => null) : null;
+    const balancePromise = isSelf && isEnabled('JONCOIN') ? joncoinBalanceRequest().catch(() => null) : null;
     try {
       const profileRes = await profileByIdRequest(userId, { signal: controller.signal });
       if (gen !== requestGen.current || controller.signal.aborted) return null;
@@ -386,7 +388,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         setRefreshing(false);
       }
     }
-  }, [isSelf, userId]);
+  }, [isEnabled, isSelf, userId]);
 
   const loadSection = useCallback(async (section, profileSnapshot, { force } = {}) => {
     const gen = requestGen.current;
@@ -1068,16 +1070,18 @@ export default function PublicProfileScreen({ route, navigation }) {
               </View>
             ) : (
               <View style={styles.selfActionsWrap}>
-                {joncoinBalance != null ? (
+                {isEnabled('JONCOIN') && joncoinBalance != null ? (
                   <View style={[styles.joncoinBanner, { borderColor: theme.border, backgroundColor: theme.chipBg }]}>
                     <Text style={styles.joncoinLabel}>XCoin</Text>
                     <Text style={styles.joncoinValue}>{joncoinBalance}</Text>
                   </View>
                 ) : null}
-                <TouchableOpacity style={styles.goLiveBtn} onPress={onGoLive} activeOpacity={0.88}>
-                  <Ionicons name="videocam" size={20} color="#fff" />
-                  <Text style={styles.goLiveBtnText}>{t('Dil LIVE')}</Text>
-                </TouchableOpacity>
+                {isEnabled('LIVE_STREAMING') ? (
+                  <TouchableOpacity style={styles.goLiveBtn} onPress={onGoLive} activeOpacity={0.88}>
+                    <Ionicons name="videocam" size={20} color="#fff" />
+                    <Text style={styles.goLiveBtnText}>{t('Dil LIVE')}</Text>
+                  </TouchableOpacity>
+                ) : null}
                 <View style={styles.selfActionsRow}>
                   <TouchableOpacity
                     style={styles.selfPrimaryBtn}

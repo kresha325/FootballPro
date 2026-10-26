@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DeviceEventEmitter } from 'react-native';
 import { BACKEND_URL } from '../config/constants';
 
 const api = axios.create({
@@ -50,6 +51,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error?.response?.status;
+    if (status === 503 && error?.response?.data?.maintenance) {
+      DeviceEventEmitter.emit('xt-maintenance', error.response.data);
+    }
     if (status === 401 && onUnauthorized && !unauthorizedInFlight && !shouldSkipUnauthorized(error)) {
       unauthorizedInFlight = true;
       try {

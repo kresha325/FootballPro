@@ -8,6 +8,7 @@ import {
   updateCartItemRequest,
 } from '../api/client';
 import { useAuth } from './AuthContext';
+import { usePlatform } from './PlatformContext';
 
 const STORAGE_KEY = 'footballpro_marketplace_cart_v1';
 const CartContext = createContext(null);
@@ -51,6 +52,7 @@ function mapServer(data) {
 
 export function CartProvider({ children }) {
   const { token } = useAuth();
+  const { isEnabled } = usePlatform();
 
   const apply = useCallback(async (data) => {
     const mapped = mapServer(data);
@@ -63,6 +65,10 @@ export function CartProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!isEnabled('MARKETPLACE')) {
+      publishCart({ ...readCart(), ready: true });
+      return undefined;
+    }
     if (!token) return undefined;
     let cancelled = false;
     (async () => {
@@ -84,9 +90,10 @@ export function CartProvider({ children }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [apply, token]);
+  }, [apply, isEnabled, token]);
 
   const addItem = useCallback(async (product, quantity) => {
+    if (!isEnabled('MARKETPLACE')) return;
     if (!product?.id) return;
     try {
       const res = await addCartItemRequest(Number(product.id), Math.max(1, parseInt(quantity, 10) || 1));
@@ -94,9 +101,10 @@ export function CartProvider({ children }) {
     } catch (_e) {
       /* server remains source of truth when it is reachable */
     }
-  }, [apply]);
+  }, [apply, isEnabled]);
 
   const setLineQuantity = useCallback(async (productId, quantity) => {
+    if (!isEnabled('MARKETPLACE')) return;
     const q = parseInt(quantity, 10) || 0;
     try {
       const res = q < 1 ? await removeCartItemRequest(productId) : await updateCartItemRequest(productId, q);
@@ -104,18 +112,20 @@ export function CartProvider({ children }) {
     } catch (_e) {
       /* ignore */
     }
-  }, [apply]);
+  }, [apply, isEnabled]);
 
   const removeItem = useCallback(async (productId) => {
+    if (!isEnabled('MARKETPLACE')) return;
     try {
       const res = await removeCartItemRequest(productId);
       await apply(res.data);
     } catch (_e) {
       /* ignore */
     }
-  }, [apply]);
+  }, [apply, isEnabled]);
 
   const clearCart = useCallback(async () => {
+    if (!isEnabled('MARKETPLACE')) return;
     try {
       const res = await clearCartRequest();
       await apply(res.data);
@@ -123,7 +133,7 @@ export function CartProvider({ children }) {
       publishCart({ items: [], serverTotal: null, ready: true });
       AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
     }
-  }, [apply]);
+  }, [apply, isEnabled]);
 
   const value = useMemo(
     () => ({ addItem, setLineQuantity, removeItem, clearCart }),

@@ -10,7 +10,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import { Ionicons } from '@expo/vector-icons';
-import { createOrderRequest, extractErrorMessage, joncoinBalanceRequest } from '../api/client';
+import { createOrderRequest, extractErrorMessage } from '../api/client';
 import OptimizedImage from '../components/media/OptimizedImage';
 import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
@@ -42,18 +42,6 @@ export default function CartScreen({ navigation }) {
     }
     if (deliveryMethod === 'shipping' && !String(deliveryAddress || '').trim()) {
       Alert.alert('Adresa', 'Vendos adresën e dërgesës.');
-      return;
-    }
-    let balance = 0;
-    try {
-      const balanceRes = await joncoinBalanceRequest();
-      balance = Number(balanceRes?.data?.balance || 0);
-    } catch (_e) {
-      Alert.alert('XCoin', 'Nuk u lexua balanca.');
-      return;
-    }
-    if (balance < subtotalJonCoin) {
-      Alert.alert('XCoin', 'Nuk ke mjaftueshëm XCoin për këtë porosi.');
       return;
     }
     Alert.alert(

@@ -23,6 +23,7 @@ import { useCart } from '../context/CartContext';
 import { absoluteBackendUrl } from '../config/constants';
 import OptimizedImage from '../components/media/OptimizedImage';
 import { useLocale } from '../context/LocaleContext';
+import { usePlatform } from '../context/PlatformContext';
 
 const PAGE_SIZE = 8;
 
@@ -99,6 +100,7 @@ function ProductCard({ item, onAddToCart, currentUserId, navigation }) {
 
 export default function MarketplaceScreen() {
   const { t } = useLocale();
+  const { isEnabled } = usePlatform();
   useRenderLog('MarketplaceScreen');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -125,7 +127,10 @@ export default function MarketplaceScreen() {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const [productsRes, balanceRes] = await Promise.all([productsRequest(), joncoinBalanceRequest()]);
+      const [productsRes, balanceRes] = await Promise.all([
+        productsRequest(),
+        isEnabled('JONCOIN') ? joncoinBalanceRequest().catch(() => null) : Promise.resolve(null),
+      ]);
       const payload = productsRes.data;
       setProducts(Array.isArray(payload) ? payload : (Array.isArray(payload?.products) ? payload.products : []));
       setBalance(Number(balanceRes?.data?.balance || 0));
@@ -137,7 +142,7 @@ export default function MarketplaceScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isEnabled]);
 
   useEffect(() => {
     loadData();
