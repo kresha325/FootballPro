@@ -6,7 +6,9 @@ buildscript {
     mavenCentral()
   }
   dependencies {
-    classpath('com.android.tools.build:gradle')
+    // API 36 requires AGP 8.9.1 or newer. Pin this explicitly because the
+    // React Native 0.79 version catalog otherwise selects AGP 8.8.2.
+    classpath('com.android.tools.build:gradle:8.9.2')
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
   }

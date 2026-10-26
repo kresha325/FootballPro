@@ -11,6 +11,8 @@
 | compileSdk | **36** | `android/gradle.properties` |
 | targetSdk | **36** | `android/gradle.properties` |
 | buildTools | **36.0.0** | `android/gradle.properties` |
+| Android Gradle Plugin | **8.9.2** | `android/build.gradle` (API 36 requires 8.9.1+) |
+| Gradle wrapper | **8.13** | `android/gradle/wrapper/gradle-wrapper.properties` |
 | New Architecture | **false** | `gradle.properties` |
 | Hermes | **true** | `gradle.properties` |
 | Edge-to-edge | **true** | `gradle.properties` / `app.json` |
