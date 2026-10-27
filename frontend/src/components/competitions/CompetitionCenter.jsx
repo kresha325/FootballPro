@@ -111,6 +111,23 @@ export default function CompetitionCenter({ section = 'overview' }) {
     }
   }
 
+  async function repairLigaSchedule(expectedMatches) {
+    const confirmed = window.confirm(
+      `Orari ka ${fixtures.length} ndeshje, por për ${clubCount} klube priten ${expectedMatches} ndeshje vajtje-kthim. Do të zëvendësohen vetëm fiksimet e paprekura, pa rezultate, statistika, video ose raporte. Vazhdo?`
+    );
+    if (!confirmed) return;
+    setBusy(true);
+    setError('');
+    try {
+      await API.post(`/tournaments/${id}/start`, { repairFixtures: true });
+      window.location.reload();
+    } catch (err) {
+      setError(extractApiMessage(err, 'Orari nuk mund të rindërtohej.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function joinCompetition() {
     setBusy(true);
     try {
@@ -184,6 +201,10 @@ export default function CompetitionCenter({ section = 'overview' }) {
   const lifecycle = competition?.lifecycle || competition?.status;
   const isCreator = user && Number(competition?.creatorId) === Number(user.id);
   const rows = standings?.rows || [];
+  const isLigaLeague = Boolean(competition?.ligaId || competition?.sourceRole === 'liga') && competition?.type === 'league';
+  const clubCount = rows.length || (competition?.participants || []).filter((participant) => String(participant.role || '').toLowerCase() === 'club').length;
+  const expectedLigaMatches = clubCount > 1 ? clubCount * (clubCount - 1) : 0;
+  const ligaScheduleMismatch = isLigaLeague && clubCount > 1 && fixtures.length !== expectedLigaMatches;
   const bracketRounds = bracket && typeof bracket === 'object' ? Object.keys(bracket) : [];
 
   return (
@@ -212,6 +233,11 @@ export default function CompetitionCenter({ section = 'overview' }) {
           )}
           {isCreator && lifecycle === 'registration' && (
             <button type="button" className="btn btn-primary" disabled={busy} onClick={startCompetition}>Gjenero ndeshjet dhe nise</button>
+          )}
+          {(isCreator || user?.role === 'admin') && lifecycle === 'active' && ligaScheduleMismatch && (
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => repairLigaSchedule(expectedLigaMatches)}>
+              {busy ? 'Po rindërtohet orari…' : `Rindërto orarin · ${expectedLigaMatches} ndeshje`}
+            </button>
           )}
           {!user && <Link to="/login" className="btn btn-quiet">Hyr për t'u regjistruar</Link>}
           <Link to="/calendar" className="btn btn-quiet">Kalendari</Link>

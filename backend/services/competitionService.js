@@ -11,6 +11,10 @@ const Bracket = require('../models/Bracket');
 const MatchScorer = require('../models/MatchScorer');
 const MatchEvent = require('../models/MatchEvent');
 const PlayerMatchStat = require('../models/PlayerMatchStat');
+const Video = require('../models/Video');
+const MediaItem = require('../models/MediaItem');
+const Stream = require('../models/Stream');
+const ScoutingReport = require('../models/ScoutingReport');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
@@ -150,6 +154,42 @@ async function createPlannedMatches(tournament, fixtures, transaction) {
   return rows;
 }
 
+async function removeUnplayedLigaFixtures(tournament, matches, transaction) {
+  const matchIds = matches.map((match) => Number(match.id));
+  if (!matchIds.length) return;
+
+  const queryOptions = { where: { matchId: { [Op.in]: matchIds } }, transaction };
+  const hasReferences = await Promise.all([
+    MatchEvent.count(queryOptions),
+    MatchScorer.count(queryOptions),
+    PlayerMatchStat.count(queryOptions),
+    Video.count(queryOptions),
+    MediaItem.count(queryOptions),
+    Stream.count(queryOptions),
+    ScoutingReport.count(queryOptions),
+  ]);
+  if (hasReferences.some((count) => count > 0)) {
+    throw fail(409, 'Orari nuk mund të rindërtohet: disa ndeshje kanë rezultate, statistika ose përmbajtje të lidhur.');
+  }
+
+  const untouched = matches.every((match) =>
+    match.status === 'scheduled' &&
+    match.scoreHome == null && match.scoreAway == null &&
+    match.winnerUserId == null && match.halfTimeHome == null && match.halfTimeAway == null &&
+    match.extraTimeHome == null && match.extraTimeAway == null &&
+    match.penaltiesHome == null && match.penaltiesAway == null &&
+    match.lineup == null && match.clockMinute == null &&
+    match.refereeUserId == null && match.refereeName == null && match.venue == null && match.highlightsUrl == null &&
+    Number(match.goals || 0) === 0 && Number(match.assists || 0) === 0
+  );
+  if (!untouched) {
+    throw fail(409, 'Orari nuk mund të rindërtohet sepse përmban ndeshje të luajtura ose të përditësuara.');
+  }
+
+  await Bracket.destroy({ where: { tournamentId: tournament.id }, transaction });
+  await Match.destroy({ where: { tournamentId: tournament.id }, transaction });
+}
+
 async function startCompetition({ tournamentId, user, options = {} }) {
   const tournament = await loadTournament(tournamentId);
   if (!tournament) throw fail(404, 'Tournament not found');
@@ -171,6 +211,10 @@ async function startCompetition({ tournamentId, user, options = {} }) {
     tournament.homeAndAway = true;
     await tournament.save();
   }
+  if (options.repairFixtures === true && isLigaCompetition && tournament.type === 'league') {
+    tournament.homeAndAway = true;
+    await tournament.save();
+  }
   if (isLigaCompetition) {
     await demoteAthleteParticipantsOnClubTournament(tournament.id);
   }
@@ -185,10 +229,9 @@ async function startCompetition({ tournamentId, user, options = {} }) {
     : participants;
   const accepted = acceptedParticipants(standing);
   const gate = assertCanStart(tournament, accepted.length);
-  if (!gate.ok) throw fail(gate.status, gate.msg);
-
-  const existing = hasExistingFixtures;
-  if (existing > 0) throw fail(409, 'Fixtures already exist for this competition.');
+  const repairingExistingLigaSchedule = options.repairFixtures === true &&
+    isLigaCompetition && tournament.type === 'league';
+  if (!gate.ok && !repairingExistingLigaSchedule) throw fail(gate.status, gate.msg);
 
   const seeded = [...accepted].sort((a, b) => {
     const sa = a.seed == null ? 9999 : Number(a.seed);
@@ -211,7 +254,33 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   );
   if (!plan.ok) throw fail(400, plan.msg);
 
+  let existingMatchesToRepair = [];
+  if (hasExistingFixtures > 0) {
+    if (options.repairFixtures !== true || !isLigaCompetition || tournament.type !== 'league') {
+      throw fail(409, 'Fixtures already exist for this competition.');
+    }
+    const existingMatches = await Match.findAll({ where: { tournamentId: tournament.id } });
+    const expectedIds = new Set(seeded.map((participant) => Number(participant.userId)));
+    const scheduleMatchesCurrentClubs = existingMatches.every((match) =>
+      expectedIds.has(Number(match.homeUserId)) && expectedIds.has(Number(match.awayUserId))
+    );
+    const actualFixtureKeys = existingMatches
+      .map((match) => `${Number(match.homeUserId)}:${Number(match.awayUserId)}`)
+      .sort();
+    const expectedFixtureKeys = plan.fixtures
+      .map((fixture) => `${Number(fixture.homeUserId)}:${Number(fixture.awayUserId)}`)
+      .sort();
+    const scheduleMatchesFormat = existingMatches.length === plan.fixtures.length &&
+      scheduleMatchesCurrentClubs && Boolean(tournament.homeAndAway) &&
+      actualFixtureKeys.every((key, index) => key === expectedFixtureKeys[index]);
+    if (scheduleMatchesFormat) throw fail(409, 'Orari ekzistues përputhet tashmë me klubet dhe formatin e ligës.');
+    existingMatchesToRepair = existingMatches;
+  }
+
   const created = await sequelize.transaction(async (transaction) => {
+    if (existingMatchesToRepair.length) {
+      await removeUnplayedLigaFixtures(tournament, existingMatchesToRepair, transaction);
+    }
     if (plan.groups?.length) {
       const groupByUser = {};
       plan.groups.forEach((group) => {
