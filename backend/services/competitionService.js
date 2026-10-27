@@ -156,11 +156,30 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   const authz = canManageTournamentMatches(tournament, user);
   if (!authz.ok) throw fail(authz.status, authz.msg);
 
+  const isLigaCompetition = Boolean(tournament.ligaId || tournament.sourceRole === 'liga');
+  const hasExistingFixtures = await Match.count({ where: { tournamentId: tournament.id } });
+  if (isLigaCompetition && tournament.participantType !== 'club') {
+    tournament.participantType = 'club';
+    await tournament.save();
+  }
+  // Older league tournaments had no home/away control and defaulted to one leg.
+  // Use the expected double round-robin unless the current request explicitly opts out.
+  if (
+    isLigaCompetition && tournament.type === 'league' && !hasExistingFixtures &&
+    !tournament.homeAndAway && options.homeAndAway === undefined
+  ) {
+    tournament.homeAndAway = true;
+    await tournament.save();
+  }
+  if (isLigaCompetition) {
+    await demoteAthleteParticipantsOnClubTournament(tournament.id);
+  }
+
   const participants = await TournamentParticipant.findAll({
     where: { tournamentId: tournament.id },
     include: [{ model: User, attributes: ['id', 'role'] }],
   });
-  const participantType = tournament.participantType || 'individual';
+  const participantType = isLigaCompetition ? 'club' : tournament.participantType || 'individual';
   const standing = participantType === 'club'
     ? participants.filter((p) => String(p.User?.role || '').toLowerCase() === 'club')
     : participants;
@@ -168,7 +187,7 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   const gate = assertCanStart(tournament, accepted.length);
   if (!gate.ok) throw fail(gate.status, gate.msg);
 
-  const existing = await Match.count({ where: { tournamentId: tournament.id } });
+  const existing = hasExistingFixtures;
   if (existing > 0) throw fail(409, 'Fixtures already exist for this competition.');
 
   const seeded = [...accepted].sort((a, b) => {
@@ -477,6 +496,10 @@ function isTerminalTournament(tournament) {
 async function getStandings(idOrSlug) {
   const tournament = await loadTournament(idOrSlug);
   if (!tournament) return null;
+  if ((tournament.ligaId || tournament.sourceRole === 'liga') && tournament.participantType !== 'club') {
+    tournament.participantType = 'club';
+    await tournament.save();
+  }
   if ((tournament.participantType || 'individual') === 'club') {
     await demoteAthleteParticipantsOnClubTournament(tournament.id);
   }

@@ -92,7 +92,13 @@ async function loadSquadByClub(tournamentId) {
 
 async function attachSquadToSerializedTournament(serialized) {
   if (!serialized || !serialized.id) return serialized;
-  const pt = serialized.participantType || 'individual';
+  const isLigaTournament = Boolean(serialized.ligaId || serialized.sourceRole === 'liga');
+  let pt = serialized.participantType || 'individual';
+  if (isLigaTournament && pt !== 'club') {
+    await Tournament.update({ participantType: 'club' }, { where: { id: serialized.id } });
+    pt = 'club';
+    serialized = { ...serialized, participantType: 'club' };
+  }
   if (pt !== 'club' && pt !== 'mixed') {
     return { ...serialized, squadByClub: {} };
   }

@@ -2,6 +2,7 @@ const logger = require('./logger');
 const { Op } = require('sequelize');
 const Liga = require('../models/Liga');
 const { Tournament, TournamentParticipant } = require('../models/Tournament');
+const Match = require('../models/Match');
 const { resolveTournamentSeason } = require('./footballSeason');
 const { resolveLifecycle } = require('./competitionLifecycle');
 
@@ -94,6 +95,19 @@ async function ensureLigaTournament(liga, { category } = {}) {
       tournament.category = cat;
       dirty = true;
     }
+    // A league's standings represent clubs. Athletes join through their club squad.
+    if (tournament.participantType !== 'club') {
+      tournament.participantType = 'club';
+      dirty = true;
+    }
+    if (
+      tournament.type === 'league' &&
+      !tournament.homeAndAway &&
+      !(await Match.count({ where: { tournamentId: tournament.id } }))
+    ) {
+      tournament.homeAndAway = true;
+      dirty = true;
+    }
     if (!tournament.sourceRole) {
       tournament.sourceRole = 'liga';
       dirty = true;
@@ -114,6 +128,7 @@ async function ensureLigaTournament(liga, { category } = {}) {
     ligaId: liga.id,
     sourceRole: 'liga',
     category: cat,
+    homeAndAway: true,
   });
   return tournament;
 }

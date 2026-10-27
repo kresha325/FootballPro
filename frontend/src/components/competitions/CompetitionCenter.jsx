@@ -304,8 +304,9 @@ export default function CompetitionCenter({ section = 'overview' }) {
 function StandingsTable({ rows }) {
   if (!rows?.length) return <p className="text-sm text-[var(--xt-color-text-muted)]">Nuk ka të dhëna.</p>;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-left text-sm">
+    <div>
+      <div className="hidden overflow-x-auto sm:block">
+       <table className="w-full min-w-[640px] text-left text-sm">
         <thead className="text-[var(--xt-color-text-subtle)]">
           <tr>
             {['#', 'Ekipi', 'N', 'F', 'B', 'H', 'GF', 'GA', 'DG', 'P'].map((head) => (
@@ -329,7 +330,32 @@ function StandingsTable({ rows }) {
             </tr>
           ))}
         </tbody>
-      </table>
+       </table>
+      </div>
+      <ol className="space-y-2 sm:hidden" aria-label="Renditja e ekipeve">
+        {rows.map((row) => (
+          <li key={row.userId} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-3">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--xt-color-gold)]/15 text-sm font-bold text-[var(--xt-color-gold-bright)]">{row.rank}</span>
+                <span className="truncate font-semibold text-[var(--xt-color-text)]">{teamName(row.User)}{row.groupName ? ` (${row.groupName})` : ''}</span>
+              </div>
+              <span className="shrink-0 rounded-lg bg-[var(--xt-color-gold)]/15 px-2.5 py-1 text-sm font-bold text-[var(--xt-color-gold-bright)]">{row.points} pikë</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-4 gap-1 border-t border-[var(--xt-color-border)] pt-2 text-center">
+              {[
+                ['N', row.played], ['F', row.wins], ['B', row.draws], ['H', row.losses],
+                ['GF', row.goalsFor], ['GA', row.goalsAgainst], ['DG', row.goalDifference],
+              ].map(([label, value]) => (
+                <div key={label} className="py-1">
+                  <dt className="text-[10px] font-medium uppercase text-[var(--xt-color-text-subtle)]">{label}</dt>
+                  <dd className="text-sm font-semibold text-[var(--xt-color-text)]">{value ?? 0}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

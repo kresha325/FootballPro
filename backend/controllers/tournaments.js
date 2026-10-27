@@ -66,11 +66,16 @@ function serializeTournamentParticipants(participants) {
 function serializeTournament(tournament) {
   if (!tournament) return tournament;
   const j = tournament && typeof tournament.toJSON === 'function' ? tournament.toJSON() : { ...tournament };
+  const isLigaTournament = Boolean(j.ligaId || j.sourceRole === 'liga');
+  const participants = serializeTournamentParticipants(j.participants);
   return {
     ...j,
+    participantType: isLigaTournament ? 'club' : j.participantType,
     lifecycle: resolveLifecycle(j),
     publicPath: j.id ? `/competitions/${j.id}` : null,
-    participants: serializeTournamentParticipants(j.participants),
+    participants: isLigaTournament
+      ? participants.filter((participant) => String(participant.role || '').toLowerCase() === 'club')
+      : participants,
   };
 }
 
@@ -90,9 +95,9 @@ exports.createTournament = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid competition type.' });
     }
     let ligaId = null;
-    let pt = 'individual';
-    if (participantType === 'club') pt = 'club';
-    else if (participantType === 'mixed') pt = 'mixed';
+    let pt = role === 'liga' ? 'club' : 'individual';
+    if (role !== 'liga' && participantType === 'club') pt = 'club';
+    else if (role !== 'liga' && participantType === 'mixed') pt = 'mixed';
 
     const maxN = parseInt(maxParticipants, 10);
     if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
@@ -111,6 +116,18 @@ exports.createTournament = async (req, res) => {
         where: { ligaId: liga.id, category },
       });
       if (existing) {
+        let dirty = false;
+        if (existing.participantType !== 'club') {
+          existing.participantType = 'club';
+          dirty = true;
+        }
+        if (existing.type === 'league' && !(await Match.count({ where: { tournamentId: existing.id } }))) {
+          if (!existing.homeAndAway) {
+            existing.homeAndAway = true;
+            dirty = true;
+          }
+        }
+        if (dirty) await existing.save();
         return res.status(200).json(existing);
       }
     } else if (!name) {
@@ -155,7 +172,9 @@ exports.createTournament = async (req, res) => {
       city: req.body.city || null,
       gender: req.body.gender || 'open',
       registrationDeadline: req.body.registrationDeadline || null,
-      homeAndAway: !!req.body.homeAndAway,
+      homeAndAway: req.body.homeAndAway == null
+        ? type === 'league'
+        : !!req.body.homeAndAway,
       groupsCount: req.body.groupsCount || null,
       qualifyPerGroup: req.body.qualifyPerGroup || 2,
       lifecycle: wantsDraft ? 'draft' : 'registration',
@@ -216,7 +235,16 @@ exports.updateTournament = async (req, res) => {
     if (req.body.city !== undefined) tournament.city = req.body.city || null;
     if (req.body.gender) tournament.gender = req.body.gender;
     if (req.body.registrationDeadline !== undefined) tournament.registrationDeadline = req.body.registrationDeadline || null;
-    if (req.body.homeAndAway !== undefined) tournament.homeAndAway = !!req.body.homeAndAway;
+    if (req.body.homeAndAway !== undefined) {
+      const nextHomeAndAway = !!req.body.homeAndAway;
+      if (nextHomeAndAway !== Boolean(tournament.homeAndAway)) {
+        const fixtureCount = await Match.count({ where: { tournamentId: tournament.id } });
+        if (fixtureCount > 0) {
+          return res.status(409).json({ msg: 'Vajtje/kthim nuk ndryshohet pasi të gjenerohen ndeshjet.' });
+        }
+      }
+      tournament.homeAndAway = nextHomeAndAway;
+    }
     if (req.body.groupsCount !== undefined) tournament.groupsCount = req.body.groupsCount || null;
     if (req.body.qualifyPerGroup !== undefined) tournament.qualifyPerGroup = parseInt(req.body.qualifyPerGroup, 10) || 2;
 
@@ -231,7 +259,9 @@ exports.updateTournament = async (req, res) => {
       tournament.status = next.status;
     }
 
-    if (participantType && ['individual', 'club', 'mixed'].includes(participantType)) {
+    if (tournament.ligaId || tournament.sourceRole === 'liga') {
+      tournament.participantType = 'club';
+    } else if (participantType && ['individual', 'club', 'mixed'].includes(participantType)) {
       tournament.participantType = participantType;
     }
 
@@ -384,8 +414,13 @@ exports.joinTournament = async (req, res) => {
     if (!tournament) return res.status(404).json({ msg: 'Tournament not found' });
     if (!isRegistrationOpen(tournament)) return res.status(400).json({ msg: 'Tournament not open for joining' });
 
-    const participantType = tournament.participantType || 'individual';
     const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
+    if (isLigaTournament && tournament.participantType !== 'club') {
+      tournament.participantType = 'club';
+      await tournament.save();
+      await demoteAthleteParticipantsOnClubTournament(tournament.id);
+    }
+    const participantType = isLigaTournament ? 'club' : tournament.participantType || 'individual';
 
     if (req.user.role === 'athlete' && isLigaTournament) {
       return res.status(400).json({
