@@ -204,7 +204,7 @@ function MatchBroadcastModal({
                   <ul className="space-y-2">
                     {scH.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row, t)}</span>
+                        <span className="min-w-0 flex-1 break-words font-medium text-[var(--xt-color-text)]">{scorerLine(row, t)}</span>
                         <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}
@@ -219,7 +219,7 @@ function MatchBroadcastModal({
                   <ul className="space-y-2">
                     {scA.map((row) => (
                       <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm">
-                        <span className="min-w-0 flex-1 break-words font-medium text-slate-100">{scorerLine(row, t)}</span>
+                        <span className="min-w-0 flex-1 break-words font-medium text-[var(--xt-color-text)]">{scorerLine(row, t)}</span>
                         <span className="shrink-0 rounded bg-[var(--xt-color-gold)]/10 px-2 py-0.5 font-mono text-[var(--xt-color-gold-bright)]">{row.goals ?? '—'}</span>
                       </li>
                     ))}

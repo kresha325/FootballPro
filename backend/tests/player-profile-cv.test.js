@@ -52,6 +52,39 @@ describe('official player statistics', () => {
     assert.equal(defender.interceptions, undefined);
   });
 
+  it('uses a scorer row side to calculate the player result for club matches', () => {
+    const report = buildPerformanceReport({
+      userId: 7,
+      matches: [{ id: 8, homeUserId: 31, awayUserId: 32, scoreHome: 0, scoreAway: 3, status: 'finished', matchDate: '2026-10-27' }],
+      scorers: [{ id: 1, matchId: 8, userId: 7, side: 'away', goals: 1 }],
+    });
+
+    assert.equal(report.career.goals, 1);
+    assert.equal(report.career.appearances, 1);
+    assert.equal(report.career.wins, 1);
+  });
+
+  it('counts a finished lineup entry as a start when no individual stat row exists', () => {
+    const report = buildPerformanceReport({
+      userId: 7,
+      matches: [{
+        id: 9,
+        homeUserId: 31,
+        awayUserId: 32,
+        scoreHome: 2,
+        scoreAway: 0,
+        status: 'finished',
+        matchDate: '2026-10-27',
+        lineup: { home: [7], away: [] },
+      }],
+    });
+
+    assert.equal(report.career.appearances, 1);
+    assert.equal(report.career.starts, 1);
+    assert.equal(report.career.minutes, 0);
+    assert.equal(report.career.wins, 1);
+  });
+
   it('splits last-5 form from the rest of the career', () => {
     const matches = [1, 2, 3, 4, 5, 6].map((id) => ({
       id,

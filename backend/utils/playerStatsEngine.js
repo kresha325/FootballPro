@@ -42,6 +42,8 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
   const assistByMatchUser = new Set();
   const yellowByMatchUser = new Set();
   const redByMatchUser = new Set();
+  const startedByMatchUser = new Set();
+  const appearedByMatchUser = new Set();
 
   for (const row of scorers) {
     const player = bucket(map, row.userId);
@@ -97,7 +99,12 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
     player.fouls += Number(row.fouls) || 0;
     player.saves += Number(row.saves) || 0;
     if (row.started) player.starts += 1;
-    if (minutes > 0 || row.started) player.appearances += 1;
+    const key = `${row.matchId}:${row.userId}`;
+    if (row.started) startedByMatchUser.add(key);
+    if (minutes > 0 || row.started) {
+      player.appearances += 1;
+      appearedByMatchUser.add(key);
+    }
     if (!scorerGoalsByMatchUser.has(`${row.matchId}:${row.userId}`)) {
       const extraGoals = Number(row.goals) || 0;
       if (extraGoals) {
@@ -140,6 +147,28 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
       const side = row.side || (Number(row.userId) === Number(match.homeUserId) ? 'home' : Number(row.userId) === Number(match.awayUserId) ? 'away' : null);
       const conceded = side === 'home' ? Number(match.scoreAway) : side === 'away' ? Number(match.scoreHome) : null;
       if (conceded === 0 && (Number(row.saves) > 0 || row.goalkeeper)) player.cleanSheets += 1;
+    }
+  }
+
+  for (const match of matches || []) {
+    const status = String(match.status || '').toLowerCase();
+    if (['scheduled', 'cancelled', 'postponed', 'live', 'in_progress', 'ongoing'].includes(status)) continue;
+    if (match.scoreHome == null || match.scoreAway == null) continue;
+    for (const ids of [match.lineup?.home, match.lineup?.away]) {
+      if (!Array.isArray(ids)) continue;
+      for (const userId of ids) {
+        const player = bucket(map, userId);
+        if (!player) continue;
+        const key = `${match.id}:${Number(userId)}`;
+        if (!startedByMatchUser.has(key)) {
+          player.starts += 1;
+          startedByMatchUser.add(key);
+        }
+        if (!appearedByMatchUser.has(key)) {
+          player.appearances += 1;
+          appearedByMatchUser.add(key);
+        }
+      }
     }
   }
 

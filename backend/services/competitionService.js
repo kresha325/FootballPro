@@ -736,7 +736,7 @@ async function savePlayerStats({ matchId, user, players }) {
 async function playerStatsForCompetition(idOrSlug) {
   const tournament = await loadTournament(idOrSlug);
   if (!tournament) return null;
-  const matches = await Match.findAll({ where: { tournamentId: tournament.id }, attributes: ['id', 'homeUserId', 'awayUserId', 'scoreHome', 'scoreAway', 'status'] });
+  const matches = await Match.findAll({ where: { tournamentId: tournament.id }, attributes: ['id', 'homeUserId', 'awayUserId', 'scoreHome', 'scoreAway', 'status', 'lineup'] });
   const matchIds = matches.map((m) => m.id);
   if (!matchIds.length) return { tournamentId: tournament.id, players: [] };
   const [scorers, events, statRows] = await Promise.all([

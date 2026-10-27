@@ -133,7 +133,12 @@ const PlayerProfile = ({ profile, tournamentSummary, gallery = [], onShowVideos,
           </div>
         ) : <Empty>Statistikat e ndeshjeve do të shfaqen këtu kur të regjistrohen nga ndeshjet.</Empty>}
         {hasOfficial && (
-          <FormWindows form={profile.performance?.form} careerAppearances={official.appearances} />
+          <>
+            <p className="mt-3 text-xs leading-relaxed text-[var(--xt-color-text-subtle)]">
+              Titullarët dalin nga formacioni i ruajtur. Minutat dhe kartonat kërkojnë statistikë individuale të ndeshjes; minuta e golit nuk është minuta e luajtur.
+            </p>
+            <FormWindows form={profile.performance?.form} careerAppearances={official.appearances} />
+          </>
         )}
       </Section>
 

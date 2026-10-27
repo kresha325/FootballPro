@@ -285,6 +285,14 @@ function buildMatchLines({ userId, statRows = [], scorers = [], events = [], mat
       ids.add(Number(event.matchId));
     }
   }
+  for (const match of matches) {
+    if (!isFinishedMatch(match)) continue;
+    const listed = [
+      ...(Array.isArray(match.lineup?.home) ? match.lineup.home : []),
+      ...(Array.isArray(match.lineup?.away) ? match.lineup.away : []),
+    ];
+    if (listed.some((playerId) => Number(playerId) === uid)) ids.add(Number(match.id));
+  }
 
   const lines = [];
   for (const matchId of ids) {
@@ -302,6 +310,15 @@ function buildMatchLines({ userId, statRows = [], scorers = [], events = [], mat
     const assistEvents = events.filter(
       (event) => Number(event.matchId) === matchId && Number(event.userId) === uid && event.type === 'assist'
     );
+    const lineupSide = Array.isArray(match.lineup?.home) && match.lineup.home.some((playerId) => Number(playerId) === uid)
+      ? 'home'
+      : Array.isArray(match.lineup?.away) && match.lineup.away.some((playerId) => Number(playerId) === uid)
+        ? 'away'
+        : null;
+    const eventSide = [...goalEvents, ...assistEvents].find((event) => event.side === 'home' || event.side === 'away')?.side;
+    const scorerSide = scorer?.side || assistRows.find((row) => row.side === 'home' || row.side === 'away')?.side;
+    const inferredSide = stat?.side || lineupSide || scorerSide || eventSide || null;
+    const sideStat = inferredSide ? { ...(stat || {}), side: inferredSide } : stat;
 
     let goals = 0;
     if (scorer) goals = Number(scorer.goals) || 0;
@@ -320,12 +337,12 @@ function buildMatchLines({ userId, statRows = [], scorers = [], events = [], mat
       tournamentId: match.tournamentId || tournament?.id || null,
       competition: tournament?.name || null,
       season: tournament?.season || footballSeasonFromDate(match.matchDate),
-      clubUserId: clubSideId(uid, stat, match),
+      clubUserId: clubSideId(uid, sideStat, match),
       goals,
       assists,
       minutes: Number(stat?.minutes) || 0,
       rating: stat?.rating != null && stat.rating !== '' ? Number(stat.rating) : null,
-      result: resultFor(uid, stat, match),
+      result: resultFor(uid, sideStat, match),
     });
   }
 
