@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
-import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiUsers } from 'react-icons/fi';
+import { FiPhone, FiVideo, FiSearch, FiSmile, FiChevronDown, FiChevronLeft, FiUsers } from 'react-icons/fi';
 import VideoCallSimple from './VideoCallSimple';
 import GroupLiveKitCall from './GroupLiveKitCall';
 import ForwardButton from './ForwardButton';
@@ -1157,7 +1157,7 @@ function Messaging() {
     );
   }
   return (
-    <div className="mx-auto flex h-[calc(100dvh-64px)] min-h-[420px] max-w-[1600px] overflow-hidden border-y border-[var(--xt-color-border)] bg-[var(--xt-color-canvas)] text-[var(--xt-color-text)] relative">
+    <div className="relative mx-auto flex h-[calc(100dvh-4rem-6rem)] min-h-0 w-full max-w-[1600px] overflow-hidden border-y border-[var(--xt-color-border)] bg-[var(--xt-color-canvas)] text-[var(--xt-color-text)] md:h-[calc(100dvh-4rem)]">
       {modalImage && <MediaModal src={modalImage} alt="Shared" onClose={() => setModalImage(null)} />}
       {showCall && selectedConversation && (
         selectedConversation.isGroup ? (
@@ -1572,9 +1572,11 @@ function Messaging() {
                           setSelectedConversation(null);
                           navigate('/messaging', { replace: true });
                         }}
-                        className="btn btn-quiet min-h-10 px-3 md:hidden"
+                        className="btn btn-quiet min-h-11 min-w-11 shrink-0 px-2 md:hidden"
                         aria-label={t('Kthehu te bisedat')}
-                      >‹</button>
+                      >
+                        <FiChevronLeft className="h-6 w-6" aria-hidden="true" />
+                      </button>
                       <div className="relative flex-shrink-0">
                         {other.profilePhoto ? (
                           <img
@@ -1668,7 +1670,7 @@ function Messaging() {
                 loadOlderMessages();
               }
             }}
-            className="flex-1 overflow-y-auto px-4 pb-36 min-h-0 relative"
+            className="flex-1 overflow-y-auto px-4 pb-4 min-h-0 relative"
           >
             {messagePagination.pages > 1 && messagePagination.page < messagePagination.pages && (
               <div className="flex justify-center py-3 sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm">
@@ -1829,7 +1831,7 @@ function Messaging() {
               type="button"
               aria-label={t('Shko poshtë')}
               onClick={() => scrollToBottom(false)}
-              className="absolute bottom-40 right-4 z-40 rounded-full bg-[var(--xt-color-gold)] p-3 text-slate-950 shadow-lg transition md:bottom-36"
+              className="absolute bottom-24 right-4 z-20 rounded-full bg-[var(--xt-color-gold)] p-3 text-slate-950 shadow-lg transition md:bottom-8"
             >
               <FiChevronDown className="w-5 h-5" />
             </button>
@@ -1847,7 +1849,7 @@ function Messaging() {
           ) : null}
           <form
             onSubmit={sendMessage}
-            className="p-4 bg-[var(--xt-color-surface)] border-t dark:border-gray-700 w-full fixed left-0 right-0 bottom-16 z-50 md:static md:bottom-auto flex-shrink-0"
+            className="p-3 md:p-4 bg-[var(--xt-color-surface)] border-t dark:border-gray-700 w-full shrink-0"
           >
             {editingMessage && (
               <div className="mb-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl flex justify-between items-start gap-2">

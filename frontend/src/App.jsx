@@ -78,6 +78,7 @@ function App() {
     location.pathname.startsWith('/embed-') ||
     /^\/live\/[^/]+/.test(location.pathname) ||
     /^\/cv\/[^/]+/.test(location.pathname);
+  const isMessagingRoute = location.pathname.startsWith('/messaging');
   // Hiq efektet dhe përdorimet e background-it nga userat
   useEffect(() => {
     document.title = `${APP_BRAND_NAME} — ${t('tagline')}`;
@@ -126,7 +127,9 @@ function App() {
               user
                 ? isFullscreenRoute
                   ? 'min-h-[100dvh] max-w-none mx-0 px-0 pt-0 pb-0'
-                  : 'pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto'
+                  : isMessagingRoute
+                    ? 'pt-16 pb-24 md:pb-0 px-0 max-w-none'
+                    : 'pt-16 pb-24 md:pb-0 px-4 max-w-7xl mx-auto'
                 : ''
             }
           >

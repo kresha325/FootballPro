@@ -77,6 +77,7 @@ const upsertMessage = (prev, incoming) => {
   return next;
 };
 
+
 /** Rikthe draft vetëm kur serveri konfirmon që mesazhi nuk u krijua. */
 function shouldRestoreDraftAfterSendError(err) {
   const status = err?.response?.status;
@@ -138,6 +139,7 @@ function MessageStatusTicks({ status, mine }) {
 }
 
 function MessageBubble({ message, mine, onOpenActions, onOpenImage, onOpenVideo, outboundStatus, onOpenSenderProfile, isDark, onReact, onOpenReply, highlighted }) {
+  const { t } = useLocale();
   const sender = message?.sender;
   const name = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'User';
   const deleted = !!message?.deleted;
