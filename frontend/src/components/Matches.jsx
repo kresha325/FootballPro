@@ -263,13 +263,13 @@ function Matches() {
   const liveMatches = useMemo(() => filterBySearch(
     matches.filter((m) => ['ongoing', 'live'].includes(String(m.status || '').toLowerCase())),
     listSearch,
-    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.awayUser?.firstName, m.awayUser?.lastName, m.Tournament?.name, m.Stadium?.name, m.status]
+    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.homeUser?.Profile?.club, m.awayUser?.firstName, m.awayUser?.lastName, m.awayUser?.Profile?.club, m.Tournament?.name, m.Stadium?.name, m.status]
   ), [matches, listSearch]);
   const upcomingMatches = useMemo(() => {
     const base = matches.filter((m) => !['finished', 'ongoing', 'live'].includes(String(m.status || '').toLowerCase()) && isUpcomingMatch(m));
     return filterBySearch(base, listSearch, (m) => [
-      m.homeUser?.firstName, m.homeUser?.lastName,
-      m.awayUser?.firstName, m.awayUser?.lastName,
+      m.homeUser?.firstName, m.homeUser?.lastName, m.homeUser?.Profile?.club,
+      m.awayUser?.firstName, m.awayUser?.lastName, m.awayUser?.Profile?.club,
       m.location,
       m.status,
       m.Tournament?.name,
@@ -278,10 +278,13 @@ function Matches() {
   const completedMatches = useMemo(() => filterBySearch(
     matches.filter((m) => String(m.status || '').toLowerCase() === 'finished'),
     listSearch,
-    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.awayUser?.firstName, m.awayUser?.lastName, m.Tournament?.name, m.Stadium?.name]
+    (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.homeUser?.Profile?.club, m.awayUser?.firstName, m.awayUser?.lastName, m.awayUser?.Profile?.club, m.Tournament?.name, m.Stadium?.name]
   ), [matches, listSearch]);
   const visibleMatches = activeTab === 'live' ? liveMatches : activeTab === 'results' ? completedMatches : upcomingMatches;
-  const teamName = (team) => [team?.firstName, team?.lastName].filter(Boolean).join(' ').trim() || '—';
+  const teamName = (team, fallbackId) =>
+    [team?.firstName, team?.lastName].filter(Boolean).join(' ').trim() ||
+    team?.Profile?.club ||
+    (fallbackId ? `Ekipi ${fallbackId}` : '—');
 
   useEffect(() => {
     fetchMatches();
@@ -383,14 +386,14 @@ function Matches() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
                     <div className="min-w-0 text-center sm:text-right">
-                      <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.homeUser)}</h2>
+                      <h2 className="break-words text-base font-bold text-[var(--xt-color-text)] sm:text-xl">{teamName(match.homeUser, match.homeUserId)}</h2>
                       <span className="text-xs text-[var(--xt-color-text-subtle)]">{t('Vendas')}</span>
                     </div>
-                    <div className="min-w-16 text-center font-mono text-2xl font-black tabular-nums text-white sm:text-3xl" aria-label="Rezultati">
+                    <div className="min-w-16 text-center font-mono text-2xl font-black tabular-nums text-[var(--xt-color-text)] sm:text-3xl" aria-label="Rezultati">
                       {match.scoreHome != null && match.scoreAway != null ? `${match.scoreHome} : ${match.scoreAway}` : <span className="text-base text-[var(--xt-color-gold-bright)]">VS</span>}
                     </div>
                     <div className="min-w-0 text-center sm:text-left">
-                      <h2 className="break-words text-base font-bold text-white sm:text-xl">{teamName(match.awayUser)}</h2>
+                      <h2 className="break-words text-base font-bold text-[var(--xt-color-text)] sm:text-xl">{teamName(match.awayUser, match.awayUserId)}</h2>
                       <span className="text-xs text-[var(--xt-color-text-subtle)]">{t('Mysafir')}</span>
                     </div>
                   </div>

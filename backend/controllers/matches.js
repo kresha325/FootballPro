@@ -215,8 +215,8 @@ exports.getMatches = async (req, res) => {
       matches = await Match.findAll({
         include: [
           { model: db.Tournament, attributes: ['name'] },
-          { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
-          { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+          { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'], include: [{ model: db.Profile, attributes: ['club'] }] },
+          { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'], include: [{ model: db.Profile, attributes: ['club'] }] },
           { model: db.Stadium, as: 'Stadium', attributes: ['id', 'name', 'city'], required: false },
           {
             model: db.MatchScorer,
@@ -229,8 +229,8 @@ exports.getMatches = async (req, res) => {
       if (message.includes('MatchScorers') || message.includes('Tournaments') || message.includes('does not exist') || message.includes('stadium')) {
         matches = await Match.findAll({
           include: [
-            { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'] },
-            { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'] },
+            { model: db.User, as: 'homeUser', attributes: ['firstName', 'lastName'], include: [{ model: db.Profile, attributes: ['club'] }] },
+            { model: db.User, as: 'awayUser', attributes: ['firstName', 'lastName'], include: [{ model: db.Profile, attributes: ['club'] }] },
           ],
         });
       } else {
