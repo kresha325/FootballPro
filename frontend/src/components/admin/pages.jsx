@@ -161,7 +161,7 @@ export function UsersPage({ permissions }) {
         <input className="rounded border px-3 py-2 text-sm" placeholder="Search name or email" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
         <select className="rounded border px-3 py-2 text-sm" value={role} onChange={(e) => { setPage(1); setRole(e.target.value); }}>
           <option value="">All roles</option>
-          {['athlete', 'club', 'scout', 'coach', 'admin', 'liga'].map((item) => <option key={item} value={item}>{item}</option>)}
+          {['athlete', 'coach', 'scout', 'manager', 'referee', 'club', 'federation', 'liga', 'media', 'business', 'admin'].map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
         <select className="rounded border px-3 py-2 text-sm" value={verified} onChange={(e) => { setPage(1); setVerified(e.target.value); }}>
           <option value="">Verification</option>
@@ -434,6 +434,9 @@ export function MediaPage({ permissions }) {
           <option value="replays">Replays</option>
         </select>
       )}>
+        <p className="text-sm text-gray-500">
+          This page lists uploaded video/media items. Accounts with the Media role are listed under Users.
+        </p>
         {list.loading ? <p className="text-sm text-gray-500">Loading…</p> : (
           <Table
             columns={[
