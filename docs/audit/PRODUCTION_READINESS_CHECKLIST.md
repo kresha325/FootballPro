@@ -17,7 +17,7 @@ This checklist records audit evidence, not release approval.
 ## Stop before enabling payments
 
 - [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; five focused tests pass. Verify the unique index in production schema and run a disposable-PostgreSQL concurrent duplicate test before launch.
-- [ ] Require exact Apple bundle/product/transaction claims and supported signed-transaction shape.
+- [x] Require exact Apple bundle/product/transaction claims; receipt/JWS and active subscription checks have focused tests. Live Apple sandbox verification remains required.
 - [ ] Verify Google package, product, token state, expiry, acknowledgement and refund/revocation flow.
 - [ ] Run concurrent duplicate receipt tests; assert only one credit/activation.
 - [ ] Keep production Stripe/mobile digital-payment flags disabled until separate approval.

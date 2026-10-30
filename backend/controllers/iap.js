@@ -97,30 +97,64 @@ async function verifyAppleReceipt(receiptData) {
   return { ok: true, raw: result };
 }
 
+function validateAppleReceiptPayload(result, { productId, transactionId, isSubscription = false, now = Date.now() } = {}) {
+  if (!result || result.status !== 0) {
+    return { ok: false, msg: 'Receipt Apple nuk është i vlefshëm' };
+  }
+  if (result.receipt?.bundle_id !== APPLE_BUNDLE_ID) {
+    return { ok: false, msg: 'Bundle ID në receipt nuk përputhet me XTALENTI' };
+  }
+
+  const entries = [
+    ...(Array.isArray(result.latest_receipt_info) ? result.latest_receipt_info : []),
+    ...(Array.isArray(result.receipt?.in_app) ? result.receipt.in_app : []),
+  ];
+  const match = entries.find((entry) =>
+    String(entry?.product_id || '') === String(productId || '') &&
+    String(entry?.transaction_id || '') === String(transactionId || '')
+  );
+  if (!match) {
+    return { ok: false, msg: 'Receipt nuk përmban produktin dhe transaksionin e kërkuar' };
+  }
+
+  if (match.cancellation_date || match.cancellation_date_ms || match.revocation_date_ms) {
+    return { ok: false, msg: 'Transaksioni Apple është anuluar ose revokuar' };
+  }
+  if (isSubscription) {
+    const expiresAt = Number(match.expires_date_ms || 0);
+    if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+      return { ok: false, msg: 'Abonimi Apple nuk është aktiv' };
+    }
+  }
+  return { ok: true, verified: true, raw: match };
+}
+
 /**
  * StoreKit 2 sends a signed JWS in purchaseToken (jwsRepresentation). This
  * verifies the x5c certificate chain against Apple's Root CA and the ES256
  * signature before trusting the decoded payload — see utils/appleJws.js.
  */
-function decodeAndVerifyAppleJws(jws) {
-  const result = verifyAppleSignedPayload(jws);
+function decodeAndVerifyAppleJws(jws, options) {
+  const result = verifyAppleSignedPayload(jws, options);
   if (!result.ok) {
     return { payload: null, verified: false, msg: result.msg };
   }
   return { payload: result.payload, verified: true };
 }
 
-async function verifyApplePurchase({ transactionReceipt, purchaseToken, productId, transactionId }) {
+async function verifyApplePurchase({ transactionReceipt, purchaseToken, productId, transactionId, isSubscription = false, verificationOptions }) {
   const legacyReceipt =
     transactionReceipt ||
     (purchaseToken && !String(purchaseToken).includes('.') ? purchaseToken : null);
 
   if (legacyReceipt) {
-    return verifyAppleReceipt(legacyReceipt);
+    const verified = await verifyAppleReceipt(legacyReceipt);
+    if (!verified.ok) return verified;
+    return validateAppleReceiptPayload(verified.raw, { productId, transactionId, isSubscription });
   }
 
   if (purchaseToken && String(purchaseToken).includes('.')) {
-    const { payload, verified, msg } = decodeAndVerifyAppleJws(purchaseToken);
+    const { payload, verified, msg } = decodeAndVerifyAppleJws(purchaseToken, verificationOptions);
     if (!verified) {
       if (unverifiedIapAllowed()) {
         // Dev/sandbox-only escape hatch; never reachable in production (see iapPolicy.js).
@@ -129,19 +163,23 @@ async function verifyApplePurchase({ transactionReceipt, purchaseToken, productI
       return { ok: false, msg: msg || 'Verifikimi i JWS nga Apple dështoi' };
     }
 
-    const jwsProduct = payload?.productId || payload?.product_id || null;
-    const jwsBundle = payload?.bundleId || payload?.bundle_id || null;
-    const jwsTx =
-      payload?.transactionId ||
-      payload?.originalTransactionId ||
-      payload?.transaction_id ||
-      null;
-    const productOk = !jwsProduct || jwsProduct === productId;
-    const bundleOk = !jwsBundle || jwsBundle === APPLE_BUNDLE_ID;
-    const txOk = !transactionId || !jwsTx || String(jwsTx) === String(transactionId);
-
-    if (!productOk || !bundleOk || !txOk) {
+    const jwsProduct = payload?.productId || payload?.product_id;
+    const jwsBundle = payload?.bundleId || payload?.bundle_id;
+    const jwsTx = payload?.transactionId || payload?.transaction_id;
+    if (
+      jwsProduct !== productId ||
+      jwsBundle !== APPLE_BUNDLE_ID ||
+      !jwsTx ||
+      String(jwsTx) !== String(transactionId)
+    ) {
       return { ok: false, msg: 'JWS i verifikuar nuk përputhet me produktin/transaksionin e kërkuar' };
+    }
+    if (isSubscription) {
+      const expiresAt = Number(payload.expiresDate || payload.expires_date_ms || 0);
+      const revokedAt = Number(payload.revocationDate || payload.revocation_date_ms || 0);
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || revokedAt > 0) {
+        return { ok: false, msg: 'Abonimi Apple nuk është aktiv ose është revokuar' };
+      }
     }
     return { ok: true, jws: true, verified: true, raw: payload };
   }
@@ -253,6 +291,7 @@ exports.verifyAndFulfill = async (req, res) => {
         purchaseToken,
         productId,
         transactionId,
+        isSubscription: catalog.kind === 'premium',
       });
       if (!verified.ok) {
         return res.status(400).json({ msg: verified.msg || 'Verifikimi Apple dështoi' });
@@ -363,3 +402,5 @@ exports.verifyAndFulfill = async (req, res) => {
 };
 
 exports.PRODUCT_CATALOG = PRODUCT_CATALOG;
+exports.validateAppleReceiptPayload = validateAppleReceiptPayload;
+exports.verifyApplePurchase = verifyApplePurchase;

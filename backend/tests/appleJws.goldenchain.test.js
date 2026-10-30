@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { verifyAppleSignedPayload } = require('../utils/appleJws');
+const { verifyApplePurchase } = require('../controllers/iap');
 
 // Builds a throwaway root -> intermediate -> leaf EC (P-256) certificate
 // chain via the system `openssl` CLI, purely for testing the happy/negative
@@ -159,4 +160,68 @@ test('verifyAppleSignedPayload rejects a tampered payload even with an otherwise
 
   const result = verifyAppleSignedPayload(tamperedJws, { trustedRoot });
   assert.equal(result.ok, false);
+});
+
+test('Apple StoreKit purchase JWS requires exact product, bundle, and transaction claims', async (t) => {
+  if (!opensslAvailable) return t.skip('openssl not available');
+  const { trustedRoot, x5c, leafKey } = buildChainAndKey();
+  const expected = {
+    productId: 'com.kresha325.xtalenti.joncoin.100',
+    transactionId: 'apple-exact-transaction',
+    bundleId: 'com.kresha325.xtalenti',
+  };
+  const valid = signJws({ alg: 'ES256', x5c }, expected, leafKey);
+  const result = await verifyApplePurchase({
+    purchaseToken: valid,
+    productId: expected.productId,
+    transactionId: expected.transactionId,
+    verificationOptions: { trustedRoot },
+  });
+  assert.equal(result.ok, true);
+
+  for (const missing of ['productId', 'bundleId', 'transactionId']) {
+    const payload = { ...expected };
+    delete payload[missing];
+    const badJws = signJws({ alg: 'ES256', x5c }, payload, leafKey);
+    const rejected = await verifyApplePurchase({
+      purchaseToken: badJws,
+      productId: expected.productId,
+      transactionId: expected.transactionId,
+      verificationOptions: { trustedRoot },
+    });
+    assert.equal(rejected.ok, false, `expected missing ${missing} to fail closed`);
+  }
+});
+
+test('Apple StoreKit subscription JWS must be current and not revoked', async (t) => {
+  if (!opensslAvailable) return t.skip('openssl not available');
+  const { trustedRoot, x5c, leafKey } = buildChainAndKey();
+  const expected = {
+    productId: 'com.kresha325.xtalenti.premium.monthly',
+    transactionId: 'apple-subscription-transaction',
+    bundleId: 'com.kresha325.xtalenti',
+  };
+  const valid = signJws({ alg: 'ES256', x5c }, { ...expected, expiresDate: Date.now() + 60_000 }, leafKey);
+  const accepted = await verifyApplePurchase({
+    purchaseToken: valid,
+    productId: expected.productId,
+    transactionId: expected.transactionId,
+    isSubscription: true,
+    verificationOptions: { trustedRoot },
+  });
+  assert.equal(accepted.ok, true);
+
+  const revoked = signJws({ alg: 'ES256', x5c }, {
+    ...expected,
+    expiresDate: Date.now() + 60_000,
+    revocationDate: Date.now() - 10,
+  }, leafKey);
+  const rejected = await verifyApplePurchase({
+    purchaseToken: revoked,
+    productId: expected.productId,
+    transactionId: expected.transactionId,
+    isSubscription: true,
+    verificationOptions: { trustedRoot },
+  });
+  assert.equal(rejected.ok, false);
 });
