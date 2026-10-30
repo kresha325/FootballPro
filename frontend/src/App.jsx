@@ -14,6 +14,7 @@ import { PlatformProvider, MaintenanceBanner, FeatureGate } from './components/a
 // imported here; lazy-loading the component would not avoid bundling the module.
 import RegisterOnboarding, { isOnboardingPending } from './components/RegisterOnboarding';
 import WelcomeOnboarding, { isWelcomeOnboardingDone } from './components/WelcomeOnboarding';
+import ParentVerificationForm from './components/ParentVerificationForm';
 
 // Lazy-loaded route components to reduce initial bundle size
 const Login = lazyWithReload(() => import('./components/Login'));
@@ -71,7 +72,7 @@ import { APP_BRAND_NAME } from './config/branding';
 
 // Hiq importin e applyBackgroundStyle
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout, refreshUser } = useAuth();
   const { setLanguage, t } = useLocale();
   const location = useLocation();
   const isFullscreenRoute =
@@ -103,6 +104,22 @@ function App() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (user?.parentAuthorizationPending) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-[var(--xt-color-canvas)] px-4 py-10">
+          <div className="mx-auto max-w-lg rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-900">
+            <h1 className="mb-2 text-xl font-bold">Autorizimi i kujdestarit në pritje</h1>
+            <p className="mb-5 text-sm text-gray-600 dark:text-gray-300">Dërgo kërkesën në emailin e prindit ose kujdestarit ligjor. Përdoruesi i mitur nuk mund të hyjë në veçoritë e platformës derisa autorizimi të përfundojë.</p>
+            <ParentVerificationForm />
+            <button type="button" onClick={refreshUser} className="mt-3 w-full rounded-lg border px-4 py-2">Kontrollo statusin</button>
+            <button type="button" onClick={logout} className="mt-4 w-full rounded-lg border px-4 py-2">Dil nga llogaria</button>
+          </div>
+        </div>
+      </ErrorBoundary>
     );
   }
 

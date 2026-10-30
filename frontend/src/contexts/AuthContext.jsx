@@ -35,8 +35,10 @@ export const AuthProvider = ({ children }) => {
         let userData = { ...res.data, token };
         // Fetch profile data for profilePhoto and merge
         try {
-          const profileRes = await profileAPI.getProfile(userData.id);
-          userData = { ...userData, ...profileRes.data };
+          if (!userData.parentAuthorizationPending) {
+            const profileRes = await profileAPI.getProfile(userData.id);
+            userData = { ...userData, ...profileRes.data };
+          }
         } catch {
           // If profile fetch fails, continue with base user
         }
@@ -62,8 +64,10 @@ export const AuthProvider = ({ children }) => {
       const res = await authAPI.me();
       let userData = { ...res.data, token };
       try {
-        const profileRes = await profileAPI.getProfile(userData.id);
-        userData = { ...userData, ...profileRes.data };
+        if (!userData.parentAuthorizationPending) {
+          const profileRes = await profileAPI.getProfile(userData.id);
+          userData = { ...userData, ...profileRes.data };
+        }
       } catch (_profileErr) {
         // ignore
       }
@@ -91,11 +95,12 @@ export const AuthProvider = ({ children }) => {
       console.log('FRONTEND: Attempting login for:', credentials.email);
       const response = await authAPI.login(credentials);
       console.log('FRONTEND: Login response:', response.data);
-      const { token, user: userData } = response.data;
+      const { token, user: userData, parentAuthorizationPending, requiresParentVerification } = response.data;
       localStorage.setItem('token', token);
       // Fetch profile data for profilePhoto and merge
-      let mergedUser = { ...userData, token };
+      let mergedUser = { ...userData, token, parentAuthorizationPending, requiresParentVerification };
       try {
+        if (parentAuthorizationPending) throw new Error('Profile is restricted pending guardian authorization');
         const profileRes = await profileAPI.getProfile(userData.id);
         mergedUser = { ...mergedUser, ...profileRes.data };
       } catch {
@@ -127,7 +132,7 @@ export const AuthProvider = ({ children }) => {
       console.log('FRONTEND: Sending registration data:', userData);
       const response = await authAPI.register(userData);
       console.log('FRONTEND: Registration response:', response.data);
-      const { token, user: newUser, requiresParentVerification } = response.data;
+      const { token, user: newUser, requiresParentVerification, parentAuthorizationPending } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('fp_pending_onboarding', '1');
       if (requiresParentVerification) {
@@ -135,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         localStorage.removeItem('fp_requires_parent');
       }
-      setUser({ ...newUser, token });
+      setUser({ ...newUser, token, requiresParentVerification, parentAuthorizationPending });
       return { success: true, requiresParentVerification };
     } catch (error) {
       console.error('FRONTEND: Registration error:', error);
@@ -169,7 +174,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { await authAPI.logout(); } catch { /* local sign-out still completes */ }
     localStorage.removeItem('token');
     setUser(null);
   };

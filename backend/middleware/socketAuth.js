@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { getJwtSecret } = require('../utils/jwtSecret');
 const User = require('../models/User');
+const { requiresParentalAuthorization } = require('../utils/parentalAuthorization');
 
 /**
  * Socket.IO middleware.
@@ -31,7 +32,7 @@ async function socketAuth(socket, next) {
     }
 
     const dbUser = await User.findByPk(userId, {
-      attributes: ['id', 'bannedAt', 'deletedAt', 'tokenVersion'],
+      attributes: ['id', 'role', 'dateOfBirth', 'parentVerified', 'bannedAt', 'deletedAt', 'tokenVersion'],
     });
     if (!dbUser || dbUser.deletedAt || dbUser.bannedAt) {
       return next(new Error('Unauthorized'));
@@ -41,12 +42,15 @@ async function socketAuth(socket, next) {
     if (tokenVersion > 0 && claimedVersion !== tokenVersion) {
       return next(new Error('Unauthorized'));
     }
+    if (await requiresParentalAuthorization(dbUser)) {
+      return next(new Error('PARENTAL_AUTHORIZATION_REQUIRED'));
+    }
 
     socket.userId = String(userId);
     socket.data.userId = userId;
     socket.data.anonymous = false;
     return next();
-  } catch (_err) {
+  } catch {
     return next(new Error('Unauthorized'));
   }
 }

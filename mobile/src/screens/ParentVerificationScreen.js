@@ -8,15 +8,15 @@ import {
   TouchableOpacity,
   View,
 } from '../theme/nativeComponents';
-import { Share } from 'react-native';
 import { extractErrorMessage, parentVerificationRequest } from '../api/client';
 import { useLocale } from '../context/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 
-export default function ParentVerificationScreen({ navigation }) {
+export default function ParentVerificationScreen() {
   const { t } = useLocale();
+  const { logout, refreshMe } = useAuth();
   const [parentEmail, setParentEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [confirmUrl, setConfirmUrl] = useState('');
   const [warning, setWarning] = useState('');
   const [emailSent, setEmailSent] = useState(null);
 
@@ -28,7 +28,6 @@ export default function ParentVerificationScreen({ navigation }) {
     }
 
     setLoading(true);
-    setConfirmUrl('');
     setWarning('');
     try {
       const res = await parentVerificationRequest(email);
@@ -39,38 +38,26 @@ export default function ParentVerificationScreen({ navigation }) {
         return;
       }
 
-      setEmailSent(!!data.emailSent);
-
-      if (data.confirmUrl) setConfirmUrl(data.confirmUrl);
-      if (data.warning) setWarning(data.warning);
-
-      if (data.emailSent) {
-        Alert.alert(
-          'U dërgua',
-          `Email u dërgua te ${email}. Mund ta ndash edhe linkun në WhatsApp nga ekrani.`
-        );
+      if (data.alreadyAuthorized) {
+        setEmailSent(null);
+        Alert.alert('Autorizimi është aktiv', 'Llogaria tashmë ka autorizim prindëror aktiv.');
         return;
       }
 
-      setWarning(
-        data.warning ||
-          'Email nuk u dërgua nga serveri. Kopjo linkun dhe ia dërgo prindit (WhatsApp).'
-      );
+      setEmailSent(!!data.emailSent);
+
+      if (data.warning) setWarning(data.warning);
+
+      if (data.emailSent) {
+        Alert.alert('U dërgua', `Kërkesa u dërgua te ${email}. Kujdestari duhet të hapë emailin dhe të plotësojë deklarimin.`);
+        return;
+      }
+
+      setWarning(data.warning || 'Email-i nuk u dërgua. Provo përsëri më vonë ose kontakto mbështetjen. Linku i autorizimit nuk mund të ndahet nga llogaria e atletit.');
     } catch (err) {
       Alert.alert('Gabim', extractErrorMessage(err, 'Server error'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const shareLink = async () => {
-    if (!confirmUrl) return;
-    try {
-      await Share.share({
-        message: `Konfirmo llogarinë X TALENTI të fëmijës:\n${confirmUrl}`,
-      });
-    } catch (_e) {
-      Alert.alert('Linku', confirmUrl);
     }
   };
 
@@ -79,7 +66,7 @@ export default function ParentVerificationScreen({ navigation }) {
       <View style={styles.card}>
         <Text style={styles.title}>Verifikimi i prindit</Text>
         <Text style={styles.sub}>
-          Për nën 18 vjeç. Vendos email-in e prindit — ose kopjo linkun nëse email nuk funksionon në server.
+          Për nën 18 vjeç. Vendos email-in e prindit ose kujdestarit ligjor. Linku i autorizimit dërgohet vetëm në atë email.
         </Text>
 
         {emailSent === true ? (
@@ -88,22 +75,7 @@ export default function ParentVerificationScreen({ navigation }) {
           </View>
         ) : null}
 
-        {confirmUrl ? (
-          <View style={styles.warnBox}>
-            <Text style={styles.warnText}>
-              {warning ||
-                (emailSent
-                  ? 'Email u dërgua. Mund ta dërgosh edhe në WhatsApp:'
-                  : 'Kopjo / ndaj linkun me prindin:')}
-            </Text>
-            <Text style={styles.link} selectable>
-              {confirmUrl}
-            </Text>
-            <TouchableOpacity style={styles.copyBtn} onPress={shareLink}>
-              <Text style={styles.copyBtnText}>Ndaj në WhatsApp</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        {emailSent === false && warning ? <View style={styles.warnBox}><Text style={styles.warnText}>{warning}</Text></View> : null}
 
         <TextInput
           value={parentEmail}
@@ -115,8 +87,10 @@ export default function ParentVerificationScreen({ navigation }) {
           style={styles.input}
         />
         <TouchableOpacity style={styles.button} onPress={handleSend} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Duke dërguar…' : 'Dërgo / krijo link'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Duke dërguar…' : 'Dërgo email autorizimi'}</Text>
         </TouchableOpacity>
+        {emailSent === true ? <TouchableOpacity style={[styles.button, styles.statusButton]} onPress={() => refreshMe().then((me) => Alert.alert(me?.parentAuthorizationPending ? 'Në pritje' : 'U autorizua', me?.parentAuthorizationPending ? 'Ende nuk është përfunduar autorizimi.' : 'Autorizimi është aktiv. Hyr sërish në aplikacion.')).catch(() => Alert.alert('Gabim', 'Nuk u kontrollua statusi.'))}><Text style={styles.buttonText}>Kontrollo statusin</Text></TouchableOpacity> : null}
+        <TouchableOpacity style={[styles.button, styles.statusButton]} onPress={logout}><Text style={styles.buttonText}>Dil nga llogaria</Text></TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -152,14 +126,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   warnText: { color: '#92400e', fontSize: 13, marginBottom: 8 },
-  link: { fontSize: 11, color: '#9A6B12', marginBottom: 10 },
-  copyBtn: {
-    backgroundColor: '#9A6B12',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  copyBtnText: { color: '#fff', fontWeight: '700' },
+  statusButton: { marginTop: 8, backgroundColor: '#475569' },
   input: {
     borderWidth: 1,
     borderColor: '#cbd5e1',

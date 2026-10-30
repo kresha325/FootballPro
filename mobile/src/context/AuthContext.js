@@ -7,6 +7,7 @@ import {
   extractErrorMessage,
   forgotPasswordRequest,
   loginRequest,
+  logoutRequest,
   meRequest,
   registerRequest,
   setAuthToken,
@@ -78,6 +79,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const connectSocket = (authToken, userData) => {
+    if (userData?.parentAuthorizationPending) {
+      disconnectSocket();
+      return;
+    }
     const existing = socketRef.current;
     const sameAuth =
       existing &&
@@ -145,6 +150,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
+
+    if (token) await logoutRequest().catch(() => {});
 
     // Drop auth first so push-clear / in-flight calls cannot re-trigger logout via 401.
     setToken(null);
@@ -242,7 +249,8 @@ export const AuthProvider = ({ children }) => {
 
     setToken(nextToken);
     setUser(me);
-    connectSocket(nextToken, me);
+    if (!me?.parentAuthorizationPending) connectSocket(nextToken, me);
+    else disconnectSocket();
     return { ok: true };
   };
 
@@ -293,7 +301,7 @@ export const AuthProvider = ({ children }) => {
       setUser(me);
       setPendingOnboarding(true);
       setRequiresParentVerification(needsParent);
-      connectSocket(nextToken, me);
+      if (!me?.parentAuthorizationPending) connectSocket(nextToken, me);
 
       return { ok: true, requiresParentVerification: needsParent };
     } catch (error) {
@@ -344,7 +352,7 @@ export const AuthProvider = ({ children }) => {
             const parsedUser = JSON.parse(storedUser);
             setToken(storedToken);
             setUser(parsedUser);
-            connectSocket(storedToken, parsedUser);
+            if (!parsedUser?.parentAuthorizationPending) connectSocket(storedToken, parsedUser);
             setIsBootstrapping(false);
             showedCachedUser = true;
           } catch (_parseErr) {
@@ -358,7 +366,8 @@ export const AuthProvider = ({ children }) => {
           setToken(storedToken);
           setUser(me);
           await SecureStore.setItemAsync('user', JSON.stringify(me));
-          if (!showedCachedUser) connectSocket(storedToken, me);
+          if (!me?.parentAuthorizationPending) connectSocket(storedToken, me);
+          else disconnectSocket();
         } catch (error) {
           const status = error?.response?.status;
           if (status === 401) {
@@ -436,6 +445,8 @@ export const AuthProvider = ({ children }) => {
         }
         setUser(me);
         await SecureStore.setItemAsync('user', JSON.stringify(me));
+        if (!me?.parentAuthorizationPending && token) connectSocket(token, me);
+        else disconnectSocket();
         return me;
       },
     }),

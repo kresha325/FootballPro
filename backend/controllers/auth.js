@@ -11,6 +11,7 @@ const {
 } = require('../utils/registerValidation');
 const { getJwtSecret } = require('../utils/jwtSecret');
 const { needsParentVerification } = require('../utils/userVerification');
+const { hasActiveGuardianConsent } = require('../utils/parentalAuthorization');
 const { isOrgProfileRole } = require('../utils/orgProfile');
 const { passwordPolicyMessage } = require('../utils/passwordPolicy');
 
@@ -157,6 +158,8 @@ exports.register = async (req, res) => {
 
     // Parent verification: athlete minors only (< 18). Media/coach/club/etc. never.
     const requiresParentVerification = needsParentVerification(user);
+    const parentAuthorizationPending = requiresParentVerification &&
+      (!user.parentVerified || !(await hasActiveGuardianConsent(user.id)));
 
     console.log('BACKEND: Sending success response');
     // 6. Response
@@ -164,6 +167,7 @@ exports.register = async (req, res) => {
       success: true,
       token,
       requiresParentVerification,
+      parentAuthorizationPending,
       user: {
         id: user.id,
         email: user.email,
@@ -262,8 +266,13 @@ exports.login = async (req, res) => {
     const token = jwt.sign(payload, getJwtSecret(), {
       expiresIn: '7d',
     });
+    const requiresParentVerification = needsParentVerification(user);
+    const parentAuthorizationPending = requiresParentVerification &&
+      (!user.parentVerified || !(await hasActiveGuardianConsent(user.id)));
     res.json({
       token,
+      requiresParentVerification,
+      parentAuthorizationPending,
       user: {
         id: user.id,
         email: user.email,

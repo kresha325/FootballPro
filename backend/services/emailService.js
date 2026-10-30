@@ -239,7 +239,7 @@ const emailTemplates = {
     `
   }),
 
-  tournamentInvite: (tournamentName, tournamentId) => ({
+  tournamentInvite: (tournamentName) => ({
     subject: `🏆 You're invited to ${tournamentName}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -326,6 +326,14 @@ const emailTemplates = {
     `,
     };
   },
+  parentConsentManagement: (athleteName, managementUrl) => {
+    const name = String(athleteName || 'atletit').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const url = String(managementUrl || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return {
+      subject: 'X TALENTI — Menaxhimi i autorizimit prindëror',
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#111"><h2>Autorizimi prindëror u regjistrua</h2><p>Autorizimi për llogarinë sportive të <strong>${name}</strong> u regjistrua pas deklarimit tuaj.</p><p>Ruajeni këtë email. Nga kjo faqe mund ta tërhiqni autorizimin në çdo kohë.</p><a href="${url}" style="background:#0f766e;color:#fff;padding:14px 24px;text-decoration:none;border-radius:8px;display:inline-block">Menaxho ose tërhiq autorizimin</a><p style="color:#64748b;font-size:13px">Nëse nuk e keni bërë këtë kërkesë, kontaktoni mbështetjen e X TALENTI.</p></div>`,
+    };
+  },
 
   importantNotice: (firstName, title, message, url, language = 'sq') => {
     const c = notificationCopy(language);
@@ -398,11 +406,11 @@ const sendEmail = async (to, templateName, ...params) => {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         const reason = result.message || result.error || `HTTP ${response.status}`;
-        console.error('❌ Email API error:', templateName, '→', to, reason);
+        console.error('❌ Email API error:', templateName, reason);
         return { success: false, error: String(reason) };
       }
 
-      console.log('✅ Email sent:', templateName, '→', to, result.id || 'accepted by Resend');
+      console.log('✅ Email sent:', templateName, result.id || 'accepted by Resend');
       return { success: true, messageId: result.id || null };
     }
 
@@ -419,10 +427,10 @@ const sendEmail = async (to, templateName, ...params) => {
     };
 
     const info = await transport.sendMail(mailOptions);
-    console.log('✅ Email sent:', templateName, '→', to, info.messageId);
+    console.log('✅ Email sent:', templateName, info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Email error:', templateName, '→', to, error.message);
+    console.error('❌ Email error:', templateName, error.message);
     return { success: false, error: error.message };
   }
 };

@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const Follow = require('../models/Follow');
 const Block = require('../models/Block');
 const Report = require('../models/Report');
+const GuardianConsent = require('../models/GuardianConsent');
 const { Op } = require('sequelize');
 
 /**
@@ -82,6 +83,17 @@ exports.deleteMyAccount = async (req, res) => {
       },
     });
     await Report.destroy({ where: { reporterId: user.id } });
+
+    // Revoke authorization and remove guardian PII when the minor account is deleted.
+    await GuardianConsent.update({
+      revokedAt: new Date(),
+      guardianEmail: `deleted+${user.id}@xtalenti.invalid`,
+      guardianName: null,
+      managementTokenHash: null,
+      managementTokenExpiresAt: null,
+      verificationTokenHash: null,
+      verificationTokenExpiresAt: null,
+    }, { where: { minorUserId: user.id, revokedAt: null } });
 
     res.json({
       msg: 'Llogaria u fshi. Të dhënat personale u anonimizuan; të dhënat financiare ruhen sipas kërkesave ligjore.',

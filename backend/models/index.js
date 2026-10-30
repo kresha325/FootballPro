@@ -164,6 +164,7 @@ const AdminAuditLog = require('./AdminAuditLog');
 const PlatformSetting = require('./PlatformSetting');
 const AdminErrorGroup = require('./AdminErrorGroup');
 const AdminJobRun = require('./AdminJobRun');
+const GuardianConsent = require('./GuardianConsent');
 const FinancialAdjustment = require('./FinancialAdjustment');
 
 module.exports = {
@@ -225,6 +226,7 @@ module.exports = {
   PlatformSetting,
   AdminErrorGroup,
   AdminJobRun,
+  GuardianConsent,
   FinancialAdjustment,
 };
 

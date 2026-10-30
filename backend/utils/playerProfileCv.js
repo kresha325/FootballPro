@@ -766,7 +766,17 @@ async function loadDerivedAchievements(userId) {
 async function resolveVerificationStatus(user) {
   if (!user) return 'UNVERIFIED';
   const { effectiveVerified, needsParentVerification } = require('./userVerification');
-  if (effectiveVerified(user)) return 'VERIFIED';
+  const userData = typeof user.get === 'function' ? user.get({ plain: true }) : user;
+  let verifiedUser = userData;
+  if (needsParentVerification(user)) {
+    try {
+      const { hasActiveGuardianConsent } = require('./parentalAuthorization');
+      verifiedUser = { ...userData, parentVerified: Boolean(userData.parentVerified && await hasActiveGuardianConsent(userData.id)) };
+    } catch {
+      verifiedUser = { ...userData, parentVerified: false };
+    }
+  }
+  if (effectiveVerified(verifiedUser)) return 'VERIFIED';
 
   let parentPending = false;
   try {
@@ -774,7 +784,7 @@ async function resolveVerificationStatus(user) {
     const full = await User.findByPk(user.id, {
       attributes: ['id', 'role', 'dateOfBirth', 'parentVerified', 'parentVerificationToken'],
     });
-    parentPending = Boolean(full?.parentVerificationToken) && needsParentVerification(full || user) && !full?.parentVerified;
+    parentPending = needsParentVerification(full || userData) && !verifiedUser.parentVerified;
   } catch (err) {
     logger.warn('verification parent check:', err?.message || err);
   }

@@ -9,7 +9,7 @@ export default function ParentVerificationForm({ onDone, compact = false }) {
   const [parentEmail, setParentEmail] = useState('');
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
-  const [confirmUrl, setConfirmUrl] = useState('');
+  const [info, setInfo] = useState('');
   const [emailSent, setEmailSent] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +17,7 @@ export default function ParentVerificationForm({ onDone, compact = false }) {
     e.preventDefault();
     setError('');
     setWarning('');
-    setConfirmUrl('');
+    setInfo('');
     setEmailSent(null);
 
     if (!parentEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
@@ -31,9 +31,9 @@ export default function ParentVerificationForm({ onDone, compact = false }) {
       const data = res.data || {};
 
       if (data.success) {
-        setEmailSent(!!data.emailSent);
+        setEmailSent(data.alreadyAuthorized ? null : !!data.emailSent);
+        if (data.alreadyAuthorized) setInfo(data.msg || 'Autorizimi është aktiv.');
         if (data.warning) setWarning(data.warning);
-        if (data.confirmUrl) setConfirmUrl(data.confirmUrl);
         onDone?.(true, data);
       } else {
         setError(data.error || 'Dështoi dërgesa');
@@ -47,63 +47,28 @@ export default function ParentVerificationForm({ onDone, compact = false }) {
     }
   };
 
-  const copyLink = async () => {
-    if (!confirmUrl) return;
-    try {
-      await navigator.clipboard.writeText(confirmUrl);
-      alert('Linku u kopjua. Dërgoje prindit (WhatsApp, SMS, etj.).');
-    } catch (_e) {
-      prompt('Kopjo linkun:', confirmUrl);
-    }
-  };
-
   return (
     <div className={compact ? '' : ''}>
       {!compact ? (
         <p className="mb-4 text-gray-600 dark:text-gray-300 text-sm">
-          Për llogari nën 18 vjeç, prindi duhet të konfirmojë me email ose me linkun e konfirmimit.
+          Për llogari nën 18 vjeç, prindi ose kujdestari ligjor duhet ta autorizojë llogarinë nga emaili i tij.
         </p>
       ) : (
         <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-          Vendos emailin e prindit. Ai merr një link konfirmimi — pastaj badge <strong>Prindi</strong> bëhet blu.
+          Vendos emailin e prindit ose kujdestarit ligjor. Linku dërgohet vetëm atje dhe nuk ndahet me llogarinë e atletit.
         </p>
       )}
 
       {error ? <div className="text-red-600 mb-3 text-sm font-medium">{error}</div> : null}
+      {info ? <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{info}</div> : null}
 
       {emailSent === true ? (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-          Email-i u dërgua te <strong>{parentEmail}</strong>. Kontrollo inbox dhe <strong>Spam</strong>.
+          Kërkesa u dërgua te <strong>{parentEmail}</strong>. Kujdestari duhet të plotësojë deklarimin nga emaili; kontrolloni inbox dhe <strong>Spam</strong>.
         </div>
       ) : null}
 
-      {confirmUrl ? (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm space-y-3">
-          <p>
-            {warning ||
-              (emailSent
-                ? 'Mund ta dërgosh edhe në WhatsApp (rekomanduar nëse prindi hap nga telefoni):'
-                : 'Email nuk u dërgua nga serveri. Dërgoje linkun në WhatsApp:')}
-          </p>
-          <a
-            href={confirmUrl}
-            className="block break-all text-teal-700 underline text-xs"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {confirmUrl}
-          </a>
-          <button
-            type="button"
-            onClick={copyLink}
-            className="w-full py-2 bg-teal-700 text-white rounded-lg font-semibold text-sm"
-          >
-            Kopjo linkun për WhatsApp
-          </button>
-        </div>
-      ) : null}
-
-      {emailSent === false && warning && !confirmUrl ? (
+      {emailSent === false && warning ? (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
           <p>{warning}</p>
         </div>

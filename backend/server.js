@@ -144,7 +144,8 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined'));
+  morgan.token('safe-url', (req) => String(req.originalUrl || req.url || '').replace(/([?&](?:token|code)=)[^&]*/gi, '$1[redacted]'));
+  app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 }
 
 // Socket.io CORS — lejo mobile (pa Origin) dhe frontend-in e konfiguruar.
@@ -162,6 +163,7 @@ io = socketIo(server, {
   pingTimeout: 60000,
   pingInterval: 25000,
 });
+app.set('io', io);
 
 const socketAuth = require('./middleware/socketAuth');
 io.use(socketAuth);

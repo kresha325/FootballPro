@@ -132,6 +132,8 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
         'lastName',
         'email',
         'role',
+        'dateOfBirth',
+        'parentVerified',
         'language',
         'points',
         'level',
@@ -158,6 +160,14 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
     plain.trialEndsAt = access.trialEndsAt;
     plain.inTrial = access.inTrial;
     plain.access = access;
+    const { needsParentVerification } = require('../utils/userVerification');
+    const { hasActiveGuardianConsent } = require('../utils/parentalAuthorization');
+    plain.requiresParentVerification = needsParentVerification(user);
+    const activeGuardianConsent = plain.requiresParentVerification
+      ? await hasActiveGuardianConsent(user.id)
+      : Boolean(user.parentVerified);
+    plain.parentVerified = Boolean(user.parentVerified && activeGuardianConsent);
+    plain.parentAuthorizationPending = plain.requiresParentVerification && !plain.parentVerified;
 
     meCache.set(req.user.id, { plain, expiry: now + ME_CACHE_TTL });
 
@@ -165,6 +175,21 @@ router.get('/me', maybeMeLimiter, auth, async (req, res) => {
   } catch (err) {
     console.error('AUTH /me error:', err);
     res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+router.post('/logout', auth, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (user) {
+      user.tokenVersion = Number(user.tokenVersion || 0) + 1;
+      await user.save({ fields: ['tokenVersion'] });
+      meCache.delete(req.user.id);
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('AUTH logout error:', err?.message || err);
+    return res.status(500).json({ msg: 'Could not log out securely' });
   }
 });
 

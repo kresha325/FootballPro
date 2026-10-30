@@ -6,10 +6,18 @@ const {
   buildAccessPayload,
   getEffectiveTier,
 } = require('../utils/subscriptionAccess');
+const {
+  requiresParentalAuthorization,
+  normalizePath,
+  isAllowedWhilePending,
+  parentalAuthorizationRequired,
+} = require('../utils/parentalAuthorization');
 
 const USER_AUTH_ATTRS = [
   'id',
   'role',
+  'dateOfBirth',
+  'parentVerified',
   'firstName',
   'lastName',
   'email',
@@ -83,6 +91,13 @@ const auth = async (req, res, next) => {
       return res.status(403).json({ msg: 'Llogaria është e pezulluar' });
     }
 
+    if (
+      await requiresParentalAuthorization(dbUser) &&
+      !isAllowedWhilePending(req.method, normalizePath(req))
+    ) {
+      return parentalAuthorizationRequired(req, res);
+    }
+
     await persistReconcileIfNeeded(dbUser);
     const plain = dbUser.get({ plain: true });
     const access = buildAccessPayload(plain);
@@ -111,16 +126,27 @@ module.exports.attachUser = attachUser;
 module.exports.optionalAuth = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return next();
+  let tokenVerified = false;
   try {
     const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret);
+    tokenVerified = true;
     const userId = decoded?.user?.id;
     if (!userId) return next();
     const attached = await attachUser(req, userId);
     if (attached && !attached.deletedAt && !attached.bannedAt) {
+      if (
+        await requiresParentalAuthorization(attached) &&
+        !isAllowedWhilePending(req.method, normalizePath(req))
+      ) {
+        return parentalAuthorizationRequired(req, res);
+      }
       req.user = attached;
     }
-  } catch (_) {
+  } catch {
+    if (tokenVerified) {
+      return res.status(503).json({ msg: 'Autorizimi nuk mund të verifikohet tani.' });
+    }
     /* ignore invalid token for optional auth */
   }
   return next();

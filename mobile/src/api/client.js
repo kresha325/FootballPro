@@ -584,6 +584,7 @@ export const clubRosterByClubRequest = (clubId) => api.get(`/api/club-roster/clu
 
 export const parentVerificationRequest = (parentEmail) =>
   api.post('/api/verification/parent-request', { parentEmail });
+export const logoutRequest = () => api.post('/api/auth/logout');
 
 export const sponsorsRequest = () => api.get('/api/sponsors/all');
 export const sponsorsByUserRequest = (userId) => api.get(`/api/sponsors/user/${userId}`);

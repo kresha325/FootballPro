@@ -496,6 +496,17 @@ exports.getProfile = async (req, res) => {
 
     // Calculate age and age group (athletes/people only — orgs get founding year)
     let user = profile.User;
+    if (user && String(user.role).toLowerCase() === 'athlete') {
+      try {
+        const { needsParentVerification } = require('../utils/userVerification');
+        const { hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+        if (needsParentVerification(user) && !hasGuardianAuthorization(user, await hasActiveGuardianConsent(user.id)) && req.user?.role !== 'admin') {
+          return res.status(404).json({ msg: 'Profili nuk u gjet' });
+        }
+      } catch {
+        if (req.user?.role !== 'admin') return res.status(503).json({ msg: 'Profili nuk mund të verifikohet tani.' });
+      }
+    }
     if (user) {
       try {
         const { ensureClubVerifiedFromRoster, ensureVerifiedSynced, isAthleteRole } = require('../utils/userVerification');
@@ -510,6 +521,17 @@ exports.getProfile = async (req, res) => {
       }
     }
     const role = user ? user.role : null;
+    if (user && role === 'athlete') {
+      try {
+        const { needsParentVerification } = require('../utils/userVerification');
+        if (needsParentVerification(user)) {
+          const { hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+          if (!hasGuardianAuthorization(user, await hasActiveGuardianConsent(user.id))) user.parentVerified = false;
+        }
+      } catch {
+        user.parentVerified = false;
+      }
+    }
     const isOrg = isOrgProfileRole(role);
     const age = !isOrg && user && user.getAge ? user.getAge() : null;
     const ageGroup = !isOrg && user && user.getAgeGroup ? user.getAgeGroup() : null;
@@ -710,6 +732,19 @@ exports.getPublicProfileCv = async (req, res) => {
 
     const user = profile.User;
     const role = user.role;
+    if (role === 'athlete') {
+      try {
+        const { needsParentVerification } = require('../utils/userVerification');
+        if (needsParentVerification(user)) {
+          const { hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+          if (!hasGuardianAuthorization(user, await hasActiveGuardianConsent(user.id))) {
+            return res.status(404).json({ msg: 'Profili nuk u gjet' });
+          }
+        }
+      } catch {
+        return res.status(503).json({ msg: 'Profili nuk mund të verifikohet tani.' });
+      }
+    }
     const isOrg = isOrgProfileRole(role);
     const age = !isOrg && user.getAge ? user.getAge() : null;
     const ageGroup = !isOrg && user.getAgeGroup ? user.getAgeGroup() : null;
@@ -1586,7 +1621,7 @@ exports.getAllProfiles = async (req, res) => {
     // Build include for User model
     const userInclude = {
       model: User,
-      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth'],
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'verified', 'dateOfBirth', 'parentVerified'],
       where: role && !['club', 'coach'].includes(normalizedRole) ? { role } : {},
       required: true,
     };
@@ -1612,6 +1647,29 @@ exports.getAllProfiles = async (req, res) => {
           return p;
         })
         .filter(p => p.User);
+    }
+
+    if (String(req.user?.role || '').toLowerCase() !== 'admin') {
+      const { needsParentVerification } = require('../utils/userVerification');
+      const { Op } = require('sequelize');
+      const minorProfiles = profiles.filter((profile) => profile?.User && needsParentVerification(profile.User));
+      if (minorProfiles.length) {
+        const GuardianConsent = require('../models/GuardianConsent');
+        const consentRows = await GuardianConsent.findAll({
+          where: {
+            minorUserId: minorProfiles.map((profile) => profile.User.id),
+            verifiedAt: { [Op.ne]: null },
+            revokedAt: null,
+          },
+          attributes: ['minorUserId'],
+        });
+        const approvedIds = new Set(consentRows.map((consent) => Number(consent.minorUserId)));
+        profiles = profiles.filter((profile) => {
+          if (!profile?.User || !needsParentVerification(profile.User)) return true;
+          const { hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+          return hasGuardianAuthorization(profile.User, approvedIds.has(Number(profile.User.id)));
+        });
+      }
     }
 
 
@@ -2208,6 +2266,7 @@ exports.getLandingShowcase = async (req, res) => {
         'lastName',
         'role',
         'verified',
+        'parentVerified',
         'dateOfBirth',
         'bannedAt',
         'deletedAt',
@@ -2247,6 +2306,24 @@ exports.getLandingShowcase = async (req, res) => {
           return p;
         })
         .filter(Boolean);
+    }
+
+    const { needsParentVerification } = require('../utils/userVerification');
+    const minorRows = rows.filter((profile) => profile?.User && needsParentVerification(profile.User));
+    if (minorRows.length) {
+      const GuardianConsent = require('../models/GuardianConsent');
+      const consentRows = await GuardianConsent.findAll({
+        where: {
+          minorUserId: minorRows.map((profile) => profile.User.id),
+          verifiedAt: { [Op.ne]: null },
+          revokedAt: null,
+        },
+        attributes: ['minorUserId'],
+      });
+      const consentIds = new Set(consentRows.map((consent) => Number(consent.minorUserId)));
+      const { hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+      rows = rows.filter((profile) => !profile?.User || !needsParentVerification(profile.User) ||
+        hasGuardianAuthorization(profile.User, consentIds.has(Number(profile.User.id))));
     }
 
     const mapped = rows

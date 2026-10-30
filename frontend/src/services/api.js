@@ -142,6 +142,7 @@ export const authAPI = {
   login: (data) => API.post('/auth/login', data),
   register: (data) => API.post('/auth/register', data),
   me: () => API.get('/auth/me'),
+  logout: () => API.post('/auth/logout'),
   updateLanguage: (language) => API.patch('/auth/language', { language }),
   forgotPassword: (email) => API.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => API.post('/auth/reset-password', { token, password }),

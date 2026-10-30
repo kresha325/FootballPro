@@ -655,6 +655,12 @@ export default function AppNavigator() {
                 />
               </>
             )
+          ) : user?.parentAuthorizationPending ? (
+            <Stack.Screen
+              name="ParentVerificationRequired"
+              component={ParentVerificationScreen}
+              options={{ headerShown: false }}
+            />
           ) : pendingOnboarding ? (
             <Stack.Screen
               name="RegisterOnboarding"
