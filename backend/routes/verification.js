@@ -8,6 +8,7 @@ const requestLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardH
 const tokenLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: 'Shumë kërkesa. Provo përsëri më vonë.' });
 
 router.post('/parent-request', requestLimiter, auth, verificationController.parentRequest);
+router.post('/communication-request', requestLimiter, auth, verificationController.requestCommunicationConsent);
 // GET shows a button page (safe for WhatsApp preview); POST completes confirmation
 router.get('/parent-confirm', tokenLimiter, verificationController.parentConfirmPage);
 router.post('/parent-confirm', tokenLimiter, verificationController.parentConfirm);

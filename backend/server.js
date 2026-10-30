@@ -70,7 +70,11 @@ const UserReward = require('./models/UserReward');
 require('./models/Notification');
 require('./models/Follow');
 require('./models/Profile');
-const { ConversationMember } = require('./models/Conversation');
+const { Conversation, ConversationMember } = require('./models/Conversation');
+const ClubMember = require('./models/ClubMember');
+const ClubStaff = require('./models/ClubStaff');
+const GuardianConsent = require('./models/GuardianConsent');
+const { CHANNELS: COMMUNICATION_CHANNELS, authorizeConversationCommunication } = require('./utils/minorCommunicationPolicy');
 const Message = require('./models/Message');
 const { VideoCallHistory } = require('./models');
 // Add other models as needed
@@ -588,6 +592,21 @@ io.on('connection', (socket) => {
         socket.emit('call:failed', { reason: 'Not a conversation member' });
         return;
       }
+      const permission = await authorizeConversationCommunication({
+        conversationId: Number(groupMatch[1]),
+        actorId: Number(userId),
+        channel: COMMUNICATION_CHANNELS.VIDEO_CALL,
+        Conversation,
+        ConversationMember,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
+      });
+      if (!permission.allowed) {
+        socket.emit('call:failed', { reason: 'Guardian approval or a verified active assignment is required' });
+        return;
+      }
     } catch (err) {
       logger.warn('call:join-room membership check failed:', err.message);
       return;
@@ -695,14 +714,18 @@ io.on('connection', (socket) => {
   socket.on('joinConversation', async (conversationId) => {
     if (!authenticatedUserId || !conversationId) return;
     try {
-      const member = await ConversationMember.findOne({
-        where: {
-          conversationId: Number(conversationId),
-          userId: Number(authenticatedUserId),
-        },
-        attributes: ['id'],
+      const permission = await authorizeConversationCommunication({
+        conversationId: Number(conversationId),
+        actorId: Number(authenticatedUserId),
+        channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+        Conversation,
+        ConversationMember,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
       });
-      if (!member) {
+      if (!permission.allowed) {
         logSocketEvent(socket, 'joinConversation-denied', { conversationId, userId: authenticatedUserId });
         return;
       }
@@ -719,11 +742,19 @@ io.on('connection', (socket) => {
   });
 
   // Typing indicator — only for rooms this socket actually joined (membership checked on join)
-  socket.on('typing', (data) => {
+  socket.on('typing', async (data) => {
     const { conversationId, userName } = data || {};
     if (!conversationId || !authenticatedUserId) return;
     const room = `conversation-${conversationId}`;
     if (!socket.rooms.has(room)) return;
+    try {
+      const permission = await authorizeConversationCommunication({
+        conversationId: Number(conversationId), actorId: Number(authenticatedUserId),
+        channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+        Conversation, ConversationMember, User, ClubMember, ClubStaff, GuardianConsent,
+      });
+      if (!permission.allowed) { socket.leave(room); return; }
+    } catch { socket.leave(room); return; }
     socket.to(room).emit('userTyping', {
       conversationId: Number(conversationId) || conversationId,
       userId: authenticatedUserId,
@@ -731,11 +762,19 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('stopTyping', (data) => {
+  socket.on('stopTyping', async (data) => {
     const { conversationId } = data || {};
     if (!conversationId || !authenticatedUserId) return;
     const room = `conversation-${conversationId}`;
     if (!socket.rooms.has(room)) return;
+    try {
+      const permission = await authorizeConversationCommunication({
+        conversationId: Number(conversationId), actorId: Number(authenticatedUserId),
+        channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+        Conversation, ConversationMember, User, ClubMember, ClubStaff, GuardianConsent,
+      });
+      if (!permission.allowed) { socket.leave(room); return; }
+    } catch { socket.leave(room); return; }
     socket.to(room).emit('userStoppedTyping', {
       conversationId: Number(conversationId) || conversationId,
       userId: authenticatedUserId,
@@ -769,7 +808,7 @@ io.on('connection', (socket) => {
 
   // All direct call signaling requires an existing call record and authenticated participation.
   const { isEitherBlocked } = require('./controllers/moderation');
-  createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCall, VideoCallHistory, User: UserModel, isEitherBlocked, isUserOnline: isUserRealtimeOnline });
+  createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCall, VideoCallHistory, User: UserModel, ClubMember, ClubStaff, GuardianConsent, isEitherBlocked, isUserOnline: isUserRealtimeOnline });
 
 });
 

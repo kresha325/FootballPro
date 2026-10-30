@@ -23,6 +23,27 @@ const { authorizeGroupAction } = require('../utils/groupPermissions');
 const { unreadCountsByConversation } = require('../utils/messagingUnread');
 const { userIsViewingConversation } = require('../utils/conversationPresence');
 const { isUserOnline } = require('../utils/socket');
+const { checkDirectContact } = require('../utils/directContactPermission');
+const {
+  CHANNELS: COMMUNICATION_CHANNELS,
+  authorizeMinorDirectContact,
+  authorizeMinorGroupCommunication,
+} = require('../utils/minorCommunicationPolicy');
+const ClubMember = require('../models/ClubMember');
+const ClubStaff = require('../models/ClubStaff');
+const GuardianConsent = require('../models/GuardianConsent');
+
+function childCommunicationDecision(result, res) {
+  if (result.allowed) return false;
+  const status = result.status || 403;
+  res.status(status).json({
+    code: result.reason || 'GUARDIAN_COMMUNICATION_CONSENT_REQUIRED',
+    msg: status === 503
+      ? 'Kontrolli i sigurisë nuk është i disponueshëm.'
+      : 'Kjo bisedë kërkon miratimin e kujdestarit dhe autorizimin përkatës.',
+  });
+  return true;
+}
 
 /** Sender + Profile për avatar në chat */
 const SENDER_WITH_PROFILE = {
@@ -143,13 +164,13 @@ function previewText(message) {
 }
 
 async function blockedWith(userId, otherId) {
-  if (!otherId || Number(otherId) === Number(userId)) return false;
-  try {
-    const { isEitherBlocked } = require('./moderation');
-    return await isEitherBlocked(userId, otherId);
-  } catch (_err) {
-    return false;
-  }
+  const { isEitherBlocked } = require('./moderation');
+  const result = await checkDirectContact({ actorId: userId, targetId: otherId, isEitherBlocked });
+  if (result.ok) return false;
+  if (result.code === 'BLOCKED') return true;
+  const error = new Error(result.code);
+  error.statusCode = result.status;
+  throw error;
 }
 
 function emitConversation(event, conversationId, payload, userIds = []) {
@@ -245,7 +266,7 @@ exports.getConversations = async (req, res) => {
     res.json(conversationsWithUnread);
   } catch (err) {
     console.error('Get conversations error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -284,6 +305,17 @@ exports.getOrCreateConversation = async (req, res) => {
     if (await blockedWith(req.user.id, targetUserId)) {
       return res.status(403).json({ msg: 'Nuk mund të hapësh bisedë me këtë përdorues (bllokuar)' });
     }
+
+    const communication = await authorizeMinorDirectContact({
+      actorId: req.user.id,
+      targetId: targetUserId,
+      channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+      User,
+      ClubMember,
+      ClubStaff,
+      GuardianConsent,
+    });
+    if (childCommunicationDecision(communication, res)) return;
 
     const targetUser = await User.findByPk(targetUserId, { attributes: ['id'] });
     if (!targetUser) {
@@ -341,7 +373,7 @@ exports.getOrCreateConversation = async (req, res) => {
     }
   } catch (err) {
     console.error('Get or create conversation error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -390,7 +422,7 @@ exports.getConversationById = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Get conversation by id error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -444,7 +476,7 @@ exports.getMessages = async (req, res) => {
     });
   } catch (err) {
     console.error('Get messages error:', err);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -478,6 +510,33 @@ exports.sendMessage = async (req, res) => {
       if (await blockedWith(req.user.id, other)) {
         discardUpload(req.file);
         return res.status(403).json({ msg: 'Mesazhet nuk lejohen me këtë përdorues (bllokuar)' });
+      }
+      const communication = await authorizeMinorDirectContact({
+        actorId: req.user.id,
+        targetId: other,
+        channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
+      });
+      if (childCommunicationDecision(communication, res)) {
+        discardUpload(req.file);
+        return;
+      }
+    } else {
+      const communication = await authorizeMinorGroupCommunication({
+        actorId: req.user.id,
+        memberIds: members.map((member) => Number(member.userId)),
+        channel: COMMUNICATION_CHANNELS.GROUP_MESSAGE,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
+      });
+      if (childCommunicationDecision(communication, res)) {
+        discardUpload(req.file);
+        return;
       }
     }
 
@@ -550,7 +609,7 @@ exports.sendMessage = async (req, res) => {
     let io = null;
     try {
       io = require('../socket').getIo();
-    } catch (_err) {
+    } catch {
       io = null;
     }
 
@@ -579,7 +638,7 @@ exports.sendMessage = async (req, res) => {
   } catch (err) {
     discardUpload(req.file);
     console.error('Send message error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -652,6 +711,16 @@ exports.createGroup = async (req, res) => {
     if (validIds.length < 2) {
       return res.status(400).json({ msg: 'Duhen të paktën 2 anëtarë të vlefshëm' });
     }
+    const groupCommunication = await authorizeMinorGroupCommunication({
+      actorId: req.user.id,
+      memberIds: [Number(req.user.id), ...validIds],
+      channel: COMMUNICATION_CHANNELS.GROUP_MESSAGE,
+      User,
+      ClubMember,
+      ClubStaff,
+      GuardianConsent,
+    });
+    if (childCommunicationDecision(groupCommunication, res)) return;
     for (const id of validIds) {
       if (await blockedWith(req.user.id, id)) {
         return res.status(403).json({ msg: 'Nuk mund të krijosh grup me një përdorues të bllokuar' });
@@ -701,7 +770,7 @@ exports.createGroup = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Create group error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -784,6 +853,21 @@ exports.addGroupMembers = async (req, res) => {
       return res.status(400).json({ msg: 'Nuk u gjetën përdorues për ftesë' });
     }
 
+    const currentMembers = await ConversationMember.findAll({
+      where: { conversationId },
+      attributes: ['userId'],
+    });
+    const groupCommunication = await authorizeMinorGroupCommunication({
+      actorId: req.user.id,
+      memberIds: [...currentMembers.map((member) => Number(member.userId)), ...validIds],
+      channel: COMMUNICATION_CHANNELS.GROUP_MESSAGE,
+      User,
+      ClubMember,
+      ClubStaff,
+      GuardianConsent,
+    });
+    if (childCommunicationDecision(groupCommunication, res)) return;
+
     await ConversationMember.bulkCreate(
       validIds.map((userId) => ({
         conversationId,
@@ -798,7 +882,7 @@ exports.addGroupMembers = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Add group members error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 
@@ -1051,6 +1135,31 @@ exports.forwardMessage = async (req, res) => {
       if (await blockedWith(req.user.id, other)) {
         return res.status(403).json({ msg: 'Mesazhet nuk lejohen me këtë përdorues (bllokuar)' });
       }
+      const communication = await authorizeMinorDirectContact({
+        actorId: req.user.id,
+        targetId: other,
+        channel: COMMUNICATION_CHANNELS.DIRECT_MESSAGE,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
+      });
+      if (childCommunicationDecision(communication, res)) return;
+    } else {
+      const members = await ConversationMember.findAll({
+        where: { conversationId: targetConversationId },
+        attributes: ['userId'],
+      });
+      const communication = await authorizeMinorGroupCommunication({
+        actorId: req.user.id,
+        memberIds: members.map((member) => Number(member.userId)),
+        channel: COMMUNICATION_CHANNELS.GROUP_MESSAGE,
+        User,
+        ClubMember,
+        ClubStaff,
+        GuardianConsent,
+      });
+      if (childCommunicationDecision(communication, res)) return;
     }
 
     const textCheck = validateMessageText(source.content || '', { allowEmpty: !!source.fileUrl });
@@ -1077,7 +1186,7 @@ exports.forwardMessage = async (req, res) => {
     res.status(201).json(payload);
   } catch (err) {
     console.error('Forward message error:', err.message);
-    res.status(500).json({ msg: 'Gabim në server' });
+    res.status(err.statusCode || 500).json({ msg: err.statusCode === 503 ? 'Kontrolli i bllokimit nuk është i disponueshëm' : 'Gabim në server' });
   }
 };
 

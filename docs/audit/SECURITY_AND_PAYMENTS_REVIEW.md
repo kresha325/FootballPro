@@ -18,14 +18,30 @@
 - Public `/api/auth/register` rejects explicit athlete role and does not default a missing role (`backend/controllers/auth.js:22-55`). It creates a session at registration for non-athlete roles and starts welcome mail asynchronously.
 - Managed athlete path checks club verification, coach ClubStaff identity/status/role/contract or admin permission; transaction creates user/profile/membership (`backend/controllers/managedAthletes.js`, `backend/utils/managedAthleteRegistration.js`).
 - Parental pending state is enforced by middleware for most endpoints. Consent can be confirmed and withdrawn with time-limited hashed tokens; withdrawal revokes access, bumps tokenVersion, disconnects sockets, and removes managed athletes from active rosters.
-- **Not established:** Independent proof of guardian identity/relationship, adult-to-minor contact restrictions after consent, age-specific contact consent, and end-to-end moderator response time.
+- **Not established:** Independent proof of guardian identity/relationship, consent workflow end-to-end on production-like email, and end-to-end moderator response time.
 
 ## Direct messages / realtime
 
 - HTTP messaging routes require auth; utility `conversationAcl.js` is the central membership helper. Socket `joinConversation` and `messageDeliveredAck` also check membership (`backend/server.js:694-760`).
-- Typing only emits in a joined conversation room. Conversation membership alone does not demonstrate age-safety policy.
-- Direct call signaling participant validation is centralized in `backend/utils/callSignaling.js`. Adult/minor contact policy and native lifecycle testing remain open.
+- Typing, room joins, message creation, group membership changes and direct/group calls now re-check the age/contact policy. Consent revocation still needs verification with a disposable PostgreSQL workflow and real browser/native lifecycle.
+- Direct call signaling participant validation is centralized in `backend/utils/callSignaling.js`; offer/answer/ICE require the approved policy, while reject/end remain available to terminate an existing call.
 - Message attachment middleware uses local disk in some routes. `backend/utils/uploadMagic.js` normalizes the `file-type` v16 and v17+ APIs; the real-PNG validation test passes on the installed dependency.
+
+### Approved private contact policy — local implementation
+
+| Actor contacting a minor athlete | DM / call / private live invite | Guardian-mediated group |
+|---|---|---|
+| Verified guardian | Allowed while account consent is active | Allowed; guardian is a participant |
+| Coach | Denied unless active verified club/squad assignment and exact channel grant are both active | Allowed only with its own exact grant; guardian must be in group if direct grant is absent |
+| Scout / manager (agent role is represented by manager in this codebase) | Denied | Requires verified professional account, exact guardian-mediated grant and guardian participant |
+| Unrelated adult | Denied | Denied without exact guardian-mediated grant and guardian participant |
+| Minor athlete | Cannot bypass the same server-side policy by initiating the request | Same group checks apply to every adult/minor pair |
+
+- Implementation lives in `backend/utils/minorCommunicationPolicy.js`; handlers are integrated in messaging, video-call, private live invitation, Socket.IO room and signaling paths.
+- Guardian email approval is per adult and channel; it does not reuse base profile consent. Revocation is checked on each new operation. Active calls are terminated and scheduled calls cancelled on revocation; historical chat and call records are retained.
+- Web/mobile profile contact actions can request guardian approval for coaches and verified scout/manager accounts. This is source-reviewed but has not been run as an end-to-end browser/device flow.
+- `GuardianConsentEvents` records consent lifecycle changes. Migration `20261030170000-create-guardian-consent-events.js` is additive and has not run; event history currently has no dedicated admin UI/report endpoint.
+- **Not covered by this product decision:** comments, follows, reactions, mentions, and connection requests. Guardian identity proof remains email access plus attestation, not independent legal identity verification.
 
 ## Media / Cloudinary
 
@@ -36,7 +52,8 @@
 ## Reporting, blocking, audit, deletion
 
 - Report types include post/comment/profile/message/live/user; message report requires reporter to be a conversation member. Duplicate reports for same target by same user are limited to one per 24 hours (`backend/controllers/moderation.js:12-92`).
-- Block is directional; `isEitherBlocked` checks either direction (`:225-236`). Audit all DM and call initiation, group invite and comment paths for consistent use.
+- Block is directional; `isEitherBlocked` checks either direction (`:225-236`). Private live invitations and direct/group messaging/calls fail closed on a block. Public comments/follows/reactions and connection requests still need a separate policy audit.
+- Guardian decisions are recorded in `GuardianConsentEvents` without contact email/token values; migration has not been applied and there is no admin review UI yet.
 - Admin report review tries to write an audit log but swallows failure (`:192-218`). High-risk moderation actions need durable audit failure handling/alerting.
 - Account delete route exists. Deletion propagation to third-party Cloudinary objects, backups, messages, invoices and legally retained data needs separate verified evidence (`backend/controllers/accountDeletion.js`).
 

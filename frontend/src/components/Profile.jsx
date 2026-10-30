@@ -3,7 +3,7 @@ import ProfileTournaments from './ProfileTournaments';
 import UserAvatarLink from './UserAvatarLink';
 import { getJonCoinBalance } from '../services/joncoin';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { profileAPI, galleryAPI, messagingAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
+import { profileAPI, galleryAPI, messagingAPI, verificationAPI, sponsorAPI, streamsAPI, liveStreamAPI } from '../services/api';
 import { confirmGoLiveInBrowser } from '../utils/goLiveConfirm';
 import { navigateToEmbedGoLive } from '../utils/goLiveNavigate';
 import { normalizeYoutubeChannelId } from '../utils/youtubeChannel';
@@ -187,7 +187,20 @@ const Profile = () => {
         }
       } catch (err) {
         console.error('Error opening/creating conversation:', err);
-      alert('Nuk u arrit hapja ose krijimi i bisedës.');
+        if (err?.response?.data?.code === 'GUARDIAN_COMMUNICATION_CONSENT_REQUIRED' &&
+          ['coach', 'scout', 'manager'].includes(String(user?.role || '').toLowerCase())) {
+          const channel = String(user.role).toLowerCase() === 'coach' ? 'direct_message' : 'guardian_mediated_group';
+          if (window.confirm(t('Komunikimi me këtë atlet kërkon miratim specifik nga kujdestari. Dërgo kërkesë?'))) {
+            try {
+              await verificationAPI.requestCommunicationConsent({ athleteId: profile.id, channel });
+              alert(t('Kujdestari do të vendosë për këtë komunikim.'));
+            } catch (requestError) {
+              alert(requestError?.response?.data?.msg || t('Kërkesa nuk u dërgua. Kontrollo caktimin dhe provo përsëri.'));
+            }
+          }
+          return;
+        }
+        alert(err?.response?.data?.msg || 'Nuk u arrit hapja ose krijimi i bisedës.');
       }
     }
   };

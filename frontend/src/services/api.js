@@ -155,6 +155,7 @@ export const authAPI = {
 ========================= */
 export const verificationAPI = {
   parentRequest: (data) => API.post('/verification/parent-request', data),
+  requestCommunicationConsent: (data) => API.post('/verification/communication-request', data),
   parentConfirm: (token) => API.get(`/verification/parent-confirm?token=${token}`),
 };
 

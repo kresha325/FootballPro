@@ -37,6 +37,7 @@ import {
   joncoinBalanceRequest,
   followUserRequest,
   getOrCreateConversationRequest,
+  requestCommunicationConsentRequest,
   profileByIdRequest,
   profileTournamentSummaryRequest,
   rejectTransferHistoryRequest,
@@ -748,6 +749,29 @@ export default function PublicProfileScreen({ route, navigation }) {
         navigation.navigate('Messages', { screen: 'Conversation', params: convParams });
       }
     } catch (err) {
+      if (err?.response?.data?.code === 'GUARDIAN_COMMUNICATION_CONSENT_REQUIRED' &&
+        ['coach', 'scout', 'manager'].includes(String(me?.role || '').toLowerCase())) {
+        const channel = String(me.role).toLowerCase() === 'coach' ? 'direct_message' : 'guardian_mediated_group';
+        Alert.alert(
+          t('Miratim i kujdestarit'),
+          t('Komunikimi me këtë atlet kërkon miratim specifik nga kujdestari. Dërgo kërkesë?'),
+          [
+            { text: t('Anulo'), style: 'cancel' },
+            {
+              text: t('Dërgo kërkesë'),
+              onPress: async () => {
+                try {
+                  await requestCommunicationConsentRequest({ athleteId: userId, channel });
+                  Alert.alert(t('Kërkesa u dërgua'), t('Kujdestari do të vendosë për këtë komunikim.'));
+                } catch (requestError) {
+                  Alert.alert(t('Gabim'), extractErrorMessage(requestError, t('Kërkesa nuk u dërgua. Kontrollo caktimin dhe provo përsëri.')));
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
       Alert.alert(t('Mesazh'), extractErrorMessage(err, t('Nuk u arrit hapja e bisedës')));
     }
   };

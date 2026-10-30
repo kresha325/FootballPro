@@ -54,6 +54,31 @@ describe('Socket.IO call signaling authorization', () => {
     assert.equal(forwarded[2].from, 1);
   });
 
+  it('denies signaling to a minor when guardian channel consent is absent', async () => {
+    const call = { id: 111, callerId: 1, receiverId: 2, status: 'ringing' };
+    const handlers = new Map();
+    const emitted = [];
+    const socket = { on: (name, fn) => handlers.set(name, fn), emit: (...args) => emitted.push(['socket', ...args]), rooms: new Set() };
+    const io = { to: (room) => ({ emit: (...args) => emitted.push([String(room), ...args]) }) };
+    createCallSignalingHandlers({
+      io,
+      socket,
+      authenticatedUserId: '1',
+      VideoCall: { findByPk: async () => call },
+      User: { findByPk: async (id) => id === 1
+        ? { id: 1, role: 'coach', email: 'coach@example.test' }
+        : { id: 2, role: 'athlete', email: 'athlete@example.test', dateOfBirth: '2012-04-03' } },
+      ClubMember: { findAll: async () => [{ clubId: 3 }] },
+      ClubStaff: { findAll: async () => [{ clubId: 3, staffId: 1, staffRole: 'head_coach', status: 'active' }] },
+      GuardianConsent: { findAll: async () => [] },
+      VideoCallHistory: {},
+      isEitherBlocked: async () => false,
+    });
+    await handlers.get('call:offer')({ callId: call.id, to: 2, offer: { type: 'offer' } });
+    assert.equal(emitted.some((item) => item[0] === '2' && item[1] === 'call:incoming'), false);
+    assert.equal(emitted.some((item) => item[1] === 'call:failed'), true);
+  });
+
   it('only lets the receiver answer or reject, and only permits ICE/end for either participant', async () => {
     const call = { id: 12, callerId: 1, receiverId: 2, status: 'ringing', async save() { this.saved = true; } };
     const receiver = setup(2, [call]);
