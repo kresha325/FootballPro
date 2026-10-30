@@ -258,6 +258,11 @@ try {
 
 // Routes
 
+// Sign Cloudinary authenticated assets only after each existing endpoint has
+// applied its normal profile, ownership, and visibility authorization. Keeping
+// the URL-valued response fields preserves the Web and React Native contract.
+app.use(require('./utils/cloudinaryMediaDelivery').cloudinaryMediaDelivery);
+
 app.use('/api/config', require('./routes/config'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));

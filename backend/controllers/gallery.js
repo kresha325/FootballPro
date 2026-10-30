@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 const { canView, canViewGalleryItem, normalizePrivacy } = require('../utils/profilePrivacy');
+const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
 
 const GALLERY_ORDER = [
   ['featured', 'DESC'],
@@ -131,16 +132,19 @@ exports.createGalleryItem = async (req, res) => {
       return res.status(400).json({ msg: 'No file uploaded' });
     }
     const isVideo = req.file.mimetype.startsWith('video/');
+    const deliveryType = await requiresAuthenticatedDelivery(req.user?.id, visibility) ? 'authenticated' : 'upload';
     let cloudRes;
     if (isVideo) {
       cloudRes = await cloudinary.uploader.upload(req.file.path, {
         resource_type: 'video',
         folder: 'gallery',
+        type: deliveryType,
       });
     } else {
       cloudRes = await cloudinary.uploader.upload(req.file.path, {
         resource_type: 'image',
         folder: 'gallery',
+        type: deliveryType,
       });
     }
     // Fshi file lokal pas upload

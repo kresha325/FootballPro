@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { viewerCanSeeVideo } = require('../utils/videoAccess');
+const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
 
 // Configure multer for video uploads
 const storage = multer.diskStorage({
@@ -49,6 +50,10 @@ exports.uploadVideo = async (req, res) => {
     const { assertVideoFile, assertDuration, rollbackUpload } = require('../utils/videoUpload');
     let publicId = null;
     let localPath = req.file?.path || null;
+    const visibility = ['public', 'unlisted', 'private'].includes(req.body.visibility)
+      ? req.body.visibility
+      : 'public';
+    const authenticatedDelivery = await requiresAuthenticatedDelivery(req.user?.id, visibility);
     try {
     if (req.file) assertVideoFile(req.file);
     let videoUrl = req.body.video || req.body.videoFile;
@@ -57,11 +62,18 @@ exports.uploadVideo = async (req, res) => {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     );
+    if (authenticatedDelivery && !cloudinaryEnabled) {
+      return res.status(503).json({ error: 'Private media storage is not configured.' });
+    }
+    if (authenticatedDelivery && videoUrl && !req.file) {
+      return res.status(400).json({ error: 'Private or restricted videos must be uploaded as a file.' });
+    }
     if (!videoUrl && req.file) {
       if (cloudinaryEnabled) {
         const cloudRes = await cloudinary.uploader.upload(req.file.path, {
           resource_type: 'video',
           folder: 'videos',
+          type: authenticatedDelivery ? 'authenticated' : 'upload',
         });
         videoUrl = cloudRes.secure_url;
         publicId = cloudRes.public_id;
@@ -85,9 +97,6 @@ exports.uploadVideo = async (req, res) => {
       return res.status(403).json({ error: 'You can only attach your own player profile' });
     }
     const duration = assertDuration(req.body.duration);
-    const visibility = ['public', 'unlisted', 'private'].includes(req.body.visibility)
-      ? req.body.visibility
-      : 'public';
     const providerId = publicId || null;
     if (providerId) {
       const existing = await Video.findOne({ where: { provider: 'upload', providerId } });
@@ -120,10 +129,12 @@ exports.uploadVideo = async (req, res) => {
       providerId,
     });
 
-    // Also publish to feed so Videos upload appears in Lajmet / Feed
+    // Only explicitly public media is mirrored into the public feed. A private
+    // asset must never gain a second, less restrictive URL path via a Post.
     const feedContent = [title, description].filter(Boolean).join('\n').trim() || 'Video e re';
     let feedPost = null;
     try {
+      if (visibility !== 'public') throw Object.assign(new Error('Private video is not published to the public feed'), { expected: true });
       feedPost = await Post.create({
         userId: req.user.id,
         content: feedContent,
@@ -144,7 +155,7 @@ exports.uploadVideo = async (req, res) => {
         /* ignore socket errors */
       }
     } catch (feedErr) {
-      console.warn('Video uploaded but feed post failed:', feedErr?.message || feedErr);
+      if (!feedErr.expected) console.warn('Video uploaded but feed post failed:', feedErr?.message || feedErr);
     }
 
     res.status(201).json({ ...video.toJSON(), postId: feedPost?.id || null });

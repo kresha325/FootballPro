@@ -748,6 +748,18 @@ exports.parentRevoke = async (req, res) => {
       }
     });
     if (revokedUserId) {
+      if (!communicationOnly) {
+        try {
+          const mediaResult = await require('../services/restrictUserCloudinaryMedia').restrictUserCloudinaryMedia(revokedUserId);
+          if (mediaResult.errors.length) {
+            console.error('Guardian withdrawal left Cloudinary media to retry:', mediaResult.errors.length);
+          }
+        } catch (mediaError) {
+          // Authorization is already revoked. Report the failed asset cleanup
+          // for operator retry instead of restoring the withdrawn consent.
+          console.error('Cloudinary media restriction after guardian withdrawal failed:', mediaError?.message || 'provider cleanup error');
+        }
+      }
       // Consent withdrawal must stop active and already-scheduled private calls,
       // while preserving their historical records.
       try {

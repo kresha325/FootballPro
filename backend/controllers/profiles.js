@@ -1240,7 +1240,7 @@ exports.updateProfile = async (req, res) => {
     if (req.files) {
       console.log('📷 Files received:', Object.keys(req.files));
       if (req.files.profilePhoto) {
-        let profilePublicId;
+        let profilePublicId = req.body?._cloudinaryPublicIds?.profilePhoto;
         if (req.body.profilePhoto) {
           updateData.profilePhoto = req.body.profilePhoto;
         } else {
@@ -1248,6 +1248,9 @@ exports.updateProfile = async (req, res) => {
           const cloudRes = await cloudinary.uploader.upload(file.path, {
             resource_type: 'image',
             folder: 'profile_photos',
+            type: await require('../utils/restrictedMedia').requiresAuthenticatedDelivery(req.user?.id, 'public')
+              ? 'authenticated'
+              : 'upload',
           });
           // Remove local file
           fs.unlink(file.path, () => {});
@@ -1270,7 +1273,7 @@ exports.updateProfile = async (req, res) => {
         }
       }
       if (req.files.coverPhoto) {
-        let coverPublicId;
+        let coverPublicId = req.body?._cloudinaryPublicIds?.coverPhoto;
         // Prefer Cloudinary URL from middleware
         if (req.body.coverPhoto) {
           updateData.coverPhoto = req.body.coverPhoto;
@@ -1279,6 +1282,9 @@ exports.updateProfile = async (req, res) => {
           const coverRes = await cloudinary.uploader.upload(file.path, {
             resource_type: 'image',
             folder: 'cover_photos',
+            type: await require('../utils/restrictedMedia').requiresAuthenticatedDelivery(req.user?.id, 'public')
+              ? 'authenticated'
+              : 'upload',
           });
           fs.unlink(file.path, () => {});
           updateData.coverPhoto = coverRes.secure_url;

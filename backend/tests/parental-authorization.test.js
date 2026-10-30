@@ -24,6 +24,7 @@ describe('minor authorization policy', () => {
     assert.equal(isMinorAthlete({ role: 'athlete', dateOfBirth: '1990-01-01' }), false);
     assert.equal(isMinorAthlete({ role: 'club', dateOfBirth: '2015-01-01' }), false);
     assert.equal(isMinorAthlete({ role: 'coach', dateOfBirth: '2015-01-01' }), false);
+    assert.equal(isMinorAthlete({ role: 'athlete' }), false, 'legacy age classification remains backward compatible');
   });
 
   it('does not trust a legacy parentVerified boolean without an active consent record', async () => {
@@ -398,6 +399,7 @@ describe('additive consent migration schema', () => {
     const queryInterface = {
       async showAllTables() { return []; },
       async createTable(name, columns) { capturedTable = { name, columns }; },
+      async showIndex() { return []; },
       async addIndex(table, fields, options) { indexes.push({ table, fields, options }); },
     };
     const Sequelize = require('sequelize');

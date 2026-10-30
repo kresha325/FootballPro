@@ -58,6 +58,17 @@ exports.deleteMyAccount = async (req, res) => {
     user.banReason = user.banReason || 'account_deleted';
     await user.save();
 
+    try {
+      const mediaResult = await require('../services/restrictUserCloudinaryMedia').restrictUserCloudinaryMedia(user.id);
+      if (mediaResult.errors.length) {
+        console.error('Account deletion Cloudinary cleanup needs retry:', mediaResult.errors.length);
+      }
+    } catch (mediaError) {
+      // The account stays deleted even if an external media provider is down.
+      // Log this for the operator's retry queue; do not silently restore access.
+      console.error('Account deletion Cloudinary cleanup failed:', mediaError?.message || 'provider cleanup error');
+    }
+
     const profile = await Profile.findOne({ where: { userId: user.id } });
     if (profile) {
       await profile.update({

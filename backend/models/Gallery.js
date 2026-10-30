@@ -19,6 +19,7 @@ const Gallery = sequelize.define('Gallery', {
   description: DataTypes.TEXT,
   imageUrl: DataTypes.STRING,
   videoUrl: DataTypes.STRING,
+  publicId: { type: DataTypes.STRING(255), allowNull: true },
   type: {
     type: DataTypes.ENUM('photo', 'video', 'highlight'),
     defaultValue: 'photo',

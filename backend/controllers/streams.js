@@ -7,6 +7,8 @@ const socketUtil = require('../utils/socket');
 const cloudinary = require('../utils/cloudinary');
 const Gallery = require('../models/Gallery');
 const Post = require('../models/Post');
+const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
+const { publicCloudinaryAsset, authenticatedDeliveryUrl } = require('../utils/cloudinaryMediaDelivery');
 const { persistLiveReplay } = require('../utils/persistLiveReplay');
 const {
   expireStaleLiveStreams,
@@ -19,6 +21,13 @@ exports.uploadRecording = async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Nuk u ngarkua asnjë skedar' });
     const { title, description, streamId } = req.body;
     const streamerId = req.user.id;
+    const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
+    let targetStream = Number.isFinite(parsedStreamId)
+      ? await Stream.findOne({ where: { id: parsedStreamId, streamerId } })
+      : null;
+    if (!targetStream) targetStream = await Stream.findOne({ where: { streamerId }, order: [['updatedAt', 'DESC']] });
+    const mediaVisibility = targetStream?.visibility || 'public';
+    const authenticatedDelivery = await requiresAuthenticatedDelivery(streamerId, mediaVisibility);
     let videoUrl = `/uploads/${req.file.filename}`;
     let publicId = null;
 
@@ -27,11 +36,15 @@ exports.uploadRecording = async (req, res) => {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     );
+    if (authenticatedDelivery && !isCloudinaryEnabled) {
+      return res.status(503).json({ error: 'Private media storage is not configured.' });
+    }
     if (isCloudinaryEnabled) {
       const full = path.join(__dirname, '..', 'uploads', req.file.filename);
       const cloudRes = await cloudinary.uploader.upload(full, {
         resource_type: 'video',
         folder: 'live-replays',
+        type: authenticatedDelivery ? 'authenticated' : 'upload',
       });
       videoUrl = cloudRes.secure_url;
       publicId = cloudRes.public_id;
@@ -42,7 +55,6 @@ exports.uploadRecording = async (req, res) => {
       }
     }
 
-    const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
     const result = await persistLiveReplay({
       userId: streamerId,
       streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
@@ -50,6 +62,7 @@ exports.uploadRecording = async (req, res) => {
       title: title || 'Regjistrim Live',
       description: description || '',
       publicId,
+      visibility: mediaVisibility,
     });
     const stream = result.stream;
     console.log('[uploadRecording] live replay saved:', stream.id, stream.videoUrl);
@@ -111,6 +124,19 @@ exports.finalizeTemp = async (req, res) => {
   try {
     const { tempUrl, content, saveAs, streamId, title, description } = req.body;
     if (!tempUrl) return res.status(400).json({ error: 'tempUrl është i detyrueshëm' });
+    const mode = saveAs === 'post' ? 'post' : 'live';
+    const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
+    let targetStream = Number.isFinite(parsedStreamId)
+      ? await Stream.findOne({ where: { id: parsedStreamId, streamerId: req.user.id } })
+      : null;
+    if (!targetStream) targetStream = await Stream.findOne({ where: { streamerId: req.user.id }, order: [['updatedAt', 'DESC']] });
+    const mediaVisibility = targetStream?.visibility || (['public', 'unlisted', 'private'].includes(req.body.visibility)
+      ? req.body.visibility
+      : 'public');
+    if (mode === 'post' && mediaVisibility !== 'public') {
+      return res.status(400).json({ error: 'Private media cannot be published as a public post.' });
+    }
+    const authenticatedDelivery = await requiresAuthenticatedDelivery(req.user.id, mediaVisibility);
     // Accept cloud URLs directly
     let imageUrl = null;
     let videoUrl = null;
@@ -119,6 +145,9 @@ exports.finalizeTemp = async (req, res) => {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET
     );
+    if (authenticatedDelivery && !isCloudinaryEnabled) {
+      return res.status(503).json({ error: 'Private media storage is not configured.' });
+    }
 
     if (tempUrl.startsWith('/uploads/')) {
       const filename = tempUrl.replace('/uploads/', '');
@@ -131,7 +160,8 @@ exports.finalizeTemp = async (req, res) => {
         const uploadOptions = {
           resource_type: isVideo ? 'video' : 'image',
           folder: 'gallery',
-          transformation: [{ fetch_format: 'auto', quality: 'auto' }]
+          type: authenticatedDelivery ? 'authenticated' : 'upload',
+          ...(authenticatedDelivery || isVideo ? {} : { transformation: [{ fetch_format: 'auto', quality: 'auto' }] }),
         };
         const cloudRes = await cloudinary.uploader.upload(full, uploadOptions);
         try { fs.unlinkSync(full); } catch (e) {}
@@ -148,20 +178,28 @@ exports.finalizeTemp = async (req, res) => {
       }
     } else if (/^https?:\/\//.test(tempUrl)) {
       // Already a public URL (maybe Cloudinary)
-      if (/\.(mp4|mov|mkv|webm|avi)(\?|$)/.test(tempUrl)) videoUrl = tempUrl; else imageUrl = tempUrl;
+      let acceptedUrl = tempUrl;
+      if (authenticatedDelivery && !/\/authenticated\//.test(tempUrl)) {
+        const asset = publicCloudinaryAsset(tempUrl);
+        if (!asset) return res.status(400).json({ error: 'Restricted media must be stored in this Cloudinary account.' });
+        await cloudinary.uploader.rename(asset.publicId, asset.publicId, {
+          resource_type: asset.resourceType, type: 'upload', to_type: 'authenticated', invalidate: true,
+        });
+        acceptedUrl = authenticatedDeliveryUrl(tempUrl);
+      }
+      if (/\.(mp4|mov|mkv|webm|avi)(\?|$)/.test(acceptedUrl)) videoUrl = acceptedUrl; else imageUrl = acceptedUrl;
     } else {
       return res.status(400).json({ error: 'Formati i tempUrl nuk mbështetet' });
     }
 
-    const mode = saveAs === 'post' ? 'post' : 'live';
     if (mode === 'live' && videoUrl) {
-      const parsedStreamId = streamId ? parseInt(streamId, 10) : null;
       const result = await persistLiveReplay({
         userId: req.user.id,
         streamId: Number.isFinite(parsedStreamId) ? parsedStreamId : null,
         videoUrl,
         title: title || content || 'Regjistrim Live',
         description: description || '',
+        visibility: mediaVisibility,
       });
       try {
         const io = socketUtil.getIo();
@@ -714,14 +752,24 @@ exports.saveLiveReplay = async (req, res) => {
     if (!stream || stream.streamerId !== req.user.id) {
       return res.status(403).json({ error: 'Nuk je i autorizuar' });
     }
+    let safeVideoUrl = videoUrl;
+    if (await requiresAuthenticatedDelivery(req.user.id, stream.visibility || 'public') && !/\/authenticated\//.test(videoUrl)) {
+      const asset = publicCloudinaryAsset(videoUrl);
+      if (!asset) return res.status(400).json({ error: 'Restricted replay must be stored in this Cloudinary account.' });
+      await cloudinary.uploader.rename(asset.publicId, asset.publicId, {
+        resource_type: asset.resourceType, type: 'upload', to_type: 'authenticated', invalidate: true,
+      });
+      safeVideoUrl = authenticatedDeliveryUrl(videoUrl);
+    }
     const result = await persistLiveReplay({
       userId: req.user.id,
       streamId: stream.id,
-      videoUrl,
+      videoUrl: safeVideoUrl,
       title: title || stream.title,
       description: description || stream.description || '',
       thumbnailUrl: thumbnailUrl || null,
       duration,
+      visibility: stream.visibility || 'public',
     });
     try {
       const io = socketUtil.getIo();

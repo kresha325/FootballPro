@@ -6,6 +6,7 @@ const cloudinary = require('../utils/cloudinary');
 const { MEDIA_EXTS, storedFilename, BLOCKED_EXT } = require('../utils/uploadNames');
 const { inspectUpload, collectUploads, discardUploads } = require('../utils/uploadMagic');
 const { uploadByteLimits } = require('../utils/uploadLimits');
+const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
 
 const isCloudinaryEnabled = !!(
   process.env.CLOUDINARY_CLOUD_NAME &&
@@ -167,13 +168,25 @@ function cloudinaryFields(fields) {
 										? [{ fetch_format: 'auto', quality: 'auto' }]
 										: undefined,
 								};
+								const requestPath = String(req.originalUrl || req.url || '').split('?')[0];
+								const visibilityIsEnforced = /^\/api\/(gallery|videos)(?:\/|$)/.test(requestPath);
+								const mediaVisibility = visibilityIsEnforced ? (req.body?.visibility || 'public') : 'public';
+								if (await requiresAuthenticatedDelivery(req.user?.id, mediaVisibility)) {
+									uploadOptions.type = 'authenticated';
+								}
 								const cloudRes = await cloudinary.uploader.upload(file.path, uploadOptions);
+									req.body._cloudinaryPublicIds = req.body._cloudinaryPublicIds || {};
+									req.body._cloudinaryPublicIds[field.name] = cloudRes.public_id;
 								try {
 									const deliveredUrl = resource_type === 'image'
 										? cloudinary.url(cloudRes.public_id, {
 												secure: true,
 												resource_type,
-												transformation: [{ fetch_format: 'auto', quality: 'auto' }]
+												type: uploadOptions.type || 'upload',
+												sign_url: uploadOptions.type === 'authenticated',
+												...(uploadOptions.type === 'authenticated' ? {} : {
+													transformation: [{ fetch_format: 'auto', quality: 'auto' }],
+												}),
 											})
 										: cloudRes.secure_url;
 									if (resource_type === 'video') {
