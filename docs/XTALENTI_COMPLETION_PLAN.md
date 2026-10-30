@@ -61,10 +61,10 @@ This is **not a production release approval**. Adult-to-minor communication poli
 - `GET /api/club-members/athlete/:athleteId` limits private membership states to the athlete, a linked verified guardian, admin, the verified club for that row, or an active authorized coach. Other authenticated users still see approved affiliations.
 - Acceptance: 4 focused visibility tests, source-level read-only GET tests, and real Sequelize route tests against an isolated temporary PostgreSQL cluster. Temporary DB and cluster were dropped after the run.
 
-### Current working-tree follow-up — public club staff visibility
+### Public club staff visibility — commit `4697599` pushed to security branch
 
 - Public `GET /api/club-staff/club/:clubId` now defaults to current active assignments only, excludes departed/expired/malformed-contract and banned/deleted staff accounts, and refuses public requests for pending/inactive states. A verified club can inspect its own non-public states; platform admins retain operational access.
-- Acceptance: 6 route-handler regression tests pass; the complete backend suite passes 265/265 with loopback listeners permitted. This follow-up is not yet committed.
+- Acceptance: 6 route-handler regression tests pass; the complete backend suite passes 265/265 with loopback listeners permitted.
 
 ## Validation ledger
 

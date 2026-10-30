@@ -77,12 +77,12 @@ Other functional parity, production schema, deletion retention, payment-provider
 
 **Status:** Locally fixed; rerun lint/build results are recorded below. No commit or push was performed.
 
-### Resolved in current working tree — club staff listing accepts caller-provided status without authorization
+### Resolved in pushed review branch — club staff listing accepts caller-provided status without authorization
 
 **Evidence:** `GET /api/club-staff/club/:clubId` has no authentication middleware and directly applies caller-supplied `status` and `teamType` filters (`backend/routes/clubStaff.js:19-66`). It exposes public roster staff names/roles/gender/photo, including pending/inactive records if requested.
 
 **Baseline impact:** Private operational state (pending/inactive staff membership) was disclosed.
-**Current status:** Public requests now default to current active assignments and exclude departed, expired, malformed-contract, banned, or deleted staff. Pending/inactive states require the verified owning club or platform admin. Six route-handler tests pass; the full backend suite passes 265/265 with loopback permitted. Active public staff discoverability is preserved.
+**Current status:** Commit `4697599` on the review branch makes public requests default to current active assignments and excludes departed, expired, malformed-contract, banned, or deleted staff. Pending/inactive states require the verified owning club or platform admin. Six route-handler tests pass; the full backend suite passes 265/265 with loopback permitted. Active public staff discoverability is preserved.
 
 ### Resolved profile privacy drift — legacy athlete API
 

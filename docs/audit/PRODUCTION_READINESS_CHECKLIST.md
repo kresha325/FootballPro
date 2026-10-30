@@ -8,7 +8,7 @@ This checklist records audit evidence, not release approval.
 - [x] Fix socket call signaling; active call and participants are server-validated, recipient is derived, block lookup fails closed, and call offers cannot create conversations. Tests cover spoofing, non-party, rate limit and allowed signaling.
 - [x] Remove writes from public roster GET; regression and disposable-PostgreSQL tests confirm existing memberships are preserved.
 - [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Commit `be5362b` is pushed to the security review branch; unit and disposable-PostgreSQL route tests pass.
-- [x] Restrict pending/inactive club staff listing to the verified owning club or platform admins; public reads show current active staff only. Six route-handler regression tests pass; this follow-up is in the current working tree.
+- [x] Restrict pending/inactive club staff listing to the verified owning club or platform admins; public reads show current active staff only. Commit `4697599` is pushed to the review branch; six route-handler regression tests pass.
 - [ ] Decide and implement adult-to-minor messaging/calling safeguards; document the policy.
 - [ ] Decide acceptable guardian verification level; current email attestation is not independent identity proof.
 - [ ] Secure private/minor media at Cloudinary delivery layer and test URL revocation/access.
