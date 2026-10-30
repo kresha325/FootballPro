@@ -1,4 +1,5 @@
 const https = require('https');
+const sequelize = require('../config/database');
 const IapPurchase = require('../models/IapPurchase');
 const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
@@ -179,6 +180,36 @@ function round2(n) {
   return Math.round(Number(n) * 100) / 100;
 }
 
+function publicPurchase(purchase) {
+  if (!purchase) return null;
+  const row = purchase.toJSON ? purchase.toJSON() : purchase;
+  return {
+    id: row.id,
+    userId: row.userId,
+    platform: row.platform,
+    productId: row.productId,
+    transactionId: row.transactionId,
+    kind: row.kind,
+    status: row.status,
+    createdAt: row.createdAt,
+  };
+}
+
+function sendAlreadyProcessed(req, res, purchase) {
+  const sameOwner = Number(purchase.userId) === Number(req.user.id);
+  const sameProduct = purchase.productId === String(req.body?.productId || '');
+  const samePlatform = purchase.platform === String(req.body?.platform || '').toLowerCase();
+  if (!sameOwner || !sameProduct || !samePlatform || purchase.status !== 'completed') {
+    return res.status(409).json({ msg: 'Ky transaksion është regjistruar tashmë për një blerje tjetër.' });
+  }
+  return res.json({
+    success: true,
+    alreadyProcessed: true,
+    purchase: publicPurchase(purchase),
+    msg: 'Blerja ishte tashmë e përpunuar',
+  });
+}
+
 exports.getIapCatalog = async (_req, res) => {
   res.json({
     products: Object.entries(PRODUCT_CATALOG).map(([productId, meta]) => ({
@@ -210,12 +241,7 @@ exports.verifyAndFulfill = async (req, res) => {
 
     const existing = await IapPurchase.findOne({ where: { transactionId } });
     if (existing) {
-      return res.json({
-        success: true,
-        alreadyProcessed: true,
-        purchase: existing,
-        msg: 'Blerja ishte tashmë e përpunuar',
-      });
+      return sendAlreadyProcessed(req, res, existing);
     }
 
     if (platform === 'ios') {
@@ -242,47 +268,60 @@ exports.verifyAndFulfill = async (req, res) => {
       }
     }
 
-    let fulfillment = null;
-    let joncoinTx = null;
-    if (catalog.kind === 'premium') {
-      fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${transactionId}`, {
-        source: 'iap',
-        productId,
-      });
-      if (!fulfillment) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
-    } else if (catalog.kind === 'joncoin') {
-      const user = await User.findByPk(req.user.id);
-      if (!user) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
-      const amount = Number(catalog.amount);
-      user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + amount);
-      await user.save();
-      joncoinTx = await JonCoinTransaction.create({
+    const result = await sequelize.transaction(async (transaction) => {
+      // The unique transactionId index is the cross-request claim. Creating
+      // this row in the same transaction as fulfillment makes the claim and
+      // entitlement/credit commit or roll back together.
+      const purchase = await IapPurchase.create({
         userId: req.user.id,
-        type: 'purchase',
-        amount,
-        status: 'completed',
-        description: `IAP ${productId}`,
-      });
-      fulfillment = { joncoinBalance: user.joncoinBalance, transaction: joncoinTx };
-    }
-
-    const purchase = await IapPurchase.create({
-      userId: req.user.id,
-      platform,
-      productId,
-      transactionId,
-      purchaseToken,
-      kind: catalog.kind,
-      status: 'completed',
-      rawPayload: {
+        platform,
         productId,
         transactionId,
-        hasReceipt: !!transactionReceipt,
-      },
-    });
+        purchaseToken,
+        kind: catalog.kind,
+        status: 'processing',
+        rawPayload: { productId, transactionId, hasReceipt: !!transactionReceipt },
+      }, { transaction });
 
-    if (catalog.kind === 'joncoin' && joncoinTx) {
-      try {
+      let fulfillment = null;
+      let joncoinTx = null;
+      if (catalog.kind === 'premium') {
+        fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${transactionId}`, {
+          source: 'iap',
+          productId,
+          iapPurchaseId: purchase.id,
+          transaction,
+        });
+        if (!fulfillment) {
+          const missingUser = new Error('Përdoruesi nuk u gjet');
+          missingUser.code = 'IAP_USER_NOT_FOUND';
+          throw missingUser;
+        }
+        if (fulfillment.invoice) {
+          fulfillment.invoice.iapPurchaseId = purchase.id;
+          fulfillment.invoice.productId = productId;
+          await fulfillment.invoice.save({ transaction });
+        }
+      } else if (catalog.kind === 'joncoin') {
+        const user = await User.findByPk(req.user.id, { transaction, lock: transaction.LOCK.UPDATE });
+        if (!user) {
+          const missingUser = new Error('Përdoruesi nuk u gjet');
+          missingUser.code = 'IAP_USER_NOT_FOUND';
+          throw missingUser;
+        }
+        const amount = Number(catalog.amount);
+        user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + amount);
+        await user.save({ transaction });
+        joncoinTx = await JonCoinTransaction.create({
+          userId: req.user.id,
+          type: 'purchase',
+          amount,
+          status: 'completed',
+          idempotencyKey: `iap:${transactionId}`,
+          description: `IAP ${productId}`,
+        }, { transaction });
+        fulfillment = { joncoinBalance: user.joncoinBalance, transaction: joncoinTx };
+
         const { createInvoiceIfNeeded } = require('../utils/invoices');
         await createInvoiceIfNeeded({
           userId: req.user.id,
@@ -297,31 +336,28 @@ exports.verifyAndFulfill = async (req, res) => {
           iapPurchaseId: purchase.id,
           joncoinTransactionId: joncoinTx.id,
           rawPayload: { platform, productId, transactionId },
+          transaction,
         });
-      } catch (invErr) {
-        console.warn('IAP XCoin invoice skipped:', invErr?.message || invErr);
       }
-    } else if (catalog.kind === 'premium' && fulfillment?.invoice && purchase?.id) {
-      try {
-        fulfillment.invoice.iapPurchaseId = purchase.id;
-        fulfillment.invoice.productId = productId;
-        await fulfillment.invoice.save();
-      } catch {
-        /* ignore */
-      }
-    }
+
+      purchase.status = 'completed';
+      await purchase.save({ transaction });
+      return { purchase, fulfillment };
+    });
 
     res.json({
       success: true,
       consumable: !!catalog.consumable,
-      purchase,
-      fulfillment,
+      purchase: publicPurchase(result.purchase),
+      fulfillment: result.fulfillment,
     });
   } catch (err) {
-    console.error('IAP verify error:', err);
     if (err?.name === 'SequelizeUniqueConstraintError') {
-      return res.json({ success: true, alreadyProcessed: true });
+      const existing = await IapPurchase.findOne({ where: { transactionId: String(req.body?.transactionId || req.body?.id || '') } });
+      if (existing) return sendAlreadyProcessed(req, res, existing);
     }
+    if (err?.code === 'IAP_USER_NOT_FOUND') return res.status(404).json({ msg: err.message });
+    console.error('IAP verify error:', err);
     res.status(500).json({ msg: 'Gabim në server' });
   }
 };

@@ -85,6 +85,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
   try {
     await user.save({ transaction });
   } catch (saveErr) {
+    if (transaction) throw saveErr;
     console.warn('Premium save with expiry failed, retrying flag only:', saveErr?.message || saveErr);
     await User.update({ premium: true }, { where: { id: userId } });
   }
@@ -117,6 +118,7 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
       }, { transaction });
       paymentId = payment.id;
     } catch (payErr) {
+      if (transaction) throw payErr;
       console.warn('Premium payment record skipped:', payErr?.message);
     }
   }
@@ -141,9 +143,11 @@ async function activatePremiumForUser(userId, plan, sessionId = null, opts = {})
           days: config.days,
           source,
         },
+        transaction,
       });
       invoice = inv.invoice;
     } catch (invErr) {
+      if (transaction) throw invErr;
       console.warn('Premium invoice skipped:', invErr?.message || invErr);
     }
   }

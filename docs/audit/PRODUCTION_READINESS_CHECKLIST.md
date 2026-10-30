@@ -16,7 +16,7 @@ This checklist records audit evidence, not release approval.
 
 ## Stop before enabling payments
 
-- [ ] Atomically claim unique provider transaction and fulfill premium/JonCoin in one idempotent transaction.
+- [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; five focused tests pass. Verify the unique index in production schema and run a disposable-PostgreSQL concurrent duplicate test before launch.
 - [ ] Require exact Apple bundle/product/transaction claims and supported signed-transaction shape.
 - [ ] Verify Google package, product, token state, expiry, acknowledgement and refund/revocation flow.
 - [ ] Run concurrent duplicate receipt tests; assert only one credit/activation.
