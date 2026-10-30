@@ -2,15 +2,8 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const AppleStrategy = require('@nicokaiser/passport-apple').Strategy;
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
-
-async function randomUnusablePassword() {
-  const raw = crypto.randomBytes(32).toString('hex');
-  return bcrypt.hash(raw, 10);
-}
 
 /** Register creates Profile; OAuth must too or /api/profiles/:id 404s. */
 async function ensureOAuthProfile(user) {
@@ -124,15 +117,9 @@ async function upsertOAuthUser(idField, profileId, email, firstName, lastName) {
     );
   }
 
-  user = await User.create({
-    [idField]: profileId,
-    email: normalizedEmail,
-    firstName: firstName || 'User',
-    lastName: lastName || '',
-    role: 'athlete',
-    password: await randomUnusablePassword(),
-  });
-  return ensureOAuthProfile(user);
+  // OAuth may authenticate/link an existing account, but must not bypass the
+  // club-managed athlete registration policy by silently creating an athlete.
+  throw new Error('Public athlete registration is disabled. Ask your club to create an athlete account.');
 }
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -267,3 +254,4 @@ module.exports.appleConfigured = appleConfigured;
 module.exports.appleCallbackURL = appleCallbackURL;
 module.exports.facebookCallbackURL = facebookCallbackURL;
 module.exports.googleCallbackURL = googleCallbackURL;
+module.exports.upsertOAuthUser = upsertOAuthUser;

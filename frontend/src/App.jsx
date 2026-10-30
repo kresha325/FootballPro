@@ -233,7 +233,7 @@ function App() {
             <Route path="/matches" element={user ? <Matches /> : <Navigate to="/login" />} />
             <Route path="/matches/:id" element={<MatchCenterPage />} />
             <Route path="/admin/*" element={user?.role === 'admin' ? <AdminShell /> : <Navigate to="/feed" />} />
-            <Route path="/club-roster" element={user?.role === 'club' ? <ClubRoster /> : <Navigate to="/feed" />} />
+            <Route path="/club-roster" element={['club', 'coach'].includes(String(user?.role || '').toLowerCase()) ? <ClubRoster /> : <Navigate to="/feed" />} />
             <Route path="/videos" element={user ? <Videos /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoPlayer /> : <Navigate to="/login" />} />
             <Route path="/live/:streamId" element={<FeatureGate flag="LIVE_STREAMING"><LiveStreamViewer /></FeatureGate>} />

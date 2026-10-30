@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { Op } = require('sequelize');
 const { createNotification } = require('../controllers/notifications');
+const { isMinorAthlete, hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
 
 const notifyClubMembershipRequest = async ({ clubId, athleteId, membershipId, position }) => {
   try {
@@ -148,7 +149,7 @@ router.get('/club/:clubId', optionalAuth, async (req, res) => {
         {
           model: User,
           as: 'athlete',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'gender', 'dateOfBirth', 'role'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'gender', 'dateOfBirth', 'role', 'parentVerified'],
           include: [{
             model: Profile,
             attributes: ['profilePhoto', 'position', 'bio', 'stats', 'age', 'ageGroup'],
@@ -159,11 +160,41 @@ router.get('/club/:clubId', optionalAuth, async (req, res) => {
     });
 
     const serialized = await Promise.all(members.map(hydrateAgeGroup));
-    const visible = serialized.map((member) => {
-      if (isManager || !member?.athlete) return member;
-      const next = { ...member, athlete: { ...member.athlete } };
+    const consentByAthlete = new Map();
+    await Promise.all(serialized.map(async (member) => {
+      const athlete = member?.athlete;
+      if (athlete && isMinorAthlete(athlete)) {
+        consentByAthlete.set(athlete.id, await hasActiveGuardianConsent(athlete.id));
+      }
+    }));
+
+    // Minor athletes are never exposed on the public club roster until both the
+    // user's parentVerified flag and an independently verified, active consent exist.
+    const visible = serialized.flatMap((member) => {
+      const athlete = member?.athlete;
+      if (!athlete) return [member];
+      const minor = isMinorAthlete(athlete);
+      const authorized = hasGuardianAuthorization(athlete, consentByAthlete.get(athlete.id));
+      if (!authorized && !isManager) return [];
+      if (!authorized && status === 'approved') return [];
+
+      const next = { ...member, athlete: { ...athlete } };
       delete next.athlete.email;
-      return next;
+      if (minor && !authorized) {
+        // Keep only the minimum identity/roster fields needed for internal
+        // administration while the guardian decision is pending.
+        delete next.athlete.dateOfBirth;
+        delete next.athlete.gender;
+        if (next.athlete.Profile) {
+          next.athlete.Profile = {
+            position: next.athlete.Profile.position || null,
+            ageGroup: next.athlete.Profile.ageGroup || null,
+          };
+        }
+        next.status = 'pending';
+        next.parentAuthorizationPending = true;
+      }
+      return [next];
     });
     res.json(visible);
   } catch (error) {
@@ -355,6 +386,22 @@ router.put('/:membershipId/status', protect, async (req, res) => {
     // Verify user is the club owner
     if (membership.clubId !== req.user.id) {
       return res.status(403).json({ msg: 'Not authorized' });
+    }
+
+    if (status === 'approved' && membership.creationSource === 'club_managed_registration') {
+      const athlete = await User.findByPk(membership.athleteId, {
+        attributes: ['id', 'role', 'dateOfBirth', 'parentVerified'],
+      });
+      if (isMinorAthlete(athlete) && !hasGuardianAuthorization(
+        athlete,
+        await hasActiveGuardianConsent(athlete.id)
+      )) {
+        return res.status(403).json({
+          code: 'PARENTAL_AUTHORIZATION_REQUIRED',
+          msg: 'Vetëm prindi ose kujdestari mund ta japë autorizimin. Klubi nuk mund ta aprovojë këtë atlet para tij.',
+          parentAuthorizationPending: true,
+        });
+      }
     }
 
     membership.status = status;

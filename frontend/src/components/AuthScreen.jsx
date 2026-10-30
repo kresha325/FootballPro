@@ -102,7 +102,6 @@ function OAuthButtons({ disabled }) {
 }
 
 export const REGISTER_ROLE_OPTIONS = [
-  { label: 'Lojtar', value: 'athlete', hint: 'Statistika, video, turne' },
   { label: 'Trajner', value: 'coach', hint: 'Skuadër, plane, ndeshje' },
   { label: 'Skaut', value: 'scout', hint: 'Talente, watchlist' },
   { label: 'Menaxher', value: 'manager', hint: 'Karrierë, kontrata' },
@@ -150,7 +149,7 @@ export default function AuthScreen({ initialMode }) {
   const [mode, setMode] = useState(resolvedInitial);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState('athlete');
+  const [role, setRole] = useState('coach');
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -271,7 +270,7 @@ export default function AuthScreen({ initialMode }) {
       }
 
       if (mode === 'register') {
-        const normalizedRole = (role || 'athlete').trim().toLowerCase();
+        const normalizedRole = String(role || '').trim().toLowerCase();
         const isOrg = isOrgProfileRole(normalizedRole);
         let dateOfBirth;
         if (!isOrg) {
@@ -543,7 +542,7 @@ export default function AuthScreen({ initialMode }) {
           </button>
         </form>
 
-        {mode !== 'forgot' ? <OAuthButtons disabled={loading} /> : null}
+        {mode === 'login' ? <OAuthButtons disabled={loading} /> : null}
       </div>
 
       {rolePickerOpen ? (

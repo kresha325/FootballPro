@@ -7,6 +7,7 @@ import { clubMembersAPI, clubStaffAPI, profileAPI } from '../services/api';
 import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useLocale } from '../contexts/LocaleContext';
+import ManagedAthleteRegistrationForm from './ManagedAthleteRegistrationForm';
 
 const VALID_ROSTER_TABS = new Set(['approved', 'pending', 'staff']);
 
@@ -25,6 +26,9 @@ function ClubRoster() {
     return apiRoot + (normalized.startsWith('/') ? normalized : '/' + normalized);
   };
   const { user } = useAuth();
+  const isClubManager = user?.role === 'club';
+  const isCoach = user?.role === 'coach';
+  const [showManagedAthleteForm, setShowManagedAthleteForm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [members, setMembers] = useState([]);
@@ -427,7 +431,11 @@ function ClubRoster() {
     }
   };
 
-  if (user?.role !== 'club') {
+  if (isCoach) {
+    return <main className="mx-auto max-w-3xl space-y-4 px-4 py-6"><ManagedAthleteRegistrationForm mode="coach" /></main>;
+  }
+
+  if (!isClubManager) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6 text-center">
@@ -466,6 +474,7 @@ function ClubRoster() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 pb-24 sm:px-6 lg:py-8">
+      {showManagedAthleteForm ? <ManagedAthleteRegistrationForm mode="club" onCancel={() => setShowManagedAthleteForm(false)} onSuccess={() => { fetchRosterData(); }} /> : null}
       <header className="xt-card overflow-hidden">
         <div className="h-2 bg-[var(--xt-color-gold)]" />
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
@@ -480,6 +489,7 @@ function ClubRoster() {
           </div>
           <div className="flex flex-col gap-3 sm:min-w-56">
             <Link className="btn btn-primary" to={`/profile/${user.id}`}>{t('Profili publik')}</Link>
+            <button type="button" className="btn btn-outline" onClick={() => setShowManagedAthleteForm((open) => !open)}>{t('Regjistro atlet')}</button>
             <div>
               <div className="mb-1 flex justify-between text-xs text-[var(--xt-color-text-muted)]"><span>{t('Plotësia e profilit')}</span><span>{profileCompletion}%</span></div>
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--xt-color-surface-raised)]" role="progressbar" aria-label="Plotësia e profilit të klubit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileCompletion}><div className="h-full rounded-full bg-[var(--xt-color-gold)]" style={{ width: `${profileCompletion}%` }} /></div>
@@ -851,7 +861,7 @@ function ClubRoster() {
                         )}
                       </h3>
                       <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded text-xs font-medium">
-                        PENDING
+                        {membership.parentAuthorizationPending ? 'NË PRITJE TË AUTORIZIMIT PRINDËROR' : 'PENDING'}
                       </span>
                     </div>
                     <div className="flex gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
@@ -881,8 +891,12 @@ function ClubRoster() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
+                  {/* Club approval cannot replace guardian authorization. */}
+                  {membership.parentAuthorizationPending ? (
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                      Në pritje të autorizimit të prindit ose kujdestarit.
+                    </p>
+                  ) : <div className="flex gap-2">
                     <button
                       onClick={() => handleApprove(membership.id)}
                       className="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center gap-2"
@@ -899,7 +913,7 @@ function ClubRoster() {
                       <XMarkIcon className="h-6 w-6" />
                       <span className="hidden md:inline">Reject</span>
                     </button>
-                  </div>
+                  </div>}
                 </div>
               </div>
             ))

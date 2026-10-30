@@ -132,6 +132,7 @@ describe('guardian token primitives', () => {
 describe('parent-confirm endpoint', () => {
   const emailService = require('../services/emailService');
   const User = require('../models/User');
+  const ClubMember = require('../models/ClubMember');
   const sequelize = require('../config/database');
   const controller = require('../controllers/verification');
 
@@ -214,12 +215,16 @@ describe('parent-confirm endpoint', () => {
       findByPk: User.findByPk,
       transaction: sequelize.transaction,
       sendEmail: emailService.sendEmail,
+      clubMemberUpdate: ClubMember.update,
+      clubMemberFindAll: ClubMember.findAll,
     };
     const oldEnv = Object.fromEntries(['RESEND_API_KEY', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_USER', 'EMAIL_PASSWORD'].map((key) => [key, process.env[key]]));
     for (const key of Object.keys(oldEnv)) process.env[key] = '';
     GuardianConsent.findOne = async () => consent;
     User.findByPk = async () => user;
     sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
+    ClubMember.update = async () => [0];
+    ClubMember.findAll = async () => [];
     try {
       const res = mockResponse();
       await controller.parentConfirm({ body: { token, guardianName: 'Adult Guardian', relationship: 'legal_guardian', attestGuardian: 'yes' }, query: {} }, res);
@@ -238,6 +243,8 @@ describe('parent-confirm endpoint', () => {
       GuardianConsent.findOne = originals.findOne;
       User.findByPk = originals.findByPk;
       sequelize.transaction = originals.transaction;
+      ClubMember.update = originals.clubMemberUpdate;
+      ClubMember.findAll = originals.clubMemberFindAll;
       emailService.sendEmail = originals.sendEmail;
       for (const [key, value] of Object.entries(oldEnv)) {
         if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -254,10 +261,16 @@ describe('parent-confirm endpoint', () => {
       async save() {},
     };
     const user = { ...minor, tokenVersion: 3, async save() {} };
-    const originals = { findOne: GuardianConsent.findOne, findByPk: User.findByPk, transaction: sequelize.transaction };
+    const originals = {
+      findOne: GuardianConsent.findOne,
+      findByPk: User.findByPk,
+      transaction: sequelize.transaction,
+      clubMemberFindAll: ClubMember.findAll,
+    };
     GuardianConsent.findOne = async () => consent;
     User.findByPk = async () => user;
     sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
+    ClubMember.findAll = async () => [];
     let disconnected = '';
     try {
       const res = mockResponse();
@@ -274,6 +287,7 @@ describe('parent-confirm endpoint', () => {
       GuardianConsent.findOne = originals.findOne;
       User.findByPk = originals.findByPk;
       sequelize.transaction = originals.transaction;
+      ClubMember.findAll = originals.clubMemberFindAll;
     }
   });
 });

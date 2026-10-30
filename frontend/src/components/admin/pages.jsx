@@ -6,6 +6,7 @@ import AdminStadiums from '../AdminStadiums';
 import AdminTournaments from '../AdminTournaments';
 import { apiError, canPermission } from './opsFormat';
 import { DangerConfirm, ExportButton, Pager, Pill } from './ui';
+import ManagedAthleteRegistrationForm from '../ManagedAthleteRegistrationForm';
 
 function useList(loader) {
   const [page, setPage] = useState(1);
@@ -123,6 +124,7 @@ export function UsersPage({ permissions }) {
   const [activity, setActivity] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showManagedAthleteForm, setShowManagedAthleteForm] = useState(false);
 
   const load = useCallback(() => {
     api.get('/admin/users', { params: { page, limit: 20, search: search || undefined, role: role || undefined, verified: verified || undefined } })
@@ -156,7 +158,8 @@ export function UsersPage({ permissions }) {
   const allow = (permission) => canPermission(permissions, permission);
 
   return (
-    <PageFrame title="Users">
+    <PageFrame title="Users" extra={allow('players.manage') ? <button type="button" className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white" onClick={() => setShowManagedAthleteForm((open) => !open)}>Regjistro atlet</button> : null}>
+      {showManagedAthleteForm ? <ManagedAthleteRegistrationForm mode="admin" onCancel={() => setShowManagedAthleteForm(false)} onSuccess={load} /> : null}
       <div className="flex flex-wrap gap-2">
         <input className="rounded border px-3 py-2 text-sm" placeholder="Search name or email" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
         <select className="rounded border px-3 py-2 text-sm" value={role} onChange={(e) => { setPage(1); setRole(e.target.value); }}>

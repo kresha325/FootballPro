@@ -3,6 +3,7 @@
 const express = require('express');
 const admin = require('../middleware/admin');
 const ops = require('../controllers/adminOps');
+const managedAthletes = require('../controllers/managedAthletes');
 
 const router = express.Router();
 router.use(admin);
@@ -14,6 +15,7 @@ router.get('/analytics', ops.analytics);
 
 router.get('/players', ops.players);
 router.post('/players/:id/actions', ops.playerAction);
+router.post('/players/managed', managedAthletes.createManagedAthlete);
 router.get('/clubs', ops.clubs);
 router.post('/clubs/:id/actions', ops.clubAction);
 router.get('/competitions', ops.competitions);

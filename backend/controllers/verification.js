@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const GuardianConsent = require('../models/GuardianConsent');
+const ClubMember = require('../models/ClubMember');
 const sequelize = require('../config/database');
 const { createRawToken, hashToken: tokenHash, isUnexpired: isFutureDate } = require('../utils/guardianConsentSecurity');
 const { sendEmail } = require('../services/emailService');
@@ -298,9 +299,34 @@ exports.parentConfirm = async (req, res) => {
       lockedUser.parentVerificationExpire = null;
       syncOverallVerified(lockedUser);
       await lockedUser.save({ transaction });
+      await ClubMember.update(
+        { status: 'approved', joinedAt: now },
+        {
+          where: { athleteId: lockedUser.id, creationSource: 'club_managed_registration', status: 'pending' },
+          transaction,
+        }
+      );
       return lockedUser;
     });
     if (!saved) return res.status(400).send(confirmPageHtml({ error: 'Linku është skaduar, përdorur, ose llogaria nuk kualifikohet.' }));
+
+    // Once guardian authorization is active, synchronize the club-managed athlete
+    // into the existing tournament squad structures; pending minors stay excluded.
+    try {
+      const managedMemberships = await ClubMember.findAll({
+        where: { athleteId: saved.id, creationSource: 'club_managed_registration', status: 'approved' },
+      });
+      for (const membership of managedMemberships) {
+        try {
+          await require('../utils/ligaTournaments').syncClubMemberToLigaTournaments(membership);
+          await require('../utils/tournamentSquad').syncAthleteClubSquads(membership);
+        } catch (syncError) {
+          console.error('Managed athlete tournament sync failed:', syncError?.message || syncError);
+        }
+      }
+    } catch (syncError) {
+      console.error('Managed athlete roster sync failed:', syncError?.message || syncError);
+    }
 
     const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
     const managementUrl = `${getApiPublicBase()}/api/verification/parent-revoke?token=${encodeURIComponent(managementToken)}`;
@@ -344,6 +370,25 @@ exports.parentRevoke = async (req, res) => {
       consent.managementTokenExpiresAt = null;
       await consent.save({ transaction });
       if (user) {
+        // A withdrawn consent removes the managed athlete from active club
+        // rosters immediately while preserving match and tournament history.
+        const managedMemberships = await ClubMember.findAll({
+          where: { athleteId: user.id, creationSource: 'club_managed_registration', status: 'approved' },
+          transaction,
+        });
+        if (managedMemberships.length) {
+          await ClubMember.update(
+            { status: 'pending', joinedAt: null },
+            { where: { id: managedMemberships.map((membership) => membership.id) }, transaction }
+          );
+          const TournamentSquadMember = require('../models/TournamentSquadMember');
+          for (const membership of managedMemberships) {
+            await TournamentSquadMember.destroy({
+              where: { athleteUserId: user.id, clubUserId: membership.clubId },
+              transaction,
+            });
+          }
+        }
         revokedUserId = user.id;
         user.parentVerified = false;
         user.tokenVersion = Number(user.tokenVersion || 0) + 1;

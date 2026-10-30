@@ -16,6 +16,7 @@ import {
 } from '../theme/nativeComponents';
 import {
   adminAnalyticsRequest,
+  adminSessionRequest,
   adminBanUserRequest,
   adminCreateStadiumRequest,
   adminDeletePostRequest,
@@ -42,6 +43,7 @@ import {
   adminVerifyUserRequest,
   extractErrorMessage,
 } from '../api/client';
+import ManagedAthleteRegistrationForm from '../components/ManagedAthleteRegistrationForm';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLocale } from '../context/LocaleContext';
@@ -112,8 +114,22 @@ export default function AdminDashboardScreen() {
   const [stadiumPhotoPreview, setStadiumPhotoPreview] = useState('');
   const [clearStadiumPhoto, setClearStadiumPhoto] = useState(false);
   const [stadiumSaving, setStadiumSaving] = useState(false);
+  const [canManagePlayers, setCanManagePlayers] = useState(false);
+  const [showManagedAthleteForm, setShowManagedAthleteForm] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    let cancelled = false;
+    adminSessionRequest().then((res) => {
+      if (!cancelled) {
+        const permissions = res?.data?.permissions || [];
+        setCanManagePlayers(permissions.includes('*') || permissions.includes('players.manage'));
+      }
+    }).catch(() => { if (!cancelled) setCanManagePlayers(false); });
+    return () => { cancelled = true; };
+  }, [isAdmin]);
 
   const resetStadiumForm = () => {
     setStadiumForm(emptyStadiumForm);
@@ -745,6 +761,14 @@ export default function AdminDashboardScreen() {
 
           {activeTab === 'users' ? (
             <View style={styles.filterBlock}>
+              {canManagePlayers ? (
+                <View style={{ marginBottom: 10 }}>
+                  <TouchableOpacity style={[styles.action, styles.verify]} onPress={() => setShowManagedAthleteForm((open) => !open)}>
+                    <Text style={styles.actionText}>{t('Regjistro atlet')}</Text>
+                  </TouchableOpacity>
+                  {showManagedAthleteForm ? <View style={{ marginTop: 10 }}><ManagedAthleteRegistrationForm mode="admin" onSuccess={() => loadData({ silent: true })} /></View> : null}
+                </View>
+              ) : null}
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.row}>
                   {ROLE_FILTERS.map((role) => {

@@ -1,0 +1,32 @@
+# Database Integrity Report
+
+**Limit:** Source/migration inspection only. No PostgreSQL connection or schema introspection was performed; production constraints and migration status remain unverified.
+
+## Entity and write-path review
+
+| Entity | Observed structure | Integrity concern / required verification |
+|---|---|---|
+| Users / Profiles | User role, DOB, parent flags; Profile contains contact/privacy JSON, stats/career/media JSON | Unique email is model-declared; verify case-insensitive uniqueness in actual DB. Profile's `userId` has no visible `allowNull:false` or unique declaration in model excerpt. Ensure one Profile per user and DB not just application-level. |
+| ClubMember | FK references to club/athlete, provenance, status, team/category/group/number | Verify both FKs, unique `(clubId, athleteId)` or appropriate temporal membership model, constraints for jersey range/status and cascade behavior in live schema. Public GET currently creates inferred memberships (P1). |
+| ClubStaff | club/staff IDs, role, team, status, contract dates | Verify FKs and constraints for duplicate active assignments, valid role/status, expiry and leftAt. Coach authorization helper checks active, allowed coaching role, non-expired contract. |
+| GuardianConsent | minor/guardian IDs, guardian contact, scope/version, hashed one-time/management tokens and timestamps | Verify unique token hashes and FK/index in deployed schema. No independently verified guardian identity evidence was found beyond email possession and declaration. |
+| Conversations / Members / Messages | conversation membership used for authorization and sockets | Verify unique membership pair, FK constraints, delete/retention policy, and that every message/call write requires membership. |
+| Match / MatchScorer / MatchEvent / PlayerMatchStat | services reconcile results, events, standings and player totals | Several sources can represent goals/cards; protect one authoritative event source and run reconciliation. Profile stats sync occurs outside core transaction in some paths. Verify unique `(matchId,userId)` and valid team/player references. |
+| IapPurchase | transactionId index in migration and purchase record fields | Migration appears to add a transactionId index; confirm it is unique from `backend/migrations/20260906193000-create-iap-purchases.js`. Current pre-check/fulfillment race exists regardless of uniqueness; claim, balance update and purchase insert must be atomic. |
+| Wallet/ledger/orders | ledger service and transaction tests | Unit tests show idempotency/locking at service level; inspect deployed unique indexes, FK and reconciliation jobs before launch. |
+
+## Confirmed data consistency defect
+
+`GET /api/club-members/club/:clubId` can insert pending rows from fuzzy profile-name matches (`backend/routes/clubMembers.js:95-144`). This makes a read request write to the roster and may create false relations. Remove this side effect; do not backfill by fuzzy matching without a reviewed reconciliation report.
+
+## Required read-only schema verification before production approval
+
+Use a sanitized schema-only dump or a read-only connection in a separately authorized environment to verify:
+
+- applied migration ledger matches repository migration order;
+- unique constraints and indexes for email, profile user, membership pairs, guardian token hashes, IAP transaction IDs, ledger idempotency keys and event dedupe keys;
+- FK `ON DELETE`/soft-delete implications and retention obligations;
+- enum/check constraints for roles, status, team type, squad group, amount and currency;
+- query plans/indexes for membership, consent and conversation ACL lookups.
+
+Do not run `sync({ alter: true })`, seeders, destructive scripts, or migrations against production as part of an audit.

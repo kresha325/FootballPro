@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import API, { extractApiMessage } from '../../services/api';
 
 const VIEWS = [
-  { id: 'upcoming', label: 'Në vijim' },
+  { id: 'upcoming', label: 'Të planifikuara' },
   { id: 'today', label: 'Sot' },
   { id: 'week', label: 'Kjo javë' },
   { id: 'completed', label: 'Përfunduara' },

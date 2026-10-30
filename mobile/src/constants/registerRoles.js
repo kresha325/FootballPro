@@ -1,6 +1,5 @@
 /** Roli i regjistrimit — në përputhje me backend ALLOWED_REGISTER_ROLES */
 export const REGISTER_ROLE_OPTIONS = [
-  { label: 'Lojtar', value: 'athlete', hint: 'Statistika, video, turne' },
   { label: 'Trajner', value: 'coach', hint: 'Skuadër, plane, ndeshje' },
   { label: 'Skaut', value: 'scout', hint: 'Talente, watchlist' },
   { label: 'Menaxher', value: 'manager', hint: 'Karrierë, kontrata' },

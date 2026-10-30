@@ -28,6 +28,9 @@ exports.register = async (req, res) => {
   const email = normalizeEmail(rawEmail);
 
   try {
+    if (String(role || '').trim().toLowerCase() === 'athlete') {
+      return res.status(403).json({ msg: 'Llogaritë e atletëve krijohen nga klubi ose administratori.' });
+    }
     // 1. Validim bazë
     if (!email || !password || !firstName) {
       console.log('BACKEND: Missing required fields');
@@ -43,7 +46,10 @@ exports.register = async (req, res) => {
       return res.status(400).json({ msg: passwordError });
     }
 
-    const normalizedRole = String(role || 'athlete').trim().toLowerCase();
+    if (role == null || String(role).trim() === '') {
+      return res.status(400).json({ msg: 'Zgjidh llojin e llogarisë' });
+    }
+    const normalizedRole = String(role).trim().toLowerCase();
     if (!ALLOWED_REGISTER_ROLES.includes(normalizedRole)) {
       return res.status(400).json({ msg: 'Lloji i llogarisë është i pavlefshëm' });
     }

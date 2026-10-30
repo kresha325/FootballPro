@@ -24,6 +24,12 @@ const ClubMember = sequelize.define('ClubMember', {
       key: 'id',
     },
   },
+  createdByUserId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: User, key: 'id' },
+  },
+  creationSource: { type: DataTypes.STRING(48), allowNull: true },
   status: {
     type: DataTypes.ENUM('pending', 'approved', 'rejected'),
     defaultValue: 'pending',
@@ -43,7 +49,7 @@ const ClubMember = sequelize.define('ClubMember', {
     allowNull: true,
   },
   position: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(80),
     allowNull: true,
   },
   jerseyNumber: {

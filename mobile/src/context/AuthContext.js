@@ -262,7 +262,7 @@ export const AuthProvider = ({ children }) => {
         lastName,
         email,
         password,
-        role: role || 'athlete',
+        role: role || '',
         language: language || 'sq',
       };
       if (dateOfBirth) payload.dateOfBirth = dateOfBirth;

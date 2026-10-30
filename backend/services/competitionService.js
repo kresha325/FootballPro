@@ -857,8 +857,9 @@ async function calendarMatches(query = {}) {
   } else if (view === 'completed') {
     where.status = 'finished';
   } else if (view === 'upcoming') {
+    // Include overdue scheduled fixtures so they remain visible for organizers
+    // to reschedule or record, instead of disappearing from every calendar view.
     where.status = { [Op.in]: ['scheduled', 'ongoing'] };
-    where.matchDate = { [Op.gte]: startOfDay(now) };
   }
 
   const teamId = query.clubId || query.teamId || query.userId;

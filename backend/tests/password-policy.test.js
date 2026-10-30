@@ -29,7 +29,7 @@ describe('password policy', () => {
         password: 'short',
         firstName: 'Ana',
         lastName: 'Hoxha',
-        role: 'athlete',
+        role: 'coach',
       },
     }, res);
     assert.equal(res.statusCode, 400);

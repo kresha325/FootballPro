@@ -400,6 +400,13 @@ export const clubMembersAPI = {
   removeMember: (membershipId) => API.delete(`/club-members/${membershipId}`),
 };
 
+export const managedAthletesAPI = {
+  create: (payload) => API.post('/athletes/managed', payload),
+  resendParentConsent: (athleteId) => API.post(`/athletes/managed/${athleteId}/parent-consent`),
+  createAsAdmin: (payload) => API.post('/admin/ops/players/managed', payload),
+  getVerifiedClubs: (params = {}) => API.get('/admin/ops/clubs', { params }),
+};
+
 /* =========================
    TRANSFER HISTORY
 ========================= */

@@ -69,6 +69,9 @@ router.get('/club/:clubId', async (req, res) => {
 router.get('/staff/:staffId', protect, async (req, res) => {
   try {
     const { staffId } = req.params;
+    if (Number(staffId) !== Number(req.user.id) && String(req.user.role || '').toLowerCase() !== 'admin') {
+      return res.status(403).json({ msg: 'Nuk je i autorizuar të shohësh caktimet e një anëtari tjetër të stafit.' });
+    }
 
     let assignments;
     try {
@@ -77,7 +80,7 @@ router.get('/staff/:staffId', protect, async (req, res) => {
         include: [{
           model: User,
           as: 'club',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'adminVerified', 'bannedAt', 'deletedAt'],
           include: [{ model: Profile, as: 'Profile', attributes: ['club', 'profilePhoto'] }]
         }],
         order: [['createdAt', 'DESC']],
@@ -90,7 +93,7 @@ router.get('/staff/:staffId', protect, async (req, res) => {
           include: [{
             model: User,
             as: 'club',
-            attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'adminVerified', 'bannedAt', 'deletedAt'],
           }],
           order: [['createdAt', 'DESC']],
         });

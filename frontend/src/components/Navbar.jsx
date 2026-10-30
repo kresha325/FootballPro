@@ -570,14 +570,14 @@ function Navbar() {
             )}
 
             {/* Club Roster (for clubs) */}
-            {user?.role === 'club' && (
+            {(user?.role === 'club' || user?.role === 'coach') && (
               <Link 
                 to="/club-roster" 
                 onClick={() => closeMenu()}
                 className="xt-drawer-link flex items-center gap-3 rounded-lg border border-[var(--xt-color-gold)]/40 bg-white/5 p-3 text-[var(--xt-color-gold-bright)] transition-colors hover:bg-white/10"
               >
                 <BuildingOffice2Icon className="h-5 w-5" aria-hidden="true" />
-                <span className="font-medium">{t('Formacioni i Klubit')}</span>
+                <span className="font-medium">{t(user?.role === 'coach' ? 'Regjistro atlet' : 'Formacioni i Klubit')}</span>
               </Link>
             )}
 

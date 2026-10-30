@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { useRoute } from '@react-navigation/native';
 import {
   approveClubRosterRequest,
@@ -15,6 +15,7 @@ import {
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
+import ManagedAthleteRegistrationForm from '../components/ManagedAthleteRegistrationForm';
 
 export default function ClubRosterScreen() {
   const { t } = useLocale();
@@ -35,8 +36,10 @@ export default function ClubRosterScreen() {
   const [staffActive, setStaffActive] = useState([]);
   const [staffPending, setStaffPending] = useState([]);
   const [staffSubTab, setStaffSubTab] = useState('pending');
+  const [showManagedAthleteForm, setShowManagedAthleteForm] = useState(false);
 
   const isClub = user?.role === 'club';
+  const isCoach = user?.role === 'coach';
   const isAthlete = user?.role === 'athlete';
 
   const loadData = useCallback(async ({ silent } = { silent: false }) => {
@@ -119,6 +122,10 @@ export default function ClubRosterScreen() {
     }
   };
 
+  if (isCoach) {
+    return <ScrollView contentContainerStyle={styles.content}><ManagedAthleteRegistrationForm mode="coach" /></ScrollView>;
+  }
+
   if (!isClub && !isAthlete) {
     return (
       <View style={styles.centered}>
@@ -164,6 +171,12 @@ export default function ClubRosterScreen() {
 
           {isClub ? (
             <View>
+              <View style={styles.headerCard}>
+                <TouchableOpacity style={styles.submitBtn} onPress={() => setShowManagedAthleteForm((open) => !open)}>
+                  <Text style={styles.submitTxt}>{t('Regjistro atlet')}</Text>
+                </TouchableOpacity>
+                {showManagedAthleteForm ? <View style={{ marginTop: 12 }}><ManagedAthleteRegistrationForm mode="club" onSuccess={() => loadData({ silent: true })} /></View> : null}
+              </View>
               <View style={styles.tabRow}>
                 <TouchableOpacity
                   style={[styles.tabBtn, activeTab === 'pending' ? styles.tabActive : null]}
@@ -310,9 +323,11 @@ export default function ClubRosterScreen() {
         return (
           <View style={styles.card}>
             <Text style={styles.name}>{`${athlete?.firstName || ''} ${athlete?.lastName || ''}`.trim() || 'Unknown Athlete'}</Text>
-            <Text style={styles.meta}>Status: {item?.status || 'pending'}</Text>
+            <Text style={styles.meta}>{item?.parentAuthorizationPending ? 'Në pritje të autorizimit prindëror' : `Status: ${item?.status || 'pending'}`}</Text>
 
-            {isClub && isPending && activeTab !== 'staff' ? (
+            {isClub && isPending && item?.parentAuthorizationPending ? (
+              <Text style={styles.meta}>Prindi ose kujdestari duhet të japë autorizimin. Klubi nuk mund ta zëvendësojë këtë verifikim.</Text>
+            ) : isClub && isPending && activeTab !== 'staff' ? (
               <View style={styles.actionsRow}>
                 <TouchableOpacity style={[styles.action, styles.ok]} onPress={() => performAction(approveClubRosterRequest, item.id)}>
                   <Text style={styles.actionText}>Approve</Text>

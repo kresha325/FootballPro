@@ -104,7 +104,7 @@ export default function LoginScreen() {
   }, [route.params?.mode]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState('athlete');
+  const [role, setRole] = useState('coach');
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -188,7 +188,7 @@ export default function LoginScreen() {
 
   const onRegister = async () => {
     setInlineError('');
-    const normalizedRole = (role || 'athlete').trim().toLowerCase();
+    const normalizedRole = String(role || '').trim().toLowerCase();
     if (!REGISTER_ROLE_VALUES.includes(normalizedRole)) {
       setInlineError('Zgjidh llojin e llogarisë.');
       return;
@@ -444,7 +444,7 @@ export default function LoginScreen() {
           importantForAutofill="yes"
           {...inputProps}
         />
-        {mode !== 'forgot' ? (
+        {mode === 'login' ? (
           <>
             <TextInput
               style={[styles.input, themed.input]}

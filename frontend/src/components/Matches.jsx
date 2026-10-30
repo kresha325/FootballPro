@@ -21,11 +21,6 @@ const fetchParticipants = async (tournamentId) => {
   return res.data?.participants || [];
 };
 
-const isUpcomingMatch = (match) => {
-  const timestamp = new Date(match.matchDate || match.scheduledAt).getTime();
-  return Number.isFinite(timestamp) && timestamp > Date.now();
-};
-
 function EditMatchModal({ isOpen, onClose, match, tournaments, participants, stadiums, onSave }) {
   const { t } = useLocale();
   const [form, setForm] = useState({
@@ -266,7 +261,9 @@ function Matches() {
     (m) => [m.homeUser?.firstName, m.homeUser?.lastName, m.homeUser?.Profile?.club, m.awayUser?.firstName, m.awayUser?.lastName, m.awayUser?.Profile?.club, m.Tournament?.name, m.Stadium?.name, m.status]
   ), [matches, listSearch]);
   const upcomingMatches = useMemo(() => {
-    const base = matches.filter((m) => !['finished', 'ongoing', 'live'].includes(String(m.status || '').toLowerCase()) && isUpcomingMatch(m));
+    // Keep scheduled fixtures visible even when their date has passed; they
+    // still need an organizer to complete or reschedule them.
+    const base = matches.filter((m) => !['finished', 'ongoing', 'live', 'cancelled', 'walkover'].includes(String(m.status || '').toLowerCase()));
     return filterBySearch(base, listSearch, (m) => [
       m.homeUser?.firstName, m.homeUser?.lastName, m.homeUser?.Profile?.club,
       m.awayUser?.firstName, m.awayUser?.lastName, m.awayUser?.Profile?.club,

@@ -66,6 +66,7 @@ export default function MoreScreen({ navigation }) {
   );
   const isAdmin = user?.role === 'admin';
   const isClub = user?.role === 'club';
+  const isCoach = user?.role === 'coach';
   const canUseParentVerification = user?.role === 'athlete';
   const planName = tierLabel(getEffectiveTier(user));
 
@@ -195,10 +196,10 @@ export default function MoreScreen({ navigation }) {
             onPress: () => navigation.navigate('ParentVerification'),
           })
         : null}
-      {isClub
+      {isClub || isCoach
         ? btn({
-            title: t('Club Roster'),
-            subtitle: t('Manage requests and squad'),
+            title: t(isCoach ? 'Regjistro atlet' : 'Club Roster'),
+            subtitle: t(isCoach ? 'Regjistro atlet për klubin tënd' : 'Manage requests and squad'),
             onPress: () => navigation.navigate('ClubRoster'),
           })
         : null}
