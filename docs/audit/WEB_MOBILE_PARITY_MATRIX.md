@@ -2,7 +2,7 @@
 
 **Method:** Compared route/API helpers and feature modules statically. A matching helper or screen is **surface parity**, not proof of identical runtime behavior. Mobile static parity script passes; production API/device end-to-end tests were not available.
 
-**Updated 2026-10-30:** Athlete privacy and direct-call signaling P1 fixes are present on review branch `fix/xtalenti-v1-p1-security` (`df8cdec`), with backend regression tests and disposable PostgreSQL route checks. Managed athlete registration is verified as connected to web/mobile screens and authenticated endpoints. Athlete membership visibility has an uncommitted follow-up fix with local route tests. None of these checks constitute a native device or production E2E run.
+**Updated 2026-10-30:** Athlete privacy and direct-call signaling fixes are in the current branch ancestry. Managed athlete registration is connected to web/mobile screens and authenticated endpoints. New adult/minor private-contact enforcement and guardian-approval request actions are implemented locally, with backend regression coverage; no browser/device E2E or production database work was performed.
 
 | # | Domain | Web | Mobile | Backend contract / assessment |
 |---:|---|---|---|---|
@@ -18,8 +18,8 @@
 | 10 | Media and gallery | gallery/upload components | gallery/upload screens | **PARTIAL PARITY** — similar endpoint surface; private media/Cloudinary access control not verified. |
 | 11 | Analytics | admin/analytics views | admin dashboard | **NOT VERIFIED** — aggregation and permissions not compared end-to-end. |
 | 12 | Gamification | points/badges components | XPNotificationManager/screens | **PARTIAL PARITY** — mobile static check passes; event delivery/data parity untested. |
-| 13 | Messaging | Messaging component | MessagingScreen | **PARTIAL PARITY** — shared HTTP/socket service; member checks present, adult/minor policy and device reconnect unverified. |
-| 14 | Video calls | VideoCallManager/Room/Simple | Incoming/Outgoing + NativeCallRoom | **PARTIAL PARITY** — direct signaling now checks active call participants and callers send `callId`; lifecycle, reconnection, and native device ACL remain untested. |
+| 13 | Messaging | Messaging component; approval request CTA | MessagingScreen; approval request alert | **PARTIAL PARITY** — server policy gates REST/socket paths and eligible profiles can request guardian approval; browser/device behavior and email approval E2E not run. |
+| 14 | Video calls | VideoCallManager/Room/Simple | Incoming/Outgoing + NativeCallRoom | **PARTIAL PARITY** — exact channel consent and active assignment are checked before direct signaling; call lifecycle, revocation during an active call, reconnection and device behavior remain untested. |
 | 15 | Scouting | Scouting views | scouting modules/screens | **NOT VERIFIED** — full flows and payload equivalence not tested. |
 | 16 | Scouting reports | report forms/views | mobile surface/API | **NOT VERIFIED** — no end-to-end create/read/permission comparison. |
 | 17 | Feed and posts | Feed components | FeedScreen | **PARTIAL PARITY** — shared API helpers, upload/moderation behavior not E2E-tested. |
@@ -40,6 +40,7 @@
 - Mobile `npm run release:preflight`: passed.
 - Frontend Vite build: passed with a >500 kB chunk warning.
 - No UI automation, browser E2E, native simulator run, store sandbox purchase, or real-device test was run in this audit.
+- Backend full suite passed 301/301 on this local branch; focused child-contact and revocation tests passed 37/37. All repository migrations applied successfully to a disposable PostgreSQL cluster, and 8 integration assertions passed against the real Sequelize models (adult denial, assigned coach, exact-channel grant, channel mismatch, group denial, unknown DOB, revocation, guardian access). Guardian email delivery itself was not exercised against Resend.
 
 ## Required parity tests before pilot
 

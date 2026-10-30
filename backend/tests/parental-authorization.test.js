@@ -11,6 +11,7 @@ const {
   isAllowedWhilePending,
 } = require('../utils/parentalAuthorization');
 const GuardianConsent = require('../models/GuardianConsent');
+const GuardianConsentEvent = require('../models/GuardianConsentEvent');
 const security = require('../utils/guardianConsentSecurity');
 const { needsParentVerification } = require('../utils/userVerification');
 
@@ -133,6 +134,7 @@ describe('parent-confirm endpoint', () => {
   const emailService = require('../services/emailService');
   const User = require('../models/User');
   const ClubMember = require('../models/ClubMember');
+  const ClubStaff = require('../models/ClubStaff');
   const sequelize = require('../config/database');
   const controller = require('../controllers/verification');
 
@@ -217,6 +219,7 @@ describe('parent-confirm endpoint', () => {
       sendEmail: emailService.sendEmail,
       clubMemberUpdate: ClubMember.update,
       clubMemberFindAll: ClubMember.findAll,
+      consentEventCreate: GuardianConsentEvent.create,
     };
     const oldEnv = Object.fromEntries(['RESEND_API_KEY', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_USER', 'EMAIL_PASSWORD'].map((key) => [key, process.env[key]]));
     for (const key of Object.keys(oldEnv)) process.env[key] = '';
@@ -225,6 +228,7 @@ describe('parent-confirm endpoint', () => {
     sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
     ClubMember.update = async () => [0];
     ClubMember.findAll = async () => [];
+    GuardianConsentEvent.create = async (values) => values;
     try {
       const res = mockResponse();
       await controller.parentConfirm({ body: { token, guardianName: 'Adult Guardian', relationship: 'legal_guardian', attestGuardian: 'yes' }, query: {} }, res);
@@ -245,6 +249,7 @@ describe('parent-confirm endpoint', () => {
       sequelize.transaction = originals.transaction;
       ClubMember.update = originals.clubMemberUpdate;
       ClubMember.findAll = originals.clubMemberFindAll;
+      GuardianConsentEvent.create = originals.consentEventCreate;
       emailService.sendEmail = originals.sendEmail;
       for (const [key, value] of Object.entries(oldEnv)) {
         if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -252,7 +257,67 @@ describe('parent-confirm endpoint', () => {
     }
   });
 
+  it('allows specific communication approval when the athlete account was already guardian-verified', async () => {
+    const token = 'communication-guardian-token';
+    const adult = { id: 900002, role: 'coach', firstName: 'Coach', lastName: 'Staff', deletedAt: null, bannedAt: null };
+    const club = { id: 900003, role: 'club', adminVerified: true, deletedAt: null, bannedAt: null };
+    const user = { ...minor, id: 900004, parentVerified: true, parentEmail: 'guardian@example.test', firstName: 'Young', lastName: 'Athlete' };
+    const scope = { adultUserId: adult.id, adultRole: 'coach', clubId: club.id, channels: ['direct_message'] };
+    const consent = {
+      id: 900005,
+      minorUserId: user.id,
+      guardianEmail: user.parentEmail,
+      consentPurpose: 'minor_communication',
+      consentScope: scope,
+      policyVersion: '2026-10-v1-communication-v1',
+      verificationTokenHash: security.hashToken(token),
+      verificationTokenExpiresAt: new Date(Date.now() + 60000),
+      verifiedAt: null,
+      revokedAt: null,
+      async save() {},
+    };
+    const originals = {
+      findOne: GuardianConsent.findOne,
+      findByPk: User.findByPk,
+      membership: ClubMember.findOne,
+      assignments: ClubStaff.findAll,
+      transaction: sequelize.transaction,
+      eventCreate: GuardianConsentEvent.create,
+      sendEmail: emailService.sendEmail,
+    };
+    GuardianConsent.findOne = async (options) => options.where?.consentPurpose === 'minor_account_authorization'
+      ? { id: 900006, verifiedAt: new Date(), revokedAt: null }
+      : consent;
+    User.findByPk = async (id) => Number(id) === user.id ? user : Number(id) === adult.id ? adult : Number(id) === club.id ? club : null;
+    ClubMember.findOne = async () => ({ id: 1, clubId: club.id, status: 'approved' });
+    ClubStaff.findAll = async () => [{ clubId: club.id, staffId: adult.id, staffRole: 'head_coach', status: 'active' }];
+    sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
+    GuardianConsentEvent.create = async (values) => values;
+    emailService.sendEmail = async () => ({ success: true });
+    try {
+      const res = mockResponse();
+      await controller.parentConfirm({
+        body: { token, guardianName: 'Guardian Name', relationship: 'parent', attestGuardian: 'yes' },
+        query: {},
+      }, res);
+      assert.equal(res.statusCode, 200);
+      assert.ok(consent.verifiedAt instanceof Date);
+      assert.equal(user.parentVerified, true);
+      assert.match(res.body, /Pëlqimi u regjistrua/);
+    } finally {
+      GuardianConsent.findOne = originals.findOne;
+      User.findByPk = originals.findByPk;
+      ClubMember.findOne = originals.membership;
+      ClubStaff.findAll = originals.assignments;
+      sequelize.transaction = originals.transaction;
+      GuardianConsentEvent.create = originals.eventCreate;
+      emailService.sendEmail = originals.sendEmail;
+    }
+  });
+
   it('revokes consent, increments the session version and disconnects the child socket', async () => {
+    const VideoCall = require('../models/VideoCall');
+    const ScheduledCall = require('../models/ScheduledCall');
     const managementToken = 'management-token';
     const consent = {
       id: 75, minorUserId: minor.id,
@@ -266,11 +331,23 @@ describe('parent-confirm endpoint', () => {
       findByPk: User.findByPk,
       transaction: sequelize.transaction,
       clubMemberFindAll: ClubMember.findAll,
+      consentUpdate: GuardianConsent.update,
+      videoCallFindAll: VideoCall.findAll,
+      videoCallUpdate: VideoCall.update,
+      scheduledCallUpdate: ScheduledCall.update,
+      consentFindAll: GuardianConsent.findAll,
+      consentEventCreate: GuardianConsentEvent.create,
     };
     GuardianConsent.findOne = async () => consent;
     User.findByPk = async () => user;
     sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
     ClubMember.findAll = async () => [];
+    GuardianConsent.update = async () => [0];
+    VideoCall.findAll = async () => [];
+    VideoCall.update = async () => [0];
+    ScheduledCall.update = async () => [0];
+    GuardianConsent.findAll = async () => [];
+    GuardianConsentEvent.create = async (values) => values;
     let disconnected = '';
     try {
       const res = mockResponse();
@@ -288,6 +365,12 @@ describe('parent-confirm endpoint', () => {
       User.findByPk = originals.findByPk;
       sequelize.transaction = originals.transaction;
       ClubMember.findAll = originals.clubMemberFindAll;
+      GuardianConsent.update = originals.consentUpdate;
+      VideoCall.findAll = originals.videoCallFindAll;
+      VideoCall.update = originals.videoCallUpdate;
+      ScheduledCall.update = originals.scheduledCallUpdate;
+      GuardianConsent.findAll = originals.consentFindAll;
+      GuardianConsentEvent.create = originals.consentEventCreate;
     }
   });
 });
@@ -306,5 +389,24 @@ describe('additive consent migration schema', () => {
     assert.equal(capturedTable.columns.guardianName.allowNull, true);
     assert.equal(capturedTable.columns.relationship.allowNull, true);
     assert.equal(capturedTable.columns.minorUserId.allowNull, false);
+  });
+
+  it('creates an append-only consent event table with durable actor and time references', async () => {
+    const migration = require('../migrations/20261030170000-create-guardian-consent-events');
+    let capturedTable;
+    const indexes = [];
+    const queryInterface = {
+      async showAllTables() { return []; },
+      async createTable(name, columns) { capturedTable = { name, columns }; },
+      async addIndex(table, fields, options) { indexes.push({ table, fields, options }); },
+    };
+    const Sequelize = require('sequelize');
+    await migration.up(queryInterface, Sequelize);
+    assert.equal(capturedTable.name, 'GuardianConsentEvents');
+    assert.equal(capturedTable.columns.consentId.allowNull, false);
+    assert.equal(capturedTable.columns.consentId.onDelete, 'RESTRICT');
+    assert.equal(capturedTable.columns.actorUserId.allowNull, true);
+    assert.equal(capturedTable.columns.eventType.allowNull, false);
+    assert.equal(indexes.length, 2);
   });
 });

@@ -10,10 +10,13 @@ This checklist records audit evidence, not release approval.
 - [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Commit `be5362b` is pushed to the security review branch; helper, route-handler and disposable-PostgreSQL tests cover access.
 - [x] Restrict pending/inactive club staff listing to the verified owning club or platform admins; public reads show current active staff only. Commit `4697599` is pushed to the review branch; six route-handler regression tests pass.
 - [x] Require a verified, active club account before exposing its private pending/rejected membership requests; unverified clubs retain public visibility of approved rosters only. Route-level tests cover both outcomes.
-- [ ] Decide and implement adult-to-minor messaging/calling safeguards; document the policy.
+- [x] Approve and implement the private-contact rule: unrelated adults denied by default; active verified coaches require exact channel consent; scouts/managers require guardian-mediated group consent and guardian presence. REST, Socket.IO, video-call, and private-live invitation checks are in the local review branch with policy regression tests.
+- [ ] Apply/review the additive `GuardianConsentEvents` migration before deploy; test consent request, approval, expiry and revocation against a disposable PostgreSQL database.
+- [ ] Exercise guardian approval request from web/mobile, verify channel-specific consent, and test revocation while a call is active on browser and device.
+- [ ] Decide separate safety rules for comments, follows, reactions, mentions, and connection invitations; current approval covers only private DMs, calls, and private live invitations.
 - [ ] Decide acceptable guardian verification level; current email attestation is not independent identity proof.
-- [ ] Secure private/minor media at Cloudinary delivery layer and test URL revocation/access.
-- [ ] Verify account deletion for all related services and retention exceptions.
+- [ ] Secure private/minor media at Cloudinary delivery layer and test copied URL access after privacy changes, consent withdrawal, and deletion. Current stored `secure_url` values appear publicly deliverable; CDN/account settings and cache invalidation are unverified.
+- [ ] Verify account deletion for all related services and retention exceptions. Current profile photo/cover references clear, but Cloudinary assets and media copied into posts/messages are not verified as removed or invalidated.
 - Profile anonymization now clears the model's actual `profilePhoto` field (test-covered); Cloudinary invalidation and copied media in posts remain unresolved.
 
 ## Stop before enabling payments

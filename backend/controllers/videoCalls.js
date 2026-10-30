@@ -7,6 +7,51 @@ const { Conversation, ConversationMember } = require('../models/Conversation');
 const Message = require('../models/Message');
 const sequelize = require('../config/database');
 const { QueryTypes } = require('sequelize');
+const { checkDirectContact } = require('../utils/directContactPermission');
+const {
+  CHANNELS: COMMUNICATION_CHANNELS,
+  authorizeMinorDirectContact,
+} = require('../utils/minorCommunicationPolicy');
+const ClubMember = require('../models/ClubMember');
+const ClubStaff = require('../models/ClubStaff');
+const GuardianConsent = require('../models/GuardianConsent');
+
+async function directCallPermission(actorId, targetId) {
+  const { isEitherBlocked } = require('./moderation');
+  const blockDecision = await checkDirectContact({ actorId, targetId, isEitherBlocked });
+  if (!blockDecision.ok) return blockDecision;
+  try {
+    const childDecision = await authorizeMinorDirectContact({
+      actorId,
+      targetId,
+      channel: COMMUNICATION_CHANNELS.VIDEO_CALL,
+      User,
+      ClubMember,
+      ClubStaff,
+      GuardianConsent,
+    });
+    if (!childDecision.allowed) return { ok: false, status: childDecision.status || 403, code: childDecision.reason };
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 503, code: 'COMMUNICATION_CHECK_UNAVAILABLE' };
+  }
+}
+
+function respondToContactDenial(res, result, action) {
+  if (result.ok) return false;
+  if (result.code === 'BLOCKED') {
+    res.status(403).json({ msg: `Nuk mund ta ${action} këtë përdorues (bllokuar)` });
+  } else if (result.code === 'BLOCK_CHECK_UNAVAILABLE' || result.code === 'COMMUNICATION_CHECK_UNAVAILABLE') {
+    res.status(503).json({ msg: 'Kontrolli i sigurisë nuk është i disponueshëm' });
+  } else if (String(result.code || '').includes('GUARDIAN')) {
+    res.status(403).json({ code: result.code, msg: 'Telefonata me të miturin kërkon miratim të posaçëm nga kujdestari dhe caktim aktiv.' });
+  } else if (result.status === 404 || result.code === 'USER_UNAVAILABLE') {
+    res.status(404).json({ msg: 'Përdoruesi nuk është i disponueshëm' });
+  } else {
+    res.status(400).json({ msg: 'Përdoruesi nuk është i vlefshëm' });
+  }
+  return true;
+}
 
 async function findOrCreateDirectConversationId(userA, userB) {
   const sql = `
@@ -126,15 +171,10 @@ async function persistCallChatMessage({ callerId, receiverId, senderId, event, d
 exports.createVideoCall = async (req, res) => {
   try {
     const { participantId, scheduledCallId } = req.body;
-
-    try {
-      const { isEitherBlocked } = require('./moderation');
-      if (await isEitherBlocked(req.user.id, participantId)) {
-        return res.status(403).json({ msg: 'Nuk mund ta telefonosh këtë përdorues (bllokuar)' });
-      }
-    } catch (_blockErr) {
-      /* non-fatal before migrate */
-    }
+    const permission = await directCallPermission(req.user.id, participantId);
+    if (respondToContactDenial(res, permission, 'telefonosh')) return;
+    const participant = await User.findByPk(Number(participantId), { attributes: ['id'] });
+    if (!participant) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
 
     // If there's already an active call between these users, return it instead of creating duplicate
     const existing = await VideoCall.findOne({
@@ -182,14 +222,10 @@ exports.createVideoCall = async (req, res) => {
 exports.startCall = async (req, res) => {
   const { receiverId } = req.body;
   try {
-    try {
-      const { isEitherBlocked } = require('./moderation');
-      if (await isEitherBlocked(req.user.id, receiverId)) {
-        return res.status(403).json({ msg: 'Nuk mund ta telefonosh këtë përdorues (bllokuar)' });
-      }
-    } catch (_blockErr) {
-      /* non-fatal before migrate */
-    }
+    const permission = await directCallPermission(req.user.id, receiverId);
+    if (respondToContactDenial(res, permission, 'telefonosh')) return;
+    const receiver = await User.findByPk(Number(receiverId), { attributes: ['id'] });
+    if (!receiver) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     // Avoid duplicate calls
     const existing = await VideoCall.findOne({
       where: {
@@ -216,7 +252,7 @@ exports.startCall = async (req, res) => {
     // Notify receiver
     await sendNotification(receiverId, 'Incoming Call', `You have an incoming call from ${req.user.firstName}`, { type: 'call', callId: call.id });
     res.json(call);
-  } catch (err) {
+  } catch {
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -278,7 +314,7 @@ exports.endCall = async (req, res) => {
       }
     }
     res.json({ msg: 'Call ended', call });
-  } catch (err) {
+  } catch {
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -312,7 +348,10 @@ exports.getActiveCall = async (req, res) => {
 exports.updateCallStatus = async (req, res) => {
   try {
     const { callId } = req.params;
-    const { status } = req.body;
+    const status = String(req.body?.status || '').toLowerCase();
+    if (!['connected', 'ended', 'declined'].includes(status)) {
+      return res.status(400).json({ msg: 'Statusi i thirrjes nuk është i vlefshëm' });
+    }
 
     const videoCall = await VideoCall.findByPk(callId);
     if (!videoCall) {
@@ -321,6 +360,11 @@ exports.updateCallStatus = async (req, res) => {
     const uid = Number(req.user.id);
     if (uid !== Number(videoCall.callerId) && uid !== Number(videoCall.receiverId)) {
       return res.status(403).json({ msg: 'Nuk je pjesëmarrës i kësaj thirrjeje' });
+    }
+    if (status === 'connected') {
+      const otherId = uid === Number(videoCall.callerId) ? videoCall.receiverId : videoCall.callerId;
+      const permission = await directCallPermission(uid, otherId);
+      if (respondToContactDenial(res, permission, 'vazhdo')) return;
     }
 
     const callerUser = await User.findByPk(req.user.id);
@@ -410,6 +454,10 @@ exports.getCallHistory = async (req, res) => {
 exports.scheduleCall = async (req, res) => {
   const { receiverId, scheduledTime } = req.body;
   try {
+    const permission = await directCallPermission(req.user.id, receiverId);
+    if (respondToContactDenial(res, permission, 'telefonosh')) return;
+    const receiver = await User.findByPk(Number(receiverId), { attributes: ['id'] });
+    if (!receiver) return res.status(404).json({ msg: 'Përdoruesi nuk u gjet' });
     const scheduledCall = await ScheduledCall.create({
       callerId: req.user.id,
       receiverId,
@@ -418,7 +466,7 @@ exports.scheduleCall = async (req, res) => {
     // Notify receiver
     await sendNotification(receiverId, 'Scheduled Call', `You have a scheduled call with ${req.user.firstName} at ${scheduledTime}`, { type: 'scheduled_call', callId: scheduledCall.id });
     res.json(scheduledCall);
-  } catch (err) {
+  } catch {
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -439,7 +487,7 @@ exports.getScheduledCalls = async (req, res) => {
       order: [['scheduledTime', 'ASC']],
     });
     res.json(calls);
-  } catch (err) {
+  } catch {
     res.status(500).json({ msg: 'Server error' });
   }
 };

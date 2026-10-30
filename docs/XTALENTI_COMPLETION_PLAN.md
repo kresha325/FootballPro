@@ -2,7 +2,7 @@
 
 **Last verified:** 2026-10-30
 **Repository:** `kresha325/FootballPro`
-**Working branch:** `fix/xtalenti-v1-p1-security`
+**Working branch:** `codex/xtalenti-safety-media-phase`
 **Production state:** No deployment or production database access performed.
 
 ## Release status
@@ -13,7 +13,17 @@ A further membership-list IDOR was confirmed from the older audit and fixed in c
 
 The upload magic-byte failure was traced to the installed `file-type` v16 API versus the newer API expected by the code. `backend/utils/uploadMagic.js` now supports both API shapes. The complete backend suite passes when loopback test servers are permitted.
 
-This is **not a production release approval**. Adult-to-minor communication policy, restricted Cloudinary delivery, transactional IAP idempotency, production schema verification, deletion propagation, and device end-to-end tests remain release blockers or unverified controls.
+This is **not a production release approval**. Restricted Cloudinary delivery, production schema verification (including the new consent-event migration), deletion propagation, and device end-to-end tests remain release blockers or unverified controls. The approved adult-to-minor private-contact policy is implemented in the current local working tree and has backend regression coverage; the database migration is not applied and no changes are deployed.
+
+## Current child-safety implementation — 2026-10-30
+
+- Product rule confirmed: unrelated adults cannot privately message, call, or send private-live invitations to minors by default. A coach must have an active verified assignment to the athlete's verified club and a separate guardian consent for the exact communication channel. Scouts/managers can only request guardian-mediated group contact; a verified guardian must be present and approve the exact adult. Account/profile consent does not grant communication permission.
+- Enforcement is server-side in REST messaging, direct and group calls, Socket.IO conversation rooms/typing/signaling, and private live guest invitations. Realtime calls re-check consent for offer/answer/ICE; reject/end remain available to stop an existing call.
+- Guardian consent is specific, expiring, revocable, and stored separately from account authorization. Revocation immediately denies future contact, disconnects the minor's sockets, ends active calls for the affected adult (or all adults when base account consent is withdrawn), and cancels scheduled calls. Existing chat/call history is retained.
+- Web and React Native profile messaging now offer eligible coaches/scouts/managers a guardian-approval request when the backend denies private contact. The route and UI have not yet been exercised in a browser or native device.
+- A new `GuardianConsentEvents` table/migration records request, delivery, approval and withdrawal events without guardian email or token values. It is a required additive migration and has not been run.
+- Guardian verification still uses access to the registered email plus a guardian attestation; independent identity or legal-relationship proof is not established. Comments, follows, reactions and public mentions are not covered by the approved private-contact rule and need a separate product/legal decision before changing those interactions.
+- Cloudinary uploads still use ordinary secure URLs. A copied URL may stay accessible after profile privacy changes or consent withdrawal. Account-level restricted delivery, cache behavior, and existing-asset migration need Cloudinary configuration and a controlled migration plan.
 
 ## Domain tracker
 
@@ -31,8 +41,8 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Official statistics | PARTIALLY COMPLETE | Reconciliation tests exist; approve authority policy before changing who publishes official stats. | P1 |
 | Analytics | PARTIALLY COMPLETE | Admin and user analytics exist; test data parity, privacy, query cost and pagination. | P2 |
 | Scouting | PARTIALLY COMPLETE | Search, watchlists, reports and comparison surfaces exist; end-to-end permissions and mobile actions are unverified. | P2 |
-| Messaging | PARTIALLY COMPLETE | Membership ACL and socket paths exist; adult/minor contact policy, reconnect/order and full device workflows remain unverified. | P1 |
-| Video calls | IMPLEMENTED BUT NOT TESTED | Direct signaling now requires active server-owned calls, validates participants, blocks failures closed and rate-limits events. Test native/web lifecycle and group calls on devices. | P1 |
+| Messaging | PARTIALLY COMPLETE | Server-side adult/minor channel consent now gates direct/group messages and socket rooms; eligible role screens can request guardian approval. Real web/mobile workflow and notification behavior remain unverified. | P1 |
+| Video calls | IMPLEMENTED BUT NOT TESTED | Direct/group call authorization rechecks exact channel consent and active verified assignments; revocation ends active/scheduled calls. Test web/native lifecycle and group calls on devices. | P1 |
 | Live streaming | PARTIALLY COMPLETE | LiveKit and stream workflows exist; production room ACL, reconnect, lifecycle and media access require staging tests. | P1 |
 | Feed and posts | PARTIALLY COMPLETE | Core create/read/react/report paths exist; role visibility, moderation and client parity need E2E tests. | P2 |
 | Stories | NOT VERIFIED | Feature-specific lifecycle, expiry, report/block and mobile parity evidence not yet collected. | P2 |
@@ -43,7 +53,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Gamification | PARTIALLY COMPLETE | XP, levels, badges and achievements exist; keep rewards separate from official stats and test repeat-call abuse. | P2 |
 | Notifications | PARTIALLY COMPLETE | In-app/push paths exist; provider delivery, dedupe and mobile tap navigation need device verification. | P2 |
 | Search and discovery | PARTIALLY COMPLETE | Search/profile discovery exists; enforce profile/media visibility on every result and compare client filters. | P1 |
-| Moderation and support | PARTIALLY COMPLETE | Report/block/account deletion paths exist; moderation SLA, audit persistence and third-party deletion are unverified. | P1 |
+| Moderation and support | PARTIALLY COMPLETE | Report/block/account deletion paths exist; consent decisions now write a dedicated event history. Moderation SLA, log access/retention and third-party deletion are unverified. | P1 |
 | Administration and audit | PARTIALLY COMPLETE | RBAC and operational screens exist; verify all privileged mutations write durable audit records. | P1 |
 | Localization | IMPLEMENTED BUT NOT TESTED | Nine-language catalogs and web/mobile localization exist; complete dynamic validation and screenshot review in all required locales. | P2 |
 
@@ -105,7 +115,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 ## Ordered work plan
 
 1. **Close child/roster access paths:** membership list authorization is covered by helper and route tests, including an unverified club denial while public approved rosters remain visible. Continue HTTP authorization coverage for linked guardians and assigned coaches, then run role workflows on web/mobile.
-2. **Resolve child contact policy:** product/legal decision on adult-to-minor DMs, calls and comments, including whether consent enables contact or only profile/tournament access. Implement only after this rule is approved.
+2. **Child contact policy:** approved private-contact rule is implemented in the current local changes. Apply/review the additive event migration, add endpoint-level approval/revocation tests, run browser/native workflow tests, and get a separate decision for public comments, follows, reactions and mentions.
 3. **Payments:** verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. The two-session unique-claim race passed on disposable PostgreSQL; confirm the production index separately. Keep payment flags disabled.
 4. **Media and deletion:** choose private/signed delivery for restricted minor media; test copied URL access after consent withdrawal and account deletion; map retention exceptions.
 5. **Database integrity:** use an authorized read-only production schema/migration report to verify unique constraints, FKs, indexes and enum/check constraints. No sync/alter/migration in audit.

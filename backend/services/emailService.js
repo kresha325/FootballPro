@@ -334,6 +334,74 @@ const emailTemplates = {
       html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#111"><h2>Autorizimi prindëror u regjistrua</h2><p>Autorizimi për llogarinë sportive të <strong>${name}</strong> u regjistrua pas deklarimit tuaj.</p><p>Ruajeni këtë email. Nga kjo faqe mund ta tërhiqni autorizimin në çdo kohë.</p><a href="${url}" style="background:#0f766e;color:#fff;padding:14px 24px;text-decoration:none;border-radius:8px;display:inline-block">Menaxho ose tërhiq autorizimin</a><p style="color:#64748b;font-size:13px">Nëse nuk e keni bërë këtë kërkesë, kontaktoni mbështetjen e X TALENTI.</p></div>`,
     };
   },
+  parentCommunicationConsent: (athleteName, adultName, clubName, channel, token, language = 'sq') => {
+    const safe = (value) => String(value || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const languageKey = String(language || 'sq').toLowerCase();
+    const copy = {
+      sq: { subject: 'X TALENTI — kërkesë për pëlqim komunikimi', title: 'Pëlqim i posaçëm për komunikim', intro: 'Kërkohet vendimi yt për komunikimin e të miturit me këtë person.', athlete: 'Atleti', adult: 'Personi', club: 'Klubi', scope: 'Lloji i komunikimit', button: 'Shqyrto kërkesën', note: 'Ky miratim nuk ndryshon pëlqimin e llogarisë ose dukshmërisë së profilit. Mund ta tërheqësh në çdo kohë.' },
+      en: { subject: 'X TALENTI — communication consent request', title: 'Specific communication consent', intro: 'Your decision is needed for this adult to communicate with the minor.', athlete: 'Athlete', adult: 'Adult', club: 'Club', scope: 'Communication type', button: 'Review request', note: 'This approval does not change account or profile-visibility consent. You may withdraw it at any time.' },
+      de: { subject: 'X TALENTI — Zustimmung zur Kommunikation', title: 'Gezielte Kommunikationsfreigabe', intro: 'Deine Entscheidung ist erforderlich, damit diese erwachsene Person mit dem Minderjährigen kommunizieren darf.', athlete: 'Athlet', adult: 'Erwachsene Person', club: 'Verein', scope: 'Kommunikationsart', button: 'Anfrage prüfen', note: 'Diese Zustimmung ändert weder die Konto- noch die Profilfreigabe. Du kannst sie jederzeit widerrufen.' },
+      fr: { subject: 'X TALENTI — demande de consentement', title: 'Consentement spécifique à la communication', intro: 'Votre décision est nécessaire pour permettre à cet adulte de communiquer avec le mineur.', athlete: 'Athlète', adult: 'Adulte', club: 'Club', scope: 'Type de communication', button: 'Examiner la demande', note: 'Cette autorisation ne modifie pas le consentement du compte ou de visibilité du profil. Vous pouvez la retirer à tout moment.' },
+      it: { subject: 'X TALENTI — richiesta di consenso', title: 'Consenso specifico alla comunicazione', intro: 'È necessaria la tua decisione per consentire a questo adulto di comunicare con il minore.', athlete: 'Atleta', adult: 'Adulto', club: 'Club', scope: 'Tipo di comunicazione', button: 'Esamina la richiesta', note: 'Questa autorizzazione non modifica il consenso dell’account o della visibilità del profilo. Puoi revocarla in qualsiasi momento.' },
+      es: { subject: 'X TALENTI — solicitud de consentimiento', title: 'Consentimiento específico de comunicación', intro: 'Necesitamos tu decisión para que este adulto pueda comunicarse con el menor.', athlete: 'Atleta', adult: 'Adulto', club: 'Club', scope: 'Tipo de comunicación', button: 'Revisar solicitud', note: 'Esta autorización no cambia el consentimiento de la cuenta ni la visibilidad del perfil. Puedes retirarla cuando quieras.' },
+      ro: { subject: 'X TALENTI — solicitare de consimțământ', title: 'Consimțământ specific pentru comunicare', intro: 'Este necesară decizia ta pentru ca acest adult să comunice cu minorul.', athlete: 'Sportiv', adult: 'Adult', club: 'Club', scope: 'Tipul comunicării', button: 'Examinează cererea', note: 'Această aprobare nu modifică acordul pentru cont sau vizibilitatea profilului. O poți retrage oricând.' },
+      hr: { subject: 'X TALENTI — zahtjev za suglasnost', title: 'Posebna suglasnost za komunikaciju', intro: 'Potrebna je tvoja odluka kako bi ova odrasla osoba mogla komunicirati s maloljetnikom.', athlete: 'Sportaš', adult: 'Odrasla osoba', club: 'Klub', scope: 'Vrsta komunikacije', button: 'Pregledaj zahtjev', note: 'Ova suglasnost ne mijenja odobrenje računa ni vidljivost profila. Možeš je povući u bilo kojem trenutku.' },
+      tr: { subject: 'X TALENTI — iletişim izni talebi', title: 'Belirli iletişim izni', intro: 'Bu yetişkinin reşit olmayan kişiyle iletişim kurabilmesi için kararın gerekiyor.', athlete: 'Sporcu', adult: 'Yetişkin', club: 'Kulüp', scope: 'İletişim türü', button: 'Talebi incele', note: 'Bu onay hesap veya profil görünürlüğü iznini değiştirmez. İstediğin zaman geri çekebilirsin.' },
+    }[languageKey] || null;
+    const c = copy || {
+      subject: 'X TALENTI — communication consent request', title: 'Specific communication consent',
+      intro: 'Your decision is needed for this adult to communicate with the minor.', athlete: 'Athlete', adult: 'Adult', club: 'Club', scope: 'Communication type', button: 'Review request',
+      note: 'This approval does not change account or profile-visibility consent. You may withdraw it at any time.',
+    };
+    const confirmUrl = buildParentConfirmUrl(token);
+    const channelNames = {
+      sq: { direct_message: 'Mesazhe private', group_message: 'Mesazhe në grup', video_call: 'Telefonata me video', private_live_invitation: 'Ftesa private live', guardian_mediated_group: 'Grup komunikimi me kujdestarin' },
+      en: { direct_message: 'Private messages', group_message: 'Group messages', video_call: 'Video calls', private_live_invitation: 'Private live invitations', guardian_mediated_group: 'Guardian-mediated group' },
+      de: { direct_message: 'Private Nachrichten', group_message: 'Gruppennachrichten', video_call: 'Videoanrufe', private_live_invitation: 'Private Live-Einladungen', guardian_mediated_group: 'Gruppe mit erziehungsberechtigter Person' },
+      fr: { direct_message: 'Messages privés', group_message: 'Messages de groupe', video_call: 'Appels vidéo', private_live_invitation: 'Invitations privées au direct', guardian_mediated_group: 'Groupe avec le tuteur' },
+      it: { direct_message: 'Messaggi privati', group_message: 'Messaggi di gruppo', video_call: 'Videochiamate', private_live_invitation: 'Inviti privati alle dirette', guardian_mediated_group: 'Gruppo con il tutore' },
+      es: { direct_message: 'Mensajes privados', group_message: 'Mensajes de grupo', video_call: 'Videollamadas', private_live_invitation: 'Invitaciones privadas al directo', guardian_mediated_group: 'Grupo con el tutor' },
+      ro: { direct_message: 'Mesaje private', group_message: 'Mesaje de grup', video_call: 'Apeluri video', private_live_invitation: 'Invitații private la transmisiune', guardian_mediated_group: 'Grup cu tutorele' },
+      hr: { direct_message: 'Privatne poruke', group_message: 'Grupne poruke', video_call: 'Videopozivi', private_live_invitation: 'Privatni pozivi u prijenos uživo', guardian_mediated_group: 'Grupa sa skrbnikom' },
+      tr: { direct_message: 'Özel mesajlar', group_message: 'Grup mesajları', video_call: 'Görüntülü aramalar', private_live_invitation: 'Özel canlı yayın davetleri', guardian_mediated_group: 'Veliyle oluşturulan grup' },
+    }[languageKey] || {};
+    return {
+      subject: `${c.subject} — ${safe(athleteName)}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#111"><h2>${c.title}</h2><p>${c.intro}</p><dl><dt>${c.athlete}</dt><dd><strong>${safe(athleteName)}</strong></dd><dt>${c.adult}</dt><dd><strong>${safe(adultName)}</strong></dd>${clubName ? `<dt>${c.club}</dt><dd><strong>${safe(clubName)}</strong></dd>` : ''}<dt>${c.scope}</dt><dd><strong>${safe(channelNames[channel] || channel)}</strong></dd></dl><p>${c.note}</p><a href="${safe(confirmUrl)}" style="background:#0f766e;color:#fff;padding:14px 24px;text-decoration:none;border-radius:8px;display:inline-block">${c.button}</a><p style="color:#64748b;font-size:12px;word-break:break-all">${safe(confirmUrl)}</p></div>`,
+    };
+  },
+  parentCommunicationManagement: (athleteName, adultName, channel, managementUrl, language = 'sq') => {
+    const safe = (value) => String(value || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const languageKey = String(language || 'sq').toLowerCase();
+    const copy = {
+      sq: ['X TALENTI — menaxho pëlqimin e komunikimit', 'Pëlqimi për komunikim u regjistrua', 'Miratimi për', 'për të komunikuar me', 'u regjistrua për', 'Mund ta tërheqësh këtë miratim specifik në çdo kohë.', 'Menaxho ose tërhiq'],
+      en: ['X TALENTI — manage communication approval', 'Communication approval recorded', 'Approval for', 'to communicate with', 'was recorded for', 'You can withdraw this specific approval at any time.', 'Manage or withdraw'],
+      de: ['X TALENTI — Kommunikationsfreigabe verwalten', 'Kommunikationsfreigabe gespeichert', 'Die Freigabe für', 'zur Kommunikation mit', 'wurde erteilt für', 'Du kannst diese konkrete Freigabe jederzeit widerrufen.', 'Verwalten oder widerrufen'],
+      fr: ['X TALENTI — gérer l’accord de communication', 'Accord de communication enregistré', 'L’accord pour', 'de communiquer avec', 'a été enregistré pour', 'Vous pouvez retirer cet accord spécifique à tout moment.', 'Gérer ou retirer'],
+      it: ['X TALENTI — gestisci il consenso alla comunicazione', 'Consenso alla comunicazione registrato', 'Il consenso per', 'a comunicare con', 'è stato registrato per', 'Puoi revocare questo consenso specifico in qualsiasi momento.', 'Gestisci o revoca'],
+      es: ['X TALENTI — gestionar la aprobación de comunicación', 'Aprobación de comunicación registrada', 'La aprobación para que', 'se comunique con', 'se registró para', 'Puedes retirar esta aprobación específica en cualquier momento.', 'Gestionar o retirar'],
+      ro: ['X TALENTI — gestionează aprobarea comunicării', 'Aprobarea comunicării a fost înregistrată', 'Aprobarea pentru ca', 'să comunice cu', 'a fost înregistrată pentru', 'Poți retrage această aprobare specifică oricând.', 'Gestionează sau retrage'],
+      hr: ['X TALENTI — upravljanje odobrenjem komunikacije', 'Odobrenje komunikacije je zabilježeno', 'Odobrenje za', 'komunikaciju s', 'zabilježeno je za', 'Ovo posebno odobrenje možeš povući u bilo kojem trenutku.', 'Upravljaj ili povuci'],
+      tr: ['X TALENTI — iletişim onayını yönet', 'İletişim onayı kaydedildi', 'Şu kişinin', 'iletişim kurması için verilen onay', 'şu iletişim türü için kaydedildi', 'Bu özel onayı istediğin zaman geri çekebilirsin.', 'Yönet veya geri çek'],
+    }[languageKey] || null;
+    const c = copy || ['X TALENTI — manage communication approval', 'Communication approval recorded', 'Approval for', 'to communicate with', 'was recorded for', 'You can withdraw this specific approval at any time.', 'Manage or withdraw'];
+    const channelLabels = {
+      sq: { direct_message: 'mesazhe private', group_message: 'mesazhe në grup', video_call: 'telefonata me video', private_live_invitation: 'ftesa private live', guardian_mediated_group: 'grup me kujdestarin' },
+      en: { direct_message: 'private messages', group_message: 'group messages', video_call: 'video calls', private_live_invitation: 'private live invitations', guardian_mediated_group: 'guardian-mediated group' },
+      de: { direct_message: 'private Nachrichten', group_message: 'Gruppennachrichten', video_call: 'Videoanrufe', private_live_invitation: 'private Live-Einladungen', guardian_mediated_group: 'Gruppe mit erziehungsberechtigter Person' },
+      fr: { direct_message: 'messages privés', group_message: 'messages de groupe', video_call: 'appels vidéo', private_live_invitation: 'invitations privées au direct', guardian_mediated_group: 'groupe avec le tuteur' },
+      it: { direct_message: 'messaggi privati', group_message: 'messaggi di gruppo', video_call: 'videochiamate', private_live_invitation: 'inviti privati alle dirette', guardian_mediated_group: 'gruppo con il tutore' },
+      es: { direct_message: 'mensajes privados', group_message: 'mensajes de grupo', video_call: 'videollamadas', private_live_invitation: 'invitaciones privadas al directo', guardian_mediated_group: 'grupo con el tutor' },
+      ro: { direct_message: 'mesaje private', group_message: 'mesaje de grup', video_call: 'apeluri video', private_live_invitation: 'invitații private la transmisiune', guardian_mediated_group: 'grup cu tutorele' },
+      hr: { direct_message: 'privatne poruke', group_message: 'grupne poruke', video_call: 'videopozivi', private_live_invitation: 'privatni pozivi u prijenos uživo', guardian_mediated_group: 'grupa sa skrbnikom' },
+      tr: { direct_message: 'özel mesajlar', group_message: 'grup mesajları', video_call: 'görüntülü aramalar', private_live_invitation: 'özel canlı yayın davetleri', guardian_mediated_group: 'veliyle oluşturulan grup' },
+    }[languageKey] || {};
+    const channelLabel = channelLabels[channel] || channel;
+    return {
+      subject: c[0],
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#111"><h2>${c[1]}</h2><p>${c[2]} <strong>${safe(adultName)}</strong> ${c[3]} <strong>${safe(athleteName)}</strong> ${c[4]} <strong>${safe(channelLabel)}</strong>.</p><p>${c[5]}</p><a href="${safe(managementUrl)}" style="background:#0f766e;color:#fff;padding:14px 24px;text-decoration:none;border-radius:8px;display:inline-block">${c[6]}</a></div>`,
+    };
+  },
 
   importantNotice: (firstName, title, message, url, language = 'sq') => {
     const c = notificationCopy(language);

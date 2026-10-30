@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const GuardianConsent = require('../models/GuardianConsent');
+const GuardianConsentEvent = require('../models/GuardianConsentEvent');
 const ClubMember = require('../models/ClubMember');
 const sequelize = require('../config/database');
 const { createRawToken, hashToken: tokenHash, isUnexpired: isFutureDate } = require('../utils/guardianConsentSecurity');
@@ -8,6 +9,12 @@ const { sendEmail } = require('../services/emailService');
 const { getApiPublicBase } = require('../config/email');
 const { needsParentVerification, syncOverallVerified } = require('../utils/userVerification');
 const { hasActiveGuardianConsent } = require('../utils/parentalAuthorization');
+const { Op } = require('sequelize');
+const { CHANNELS: COMMUNICATION_CHANNELS, isMinorAthlete, hasCommunicationConsent } = require('../utils/minorCommunicationPolicy');
+const { COACHING_STAFF_ROLES, isActiveCoachAssignment, isVerifiedClub } = require('../utils/managedAthleteRegistration');
+const ClubStaff = require('../models/ClubStaff');
+const VideoCall = require('../models/VideoCall');
+const ScheduledCall = require('../models/ScheduledCall');
 
 const CONSENT_POLICY_VERSION = process.env.PARENTAL_CONSENT_POLICY_VERSION || '2026-10-v1';
 const CONSENT_SCOPE = ['account_access', 'sports_profile', 'tournaments', 'safety_moderation'];
@@ -136,6 +143,80 @@ function revokePageHtml({ token, error }) {
   });
 }
 
+function communicationConfirmPageHtml({ token, athleteName, adultName, clubName, channel, error }) {
+  if (error) return shellHtml({ title: 'X TALENTI — Pëlqimi për komunikim', body: `<h1>Pëlqimi për komunikim</h1><p class="err">${escapeHtml(error)}</p>` });
+  const labels = {
+    [COMMUNICATION_CHANNELS.DIRECT_MESSAGE]: 'mesazhe private',
+    [COMMUNICATION_CHANNELS.GROUP_MESSAGE]: 'mesazhe në grup',
+    [COMMUNICATION_CHANNELS.VIDEO_CALL]: 'telefonata me video',
+    [COMMUNICATION_CHANNELS.PRIVATE_LIVE_INVITATION]: 'ftesa private live',
+    [COMMUNICATION_CHANNELS.GUARDIAN_MEDIATED_GROUP]: 'grup komunikimi ku ti je pjesëmarrës',
+  };
+  const actionUrl = escapeHtml(`${getApiPublicBase()}/api/verification/parent-confirm`);
+  return shellHtml({
+    title: 'X TALENTI — Pëlqim specifik',
+    body: `<h1>Pëlqim specifik për komunikim</h1><p>Kërkohet vendimi yt për komunikimin e <strong>${escapeHtml(athleteName)}</strong> me <strong>${escapeHtml(adultName)}</strong>${clubName ? ` nga klubi <strong>${escapeHtml(clubName)}</strong>` : ''} përmes <strong>${escapeHtml(labels[channel] || 'komunikimit të kërkuar')}</strong>.</p><p>Ky pëlqim është i veçantë nga autorizimi i llogarisë dhe dukshmëria e profilit. Mund ta tërheqësh në çdo kohë nga linku i menaxhimit.</p><form method="POST" action="${actionUrl}" accept-charset="UTF-8"><input type="hidden" name="token" value="${escapeHtml(token)}"/><label for="guardianName">Emri yt i plotë</label><input id="guardianName" name="guardianName" required maxlength="160" autocomplete="name" style="width:100%;box-sizing:border-box;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:7px"/><label for="relationship">Marrëdhënia me të miturin</label><select id="relationship" name="relationship" required style="width:100%;box-sizing:border-box;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:7px"><option value="">Zgjidh</option><option value="parent">Prind</option><option value="legal_guardian">Kujdestar ligjor</option></select><label class="muted"><input type="checkbox" name="attestGuardian" value="yes" required/> Konfirmoj se jam prind/kujdestar ligjor dhe jap këtë pëlqim posaçërisht për personin dhe mënyrën e komunikimit të shënuar më sipër.</label><button type="submit">Mirato këtë komunikim</button></form>`,
+  });
+}
+
+function communicationChannelsForRole(role) {
+  if (role === 'coach') return Object.values(COMMUNICATION_CHANNELS);
+  if (role === 'scout' || role === 'manager') return [COMMUNICATION_CHANNELS.GUARDIAN_MEDIATED_GROUP];
+  return [];
+}
+
+async function validateCommunicationRequest({ athlete, adult, scope, transaction = null }) {
+  if (!isMinorAthlete(athlete) || !adult || adult.deletedAt || adult.bannedAt) return false;
+  const role = String(adult.role || '').toLowerCase();
+  const channels = communicationChannelsForRole(role);
+  if (!channels.includes(scope?.channels?.[0])) return false;
+  if (role === 'coach') {
+    const clubId = Number(scope.clubId);
+    if (!Number.isInteger(clubId) || clubId < 1) return false;
+    const membership = await ClubMember.findOne({
+      where: { athleteId: Number(athlete.id), clubId, status: 'approved', leftAt: null },
+      ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}),
+    });
+    if (!membership) return false;
+    const [club, assignments] = await Promise.all([
+      User.findByPk(clubId, { attributes: ['id', 'role', 'adminVerified', 'deletedAt', 'bannedAt'], ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}) }),
+      ClubStaff.findAll({ where: { clubId, staffId: Number(adult.id), status: 'active' }, ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}) }),
+    ]);
+    return isVerifiedClub(club) && assignments.some((assignment) =>
+      COACHING_STAFF_ROLES.has(String(assignment.staffRole || '').toLowerCase()) &&
+      isActiveCoachAssignment(adult, assignment, clubId));
+  }
+  return ['scout', 'manager'].includes(role) && adult.adminVerified === true &&
+    scope.channels[0] === COMMUNICATION_CHANNELS.GUARDIAN_MEDIATED_GROUP;
+}
+
+function communicationRevokePageHtml({ token, error, communication = false }) {
+  if (error) return shellHtml({ title: 'X TALENTI — Pëlqimi prindëror', body: `<h1>Menaxhimi i pëlqimit</h1><p class="err">${escapeHtml(error)}</p>` });
+  const actionUrl = escapeHtml(`${getApiPublicBase()}/api/verification/parent-revoke`);
+  const title = communication ? 'Tërhiq pëlqimin për komunikim' : 'Tërhiq pëlqimin prindëror';
+  const body = communication
+    ? 'Vetëm miratimi specifik për komunikim do të tërhiqet. Autorizimi i llogarisë sportive nuk ndryshon.'
+    : 'Kjo do ta kufizojë menjëherë llogarinë e të miturit dhe do të tërheqë pëlqimet specifike të komunikimit.';
+  return shellHtml({ title: `X TALENTI — ${title}`, body: `<h1>${title}</h1><p>${body}</p><form method="POST" action="${actionUrl}"><input type="hidden" name="token" value="${escapeHtml(token)}"/><button type="submit">${title}</button></form>` });
+}
+
+async function communicationDetails(consent, athlete) {
+  const scope = consent?.consentScope;
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) return null;
+  const adultId = Number(scope.adultUserId);
+  const channel = String(scope.channels?.[0] || '');
+  if (!Number.isInteger(adultId) || adultId < 1 || !communicationChannelsForRole('coach').includes(channel)) return null;
+  const adult = await User.findByPk(adultId, { attributes: ['id', 'firstName', 'lastName', 'role', 'adminVerified', 'deletedAt', 'bannedAt'] });
+  if (!await validateCommunicationRequest({ athlete, adult, scope })) return null;
+  const club = scope.clubId ? await User.findByPk(Number(scope.clubId), { attributes: ['id', 'firstName', 'lastName'] }) : null;
+  return {
+    adult,
+    adultName: `${adult?.firstName || ''} ${adult?.lastName || ''}`.trim() || 'Përdorues i verifikuar',
+    clubName: `${club?.firstName || ''} ${club?.lastName || ''}`.trim(),
+    channel,
+  };
+}
+
 // Request parental verification (authenticated athlete)
 exports.parentRequest = async (req, res) => {
   try {
@@ -172,7 +253,7 @@ exports.parentRequest = async (req, res) => {
         { verificationTokenHash: null, verificationTokenExpiresAt: null },
         { where: { minorUserId: user.id, verifiedAt: null, revokedAt: null }, transaction }
       );
-      await GuardianConsent.create({
+      const accountConsent = await GuardianConsent.create({
         minorUserId: user.id,
         guardianEmail: normalizedParent,
         guardianName: null,
@@ -183,6 +264,14 @@ exports.parentRequest = async (req, res) => {
         verificationMethod: 'guardian_email_attestation',
         verificationTokenHash: tokenHash(token),
         verificationTokenExpiresAt: expiresAt,
+      }, { transaction });
+      await GuardianConsentEvent.create({
+        consentId: accountConsent.id,
+        minorUserId: user.id,
+        actorUserId: user.id,
+        actorType: 'athlete',
+        eventType: 'account_consent_requested',
+        metadata: { policyVersion: CONSENT_POLICY_VERSION },
       }, { transaction });
       user.parentEmail = normalizedParent;
       user.parentVerificationToken = null;
@@ -214,6 +303,152 @@ exports.parentRequest = async (req, res) => {
   }
 };
 
+/** Coach/scout/manager requests one guardian approval for one adult + channel. */
+exports.requestCommunicationConsent = async (req, res) => {
+  try {
+    const athleteId = Number(req.body?.athleteId);
+    const requestedChannel = String(req.body?.channel || '');
+    const requestedClubId = req.body?.clubId == null ? null : Number(req.body.clubId);
+    if (!Number.isInteger(athleteId) || athleteId < 1) return res.status(400).json({ msg: 'Atleti nuk është i vlefshëm.' });
+
+    const [adult, athlete] = await Promise.all([
+      User.findByPk(Number(req.user.id)),
+      User.findByPk(athleteId),
+    ]);
+    if (!adult || adult.deletedAt || adult.bannedAt) return res.status(403).json({ msg: 'Llogaria nuk është aktive.' });
+    if (!athlete || !isMinorAthlete(athlete) || !athlete.parentVerified || !await hasActiveGuardianConsent(athlete.id)) {
+      return res.status(403).json({ msg: 'Atleti nuk ka autorizim aktiv të kujdestarit.' });
+    }
+    const role = String(adult.role || '').toLowerCase();
+    const allowedChannels = communicationChannelsForRole(role);
+    if (!allowedChannels.includes(requestedChannel)) return res.status(403).json({ msg: 'Ky rol nuk mund ta kërkojë këtë lloj komunikimi.' });
+    if (!athlete.parentEmail || String(athlete.parentEmail).trim().toLowerCase() === String(athlete.email || '').trim().toLowerCase()) {
+      return res.status(409).json({ msg: 'Nuk ka kontakt të vlefshëm kujdestari për kërkesën.' });
+    }
+
+    let clubId = null;
+    if (role === 'coach') {
+      const memberships = await ClubMember.findAll({
+        where: { athleteId, status: 'approved', leftAt: null },
+      });
+      const clubIds = [...new Set(memberships.map((membership) => Number(membership.clubId)).filter(Number.isInteger))];
+      const candidates = requestedClubId == null ? clubIds : clubIds.filter((id) => id === requestedClubId);
+      for (const candidate of candidates) {
+        const valid = await validateCommunicationRequest({
+          athlete,
+          adult,
+          scope: { adultUserId: adult.id, clubId: candidate, channels: [requestedChannel] },
+        });
+        if (valid) { clubId = candidate; break; }
+      }
+      if (!clubId) return res.status(403).json({ msg: 'Nuk ke caktim aktiv në klubin e atletit.' });
+    } else if (adult.adminVerified !== true) {
+      return res.status(403).json({ msg: 'Llogaria profesionale duhet të jetë e verifikuar.' });
+    }
+
+    if (await hasCommunicationConsent({
+      GuardianConsent,
+      minorUserId: athleteId,
+      adultUserId: adult.id,
+      channel: requestedChannel,
+      clubId,
+    })) {
+      return res.status(200).json({ success: true, alreadyAuthorized: true, emailSent: false, channel: requestedChannel });
+    }
+
+    const pendingRows = await GuardianConsent.findAll({
+      where: { minorUserId: athleteId, consentPurpose: 'minor_communication', verifiedAt: null, revokedAt: null },
+    });
+    for (const pending of pendingRows) {
+      if (Number(pending.consentScope?.adultUserId) === Number(adult.id) &&
+        pending.consentScope?.channels?.includes(requestedChannel)) {
+        pending.verificationTokenHash = null;
+        pending.verificationTokenExpiresAt = new Date();
+        await pending.save();
+      }
+    }
+
+    const rawToken = createRawToken();
+    const expiresAt = new Date(Date.now() + PARENT_TOKEN_TTL_MS);
+    const scope = {
+      version: 1,
+      adultUserId: Number(adult.id),
+      adultRole: role,
+      clubId,
+      channels: [requestedChannel],
+      requestedAt: new Date().toISOString(),
+      requestedByUserId: Number(adult.id),
+    };
+    let consent;
+    await sequelize.transaction(async (transaction) => {
+      consent = await GuardianConsent.create({
+        minorUserId: athlete.id,
+        guardianEmail: String(athlete.parentEmail).trim().toLowerCase(),
+        consentPurpose: 'minor_communication',
+        consentScope: scope,
+        policyVersion: `${CONSENT_POLICY_VERSION}-communication-v1`,
+        verificationMethod: 'guardian_email_attestation',
+        verificationTokenHash: tokenHash(rawToken),
+        verificationTokenExpiresAt: expiresAt,
+      }, { transaction });
+      await GuardianConsentEvent.create({
+        consentId: consent.id,
+        minorUserId: athlete.id,
+        actorUserId: adult.id,
+        actorType: 'professional',
+        eventType: 'communication_consent_requested',
+        metadata: { adultUserId: Number(adult.id), adultRole: role, clubId, channel: requestedChannel, policyVersion: `${CONSENT_POLICY_VERSION}-communication-v1` },
+      }, { transaction });
+    });
+    const athleteName = `${athlete.firstName || ''} ${athlete.lastName || ''}`.trim() || 'Atleti';
+    const adultName = `${adult.firstName || ''} ${adult.lastName || ''}`.trim() || 'Përdorues i verifikuar';
+    const club = clubId ? await User.findByPk(clubId, { attributes: ['firstName', 'lastName'] }) : null;
+    const clubName = `${club?.firstName || ''} ${club?.lastName || ''}`.trim();
+    const sent = await sendEmail(
+      consent.guardianEmail,
+      'parentCommunicationConsent',
+      athleteName,
+      adultName,
+      clubName,
+      requestedChannel,
+      rawToken,
+      athlete.language || 'sq'
+    );
+    if (!sent.success) {
+      console.warn('Communication consent email not sent for minor account id:', athlete.id);
+      await GuardianConsentEvent.create({
+        consentId: consent.id,
+        minorUserId: athlete.id,
+        actorUserId: adult.id,
+        actorType: 'system',
+        eventType: 'communication_email_failed',
+        metadata: { channel: requestedChannel },
+      });
+      return res.status(503).json({ success: false, emailSent: false, msg: 'Email-i i kërkesës nuk u dërgua. Provo përsëri më vonë.' });
+    }
+    await GuardianConsentEvent.create({
+      consentId: consent.id,
+      minorUserId: athlete.id,
+      actorUserId: adult.id,
+      actorType: 'system',
+      eventType: 'communication_email_sent',
+      metadata: { channel: requestedChannel },
+    });
+    return res.status(202).json({
+      success: true,
+      emailSent: true,
+      consentId: consent.id,
+      channel: requestedChannel,
+      status: 'pending',
+      expiresAt: expiresAt.toISOString(),
+      msg: 'Kërkesa iu dërgua kujdestarit për shqyrtim.',
+    });
+  } catch (error) {
+    console.error('Communication consent request failed:', error?.message || error);
+    return res.status(500).json({ msg: 'Kërkesa për pëlqim nuk u përfundua.' });
+  }
+};
+
 /**
  * GET: show confirm button page (WhatsApp link preview must NOT consume the token).
  */
@@ -241,6 +476,17 @@ exports.parentConfirmPage = async (req, res) => {
     }
 
     const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
+    if (consent.consentPurpose === 'minor_communication') {
+      const details = await communicationDetails(consent, user);
+      if (!details) return res.status(400).send(communicationConfirmPageHtml({ error: 'Kërkesa nuk është më e vlefshme ose caktimi nuk është aktiv.' }));
+      return res.send(communicationConfirmPageHtml({
+        token,
+        athleteName,
+        adultName: details.adultName,
+        clubName: details.clubName,
+        channel: details.channel,
+      }));
+    }
     return res.send(confirmPageHtml({ token, athleteName }));
   } catch {
     console.error('Parent confirmation page failed');
@@ -272,7 +518,8 @@ exports.parentConfirm = async (req, res) => {
     const guardianName = String(req.body?.guardianName || '').trim().slice(0, 160);
     const relationship = String(req.body?.relationship || '');
     if (!guardianName || !['parent', 'legal_guardian'].includes(relationship) || req.body?.attestGuardian !== 'yes') {
-      return res.status(400).send(confirmPageHtml({ error: 'Plotëso emrin, marrëdhënien dhe deklarimin e kujdestarit.' }));
+      const page = found.consent.consentPurpose === 'minor_communication' ? communicationConfirmPageHtml : confirmPageHtml;
+      return res.status(400).send(page({ error: 'Plotëso emrin, marrëdhënien dhe deklarimin e kujdestarit.' }));
     }
     const managementToken = createRawToken();
     const now = new Date();
@@ -283,7 +530,31 @@ exports.parentConfirm = async (req, res) => {
         lock: transaction.LOCK.UPDATE,
       });
       const lockedUser = await User.findByPk(user.id, { transaction, lock: transaction.LOCK.UPDATE });
-      if (!consent || !lockedUser || !isFutureDate(consent.verificationTokenExpiresAt) || consent.verifiedAt || !needsParentVerification(lockedUser)) return false;
+      const communication = consent?.consentPurpose === 'minor_communication';
+      if (!consent || !lockedUser || !isFutureDate(consent.verificationTokenExpiresAt) || consent.verifiedAt ||
+        (!communication && !needsParentVerification(lockedUser))) return false;
+
+      let communicationScope = null;
+      if (communication) {
+        communicationScope = consent.consentScope;
+        const activeAccountConsent = await GuardianConsent.findOne({
+          where: {
+            minorUserId: lockedUser.id,
+            consentPurpose: 'minor_account_authorization',
+            verifiedAt: { [Op.ne]: null },
+            revokedAt: null,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        const adult = await User.findByPk(Number(communicationScope?.adultUserId), {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        if (!activeAccountConsent || !lockedUser.parentVerified ||
+          String(lockedUser.parentEmail || '').trim().toLowerCase() !== String(consent.guardianEmail || '').trim().toLowerCase() ||
+          !await validateCommunicationRequest({ athlete: lockedUser, adult, scope: communicationScope, transaction })) return false;
+      }
       consent.guardianName = guardianName;
       consent.relationship = relationship;
       consent.verificationMethod = 'guardian_email_attestation';
@@ -293,6 +564,19 @@ exports.parentConfirm = async (req, res) => {
       consent.managementTokenHash = tokenHash(managementToken);
       consent.managementTokenExpiresAt = new Date(Date.now() + MANAGEMENT_TOKEN_TTL_MS);
       await consent.save({ transaction });
+      await GuardianConsentEvent.create({
+        consentId: consent.id,
+        minorUserId: lockedUser.id,
+        actorUserId: null,
+        actorType: 'guardian_email',
+        eventType: communication ? 'communication_consent_approved' : 'account_consent_approved',
+        metadata: communication
+          ? { adultUserId: Number(communicationScope?.adultUserId), clubId: Number(communicationScope?.clubId) || null, channel: communicationScope?.channels?.[0] }
+          : { policyVersion: consent.policyVersion },
+        eventAt: now,
+      }, { transaction });
+      if (communication) return { user: lockedUser, communication: true, scope: communicationScope };
+
       lockedUser.parentVerified = true;
       lockedUser.parentEmail = consent.guardianEmail;
       lockedUser.parentVerificationToken = null;
@@ -306,15 +590,38 @@ exports.parentConfirm = async (req, res) => {
           transaction,
         }
       );
-      return lockedUser;
+      return { user: lockedUser, communication: false, scope: null };
     });
-    if (!saved) return res.status(400).send(confirmPageHtml({ error: 'Linku është skaduar, përdorur, ose llogaria nuk kualifikohet.' }));
+    if (!saved) return res.status(400).send(found.consent.consentPurpose === 'minor_communication'
+      ? communicationConfirmPageHtml({ error: 'Linku ka skaduar, është përdorur ose kërkesa nuk kualifikohet më.' })
+      : confirmPageHtml({ error: 'Linku është skaduar, përdorur, ose llogaria nuk kualifikohet.' }));
+
+    const savedUser = saved.user;
+    const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
+    const managementUrl = `${getApiPublicBase()}/api/verification/parent-revoke?token=${encodeURIComponent(managementToken)}`;
+    if (saved.communication) {
+      const details = await communicationDetails({ consentScope: saved.scope }, savedUser);
+      const sent = await sendEmail(
+        found.consent.guardianEmail,
+        'parentCommunicationManagement',
+        athleteName,
+        details?.adultName || 'Përdorues i verifikuar',
+        details?.channel || saved.scope.channels?.[0],
+        managementUrl,
+        user.language || 'sq'
+      );
+      if (!sent.success) console.warn('Communication consent management email not sent for minor account id:', savedUser.id);
+      return res.status(200).send(shellHtml({
+        title: 'X TALENTI — Pëlqimi u regjistrua',
+        body: `<h1 class="ok">✓ Pëlqimi u regjistrua</h1><p>Miratimi yt specifik për komunikimin e <strong>${escapeHtml(athleteName)}</strong> u aktivizua.</p><p class="muted">Mund ta tërheqësh në çdo kohë. Kjo nuk ndryshon pëlqimin bazë të llogarisë sportive.</p><a class="btn btn-secondary" href="${escapeHtml(managementUrl)}">Menaxho ose tërhiq pëlqimin</a>`,
+      }));
+    }
 
     // Once guardian authorization is active, synchronize the club-managed athlete
     // into the existing tournament squad structures; pending minors stay excluded.
     try {
       const managedMemberships = await ClubMember.findAll({
-        where: { athleteId: saved.id, creationSource: 'club_managed_registration', status: 'approved' },
+        where: { athleteId: savedUser.id, creationSource: 'club_managed_registration', status: 'approved' },
       });
       for (const membership of managedMemberships) {
         try {
@@ -328,10 +635,8 @@ exports.parentConfirm = async (req, res) => {
       console.error('Managed athlete roster sync failed:', syncError?.message || syncError);
     }
 
-    const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Lojtari';
-    const managementUrl = `${getApiPublicBase()}/api/verification/parent-revoke?token=${encodeURIComponent(managementToken)}`;
     const sent = await sendEmail(found.consent.guardianEmail, 'parentConsentManagement', athleteName, managementUrl, user.language || 'sq');
-    if (!sent.success) console.warn('Guardian consent management email not sent for minor account id:', user.id);
+    if (!sent.success) console.warn('Guardian consent management email not sent for minor account id:', savedUser.id);
     return res.status(200).send(successPageHtml({ athleteName, managementUrl }));
   } catch {
     console.error('Guardian confirmation failed');
@@ -346,11 +651,11 @@ exports.parentRevokePage = async (req, res) => {
     const hash = token ? tokenHash(token) : '';
     const consent = hash ? await GuardianConsent.findOne({ where: { managementTokenHash: hash, revokedAt: null } }) : null;
     if (!consent || !isFutureDate(consent.managementTokenExpiresAt)) {
-      return res.status(400).send(revokePageHtml({ error: 'Linku nuk është i vlefshëm ose ka skaduar.' }));
+      return res.status(400).send(communicationRevokePageHtml({ error: 'Linku nuk është i vlefshëm ose ka skaduar.' }));
     }
-    return res.send(revokePageHtml({ token }));
+    return res.send(communicationRevokePageHtml({ token, communication: consent.consentPurpose === 'minor_communication' }));
   } catch {
-    return res.status(500).send(revokePageHtml({ error: 'Gabim serveri.' }));
+    return res.status(500).send(communicationRevokePageHtml({ error: 'Gabim serveri.' }));
   }
 };
 
@@ -361,15 +666,62 @@ exports.parentRevoke = async (req, res) => {
     const hash = token ? tokenHash(token) : '';
     if (!hash) return res.status(400).send(revokePageHtml({ error: 'Linku nuk është i vlefshëm.' }));
     let revokedUserId = null;
+    let communicationOnly = false;
+    let revokedAdultUserId = null;
     await sequelize.transaction(async (transaction) => {
       const consent = await GuardianConsent.findOne({ where: { managementTokenHash: hash, revokedAt: null }, transaction, lock: transaction.LOCK.UPDATE });
       if (!consent || !isFutureDate(consent.managementTokenExpiresAt)) throw new Error('INVALID_OR_EXPIRED');
       const user = await User.findByPk(consent.minorUserId, { transaction, lock: transaction.LOCK.UPDATE });
-      consent.revokedAt = new Date();
+      const revokedAt = new Date();
+      communicationOnly = consent.consentPurpose === 'minor_communication';
+      revokedAdultUserId = communicationOnly ? Number(consent.consentScope?.adultUserId) || null : null;
+      consent.revokedAt = revokedAt;
       consent.managementTokenHash = null;
       consent.managementTokenExpiresAt = null;
       await consent.save({ transaction });
+      await GuardianConsentEvent.create({
+        consentId: consent.id,
+        minorUserId: consent.minorUserId,
+        actorUserId: null,
+        actorType: 'guardian_email',
+        eventType: communicationOnly ? 'communication_consent_revoked' : 'account_consent_revoked',
+        metadata: communicationOnly
+          ? { adultUserId: revokedAdultUserId, channel: consent.consentScope?.channels?.[0] }
+          : { policyVersion: consent.policyVersion },
+        eventAt: revokedAt,
+      }, { transaction });
       if (user) {
+        revokedUserId = user.id;
+        if (communicationOnly) return;
+
+        // Base account-consent withdrawal also revokes every communication grant.
+        const communicationConsents = await GuardianConsent.findAll({
+          where: { minorUserId: user.id, consentPurpose: 'minor_communication', revokedAt: null },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        await GuardianConsent.update({
+          revokedAt,
+          verificationTokenHash: null,
+          verificationTokenExpiresAt: null,
+          managementTokenHash: null,
+          managementTokenExpiresAt: null,
+        }, {
+          where: { minorUserId: user.id, consentPurpose: 'minor_communication', revokedAt: null },
+          transaction,
+        });
+        for (const communicationConsent of communicationConsents) {
+          await GuardianConsentEvent.create({
+            consentId: communicationConsent.id,
+            minorUserId: user.id,
+            actorUserId: null,
+            actorType: 'guardian_email',
+            eventType: 'communication_consent_revoked_with_account',
+            metadata: { adultUserId: Number(communicationConsent.consentScope?.adultUserId) || null, channel: communicationConsent.consentScope?.channels?.[0] },
+            eventAt: revokedAt,
+          }, { transaction });
+        }
+
         // A withdrawn consent removes the managed athlete from active club
         // rosters immediately while preserving match and tournament history.
         const managedMemberships = await ClubMember.findAll({
@@ -389,18 +741,53 @@ exports.parentRevoke = async (req, res) => {
             });
           }
         }
-        revokedUserId = user.id;
         user.parentVerified = false;
         user.tokenVersion = Number(user.tokenVersion || 0) + 1;
         syncOverallVerified(user);
         await user.save({ transaction });
       }
     });
-    if (revokedUserId) req.app.get('io')?.in(String(revokedUserId)).disconnectSockets(true);
-    return res.send(shellHtml({ title: 'X TALENTI — Pëlqimi u tërhoq', body: '<h1 class="ok">Pëlqimi u tërhoq</h1><p>Llogaria e të miturit është kufizuar. Mund ta mbyllësh këtë faqe.</p>' }));
+    if (revokedUserId) {
+      // Consent withdrawal must stop active and already-scheduled private calls,
+      // while preserving their historical records.
+      try {
+        const pairWhere = communicationOnly && revokedAdultUserId
+          ? { [Op.or]: [
+            { callerId: revokedUserId, receiverId: revokedAdultUserId },
+            { callerId: revokedAdultUserId, receiverId: revokedUserId },
+          ] }
+          : { [Op.or]: [{ callerId: revokedUserId }, { receiverId: revokedUserId }] };
+        const activeCalls = await VideoCall.findAll({
+          where: { ...pairWhere, status: { [Op.in]: ['ringing', 'connected'] } },
+          attributes: ['id', 'callerId', 'receiverId'],
+        });
+        if (activeCalls.length) {
+          await VideoCall.update(
+            { status: 'ended', endTime: new Date() },
+            { where: { id: { [Op.in]: activeCalls.map((call) => call.id) }, status: { [Op.in]: ['ringing', 'connected'] } } }
+          );
+          for (const call of activeCalls) {
+            const io = req.app.get('io');
+            io?.to(String(call.callerId)).emit('call:ended', { callId: call.id, reason: 'guardian_consent_revoked' });
+            io?.to(String(call.receiverId)).emit('call:ended', { callId: call.id, reason: 'guardian_consent_revoked' });
+          }
+        }
+        await ScheduledCall.update(
+          { status: 'cancelled' },
+          { where: { ...pairWhere, status: 'scheduled' } }
+        );
+      } catch (callRevocationError) {
+        console.error('Call cleanup after guardian consent withdrawal failed:', callRevocationError?.message || callRevocationError);
+      }
+      req.app.get('io')?.in(String(revokedUserId)).disconnectSockets(true);
+    }
+    const body = communicationOnly
+      ? '<h1 class="ok">Pëlqimi për komunikim u tërhoq</h1><p>Kontakti i ri përmes këtij kanali është bllokuar menjëherë. Pëlqimi bazë i llogarisë sportive mbetet aktiv.</p>'
+      : '<h1 class="ok">Pëlqimi prindëror u tërhoq</h1><p>Llogaria e të miturit dhe të gjitha pëlqimet e komunikimit janë kufizuar menjëherë.</p>';
+    return res.send(shellHtml({ title: 'X TALENTI — Pëlqimi u tërhoq', body }));
   } catch (err) {
     const status = err.message === 'INVALID_OR_EXPIRED' ? 400 : 500;
     if (status === 500) console.error('Guardian consent revocation failed');
-    return res.status(status).send(revokePageHtml({ error: status === 400 ? 'Linku nuk është i vlefshëm ose ka skaduar.' : 'Gabim serveri.' }));
+    return res.status(status).send(communicationRevokePageHtml({ error: status === 400 ? 'Linku nuk është i vlefshëm ose ka skaduar.' : 'Gabim serveri.' }));
   }
 };

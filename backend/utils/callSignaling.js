@@ -9,12 +9,13 @@ const LIMITS = {
   'call:end': 24,
 };
 const WINDOW_MS = 60_000;
+const { CHANNELS, authorizeMinorDirectContact } = require('./minorCommunicationPolicy');
 
 function payloadSize(value) {
   try { return Buffer.byteLength(JSON.stringify(value ?? null)); } catch { return Infinity; }
 }
 
-function createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCall, VideoCallHistory, User, isEitherBlocked, isUserOnline, now = Date.now }) {
+function createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCall, VideoCallHistory, User, ClubMember, ClubStaff, GuardianConsent, isEitherBlocked, isUserOnline, now = Date.now }) {
   const actorId = Number(authenticatedUserId);
   const emitFailure = (reason = 'User not available') => socket.emit('call:failed', { reason });
 
@@ -79,14 +80,29 @@ function createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCal
       emitFailure('Unauthorized');
       return null;
     }
-    try {
-      if (await isEitherBlocked(actorId, otherId)) {
-        emitFailure();
+    if (!['call:end', 'call:reject'].includes(event)) {
+      try {
+        if (await isEitherBlocked(actorId, otherId)) {
+          emitFailure();
+          return null;
+        }
+        const communication = await authorizeMinorDirectContact({
+          actorId,
+          targetId: otherId,
+          channel: CHANNELS.VIDEO_CALL,
+          User,
+          ClubMember,
+          ClubStaff,
+          GuardianConsent,
+        });
+        if (!communication.allowed) {
+          emitFailure('Guardian approval or an active club assignment is required');
+          return null;
+        }
+      } catch {
+        emitFailure('Call authorization unavailable');
         return null;
       }
-    } catch {
-      emitFailure('Call unavailable');
-      return null;
     }
     return { call, otherId };
   }
