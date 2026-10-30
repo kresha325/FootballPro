@@ -22,9 +22,12 @@ module.exports = {
       await queryInterface.addIndex('GuardianConsentEvents', ['consentId', 'eventAt'], { name: 'guardian_consent_events_consent_time_idx' });
     }
 
-    const galleryColumns = await queryInterface.describeTable('Gallery');
+    // Sequelize pluralizes the Gallery model to `Galleries` (see the original
+    // 20260304-create-gallery migration). Use the persisted table name here;
+    // production does not have a singular `Gallery` table.
+    const galleryColumns = await queryInterface.describeTable('Galleries');
     if (!galleryColumns.publicId) {
-      await queryInterface.addColumn('Gallery', 'publicId', { type: Sequelize.STRING(255), allowNull: true });
+      await queryInterface.addColumn('Galleries', 'publicId', { type: Sequelize.STRING(255), allowNull: true });
     }
   },
 

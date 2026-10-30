@@ -18,11 +18,11 @@ test('consent event migration adds missing indexes even when the table already e
   ]);
 });
 
-test('repair migration checks required event columns, repairs indexes, and adds Gallery.publicId additively', async () => {
+test('repair migration checks event columns, repairs indexes, and adds publicId to Sequelize Galleries table', async () => {
   const added = [];
   const eventColumns = Object.fromEntries(['id', 'consentId', 'minorUserId', 'actorUserId', 'actorType', 'eventType', 'metadata', 'eventAt', 'createdAt'].map((name) => [name, {}]));
   const qi = {
-    showAllTables: async () => ['GuardianConsentEvents', 'Gallery'],
+    showAllTables: async () => ['GuardianConsentEvents', 'Galleries'],
     describeTable: async (table) => table === 'GuardianConsentEvents' ? eventColumns : { id: {} },
     showIndex: async () => [],
     addIndex: async (_table, fields, options) => added.push({ fields, name: options.name }),
@@ -30,10 +30,10 @@ test('repair migration checks required event columns, repairs indexes, and adds 
   };
   await repairMigration.up(qi, { STRING: (length) => ({ type: 'string', length }) });
   assert.equal(added.filter((entry) => entry.fields).length, 2);
-  assert.ok(added.some((entry) => entry.table === 'Gallery' && entry.name === 'publicId'));
+  assert.ok(added.some((entry) => entry.table === 'Galleries' && entry.name === 'publicId'));
 });
 
 test('audit migration rollback refuses to delete consent event history', async () => {
   await assert.rejects(() => eventsMigration.down(), /preserve it during rollback/);
-  await assert.rejects(() => repairMigration.up({ showAllTables: async () => ['Gallery'] }, {}), /GuardianConsentEvents is missing/);
+  await assert.rejects(() => repairMigration.up({ showAllTables: async () => ['Galleries'] }, {}), /GuardianConsentEvents is missing/);
 });
