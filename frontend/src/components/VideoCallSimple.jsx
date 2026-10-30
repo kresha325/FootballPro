@@ -282,7 +282,7 @@ export default function VideoCallSimple({
       ) {
         return;
       }
-      socket.emit('call:reject', { to: from });
+      socket.emit('call:reject', { to: from, callId });
       return;
     }
     setIncomingCall({ from, callerName, offer, callId });
@@ -360,7 +360,7 @@ export default function VideoCallSimple({
 
   const rejectIncomingCall = () => {
     if (incomingCall?.from) {
-      socket.emit('call:reject', { to: incomingCall.from });
+      socket.emit('call:reject', { to: incomingCall.from, callId: incomingCall.callId });
     }
     setIncomingCall(null);
     setCallStatus('idle');
@@ -617,6 +617,7 @@ export default function VideoCallSimple({
         socket.emit('call:ice-candidate', {
           to: targetUser.id,
           candidate: event.candidate,
+          callId: currentCallIdRef.current,
         });
       }
     };
@@ -742,13 +743,12 @@ export default function VideoCallSimple({
 
   const endCall = async () => {
     try {
+      // Notify remote user
+      if (socket && targetUser && currentCallId) {
+        socket.emit('call:end', { to: targetUser.id, callId: currentCallId });
+      }
       if (currentCallId) {
         await API.put(`/video-calls/${currentCallId}/end`);
-      }
-      
-      // Notify remote user
-      if (socket && targetUser) {
-        socket.emit('call:end', { to: targetUser.id });
       }
 
       cleanup();

@@ -108,7 +108,7 @@ export default function IncomingCallListener() {
   const reject = useCallback(() => {
     const socket = getSocket();
     if (socket && incoming?.from) {
-      socket.emit('call:reject', { to: incoming.from });
+      socket.emit('call:reject', { to: incoming.from, callId: incoming.callId });
     }
     setIncoming(null);
   }, [getSocket, incoming]);

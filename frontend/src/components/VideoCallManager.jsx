@@ -105,6 +105,7 @@ export default function VideoCallManager() {
     console.log('❌ Rejecting call');
     socket.emit('call:reject', {
       to: incomingCall.caller.id,
+      callId: incomingCall.callId,
     });
 
     setIncomingCall(null);

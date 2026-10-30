@@ -25,8 +25,10 @@ router.post('/managed', authenticate, managedAthleteLimiter, managedAthletes.cre
 router.post('/managed/:athleteId/parent-consent', authenticate, consentResendLimiter, managedAthletes.resendManagedAthleteConsent);
 
 router.post('/', authenticate, athleteController.createAthlete);
+// Keep the collection route ahead of the optional ID route so GET / cannot
+// resolve as a detail request with an empty parameter.
+router.get('/', authenticate, athleteController.getAllAthletes);
 router.get('/:id?', authenticate, athleteController.getAthlete);
 router.put('/', authenticate, athleteController.updateAthlete);
-router.get('/', authenticate, athleteController.getAllAthletes);
 
 module.exports = router;

@@ -33,6 +33,7 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
   const [participants, setParticipants] = useState([]);
   const socketRef = useRef();
   const peerConnections = useRef({});
+  const callIds = useRef({});
   const localVideoRef = useRef();
 
   useEffect(() => {
@@ -68,7 +69,7 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
       localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
       pc.onicecandidate = e => {
         if (e.candidate) {
-          socketRef.current.emit('call:ice-candidate', { to: remoteUserId, candidate: e.candidate });
+          socketRef.current.emit('call:ice-candidate', { to: remoteUserId, candidate: e.candidate, callId: callIds.current[remoteUserId] });
         }
       };
       pc.ontrack = e => {
@@ -87,6 +88,7 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
         } catch (e) {
           console.warn('Could not create backend call record:', e.message);
         }
+        if (callId) callIds.current[remoteUserId] = callId;
         socketRef.current.emit('call:offer', { to: remoteUserId, offer, from: userId, callId });
       });
     });
@@ -101,13 +103,15 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
     });
     // Handle offer
     socketRef.current.on('call:incoming', async ({ from, offer, callId }) => {
+      if (!callId) return;
+      callIds.current[from] = callId;
       setParticipants(prev => prev.includes(from) ? prev : [...prev, from]);
       const pc = new RTCPeerConnection();
       peerConnections.current[from] = pc;
       localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
       pc.onicecandidate = e => {
         if (e.candidate) {
-          socketRef.current.emit('call:ice-candidate', { to: from, candidate: e.candidate });
+          socketRef.current.emit('call:ice-candidate', { to: from, candidate: e.candidate, callId });
         }
       };
       pc.ontrack = e => {
@@ -147,7 +151,7 @@ const VideoCallRoom = ({ roomId, userId, autoJoin = false, onClose = null }) => 
   const handleJoin = () => setJoined(true);
   const handleLeave = () => {
     setJoined(false);
-    socketRef.current.emit('call:end', { roomId, userId });
+    socketRef.current.emit('call:end', { roomId });
     Object.values(peerConnections.current).forEach(pc => pc.close());
     peerConnections.current = {};
     setRemoteStreams([]);

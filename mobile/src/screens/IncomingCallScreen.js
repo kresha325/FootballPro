@@ -47,7 +47,7 @@ export default function IncomingCallScreen({ navigation }) {
     try {
       const socket = getSocket?.();
       if (socket && payload?.from) {
-        socket.emit('call:end', { to: payload.from });
+        socket.emit('call:end', { to: payload.from, callId });
       }
       if (callId) {
         await endVideoCallRequest(callId).catch(() => {});

@@ -70,7 +70,7 @@ export default function OutgoingCallScreen({ route, navigation }) {
     try {
       const socket = getSocket?.();
       if (socket && targetUserId) {
-        socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
+        socket.emit('call:end', { to: Number(targetUserId) || targetUserId, callId: activeCallId });
       }
       if (activeCallId) {
         await endVideoCallRequest(activeCallId).catch(() => {});
@@ -136,7 +136,7 @@ export default function OutgoingCallScreen({ route, navigation }) {
       try {
         const socket = getSocket?.();
         if (socket && targetUserId) {
-          socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
+          socket.emit('call:end', { to: Number(targetUserId) || targetUserId, callId: callIdRef.current });
         }
         const id = callIdRef.current;
         if (id) endVideoCallRequest(id).catch(() => {});
@@ -153,7 +153,7 @@ export default function OutgoingCallScreen({ route, navigation }) {
       endingRef.current = true;
       const socket = getSocket?.();
       if (socket && targetUserId) {
-        socket.emit('call:end', { to: Number(targetUserId) || targetUserId });
+        socket.emit('call:end', { to: Number(targetUserId) || targetUserId, callId: callIdRef.current || callId });
       }
       const id = callIdRef.current || callId;
       if (id) {

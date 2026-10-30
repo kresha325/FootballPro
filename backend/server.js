@@ -70,13 +70,12 @@ const UserReward = require('./models/UserReward');
 require('./models/Notification');
 require('./models/Follow');
 require('./models/Profile');
-const { Conversation, ConversationMember } = require('./models/Conversation');
+const { ConversationMember } = require('./models/Conversation');
 const Message = require('./models/Message');
 const { VideoCallHistory } = require('./models');
 // Add other models as needed
 
 const sequelize = require('./config/database');
-const { QueryTypes } = require('sequelize');
 
 // `uploads` static assets are served below; global CORS middleware will set
 // the appropriate headers for those responses. Do not set headers twice.
@@ -533,6 +532,7 @@ const {
 
 const VideoCall = require('./models/VideoCall');
 const UserModel = require('./models/User');
+const { createCallSignalingHandlers } = require('./utils/callSignaling');
 
 async function persistLastSeen(userId, lastSeenAt) {
   if (userId == null || !lastSeenAt) return;
@@ -572,22 +572,25 @@ io.on('connection', (socket) => {
     const userId = authenticatedUserId;
     if (!roomId || !userId) return;
 
-    // group-{conversationId}: require membership
+    // Only conversation-backed group rooms are valid; never accept arbitrary
+    // client-chosen rooms that can be used to observe or poison call history.
     const groupMatch = /^group-(\d+)$/i.exec(String(roomId));
-    if (groupMatch) {
-      try {
-        const member = await ConversationMember.findOne({
-          where: { conversationId: groupMatch[1], userId: Number(userId) },
-          attributes: ['id'],
-        });
-        if (!member) {
-          socket.emit('call:failed', { reason: 'Not a conversation member' });
-          return;
-        }
-      } catch (err) {
-        logger.warn('call:join-room membership check failed:', err.message);
+    if (!groupMatch) {
+      socket.emit('call:failed', { reason: 'Invalid call room' });
+      return;
+    }
+    try {
+      const member = await ConversationMember.findOne({
+        where: { conversationId: groupMatch[1], userId: Number(userId) },
+        attributes: ['id'],
+      });
+      if (!member) {
+        socket.emit('call:failed', { reason: 'Not a conversation member' });
         return;
       }
+    } catch (err) {
+      logger.warn('call:join-room membership check failed:', err.message);
+      return;
     }
 
     socket.join(roomId);
@@ -764,215 +767,9 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC signaling for video calls
-  socket.on('call:offer', (data) => {
-    if (!authenticatedUserId) {
-      socket.emit('call:failed', { reason: 'Unauthorized' });
-      return;
-    }
-    const { to, offer, callerName, callId } = data;
-    const from = authenticatedUserId;
-    const receiverOnline = isUserRealtimeOnline(to);
-    (async () => {
-      let usedCallId = callId;
-      try {
-        try {
-          const { isEitherBlocked } = require('./controllers/moderation');
-          if (await isEitherBlocked(from, to)) {
-            socket.emit('call:failed', { reason: 'User not available' });
-            return;
-          }
-        } catch {
-          /* Blocks table may be missing before migrate */
-        }
-        // If no callId provided, create a VideoCall fallback so server-side records exist
-        if (!usedCallId) {
-          try {
-            const created = await VideoCall.create({
-              callerId: from,
-              receiverId: to,
-              status: 'ringing',
-              startTime: new Date(),
-            });
-            usedCallId = created.id;
-            logSocketEvent(socket, 'call:fallback-created', { callId: usedCallId, from, to });
-
-            // Try to persist a message into conversation (best-effort)
-            try {
-              const { DIRECT_PAIR_SQL } = require('./utils/directConversation');
-              const sql = DIRECT_PAIR_SQL;
-              const convoMatches = await sequelize.query(sql, {
-                replacements: { a: from, b: to },
-                type: QueryTypes.SELECT,
-              });
-              let conversationId = null;
-              if (convoMatches && convoMatches.length > 0) {
-                conversationId = convoMatches[0].conversationId || convoMatches[0].conversationid || convoMatches[0].conversation_id;
-              }
-              if (!conversationId) {
-                const t = await sequelize.transaction();
-                try {
-                  const newConv = await Conversation.create({ isGroup: false }, { transaction: t });
-                  await ConversationMember.bulkCreate([
-                    { conversationId: newConv.id, userId: from },
-                    { conversationId: newConv.id, userId: to },
-                  ], { transaction: t });
-                  await t.commit();
-                  conversationId = newConv.id;
-                  logSocketEvent(socket, 'conversation-created-for-call', { conversationId, callId: usedCallId });
-                } catch (txErr) {
-                  await t.rollback();
-                  logger.warn('Failed to create conversation for call fallback:', txErr && txErr.message);
-                }
-              }
-              if (conversationId) {
-                const callMessage = await Message.create({
-                  conversationId,
-                  senderId: from,
-                  content: `Call started`,
-                  type: 'call',
-                  metadata: { callId: usedCallId, event: 'started' },
-                });
-                await Conversation.update({ lastMessageAt: new Date() }, { where: { id: conversationId } });
-                logSocketEvent(socket, 'call-message-saved', { callId: usedCallId, messageId: callMessage.id });
-              }
-            } catch (msgErr) {
-              logger.warn('Failed to persist call fallback message:', msgErr && msgErr.message);
-            }
-          } catch (createErr) {
-            logger.warn('Failed to create VideoCall fallback:', createErr && createErr.message);
-          }
-        }
-
-        if (receiverOnline) {
-          logSocketEvent(socket, 'call:offer', { from, to, callId: usedCallId, receiverOnline: true });
-          io.to(String(to)).emit('call:incoming', {
-            from,
-            callerName,
-            offer,
-            callId: usedCallId,
-            audioOnly: !!(data && data.audioOnly),
-          });
-        } else {
-          logSocketEvent(socket, 'call:offer-failed', { from, to, callId: usedCallId, reason: 'User not connected' });
-          socket.emit('call:failed', { reason: 'User not available' });
-        }
-      } catch (outerErr) {
-        logger.error('Error handling call:offer fallback:', outerErr && outerErr.stack ? outerErr.stack : outerErr);
-        socket.emit('call:failed', { reason: 'Server error' });
-      }
-    })();
-  });
-
-  socket.on('call:answer', (data) => {
-    if (!authenticatedUserId) {
-      socket.emit('call:failed', { reason: 'Unauthorized' });
-      return;
-    }
-    (async () => {
-      const payload = data || {};
-      let { to, answer, callId } = payload;
-      logSocketEvent(socket, 'call:answer-received', { from: authenticatedUserId, to, callId });
-
-      let callRecord = null;
-      if (callId) {
-        try {
-          callRecord = await VideoCall.findByPk(callId);
-        } catch (resolveErr) {
-          logger.warn('Failed to resolve call recipient for answer:', resolveErr && resolveErr.message);
-          socket.emit('call:failed', { reason: 'Server error' });
-          return;
-        }
-        if (!callRecord) {
-          socket.emit('call:failed', { reason: 'Recipient not found for answer' });
-          return;
-        }
-        const uid = Number(authenticatedUserId);
-        const party = uid === Number(callRecord.callerId) || uid === Number(callRecord.receiverId);
-        if (!party) {
-          socket.emit('call:failed', { reason: 'Unauthorized' });
-          return;
-        }
-        if (!to || String(to) === 'undefined') {
-          to = uid === Number(callRecord.receiverId) ? callRecord.callerId : callRecord.receiverId;
-          logSocketEvent(socket, 'call:answer-resolved-recipient', { callId, resolvedTo: to });
-        }
-      }
-
-      if (!to) {
-        logSocketEvent(socket, 'call:answer-no-recipient', { from: authenticatedUserId, callId });
-        socket.emit('call:failed', { reason: 'Recipient not found for answer' });
-        return;
-      }
-
-      logSocketEvent(socket, 'call:answer-forwarding', { from: authenticatedUserId, to, callId });
-      io.to(String(to)).emit('call:answered', {
-        from: authenticatedUserId,
-        answer,
-        callId,
-      });
-
-      if (!callRecord) return;
-      try {
-        callRecord.status = 'connected';
-        callRecord.connectedAt = new Date();
-        await callRecord.save();
-        try {
-          io.to(String(callRecord.callerId)).emit('call:connected', { callId: callRecord.id });
-          io.to(String(callRecord.receiverId)).emit('call:connected', { callId: callRecord.id });
-        } catch (emitErr) {
-          logger.warn('Failed to emit call:connected:', emitErr.message);
-        }
-      } catch (e) {
-        logger.warn('Failed to update VideoCall on answer:', e.message);
-      }
-    })();
-  });
-
-  socket.on('call:ice-candidate', (data) => {
-    if (!authenticatedUserId) return;
-    const { to, candidate } = data || {};
-    if (!to) return;
-    logSocketEvent(socket, 'call:ice-candidate', { to, hasCandidate: !!candidate });
-    io.to(String(to)).emit('call:ice-candidate', {
-      from: authenticatedUserId,
-      candidate,
-    });
-  });
-
-  socket.on('call:reject', (data) => {
-    if (!authenticatedUserId) return;
-    const { to } = data || {};
-    if (!to) return;
-    logSocketEvent(socket, 'call:reject', { to });
-    io.to(String(to)).emit('call:rejected', {
-      from: authenticatedUserId,
-    });
-  });
-
-  socket.on('call:end', async (data) => {
-    if (!authenticatedUserId) return;
-    const { to } = data || {};
-    logSocketEvent(socket, 'call:end', { to });
-    if (to) {
-      io.to(String(to)).emit('call:ended', {
-        from: authenticatedUserId,
-      });
-    }
-    // Mark call as ended in DB (for all rooms this user is in)
-    try {
-      const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
-      for (const roomId of rooms) {
-        const call = await VideoCallHistory.findOne({ where: { roomId, endedAt: null } });
-        if (call) {
-          call.endedAt = new Date();
-          await call.save();
-        }
-      }
-    } catch (err) {
-      logger.warn('⚠️ VideoCallHistory not available:', err.message);
-    }
-  });
+  // All direct call signaling requires an existing call record and authenticated participation.
+  const { isEitherBlocked } = require('./controllers/moderation');
+  createCallSignalingHandlers({ io, socket, authenticatedUserId, VideoCall, VideoCallHistory, User: UserModel, isEitherBlocked, isUserOnline: isUserRealtimeOnline });
 
 });
 
