@@ -4,7 +4,7 @@
 
 ## Latest verification — 2026-10-30
 
-Two isolated local PostgreSQL clusters were initialized solely for test runs, used with Sequelize schema sync in those disposable databases, then dropped and removed. The first exercised athlete privacy, guardian-consent filtering, call recipient checks and read-only club roster behavior. The second exercised the athlete-membership route under public, verified-club, active-coach and inactive-coach identities. No project/local/production DB was used or modified, and no migration was run.
+Three isolated local PostgreSQL clusters were initialized solely for test runs, then stopped and removed. The first two exercised athlete privacy, guardian-consent filtering, call recipient checks, read-only club roster behavior, and the athlete-membership route under public, verified-club, active-coach and inactive-coach identities. The third used Sequelize's `IapPurchase` model with the migration's unique-index definition and confirmed that simultaneous claims for one transaction commit exactly one row. No project/local/production DB was used or modified, and no migration was run. This does not prove the index is present in production.
 
 ## Entity and write-path review
 
@@ -16,7 +16,7 @@ Two isolated local PostgreSQL clusters were initialized solely for test runs, us
 | GuardianConsent | minor/guardian IDs, guardian contact, scope/version, hashed one-time/management tokens and timestamps | Verify unique token hashes and FK/index in deployed schema. No independently verified guardian identity evidence was found beyond email possession and declaration. |
 | Conversations / Members / Messages | conversation membership used for authorization and sockets | Verify unique membership pair, FK constraints, delete/retention policy, and that every message/call write requires membership. |
 | Match / MatchScorer / MatchEvent / PlayerMatchStat | services reconcile results, events, standings and player totals | Several sources can represent goals/cards; protect one authoritative event source and run reconciliation. Profile stats sync occurs outside core transaction in some paths. Verify unique `(matchId,userId)` and valid team/player references. |
-| IapPurchase | transactionId index in migration and purchase record fields | Migration appears to add a transactionId index; confirm it is unique from `backend/migrations/20260906193000-create-iap-purchases.js`. Current pre-check/fulfillment race exists regardless of uniqueness; claim, balance update and purchase insert must be atomic. |
+| IapPurchase | transactionId unique index in migration and purchase record fields | Disposable PostgreSQL concurrency check confirmed unique-index arbitration yields one committed claim. Verify the production migration ledger/index; the disposable check does not establish production state. |
 | Wallet/ledger/orders | ledger service and transaction tests | Unit tests show idempotency/locking at service level; inspect deployed unique indexes, FK and reconciliation jobs before launch. |
 
 ## Resolved data consistency defect

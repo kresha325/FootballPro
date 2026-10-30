@@ -77,7 +77,8 @@ This is **not a production release approval**. Adult-to-minor communication poli
 - `POST /api/iap/verify` now creates the unique transaction claim and commits Premium activation or the JonCoin balance/ledger/invoice together. A concurrent unique-claim conflict returns idempotent success only for the same completed user/product/platform; purchase tokens are omitted from responses.
 - Existing `IapPurchases.transactionId` unique index is the cross-request claim. No migration was run; whether this index is applied in production remains unverified.
 - Google verified purchases now use the provider-issued order ID as the idempotency key; regression tests reject missing or mismatched provider identity and prove client transaction IDs are not used for verified Google claims.
-- Acceptance: transaction, Apple, and Google regression tests pass. These mock transaction propagation, provider verification, and unique-conflict behavior; a disposable-PostgreSQL two-session race and real store sandbox/refund testing remain required.
+- Acceptance: transaction, Apple, and Google regression tests pass. These mock transaction propagation, provider verification, and unique-conflict behavior; the disposable-PostgreSQL race is separately verified below, while real store sandbox/refund testing remains required.
+- A fresh disposable PostgreSQL cluster confirmed two concurrent inserts with the same provider transaction ID serialize on the unique index: the first committed and the second received `SequelizeUniqueConstraintError`; exactly one purchase row remained. The cluster was stopped and removed. The index was created to match the repository migration; this does not verify that production has applied it.
 
 ### Strict Apple purchase claims — code-level checks
 
@@ -100,7 +101,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 1. **Close child/roster access paths:** membership list authorization is covered by helper and route tests, including an unverified club denial while public approved rosters remain visible. Continue HTTP authorization coverage for linked guardians and assigned coaches, then run role workflows on web/mobile.
 2. **Resolve child contact policy:** product/legal decision on adult-to-minor DMs, calls and comments, including whether consent enables contact or only profile/tournament access. Implement only after this rule is approved.
-3. **Payments:** prove the new atomic IAP claim with a disposable PostgreSQL concurrency test; verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. Keep payment flags disabled.
+3. **Payments:** verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. The two-session unique-claim race passed on disposable PostgreSQL; confirm the production index separately. Keep payment flags disabled.
 4. **Media and deletion:** choose private/signed delivery for restricted minor media; test copied URL access after consent withdrawal and account deletion; map retention exceptions.
 5. **Database integrity:** use an authorized read-only production schema/migration report to verify unique constraints, FKs, indexes and enum/check constraints. No sync/alter/migration in audit.
 6. **Core workflow parity:** create disposable-database role matrices for managed registration, guardians, roster, tournament enrollment, match results, scouting, messaging, calls and deletion; run web and mobile API contract cases.

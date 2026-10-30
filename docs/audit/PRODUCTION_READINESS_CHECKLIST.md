@@ -17,7 +17,7 @@ This checklist records audit evidence, not release approval.
 
 ## Stop before enabling payments
 
-- [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; Google uses verified provider `orderId`, and Apple requires exact signed claims. Focused tests pass. Verify the unique index in production schema and run a disposable-PostgreSQL concurrent duplicate test before launch.
+- [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; Google uses verified provider `orderId`, and Apple requires exact signed claims. Focused tests and a disposable-PostgreSQL concurrent duplicate test pass. Confirm the unique index exists in production schema before launch.
 - [x] Require exact Apple bundle/product/transaction claims; receipt/JWS and active subscription checks have focused tests. Live Apple sandbox verification remains required.
 - [ ] Verify Google package, token state, expiry, acknowledgement and refund/revocation flow in Play sandbox; code-level orderId/product binding is regression-tested.
 - [ ] Run concurrent duplicate receipt tests; assert only one credit/activation.
