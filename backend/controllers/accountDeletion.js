@@ -62,7 +62,7 @@ exports.deleteMyAccount = async (req, res) => {
     if (profile) {
       await profile.update({
         bio: null,
-        profilePicture: null,
+        profilePhoto: null,
         coverPhoto: null,
         city: null,
         country: null,

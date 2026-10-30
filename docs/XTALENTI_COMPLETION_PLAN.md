@@ -49,6 +49,11 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 ## Verified fixes and acceptance results
 
+### Account deletion profile-photo reference — current follow-up
+
+- Corrected account anonymization to clear `Profile.profilePhoto`, the field the model and profile API actually use; parent-consent revocation and account token invalidation remain in place.
+- Acceptance: a regression test proves the actual field is cleared; the full backend suite passes 284/284. Cloudinary asset invalidation and removal of copied media in posts are still unverified and remain a launch blocker.
+
 ### Security branch `df8cdec`
 
 - Legacy athlete detail/list endpoints use canonical profile privacy and hide pending minors without active verified guardian consent; sensitive account fields and exact DOB are not serialized. The current process records guardian email attestation; independent proof of legal relationship is not established.
@@ -90,7 +95,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Check | Result | Limits |
 |---|---|---|
 | Focused security, upload, and IAP regression tests | PASS, 35/35 | Includes legacy privacy, call signaling, club roster reads, membership and staff visibility, PNG validation, IAP transaction handling, and Apple claim binding. |
-| Backend full suite | PASS, 283/283 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
+| Backend full suite | PASS, 284/284 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
 | Changed backend files syntax/lint | PASS | Not equivalent to full backend lint; repository-wide lint has historical failures. |
 | Frontend production build | PASS | Existing large-chunk warning remains; unrelated to this phase. |
 | Mobile parity static checks | PASS | Static source checks only; does not prove device runtime behavior. |

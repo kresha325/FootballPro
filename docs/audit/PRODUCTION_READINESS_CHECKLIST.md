@@ -14,6 +14,7 @@ This checklist records audit evidence, not release approval.
 - [ ] Decide acceptable guardian verification level; current email attestation is not independent identity proof.
 - [ ] Secure private/minor media at Cloudinary delivery layer and test URL revocation/access.
 - [ ] Verify account deletion for all related services and retention exceptions.
+- Profile anonymization now clears the model's actual `profilePhoto` field (test-covered); Cloudinary invalidation and copied media in posts remain unresolved.
 
 ## Stop before enabling payments
 
@@ -35,7 +36,7 @@ This checklist records audit evidence, not release approval.
 - [x] Frontend production build passed; bundle warning remains (>500 kB chunks).
 - [x] Mobile parity static check passed.
 - [x] Mobile release preflight passed; this does not build or run on native device.
-- [x] Backend test suite green: latest complete run 283/283 when temporary loopback listeners were permitted. Focused roster/visibility suite: 9/9; athlete membership route authorization: 4/4.
+- [x] Backend test suite green: latest complete run 284/284 when temporary loopback listeners were permitted. Focused account deletion test: 1/1; athlete membership route authorization: 4/4.
 - [ ] Backend lint clean. Current run: 272 errors.
 - [ ] Frontend lint; prior completion snapshot had 0 errors / 146 warnings after an admin managed-form state fix. Re-run before launch.
 - [ ] iOS and Android simulator/device flows: auth restore, consent pending/revoke, roster, tournament result, chat/call, camera/mic, upload/playback, notifications, deletion.
