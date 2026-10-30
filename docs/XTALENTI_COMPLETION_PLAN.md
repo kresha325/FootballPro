@@ -69,7 +69,8 @@ This is **not a production release approval**. Adult-to-minor communication poli
 ### Club membership route authorization — current follow-up
 
 - `GET /api/club-members/club/:clubId` now treats a club account as a manager only when that same club is verified and neither banned nor deleted. Unverified clubs can still display approved public rosters, but cannot inspect pending/rejected requests or unconsented minor details.
-- Acceptance: 3 route-level authorization tests pass, along with membership visibility and read-only roster tests. Full backend suite passes 279/279; loopback listeners were permitted.
+- Acceptance: 3 route-level club authorization tests and 4 athlete membership route tests pass, along with membership visibility and read-only roster tests. Full backend suite passes 283/283; loopback listeners were permitted.
+- The athlete-membership endpoint now has direct route-handler tests for unrelated viewers, a linked verified guardian, an active coach assigned to the club, and a coach with an inactive assignment. The coach sees only the assigned verified club's row; public sports history remains available to unrelated viewers.
 
 ### IAP atomic claim, provider claims and fulfillment — commits `4e79fad`, `ef90799`, `e02997f`
 
@@ -88,7 +89,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Check | Result | Limits |
 |---|---|---|
 | Focused security, upload, and IAP regression tests | PASS, 35/35 | Includes legacy privacy, call signaling, club roster reads, membership and staff visibility, PNG validation, IAP transaction handling, and Apple claim binding. |
-| Backend full suite | PASS, 279/279 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
+| Backend full suite | PASS, 283/283 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
 | Changed backend files syntax/lint | PASS | Not equivalent to full backend lint; repository-wide lint has historical failures. |
 | Frontend production build | PASS | Existing large-chunk warning remains; unrelated to this phase. |
 | Mobile parity static checks | PASS | Static source checks only; does not prove device runtime behavior. |

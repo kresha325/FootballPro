@@ -7,7 +7,7 @@ This checklist records audit evidence, not release approval.
 - [x] Fix athlete API privacy/IDOR; tests cover non-owner, consented and pending minor. Branch `df8cdec`.
 - [x] Fix socket call signaling; active call and participants are server-validated, recipient is derived, block lookup fails closed, and call offers cannot create conversations. Tests cover spoofing, non-party, rate limit and allowed signaling.
 - [x] Remove writes from public roster GET; regression and disposable-PostgreSQL tests confirm existing memberships are preserved.
-- [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Commit `be5362b` is pushed to the security review branch; unit and disposable-PostgreSQL route tests pass.
+- [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Commit `be5362b` is pushed to the security review branch; helper, route-handler and disposable-PostgreSQL tests cover access.
 - [x] Restrict pending/inactive club staff listing to the verified owning club or platform admins; public reads show current active staff only. Commit `4697599` is pushed to the review branch; six route-handler regression tests pass.
 - [x] Require a verified, active club account before exposing its private pending/rejected membership requests; unverified clubs retain public visibility of approved rosters only. Route-level tests cover both outcomes.
 - [ ] Decide and implement adult-to-minor messaging/calling safeguards; document the policy.
@@ -35,7 +35,7 @@ This checklist records audit evidence, not release approval.
 - [x] Frontend production build passed; bundle warning remains (>500 kB chunks).
 - [x] Mobile parity static check passed.
 - [x] Mobile release preflight passed; this does not build or run on native device.
-- [x] Backend test suite green: latest complete run 279/279 when temporary loopback listeners were permitted. Focused roster/visibility suite: 9/9.
+- [x] Backend test suite green: latest complete run 283/283 when temporary loopback listeners were permitted. Focused roster/visibility suite: 9/9; athlete membership route authorization: 4/4.
 - [ ] Backend lint clean. Current run: 272 errors.
 - [ ] Frontend lint; prior completion snapshot had 0 errors / 146 warnings after an admin managed-form state fix. Re-run before launch.
 - [ ] iOS and Android simulator/device flows: auth restore, consent pending/revoke, roster, tournament result, chat/call, camera/mic, upload/playback, notifications, deletion.
