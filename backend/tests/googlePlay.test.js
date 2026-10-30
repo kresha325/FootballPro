@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   interpretProductPurchase,
   interpretSubscriptionPurchase,
+  resolveVerifiedGoogleOrderId,
   buildAssertionClaims,
   getServiceAccount,
   getPackageName,
@@ -27,6 +28,14 @@ test('interpretProductPurchase rejects purchaseState 2 (pending)', () => {
 test('interpretProductPurchase rejects empty/undefined response', () => {
   assert.equal(interpretProductPurchase(null).ok, false);
   assert.equal(interpretProductPurchase(undefined).ok, false);
+});
+
+test('Google IAP idempotency uses provider orderId and rejects missing/mismatched identity', () => {
+  const productId = 'com.kresha325.xtalenti.joncoin.100';
+  assert.equal(resolveVerifiedGoogleOrderId({ orderId: 'GPA.123', productId }, productId), 'google:GPA.123');
+  assert.equal(resolveVerifiedGoogleOrderId({ orderId: 'GPA.123' }, productId), 'google:GPA.123');
+  assert.equal(resolveVerifiedGoogleOrderId({ orderId: 'GPA.123', productId: 'other.sku' }, productId), null);
+  assert.equal(resolveVerifiedGoogleOrderId({ productId }, productId), null);
 });
 
 test('interpretSubscriptionPurchase accepts paymentState 1 (received) with future expiry', () => {

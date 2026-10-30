@@ -112,6 +112,13 @@ function interpretSubscriptionPurchase(data) {
   return { ok: true, raw: data };
 }
 
+/** Use the provider-issued order id as the idempotency identity, never a client string. */
+function resolveVerifiedGoogleOrderId(data, productId) {
+  if (!data || !data.orderId) return null;
+  if (data.productId && String(data.productId) !== String(productId)) return null;
+  return `google:${String(data.orderId).trim()}`;
+}
+
 async function callAndroidPublisher(path, env) {
   const serviceAccount = getServiceAccount(env);
   const token = await fetchAccessToken(serviceAccount);
@@ -155,6 +162,7 @@ module.exports = {
   verifyGooglePlayPurchase,
   interpretProductPurchase,
   interpretSubscriptionPurchase,
+  resolveVerifiedGoogleOrderId,
   buildAssertionClaims,
   getServiceAccount,
   getPackageName,

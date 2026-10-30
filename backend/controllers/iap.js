@@ -5,7 +5,11 @@ const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 const { verifyAppleSignedPayload } = require('../utils/appleJws');
-const { verifyGooglePlayPurchase, getServiceAccount: getGoogleServiceAccount } = require('../utils/googlePlay');
+const {
+  verifyGooglePlayPurchase,
+  getServiceAccount: getGoogleServiceAccount,
+  resolveVerifiedGoogleOrderId,
+} = require('../utils/googlePlay');
 const { PLANS, activatePremiumForUser } = require('./premium');
 
 const APPLE_BUNDLE_ID = 'com.kresha325.xtalenti';
@@ -259,6 +263,7 @@ exports.getIapCatalog = async (_req, res) => {
 };
 
 exports.verifyAndFulfill = async (req, res) => {
+  let canonicalTransactionId = null;
   try {
     const platform = String(req.body?.platform || '').toLowerCase();
     const productId = String(req.body?.productId || '');
@@ -277,10 +282,7 @@ exports.verifyAndFulfill = async (req, res) => {
       return res.status(400).json({ msg: 'platform duhet ios|android' });
     }
 
-    const existing = await IapPurchase.findOne({ where: { transactionId } });
-    if (existing) {
-      return sendAlreadyProcessed(req, res, existing);
-    }
+    canonicalTransactionId = transactionId;
 
     if (platform === 'ios') {
       if (!transactionReceipt && !purchaseToken) {
@@ -305,6 +307,17 @@ exports.verifyAndFulfill = async (req, res) => {
       if (!verified.ok) {
         return res.status(400).json({ msg: verified.msg || 'Verifikimi Google dështoi' });
       }
+      if (!verified.unverified) {
+        canonicalTransactionId = resolveVerifiedGoogleOrderId(verified.raw, productId);
+        if (!canonicalTransactionId) {
+          return res.status(400).json({ msg: 'Google Play nuk ktheu një orderId të vlefshëm për produktin e verifikuar.' });
+        }
+      }
+    }
+
+    const existing = await IapPurchase.findOne({ where: { transactionId: canonicalTransactionId } });
+    if (existing) {
+      return sendAlreadyProcessed(req, res, existing);
     }
 
     const result = await sequelize.transaction(async (transaction) => {
@@ -315,17 +328,17 @@ exports.verifyAndFulfill = async (req, res) => {
         userId: req.user.id,
         platform,
         productId,
-        transactionId,
+        transactionId: canonicalTransactionId,
         purchaseToken,
         kind: catalog.kind,
         status: 'processing',
-        rawPayload: { productId, transactionId, hasReceipt: !!transactionReceipt },
+        rawPayload: { productId, transactionId: canonicalTransactionId, hasReceipt: !!transactionReceipt },
       }, { transaction });
 
       let fulfillment = null;
       let joncoinTx = null;
       if (catalog.kind === 'premium') {
-        fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${transactionId}`, {
+        fulfillment = await activatePremiumForUser(req.user.id, catalog.plan, `iap:${canonicalTransactionId}`, {
           source: 'iap',
           productId,
           iapPurchaseId: purchase.id,
@@ -356,7 +369,7 @@ exports.verifyAndFulfill = async (req, res) => {
           type: 'purchase',
           amount,
           status: 'completed',
-          idempotencyKey: `iap:${transactionId}`,
+          idempotencyKey: `iap:${canonicalTransactionId}`,
           description: `IAP ${productId}`,
         }, { transaction });
         fulfillment = { joncoinBalance: user.joncoinBalance, transaction: joncoinTx };
@@ -371,10 +384,10 @@ exports.verifyAndFulfill = async (req, res) => {
           description: `XCoin pack ${catalog.amount}`,
           productId,
           joncoinAmount: Number(catalog.amount),
-          externalId: `iap:${transactionId}`,
+          externalId: `iap:${canonicalTransactionId}`,
           iapPurchaseId: purchase.id,
           joncoinTransactionId: joncoinTx.id,
-          rawPayload: { platform, productId, transactionId },
+          rawPayload: { platform, productId, transactionId: canonicalTransactionId },
           transaction,
         });
       }
@@ -392,7 +405,9 @@ exports.verifyAndFulfill = async (req, res) => {
     });
   } catch (err) {
     if (err?.name === 'SequelizeUniqueConstraintError') {
-      const existing = await IapPurchase.findOne({ where: { transactionId: String(req.body?.transactionId || req.body?.id || '') } });
+      const existing = canonicalTransactionId
+        ? await IapPurchase.findOne({ where: { transactionId: canonicalTransactionId } })
+        : null;
       if (existing) return sendAlreadyProcessed(req, res, existing);
     }
     if (err?.code === 'IAP_USER_NOT_FOUND') return res.status(404).json({ msg: err.message });

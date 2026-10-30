@@ -39,7 +39,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Gallery and media | PARTIALLY COMPLETE | PNG magic-byte validation now passes across the installed and newer `file-type` API shapes; direct Cloudinary URLs may remain public. | P1 |
 | Marketplace | PARTIALLY COMPLETE | Listing/cart/order code exists; exercise role permissions and fulfillment on web/mobile. | P2 |
 | Wallet and JonCoin | IMPLEMENTED BUT NOT TESTED | Ledger/idempotency tests exist; compare client balances and run reconciliation against a disposable DB. | P1 |
-| Payments and subscriptions | PARTIALLY COMPLETE | IAP claim plus Premium/JonCoin fulfillment is now one database transaction; Apple receipt/JWS requires exact bundle/product/transaction claims and active subscription state. Google claim still uses client transactionId instead of verified orderId; provider sandbox/refund cases and production constraint verification remain. Mobile digital payments remain disabled. | P1 |
+| Payments and subscriptions | PARTIALLY COMPLETE | IAP claim plus Premium/JonCoin fulfillment is now one database transaction; Apple receipt/JWS requires exact bundle/product/transaction claims and active subscription state. Verified Google purchases now use provider orderId for idempotency; provider sandbox/refund cases and production constraint verification remain. Mobile digital payments remain disabled. | P1 |
 | Gamification | PARTIALLY COMPLETE | XP, levels, badges and achievements exist; keep rewards separate from official stats and test repeat-call abuse. | P2 |
 | Notifications | PARTIALLY COMPLETE | In-app/push paths exist; provider delivery, dedupe and mobile tap navigation need device verification. | P2 |
 | Search and discovery | PARTIALLY COMPLETE | Search/profile discovery exists; enforce profile/media visibility on every result and compare client filters. | P1 |
@@ -93,7 +93,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 1. **Close child/roster access paths:** review the pushed membership-list authorization fix and commit the current public staff visibility fix; extend authorization verification for guardian and coach cases through HTTP routes.
 2. **Resolve child contact policy:** product/legal decision on adult-to-minor DMs, calls and comments, including whether consent enables contact or only profile/tournament access. Implement only after this rule is approved.
-3. **Payments:** prove the new atomic IAP claim with a disposable PostgreSQL concurrency test; bind Android claims to verified Google `orderId`; verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. Keep payment flags disabled.
+3. **Payments:** prove the new atomic IAP claim with a disposable PostgreSQL concurrency test; verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. Keep payment flags disabled.
 4. **Media and deletion:** choose private/signed delivery for restricted minor media; test copied URL access after consent withdrawal and account deletion; map retention exceptions.
 5. **Database integrity:** use an authorized read-only production schema/migration report to verify unique constraints, FKs, indexes and enum/check constraints. No sync/alter/migration in audit.
 6. **Core workflow parity:** create disposable-database role matrices for managed registration, guardians, roster, tournament enrollment, match results, scouting, messaging, calls and deletion; run web and mobile API contract cases.
@@ -104,7 +104,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 - Adult/minor contact policy and enforcement tests are not resolved.
 - Cloudinary delivery privacy and revocation behavior are not proven.
-- Google orderId binding, refund/revocation behavior, production unique-index verification and full provider sandbox cases remain incomplete.
+- Google orderId binding is implemented with regression coverage. Refund/revocation behavior, production unique-index verification and full provider sandbox cases remain incomplete.
 - Production database schema and applied migration ledger are not verified.
 - Adult/minor contact policy and enforcement tests are unresolved.
 - Native iOS/Android end-to-end flows and production-provider integrations have not been exercised.

@@ -172,6 +172,8 @@ describe('IAP transaction claiming and fulfillment', () => {
   });
 
   it('does not disclose or accept a transaction already owned by another account', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.IAP_ALLOW_UNVERIFIED = 'true';
     IapPurchase.findOne = async () => ({
       id: 99,
       userId: 88,
@@ -189,10 +191,16 @@ describe('IAP transaction claiming and fulfillment', () => {
       assert.equal(JSON.stringify(res.body).includes('88'), false);
     } finally {
       IapPurchase.findOne = originals.findPurchase;
+      if (originals.env.NODE_ENV === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originals.env.NODE_ENV;
+      if (originals.env.IAP_ALLOW_UNVERIFIED === undefined) delete process.env.IAP_ALLOW_UNVERIFIED;
+      else process.env.IAP_ALLOW_UNVERIFIED = originals.env.IAP_ALLOW_UNVERIFIED;
     }
   });
 
   it('returns idempotent success only for the same completed owner/product/platform', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.IAP_ALLOW_UNVERIFIED = 'true';
     IapPurchase.findOne = async () => ({
       id: 16,
       userId: 7,
@@ -217,6 +225,10 @@ describe('IAP transaction claiming and fulfillment', () => {
     } finally {
       IapPurchase.findOne = originals.findPurchase;
       sequelize.transaction = originals.transaction;
+      if (originals.env.NODE_ENV === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originals.env.NODE_ENV;
+      if (originals.env.IAP_ALLOW_UNVERIFIED === undefined) delete process.env.IAP_ALLOW_UNVERIFIED;
+      else process.env.IAP_ALLOW_UNVERIFIED = originals.env.IAP_ALLOW_UNVERIFIED;
     }
   });
 
