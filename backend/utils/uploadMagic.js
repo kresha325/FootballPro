@@ -7,7 +7,21 @@ const path = require('path');
 // even from this CommonJS module. Cached after the first load.
 let fileTypePromise;
 function loadFileType() {
-  if (!fileTypePromise) fileTypePromise = import('file-type');
+  if (!fileTypePromise) {
+    fileTypePromise = import('file-type').then((module) => {
+      // file-type renamed fromFile/fromBuffer to fileTypeFromFile/
+      // fileTypeFromBuffer in v17. Normalize both APIs so a stale local
+      // install cannot silently reject all uploads (and tests exercise the
+      // same path as production installs).
+      const api = module.fileTypeFromFile ? module : (module.default || module);
+      const fileTypeFromFile = api.fileTypeFromFile || api.fromFile;
+      const fileTypeFromBuffer = api.fileTypeFromBuffer || api.fromBuffer;
+      if (typeof fileTypeFromFile !== 'function' || typeof fileTypeFromBuffer !== 'function') {
+        throw new Error('Unsupported file-type API');
+      }
+      return { fileTypeFromFile, fileTypeFromBuffer };
+    });
+  }
   return fileTypePromise;
 }
 

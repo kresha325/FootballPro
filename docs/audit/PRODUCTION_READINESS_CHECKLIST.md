@@ -4,10 +4,10 @@ This checklist records audit evidence, not release approval.
 
 ## Stop before child-safety pilot
 
-- [ ] Fix athlete API privacy/IDOR; test non-owner and pending minor.
-- [ ] Fix socket call signaling; require server-owned active call and participant-derived recipients.
-- [ ] Remove writes from public roster GET; test GET is side-effect free.
-- [ ] Restrict `/club-members/athlete/:athleteId` to the athlete/guardian/assigned club/admin.
+- [x] Fix athlete API privacy/IDOR; tests cover non-owner, consented and pending minor. Branch `df8cdec`.
+- [x] Fix socket call signaling; active call and participants are server-validated, recipient is derived, block lookup fails closed, and call offers cannot create conversations. Tests cover spoofing, non-party, rate limit and allowed signaling.
+- [x] Remove writes from public roster GET; regression and disposable-PostgreSQL tests confirm existing memberships are preserved.
+- [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Unit and local route tests pass; follow-up change is not yet committed.
 - [ ] Restrict pending/inactive club staff listing to authorized managers.
 - [ ] Decide and implement adult-to-minor messaging/calling safeguards; document the policy.
 - [ ] Decide acceptable guardian verification level; current email attestation is not independent identity proof.
@@ -34,9 +34,9 @@ This checklist records audit evidence, not release approval.
 - [x] Frontend production build passed; bundle warning remains (>500 kB chunks).
 - [x] Mobile parity static check passed.
 - [x] Mobile release preflight passed; this does not build or run on native device.
-- [ ] Backend test suite green in a network-enabled CI runner. Current sandbox run: 240/244; three loopback tests failed `EPERM`, one upload-magic assertion failed.
+- [x] Backend test suite green: latest complete run 259/259 when temporary loopback listeners were permitted. Focused security/upload suite: 17/17.
 - [ ] Backend lint clean. Current run: 272 errors.
-- [ ] Frontend lint; current run: 5 errors / 146 warnings in `frontend/src/components/ClubRoster.jsx` (managed athlete form state is unused/undefined).
+- [ ] Frontend lint; prior completion snapshot had 0 errors / 146 warnings after an admin managed-form state fix. Re-run before launch.
 - [ ] iOS and Android simulator/device flows: auth restore, consent pending/revoke, roster, tournament result, chat/call, camera/mic, upload/playback, notifications, deletion.
 - [ ] Store sandbox IAP and provider refund/revocation tests if payments are to launch.
 - [ ] Verify production env/domain/secrets and monitoring in dashboards; not accessible in this code-only audit.

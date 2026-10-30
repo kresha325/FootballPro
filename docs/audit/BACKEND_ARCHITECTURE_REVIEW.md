@@ -2,6 +2,12 @@
 
 **Scope:** Static review of the current Express/Sequelize backend. No DB or deployed service was queried.
 
+## Latest verification — 2026-10-30
+
+The former P1 findings for legacy athlete serialization, direct-call socket signaling, and roster GET writes are fixed on branch `fix/xtalenti-v1-p1-security` (commit `df8cdec`). A disposable local PostgreSQL integration test exercised those changes; it was dropped after the run. The athlete-membership enumeration finding is also fixed in the current working tree and passed route tests against a second disposable PostgreSQL cluster. Neither change is deployed or merged into `main`.
+
+Remaining verified architectural risks include duplicated HTTP call-start flows (`videoCalls.js`), non-atomic IAP fulfillment, the public club-staff endpoint accepting arbitrary status filters, and projections that run after core match transactions. The full backend suite still has the unrelated `upload-magic` fixture failure; changed-file lint is clean.
+
 ## Observed architecture
 
 - Express mounts route modules under `/api`; JWT auth middleware resolves the account from the database per request, checks token version and account ban/deletion, and applies parental gating to most API routes (`backend/middleware/auth.js`). Socket.IO uses separate JWT middleware (`backend/middleware/socketAuth.js`) and checks user status/parental restrictions before connection.
@@ -20,13 +26,13 @@
 
 ## Architectural risks / verified issues
 
-1. Legacy and canonical profile endpoints implement different privacy policies. This is a verified policy-drift defect (see full audit).
-2. Socket signaling authorization is duplicated across event handlers, and only answer currently checks call-party membership. Move call authorization into a shared service used by every event.
+1. Legacy athlete profile privacy now delegates to the canonical field-visibility rules, but other profile serializers still need a parity audit.
+2. Direct-call signaling authorization is centralized in `backend/utils/callSignaling.js`; group room membership and call start/end lifecycle still need device E2E testing.
 3. `backend/controllers/videoCalls.js:126-230` implements separate `createVideoCall` and `startCall` flows with duplicated block checks, duplicate-call lookup, record creation and notification logic. A shared internal call-start service could reduce policy drift while preserving both public endpoints. This is a recommended refactor, not yet changed.
-4. Roster GET includes a legacy profile-to-membership synchronization write. Read handlers should be side-effect free; migration/import should be explicit and auditable.
+4. Club roster GET no longer imports memberships. Athlete membership reads now scope pending/rejected states to the athlete, verified guardian, admin, verified club, or active authorized coach; continue auditing other GET handlers for writes.
 5. IAP verification and fulfillment are sequential but not one atomic transaction. `transactionId` uniqueness is checked before fulfillment; concurrent requests can race. Wallet and purchase records must commit together under a unique transaction claim/lock.
 6. Some best-effort sync/notification logic runs after core transactions (competition statistics/profile reconciliation). Treat projections as repairable derived state, expose reconciliation metrics, and keep authoritative score/event transaction atomic.
-7. Repository tests combine pure unit tests with loopback server tests. Sandbox restrictions prevented three loopback tests from binding; CI must run those in a network-enabled isolated job rather than count them as passing.
+7. Repository tests combine pure unit tests with loopback server tests. The complete suite now runs when local listener permissions are available; the current remaining failure is the unrelated PNG fixture assertion in `tests/upload-magic.test.js`.
 
 ## Official match authority compatibility map
 

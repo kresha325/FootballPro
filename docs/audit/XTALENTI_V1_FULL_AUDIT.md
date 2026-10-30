@@ -1,26 +1,35 @@
 # XTALENTI V1 — Full Backend, Security, and Web/Mobile Audit
 
 **Audit date:** 2026-10-30
-**Scope:** Current working tree in `/Users/kresha/Projects/footballpro`; static source review and repository tests/build checks. No database connection, migration, production request, deployment, or data mutation was performed.
+**Scope:** Current working tree in `/Users/kresha/Projects/footballpro`; static source review, repository tests/build checks, and isolated disposable PostgreSQL integration runs. No production database connection, migration, production request, or deployment was performed.
 **Confidence labels:** **Verified** = directly reproducible from source or an executed repository check; **Partial** = source indicates behavior, but an end-to-end production/device check was not available; **Not verified** = repository does not contain enough evidence. Severity ranks impact if the path is reachable, not exploit likelihood.
+
+## Current implementation update — 2026-10-30
+
+The first three P1 findings recorded below were fixed in commit `df8cdec` on `fix/xtalenti-v1-p1-security`, pushed for review but not merged or deployed. Their regression tests passed. Disposable local PostgreSQL route runs verified athlete privacy/consent, participant-bound call delivery, and that roster GET preserves membership rows. A follow-up fix to the athlete-membership enumeration issue was committed locally: approved sports affiliations remain visible, while pending/rejected rows are scoped to the athlete, linked verified guardian, admin, verified club, or an active authorized coach. Its 4 focused policy tests and route test against a second disposable PostgreSQL database passed. The upload magic-byte helper was also updated for the installed `file-type` v16 API and newer API versions, resolving the PNG fixture failure. This follow-up commit has not been pushed or deployed.
+
+The P1 sections below document the initial baseline and should be read as historical evidence; the tested fixes above supersede those reproduction steps. A new P2 risk remains in the public club-staff listing, and adult-to-minor communication policy is still not established. Current checklist: `PRODUCTION_READINESS_CHECKLIST.md`; phase tracker: `../XTALENTI_COMPLETION_PLAN.md`.
 
 ## Executive summary
 
 XTALENTI has broad feature coverage and several useful safeguards already in place: JWTs resolve to live database users and token versions, parental authorization gates many authenticated routes, club-managed minors begin pending, LiveKit authorizes its supported room types, purchase verification exists, wallet operations have a ledger, moderation includes report/block/delete paths, and mobile static parity/release checks pass.
 
-This audit does **not** establish production readiness. Three verified high-priority authorization/data-integrity issues need remediation before a child-safety pilot:
+This audit does **not** establish production readiness. Three previously verified P1 authorization/data-integrity issues have been addressed on the review branch. A further membership enumeration issue is fixed in the current working tree. Release blockers remain:
 
-1. **P1 — legacy athlete API bypasses profile privacy and object-level authorization.** Authenticated users can read a specified athlete profile, including unrestricted Profile JSON. The list-all controller exists, but its `GET /` route is likely shadowed by the earlier optional `GET /:id?` route; do not claim that collection route is reachable without a route-level reproduction. `backend/routes/athlete.js:27-30`, `backend/controllers/athlete.js:33-47,75-85`.
-2. **P1 — WebRTC socket signaling trusts client-chosen recipients for offer/ICE/reject/end.** Call membership is checked for `call:answer` only; other signaling events can address arbitrary user rooms and create fallback call/conversation records. `backend/server.js:768-865,932-970`.
-3. **P1 — public optional-auth roster GET mutates roster state.** A GET request can create pending ClubMember rows based on a fuzzy Profile.club string match; this is an unauthenticated state-changing endpoint and can create false affiliations. `backend/routes/clubMembers.js:73-144`.
+1. **P1 — adult/minor contact policy is not established across messaging and calls.** This requires an explicit product/safeguarding decision before implementing a rule.
+2. **P1 — IAP fulfillment has a concurrency/idempotency gap** and Apple claim matching is permissive. Keep payments disabled pending a transactional claim and provider sandbox validation.
+3. **P1 — private/minor Cloudinary delivery and deletion revocation are unverified.** Ordinary secure URLs may remain accessible after API-level authorization changes.
+4. **P2 — public club-staff listing accepts arbitrary status filters** and needs active-only public access plus manager authorization for internal states.
 
-Additional verified gaps include overbroad membership reads, profile privacy inconsistencies in compatibility APIs, and unverified adult-to-minor DM safeguards. Payment checks are substantial, but IAP fulfillment has a concurrency/idempotency gap that requires a transactional claim before pilot billing. See [SECURITY_AND_PAYMENTS_REVIEW.md](SECURITY_AND_PAYMENTS_REVIEW.md).
+Other functional parity, production schema, deletion retention, payment-provider, native-device and moderator-SLA evidence remains incomplete. See `SECURITY_AND_PAYMENTS_REVIEW.md` and `PRODUCTION_READINESS_CHECKLIST.md`.
 
 **Official-stat publication policy:** Current tournament authorization permits the tournament creator and admins to manage official match outcomes/statistics, with special league checks. A proposed XTALENTI-Team-only policy changes product authority and may affect club/federation workflows and historical tournament administration. It is documented as an approval-dependent policy decision, not changed here.
 
 ## Verified findings
 
-### P1 — athlete profile endpoints bypass privacy / object access
+### Resolved P1 baseline — athlete profile endpoints bypassed privacy / object access
+
+**Current status:** Fixed on review branch `df8cdec`. Legacy athlete handlers now use canonical privacy rules, do not serialize account email or exact DOB, and filter pending minors without active guardian authorization. Tests cover privacy levels, owner/follower behavior and pending/consented minors. The profile DTO retains sports profile fields. The original evidence below describes the pre-fix baseline.
 
 **Evidence:** `GET /api/athletes/:id?` and `GET /api/athletes/` require authentication only. `getAthlete` returns the complete Sequelize Profile row (including `contact`, `privacy`, and other JSON fields); `getAllAthletes` returns every Profile with no consent or privacy filtering. The dedicated profile controller has explicit privacy shaping and pending-minor filtering, but the legacy athlete controller does not.
 
@@ -30,7 +39,9 @@ Additional verified gaps include overbroad membership reads, profile privacy inc
 **Affected:** `backend/routes/athlete.js:27-30`; `backend/controllers/athlete.js:33-47,75-85`; `Profile` fields at `backend/models/Profile.js:12-66`.
 **Minimal remediation:** Remove/retire legacy endpoints if unused, or enforce owner/admin/object permissions and reuse the same privacy/guardian-consent serializer as `controllers/profiles.js`. Add cross-user/minor tests first; preserve public sports profile visibility and match/tournament data.
 
-### P1 — socket call signaling has no participant check for most events
+### Resolved P1 baseline — socket call signaling lacked participant checks
+
+**Current status:** Fixed on review branch `df8cdec`. All five direct-call signaling events require an active server-owned `VideoCall`, enforce participant/direction checks, derive the recipient, fail closed on block lookup errors and apply rate/payload limits. Offers cannot create calls or conversations. Web/mobile callers now send `callId`. Regression tests cover forged recipient, nonparticipant, valid parties and rate limiting. Disposable PostgreSQL verified persisted-call recipient routing. Native/WebRTC end-to-end lifecycle remains untested. The original evidence below describes the pre-fix baseline.
 
 **Evidence:** `call:answer` resolves a VideoCall and verifies that the authenticated socket user is caller or receiver (`backend/server.js:867-930`). `call:offer` trusts body `to`, may create a new VideoCall and direct conversation, then sends an incoming-call event (`:768-865`). `call:ice-candidate`, `call:reject`, and `call:end` also forward to body `to` without resolving/authorizing `callId` or participant membership (`:932-970`). Block status is checked only on offer and its lookup failure is treated as non-fatal.
 
@@ -40,7 +51,9 @@ Additional verified gaps include overbroad membership reads, profile privacy inc
 **Affected:** `backend/server.js:768-970`, `VideoCall` model.
 **Minimal remediation:** Require a server-created active VideoCall ID on all signaling; verify authenticated user is one party, derive recipient server-side, apply reciprocal block/minor communication policy, validate payload shape/size, and make calls to nonexistent IDs fail closed. Add socket-level tests for forged recipient, non-party, blocked pair, guardian-pending minor, and valid party flows.
 
-### P1 — GET roster endpoint writes inferred memberships
+### Resolved P1 baseline — GET roster endpoint wrote inferred memberships
+
+**Current status:** Fixed on review branch `df8cdec`. Fuzzy profile-to-membership imports were removed from the GET handler; existing membership rows are preserved. Regression assertions and disposable PostgreSQL count checks passed. The original evidence below describes the pre-fix baseline.
 
 **Evidence:** Optional-auth `GET /api/club-members/club/:clubId` performs fuzzy text matching on Profile.club, then inserts pending ClubMember rows when no row exists (`backend/routes/clubMembers.js:73-144`). The write is independent of caller identity and happens during a read.
 
@@ -49,12 +62,14 @@ Additional verified gaps include overbroad membership reads, profile privacy inc
 **Impact:** A public read can mutate roster state, create incorrect club-athlete associations, and pollute subsequent roster/tournament workflows.
 **Minimal remediation:** Remove writes from GET. If legacy roster import is required, run a one-time reviewed admin job with deterministic exact club IDs, audit records, and dry-run output; do not infer links from a name substring.
 
-### P2 — athlete membership list exposes other users' memberships to any authenticated user
+### Resolved in current working tree — athlete membership list exposed private membership state
 
+**Current status:** The route now restricts pending/rejected membership rows to the athlete, linked verified guardian, admin, the verified club associated with that row, or an active authorized coach with a valid assignment. Unrelated authenticated users still see approved affiliations to preserve sports visibility. Four helper tests and a disposable PostgreSQL route test passed. This follow-up is not yet committed.
+
+**Baseline evidence before fix:**
 **Evidence:** `GET /api/club-members/athlete/:athleteId` uses `protect` but does not require `req.user.id === athleteId`, guardian, club assignment, or admin; returns all ClubMember states and club identities (`backend/routes/clubMembers.js:206-237`).
 
-**Impact:** Pending/rejected affiliation and transfer history can be enumerated.
-**Minimal remediation:** Check owner, authorized guardian, assigned club staff for that specific athlete, or admin; return only approved public affiliations to other viewers. Tests should cover pending/rejected versus approved.
+**Baseline impact:** Pending/rejected affiliation and transfer history could be enumerated. Acceptance tests now cover public, verified club, active/inactive coach, athlete, guardian and admin visibility.
 
 ### P2 — admin managed-athlete form state was attached to the wrong component (fixed locally)
 
@@ -69,7 +84,9 @@ Additional verified gaps include overbroad membership reads, profile privacy inc
 **Impact:** Private operational state (pending/inactive staff membership) is disclosed.
 **Minimal remediation:** Anonymous requests should see only active public staff; require club/admin authorization for pending/inactive states. Do not change active public staff discoverability.
 
-### P2 — athlete profile privacy is applied inconsistently
+### Resolved profile privacy drift — legacy athlete API
+
+**Current status:** The legacy athlete endpoints now use the canonical `applyProfilePrivacy` utility, remove exact DOB/account fields, and apply guardian-consent filtering. Regression tests passed on the current branch. The text below is baseline evidence.
 
 **Evidence:** The profile system has `privacy` and explicit output shaping for profiles/list/CV paths (`backend/controllers/profiles.js:1652-1711` and related serializers). The legacy athlete endpoints return Profile directly (`backend/controllers/athlete.js:33-47,75-85`) and do not call that policy.
 
@@ -94,8 +111,8 @@ Additional verified gaps include overbroad membership reads, profile privacy inc
 
 ## Tests and checks executed
 
-- Backend `npm test`: **240 passed / 244 total; 4 failed.** Three tests could not bind `127.0.0.1` (`EPERM` in this sandbox): `tests/oauth-exchange.test.js`, `tests/phase6-livekit-football.test.js`, `tests/rate-limit-proxy.test.js`. `tests/upload-magic.test.js` failed independently: its real-PNG assertion returned `false` where `true` was expected. No changes were made to tests.
-- Backend `npm run lint`: **failed, 272 ESLint errors** across the existing backend, including unused variables and control-regex lint. New uncommitted `managedAthletes.js` also has an unused `TEAM_TYPES` constant.
+- Backend `npm test`: **259 passed / 259 total** with permission for temporary loopback listeners. An unprivileged run is expected to fail three HTTP tests because the sandbox blocks binding `127.0.0.1`; the permitted run passed them. The upload magic-byte helper now handles the installed `file-type` v16 API, and the PNG test passes.
+- Backend repository-wide `npm run lint`: historical audit run reported **272 ESLint errors**; this full lint has not been rerun for the current working tree. ESLint on the touched route/helper/test files passes.
 - Frontend `npm run build`: **passed**; Vite emitted a large-chunk warning (largest entry about 924 kB minified, LiveKit chunk about 503 kB). Frontend `npm run lint`: initial run found 5 errors / 146 warnings in `frontend/src/components/admin/pages.jsx`; the confirmed misplaced state was fixed locally by moving its hook to `UsersPage`. A final lint run was started after the fix; see final run result below.
 - Mobile `npm run verify:parity`: **passed all static checks**. This verifies source tokens/modules only, not end-to-end feature behavior.
 - Mobile `npm run release:preflight`: **passed** including identifiers, production API URL, disabled payment flags, legal/deletion UI, syntax, and smoke checklist. No native device/build was performed.

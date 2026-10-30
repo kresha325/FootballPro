@@ -1,13 +1,17 @@
 # Database Integrity Report
 
-**Limit:** Source/migration inspection only. No PostgreSQL connection or schema introspection was performed; production constraints and migration status remain unverified.
+**Limit:** Source/migration inspection plus disposable local integration databases. No production PostgreSQL connection or schema introspection was performed; production constraints and migration status remain unverified.
+
+## Latest verification — 2026-10-30
+
+Two isolated local PostgreSQL clusters were initialized solely for test runs, used with Sequelize schema sync in those disposable databases, then dropped and removed. The first exercised athlete privacy, guardian-consent filtering, call recipient checks and read-only club roster behavior. The second exercised the athlete-membership route under public, verified-club, active-coach and inactive-coach identities. No project/local/production DB was used or modified, and no migration was run.
 
 ## Entity and write-path review
 
 | Entity | Observed structure | Integrity concern / required verification |
 |---|---|---|
 | Users / Profiles | User role, DOB, parent flags; Profile contains contact/privacy JSON, stats/career/media JSON | Unique email is model-declared; verify case-insensitive uniqueness in actual DB. Profile's `userId` has no visible `allowNull:false` or unique declaration in model excerpt. Ensure one Profile per user and DB not just application-level. |
-| ClubMember | FK references to club/athlete, provenance, status, team/category/group/number | Verify both FKs, unique `(clubId, athleteId)` or appropriate temporal membership model, constraints for jersey range/status and cascade behavior in live schema. Public GET currently creates inferred memberships (P1). |
+| ClubMember | FK references to club/athlete, provenance, status, team/category/group/number | GET paths no longer create or update ClubMember rows; the athlete membership list also filters private states by relationship. Verify both FKs, unique `(clubId, athleteId)` or temporal membership policy, jersey/status constraints and cascade behavior in the live schema. |
 | ClubStaff | club/staff IDs, role, team, status, contract dates | Verify FKs and constraints for duplicate active assignments, valid role/status, expiry and leftAt. Coach authorization helper checks active, allowed coaching role, non-expired contract. |
 | GuardianConsent | minor/guardian IDs, guardian contact, scope/version, hashed one-time/management tokens and timestamps | Verify unique token hashes and FK/index in deployed schema. No independently verified guardian identity evidence was found beyond email possession and declaration. |
 | Conversations / Members / Messages | conversation membership used for authorization and sockets | Verify unique membership pair, FK constraints, delete/retention policy, and that every message/call write requires membership. |
@@ -15,9 +19,9 @@
 | IapPurchase | transactionId index in migration and purchase record fields | Migration appears to add a transactionId index; confirm it is unique from `backend/migrations/20260906193000-create-iap-purchases.js`. Current pre-check/fulfillment race exists regardless of uniqueness; claim, balance update and purchase insert must be atomic. |
 | Wallet/ledger/orders | ledger service and transaction tests | Unit tests show idempotency/locking at service level; inspect deployed unique indexes, FK and reconciliation jobs before launch. |
 
-## Confirmed data consistency defect
+## Resolved data consistency defect
 
-`GET /api/club-members/club/:clubId` can insert pending rows from fuzzy profile-name matches (`backend/routes/clubMembers.js:95-144`). This makes a read request write to the roster and may create false relations. Remove this side effect; do not backfill by fuzzy matching without a reviewed reconciliation report.
+The profile-name fuzzy import was removed from `GET /api/club-members/club/:clubId` in commit `df8cdec`. Existing `ClubMember` rows remain the roster source; no data was deleted or backfilled. Regression checks confirm GET does not call ClubMember write methods and the local PostgreSQL route test preserved membership row count. If a legacy import is needed later, use a reviewed, deterministic, auditable job rather than name-substring matching.
 
 ## Required read-only schema verification before production approval
 

@@ -2,13 +2,15 @@
 
 **Method:** Compared route/API helpers and feature modules statically. A matching helper or screen is **surface parity**, not proof of identical runtime behavior. Mobile static parity script passes; production API/device end-to-end tests were not available.
 
+**Updated 2026-10-30:** Athlete privacy and direct-call signaling P1 fixes are present on review branch `fix/xtalenti-v1-p1-security` (`df8cdec`), with backend regression tests and disposable PostgreSQL route checks. Managed athlete registration is verified as connected to web/mobile screens and authenticated endpoints. Athlete membership visibility has an uncommitted follow-up fix with local route tests. None of these checks constitute a native device or production E2E run.
+
 | # | Domain | Web | Mobile | Backend contract / assessment |
 |---:|---|---|---|---|
 | 1 | Authentication | API helpers + AuthScreen | API helpers + auth screens | **PARTIAL PARITY** — shared API; role/guardian error scenarios not E2E-tested. |
-| 2 | User profiles | profile helpers/screens | profile helpers/screens | **BROKEN** — canonical privacy serializer exists, but legacy athlete API returns full Profile to other authenticated users. |
+| 2 | User profiles | profile helpers/screens | profile helpers/screens | **PARTIAL PARITY** — legacy athlete API now applies canonical privacy and pending-minor filters; compare remaining profile/CV serializers and run role-based web/mobile E2E tests. |
 | 3 | Clubs | club/profile components | club/profile screens | **PARTIAL PARITY** — shared backend; club verification/ownership flows not E2E-tested. |
-| 4 | Coaches and staff | staff/roster views | roster/admin surfaces | **PARTIAL PARITY** — same data model; endpoint exposes pending/inactive staff publicly. |
-| 5 | Athletes and rosters | ClubRoster + managed form | ClubRosterScreen + managed form | **PARTIAL PARITY** — both call server-managed flow; GET roster side effect must be removed before relying on consistency. |
+| 4 | Coaches and staff | staff/roster views | roster/admin surfaces | **PARTIAL PARITY** — active assignment is checked for managed registration and private athlete membership states; club-staff GET still exposes caller-selected pending/inactive rows. |
+| 5 | Athletes and rosters | ClubRoster + managed form | ClubRosterScreen + managed form | **PARTIAL PARITY** — managed form wiring is verified; roster GET is read-only and membership status reads are scoped, but no device workflow E2E has run. |
 | 6 | Federations and leagues | API and competition views | API and league/tournament views | **NOT VERIFIED** — static endpoint breadth; role and lifecycle parity not exercised. |
 | 7 | Tournaments | tournament components | TournamentDetailScreen | **PARTIAL PARITY** — static parity module check passes; real enrollment/admin/fixture workflows not E2E-tested. |
 | 8 | Matches | Matches/MatchCenter | tournament match screens | **PARTIAL PARITY** — shared backend; separate score/event flows need consistency tests. |
@@ -17,7 +19,7 @@
 | 11 | Analytics | admin/analytics views | admin dashboard | **NOT VERIFIED** — aggregation and permissions not compared end-to-end. |
 | 12 | Gamification | points/badges components | XPNotificationManager/screens | **PARTIAL PARITY** — mobile static check passes; event delivery/data parity untested. |
 | 13 | Messaging | Messaging component | MessagingScreen | **PARTIAL PARITY** — shared HTTP/socket service; member checks present, adult/minor policy and device reconnect unverified. |
-| 14 | Video calls | VideoCallManager/Room/Simple | Incoming/Outgoing + NativeCallRoom | **BROKEN** — server signaling recipient checks incomplete; mobile parity static script passes but does not test ACL. |
+| 14 | Video calls | VideoCallManager/Room/Simple | Incoming/Outgoing + NativeCallRoom | **PARTIAL PARITY** — direct signaling now checks active call participants and callers send `callId`; lifecycle, reconnection, and native device ACL remain untested. |
 | 15 | Scouting | Scouting views | scouting modules/screens | **NOT VERIFIED** — full flows and payload equivalence not tested. |
 | 16 | Scouting reports | report forms/views | mobile surface/API | **NOT VERIFIED** — no end-to-end create/read/permission comparison. |
 | 17 | Feed and posts | Feed components | FeedScreen | **PARTIAL PARITY** — shared API helpers, upload/moderation behavior not E2E-tested. |

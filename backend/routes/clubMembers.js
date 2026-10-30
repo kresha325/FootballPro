@@ -3,11 +3,14 @@ const { body, param, query, validationResult } = require('express-validator');
 const router = express.Router();
 const { protect, optionalAuth } = require('../middleware/auth');
 const ClubMember = require('../models/ClubMember');
+const ClubStaff = require('../models/ClubStaff');
 const User = require('../models/User');
+const GuardianConsent = require('../models/GuardianConsent');
 const Profile = require('../models/Profile');
 const { Op } = require('sequelize');
 const { createNotification } = require('../controllers/notifications');
 const { isMinorAthlete, hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+const { visibleAthleteMemberships } = require('../utils/athleteMembershipVisibility');
 
 const notifyClubMembershipRequest = async ({ clubId, athleteId, membershipId, position }) => {
   try {
@@ -161,6 +164,12 @@ router.get('/athlete/:athleteId', protect, async (req, res) => {
     }
   try {
     const { athleteId } = req.params;
+    const targetAthlete = await User.findByPk(Number(athleteId), {
+      attributes: ['id', 'role', 'dateOfBirth', 'parentVerified', 'deletedAt', 'bannedAt'],
+    });
+    if (!targetAthlete || String(targetAthlete.role || '').toLowerCase() !== 'athlete' || targetAthlete.deletedAt || targetAthlete.bannedAt) {
+      return res.status(404).json({ msg: 'Atleti nuk u gjet.' });
+    }
 
     const memberships = await ClubMember.findAll({
       where: { athleteId: parseInt(athleteId) },
@@ -177,8 +186,40 @@ router.get('/athlete/:athleteId', protect, async (req, res) => {
       ],
       order: [['createdAt', 'DESC']],
     });
+    const viewer = req.user;
+    let verifiedGuardian = false;
+    if (isMinorAthlete(targetAthlete) && targetAthlete.parentVerified && Number(viewer.id) !== Number(targetAthlete.id)) {
+      verifiedGuardian = Boolean(await GuardianConsent.findOne({
+        where: {
+          minorUserId: targetAthlete.id,
+          guardianUserId: viewer.id,
+          verifiedAt: { [Op.ne]: null },
+          revokedAt: null,
+        },
+        attributes: ['id'],
+      }));
+    }
 
-    res.json(memberships);
+    const clubIds = [...new Set(memberships.map((membership) => Number(membership.clubId)).filter(Number.isFinite))];
+    const [clubs, staffAssignments] = await Promise.all([
+      clubIds.length ? User.findAll({
+        where: { id: { [Op.in]: clubIds }, role: 'club', adminVerified: true, bannedAt: null, deletedAt: null },
+        attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'],
+      }) : [],
+      clubIds.length && String(viewer.role || '').toLowerCase() === 'coach' ? ClubStaff.findAll({
+        where: { clubId: { [Op.in]: clubIds }, staffId: viewer.id, status: 'active', leftAt: null },
+        attributes: ['clubId', 'staffId', 'staffRole', 'status', 'leftAt', 'contractUntil'],
+      }) : [],
+    ]);
+    const visible = visibleAthleteMemberships({
+      viewer,
+      athlete: targetAthlete,
+      memberships,
+      verifiedClubs: clubs,
+      staffAssignments,
+      verifiedGuardian,
+    });
+    res.json(visible);
   } catch (error) {
     console.error('Get athlete memberships error:', error);
     res.status(500).json({ msg: 'Server error' });
