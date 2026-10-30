@@ -6,7 +6,7 @@
 
 ## Current implementation update — 2026-10-30
 
-The first three P1 findings recorded below were fixed in commit `df8cdec` on `fix/xtalenti-v1-p1-security`, pushed for review but not merged or deployed. Their regression tests passed. Disposable local PostgreSQL route runs verified athlete privacy/consent, participant-bound call delivery, and that roster GET preserves membership rows. A follow-up fix to the athlete-membership enumeration issue was committed locally: approved sports affiliations remain visible, while pending/rejected rows are scoped to the athlete, linked verified guardian, admin, verified club, or an active authorized coach. Its 4 focused policy tests and route test against a second disposable PostgreSQL database passed. The upload magic-byte helper was also updated for the installed `file-type` v16 API and newer API versions, resolving the PNG fixture failure. This follow-up commit has not been pushed or deployed.
+The first three P1 findings recorded below were fixed in commit `df8cdec` on `fix/xtalenti-v1-p1-security`, pushed for review but not merged or deployed. Their regression tests passed. Disposable local PostgreSQL route runs verified athlete privacy/consent, participant-bound call delivery, and that roster GET preserves membership rows. The follow-up fix to athlete-membership enumeration was committed as `be5362b` and pushed to the same review branch: approved sports affiliations remain visible, while pending/rejected rows are scoped to the athlete, linked verified guardian, admin, verified club, or an active authorized coach. Its 4 focused policy tests and route test against a second disposable PostgreSQL database passed. The upload magic-byte helper now supports the installed `file-type` v16 API and newer versions. A further public club-staff visibility fix is in the current working tree: public users only see current active, non-expired, non-departed staff; non-public states are restricted to the verified club owner and platform admins.
 
 The P1 sections below document the initial baseline and should be read as historical evidence; the tested fixes above supersede those reproduction steps. A new P2 risk remains in the public club-staff listing, and adult-to-minor communication policy is still not established. Current checklist: `PRODUCTION_READINESS_CHECKLIST.md`; phase tracker: `../XTALENTI_COMPLETION_PLAN.md`.
 
@@ -62,9 +62,9 @@ Other functional parity, production schema, deletion retention, payment-provider
 **Impact:** A public read can mutate roster state, create incorrect club-athlete associations, and pollute subsequent roster/tournament workflows.
 **Minimal remediation:** Remove writes from GET. If legacy roster import is required, run a one-time reviewed admin job with deterministic exact club IDs, audit records, and dry-run output; do not infer links from a name substring.
 
-### Resolved in current working tree — athlete membership list exposed private membership state
+### Resolved in pushed review branch — athlete membership list exposed private membership state
 
-**Current status:** The route now restricts pending/rejected membership rows to the athlete, linked verified guardian, admin, the verified club associated with that row, or an active authorized coach with a valid assignment. Unrelated authenticated users still see approved affiliations to preserve sports visibility. Four helper tests and a disposable PostgreSQL route test passed. This follow-up is not yet committed.
+**Current status:** Commit `be5362b` restricts pending/rejected membership rows to the athlete, linked verified guardian, admin, the verified club associated with that row, or an active authorized coach with a valid assignment. Unrelated authenticated users still see approved affiliations to preserve sports visibility. Four helper tests and a disposable PostgreSQL route test passed.
 
 **Baseline evidence before fix:**
 **Evidence:** `GET /api/club-members/athlete/:athleteId` uses `protect` but does not require `req.user.id === athleteId`, guardian, club assignment, or admin; returns all ClubMember states and club identities (`backend/routes/clubMembers.js:206-237`).
@@ -77,12 +77,12 @@ Other functional parity, production schema, deletion retention, payment-provider
 
 **Status:** Locally fixed; rerun lint/build results are recorded below. No commit or push was performed.
 
-### P2 — club staff listing accepts caller-provided status without authorization
+### Resolved in current working tree — club staff listing accepts caller-provided status without authorization
 
 **Evidence:** `GET /api/club-staff/club/:clubId` has no authentication middleware and directly applies caller-supplied `status` and `teamType` filters (`backend/routes/clubStaff.js:19-66`). It exposes public roster staff names/roles/gender/photo, including pending/inactive records if requested.
 
-**Impact:** Private operational state (pending/inactive staff membership) is disclosed.
-**Minimal remediation:** Anonymous requests should see only active public staff; require club/admin authorization for pending/inactive states. Do not change active public staff discoverability.
+**Baseline impact:** Private operational state (pending/inactive staff membership) was disclosed.
+**Current status:** Public requests now default to current active assignments and exclude departed, expired, malformed-contract, banned, or deleted staff. Pending/inactive states require the verified owning club or platform admin. Six route-handler tests pass; the full backend suite passes 265/265 with loopback permitted. Active public staff discoverability is preserved.
 
 ### Resolved profile privacy drift — legacy athlete API
 
@@ -111,7 +111,7 @@ Other functional parity, production schema, deletion retention, payment-provider
 
 ## Tests and checks executed
 
-- Backend `npm test`: **259 passed / 259 total** with permission for temporary loopback listeners. An unprivileged run is expected to fail three HTTP tests because the sandbox blocks binding `127.0.0.1`; the permitted run passed them. The upload magic-byte helper now handles the installed `file-type` v16 API, and the PNG test passes.
+- Backend `npm test`: **265 passed / 265 total** with permission for temporary loopback listeners. An unprivileged run is expected to fail three HTTP tests because the sandbox blocks binding `127.0.0.1`; the permitted run passed them. The upload magic-byte helper now handles the installed `file-type` v16 API, and the PNG test passes.
 - Backend repository-wide `npm run lint`: historical audit run reported **272 ESLint errors**; this full lint has not been rerun for the current working tree. ESLint on the touched route/helper/test files passes.
 - Frontend `npm run build`: **passed**; Vite emitted a large-chunk warning (largest entry about 924 kB minified, LiveKit chunk about 503 kB). Frontend `npm run lint`: initial run found 5 errors / 146 warnings in `frontend/src/components/admin/pages.jsx`; the confirmed misplaced state was fixed locally by moving its hook to `UsersPage`. A final lint run was started after the fix; see final run result below.
 - Mobile `npm run verify:parity`: **passed all static checks**. This verifies source tokens/modules only, not end-to-end feature behavior.

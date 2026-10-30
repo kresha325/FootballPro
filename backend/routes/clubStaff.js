@@ -1,7 +1,7 @@
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, optionalAuth } = require('../middleware/auth');
 const ClubStaff = require('../models/ClubStaff');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
@@ -17,15 +17,36 @@ function withAbsoluteStaffPhotos(req, rows) {
 }
 
 // Get club staff
-router.get('/club/:clubId', async (req, res) => {
+router.get('/club/:clubId', optionalAuth, async (req, res) => {
   try {
     const { clubId } = req.params;
     const { status, teamType } = req.query;
-    const numericClubId = parseInt(clubId);
-    if (isNaN(numericClubId)) return res.status(400).json({ msg: 'Invalid clubId' });
+    const numericClubId = Number(clubId);
+    if (!Number.isInteger(numericClubId) || numericClubId < 1) return res.status(400).json({ msg: 'Invalid clubId' });
 
-    const where = { clubId: numericClubId };
-    if (status) where.status = status;
+    const requestedStatus = status ? String(status).trim().toLowerCase() : null;
+    if (requestedStatus && !['pending', 'active', 'inactive'].includes(requestedStatus)) {
+      return res.status(400).json({ msg: 'Invalid staff status' });
+    }
+
+    const viewerRole = String(req.user?.role || '').toLowerCase();
+    let canManageStaff = viewerRole === 'admin';
+    if (!canManageStaff && req.user && Number(req.user.id) === numericClubId && viewerRole === 'club') {
+      const club = await User.findByPk(numericClubId, {
+        attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'],
+      });
+      canManageStaff = Boolean(
+        club && String(club.role || '').toLowerCase() === 'club' && club.adminVerified === true && !club.bannedAt && !club.deletedAt
+      );
+    }
+
+    if (requestedStatus && requestedStatus !== 'active' && !canManageStaff) {
+      return res.status(403).json({ msg: 'Only the verified club or platform admin can view non-public staff assignments.' });
+    }
+
+    const publicActiveView = !canManageStaff;
+    const where = { clubId: numericClubId, status: requestedStatus || 'active' };
+    if (publicActiveView || where.status === 'active') where.leftAt = null;
     if (teamType) where.teamType = teamType;
 
     let staff;
@@ -35,7 +56,7 @@ router.get('/club/:clubId', async (req, res) => {
         include: [{
           model: User,
           as: 'staff',
-          attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
+          attributes: ['id', 'firstName', 'lastName', 'role', 'gender', 'bannedAt', 'deletedAt'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'bio'] }]
         }],
         order: [['createdAt', 'DESC']],
@@ -48,7 +69,7 @@ router.get('/club/:clubId', async (req, res) => {
           include: [{
             model: User,
             as: 'staff',
-            attributes: ['id', 'firstName', 'lastName', 'role', 'gender'],
+            attributes: ['id', 'firstName', 'lastName', 'role', 'gender', 'bannedAt', 'deletedAt'],
           }],
           order: [['createdAt', 'DESC']],
         });
@@ -58,7 +79,19 @@ router.get('/club/:clubId', async (req, res) => {
       }
     }
 
-    res.json(withAbsoluteStaffPhotos(req, staff));
+    const visibleStaff = publicActiveView
+      ? staff.filter((assignment) => {
+        if (assignment.leftAt || String(assignment.status || '').toLowerCase() !== 'active') return false;
+        const staffAccount = assignment.staff || assignment.User;
+        if (!staffAccount || staffAccount.bannedAt || staffAccount.deletedAt) return false;
+        const expiryText = String(assignment.contractUntil || '').trim();
+        if (!expiryText || expiryText.toLowerCase() === 'vazhdon') return true;
+        const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(expiryText);
+        const expiry = new Date(dateOnly ? `${expiryText}T23:59:59.999Z` : expiryText);
+        return Number.isFinite(expiry.getTime()) && expiry >= new Date();
+      })
+      : staff;
+    res.json(withAbsoluteStaffPhotos(req, visibleStaff));
   } catch (error) {
     console.error('Get club staff error:', error);
     res.status(500).json({ msg: 'Server error' });

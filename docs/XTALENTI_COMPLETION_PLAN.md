@@ -9,7 +9,7 @@
 
 The three previously confirmed P1 defects (legacy athlete privacy, Socket.IO call signaling, and roster GET writes) are implemented in commit `df8cdec` and pushed to the security branch. They are not merged into `main` or deployed. Their regression tests pass, and an isolated PostgreSQL integration run verified profile privacy, call participant routing, and read-only roster behavior.
 
-A further membership-list IDOR was confirmed from the older audit and fixed in this follow-up commit: external authenticated viewers receive approved sports affiliations only; private membership states are scoped to the athlete, an explicitly linked verified guardian, admin, verified club, or active authorized coach. Unit tests and an isolated PostgreSQL route test pass. The commit is local and not pushed.
+A further membership-list IDOR was confirmed from the older audit and fixed in commit `be5362b`, pushed to the security branch: external authenticated viewers receive approved sports affiliations only; private membership states are scoped to the athlete, an explicitly linked verified guardian, admin, verified club, or active authorized coach. Unit tests and an isolated PostgreSQL route test pass.
 
 The upload magic-byte failure was traced to the installed `file-type` v16 API versus the newer API expected by the code. `backend/utils/uploadMagic.js` now supports both API shapes. The complete backend suite passes when loopback test servers are permitted.
 
@@ -24,7 +24,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Clubs | PARTIALLY COMPLETE | Verification, memberships and registration flows exist; DB constraints and club ownership transfers need schema and E2E verification. | P2 |
 | Athletes and rosters | IMPLEMENTED BUT NOT TESTED | Managed registration exists; roster GET no longer writes; membership status endpoint is now relationship-scoped. Verify transfers and production constraints. | P1 |
 | Guardians | PARTIALLY COMPLETE | Hashed, expiring consent and withdrawal flows exist. Guardian identity/relationship proof is email attestation; guardian account linkage is not demonstrated end to end. | P1 |
-| Coaches and staff | PARTIALLY COMPLETE | Active, role-limited coach assignment gates managed registration and membership-state reads; public staff endpoint still needs active-only filtering. | P2 |
+| Coaches and staff | PARTIALLY COMPLETE | Active, role-limited coach assignment gates managed registration and membership-state reads; public staff endpoint now defaults to current active staff and gates non-public statuses. Full role workflow and device validation remain. | P2 |
 | Federations and leagues | PARTIALLY COMPLETE | League/federation profile and competition paths exist; workflow parity and authority matrix need E2E confirmation. | P2 |
 | Tournaments | IMPLEMENTED BUT NOT TESTED | Lifecycle, enrollment, fixtures and standings helpers/tests exist; run the same role workflows on web and mobile. | P1 |
 | Matches | PARTIALLY COMPLETE | Results/events/lineups exist; confirm all route writes use one transaction and authorization policy. | P1 |
@@ -56,17 +56,22 @@ This is **not a production release approval**. Adult-to-minor communication poli
 - Club roster GET no longer infers or creates memberships. Existing `ClubMember` data remains the source of roster state.
 - Mobile managed-athlete form is wired to club/coach and admin screens using authenticated API helpers; parity checks guard those links.
 
-### Follow-up commit (local, not pushed)
+### Follow-up commit `be5362b` (pushed to security branch)
 
 - `GET /api/club-members/athlete/:athleteId` limits private membership states to the athlete, a linked verified guardian, admin, the verified club for that row, or an active authorized coach. Other authenticated users still see approved affiliations.
 - Acceptance: 4 focused visibility tests, source-level read-only GET tests, and real Sequelize route tests against an isolated temporary PostgreSQL cluster. Temporary DB and cluster were dropped after the run.
+
+### Current working-tree follow-up — public club staff visibility
+
+- Public `GET /api/club-staff/club/:clubId` now defaults to current active assignments only, excludes departed/expired/malformed-contract and banned/deleted staff accounts, and refuses public requests for pending/inactive states. A verified club can inspect its own non-public states; platform admins retain operational access.
+- Acceptance: 6 route-handler regression tests pass; the complete backend suite passes 265/265 with loopback listeners permitted. This follow-up is not yet committed.
 
 ## Validation ledger
 
 | Check | Result | Limits |
 |---|---|---|
-| Focused security and upload regression tests | PASS, 17/17 | Includes legacy privacy, call signaling, club roster reads, membership visibility, and PNG validation. |
-| Backend full suite | PASS, 259/259 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
+| Focused security and upload regression tests | PASS, 23/23 | Includes legacy privacy, call signaling, club roster reads, membership visibility, staff visibility, and PNG validation. |
+| Backend full suite | PASS, 265/265 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
 | Changed backend files syntax/lint | PASS | Not equivalent to full backend lint; repository-wide lint has historical failures. |
 | Frontend production build | PASS | Existing large-chunk warning remains; unrelated to this phase. |
 | Mobile parity static checks | PASS | Static source checks only; does not prove device runtime behavior. |
@@ -75,7 +80,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 ## Ordered work plan
 
-1. **Close child/roster access paths:** commit and review the membership-list authorization fix; add an authorization rule for pending/inactive public staff listings; test guardian and coach cases through HTTP routes.
+1. **Close child/roster access paths:** review the pushed membership-list authorization fix and commit the current public staff visibility fix; extend authorization verification for guardian and coach cases through HTTP routes.
 2. **Resolve child contact policy:** product/legal decision on adult-to-minor DMs, calls and comments, including whether consent enables contact or only profile/tournament access. Implement only after this rule is approved.
 3. **Payments:** build atomic idempotent IAP transaction claiming/fulfillment with concurrent duplicate tests; require exact Apple signed-transaction claims and verify Google refund/revocation/acknowledgement states. Keep payment flags disabled.
 4. **Media and deletion:** choose private/signed delivery for restricted minor media; test copied URL access after consent withdrawal and account deletion; map retention exceptions.
@@ -90,6 +95,6 @@ This is **not a production release approval**. Adult-to-minor communication poli
 - Cloudinary delivery privacy and revocation behavior are not proven.
 - IAP atomicity/idempotency and full provider sandbox refund cases are incomplete.
 - Production database schema and applied migration ledger are not verified.
-- Whole backend suite is not green because of the PNG fixture test failure.
+- Adult/minor contact policy and enforcement tests are unresolved.
 - Native iOS/Android end-to-end flows and production-provider integrations have not been exercised.
 - Several broad domains remain only statically audited; consult `docs/audit/PRODUCTION_READINESS_CHECKLIST.md` for release evidence required.
