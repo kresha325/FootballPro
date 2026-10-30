@@ -9,6 +9,7 @@ This checklist records audit evidence, not release approval.
 - [x] Remove writes from public roster GET; regression and disposable-PostgreSQL tests confirm existing memberships are preserved.
 - [x] Restrict `/club-members/athlete/:athleteId` to owner/guardian/admin/verified club/active assigned coach for private states; other viewers retain approved affiliations. Commit `be5362b` is pushed to the security review branch; unit and disposable-PostgreSQL route tests pass.
 - [x] Restrict pending/inactive club staff listing to the verified owning club or platform admins; public reads show current active staff only. Commit `4697599` is pushed to the review branch; six route-handler regression tests pass.
+- [x] Require a verified, active club account before exposing its private pending/rejected membership requests; unverified clubs retain public visibility of approved rosters only. Route-level tests cover both outcomes.
 - [ ] Decide and implement adult-to-minor messaging/calling safeguards; document the policy.
 - [ ] Decide acceptable guardian verification level; current email attestation is not independent identity proof.
 - [ ] Secure private/minor media at Cloudinary delivery layer and test URL revocation/access.
@@ -16,9 +17,9 @@ This checklist records audit evidence, not release approval.
 
 ## Stop before enabling payments
 
-- [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; five focused tests pass. Verify the unique index in production schema and run a disposable-PostgreSQL concurrent duplicate test before launch.
+- [x] IAP code now claims the unique provider transaction and fulfills Premium/JonCoin in one idempotent database transaction; Google uses verified provider `orderId`, and Apple requires exact signed claims. Focused tests pass. Verify the unique index in production schema and run a disposable-PostgreSQL concurrent duplicate test before launch.
 - [x] Require exact Apple bundle/product/transaction claims; receipt/JWS and active subscription checks have focused tests. Live Apple sandbox verification remains required.
-- [ ] Verify Google package, product, token state, expiry, acknowledgement and refund/revocation flow.
+- [ ] Verify Google package, token state, expiry, acknowledgement and refund/revocation flow in Play sandbox; code-level orderId/product binding is regression-tested.
 - [ ] Run concurrent duplicate receipt tests; assert only one credit/activation.
 - [ ] Keep production Stripe/mobile digital-payment flags disabled until separate approval.
 
@@ -34,7 +35,7 @@ This checklist records audit evidence, not release approval.
 - [x] Frontend production build passed; bundle warning remains (>500 kB chunks).
 - [x] Mobile parity static check passed.
 - [x] Mobile release preflight passed; this does not build or run on native device.
-- [x] Backend test suite green: latest complete run 265/265 when temporary loopback listeners were permitted. Focused security/upload/staff visibility suite: 23/23.
+- [x] Backend test suite green: latest complete run 279/279 when temporary loopback listeners were permitted. Focused roster/visibility suite: 9/9.
 - [ ] Backend lint clean. Current run: 272 errors.
 - [ ] Frontend lint; prior completion snapshot had 0 errors / 146 warnings after an admin managed-form state fix. Re-run before launch.
 - [ ] iOS and Android simulator/device flows: auth restore, consent pending/revoke, roster, tournament result, chat/call, camera/mic, upload/playback, notifications, deletion.

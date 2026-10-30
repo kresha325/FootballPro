@@ -66,11 +66,17 @@ This is **not a production release approval**. Adult-to-minor communication poli
 - Public `GET /api/club-staff/club/:clubId` now defaults to current active assignments only, excludes departed/expired/malformed-contract and banned/deleted staff accounts, and refuses public requests for pending/inactive states. A verified club can inspect its own non-public states; platform admins retain operational access.
 - Acceptance: 6 route-handler regression tests pass; the complete backend suite passes 265/265 with loopback listeners permitted.
 
-### Current working-tree follow-up — IAP atomic claim and fulfillment
+### Club membership route authorization — current follow-up
+
+- `GET /api/club-members/club/:clubId` now treats a club account as a manager only when that same club is verified and neither banned nor deleted. Unverified clubs can still display approved public rosters, but cannot inspect pending/rejected requests or unconsented minor details.
+- Acceptance: 3 route-level authorization tests pass, along with membership visibility and read-only roster tests. Full backend suite passes 279/279; loopback listeners were permitted.
+
+### IAP atomic claim, provider claims and fulfillment — commits `4e79fad`, `ef90799`, `e02997f`
 
 - `POST /api/iap/verify` now creates the unique transaction claim and commits Premium activation or the JonCoin balance/ledger/invoice together. A concurrent unique-claim conflict returns idempotent success only for the same completed user/product/platform; purchase tokens are omitted from responses.
 - Existing `IapPurchases.transactionId` unique index is the cross-request claim. No migration was run; whether this index is applied in production remains unverified.
-- Acceptance: 5 focused controller/transaction tests pass. These mock transaction propagation and unique-conflict behavior; a disposable-PostgreSQL two-session race and real store sandbox/refund testing remain required. This follow-up is not yet committed.
+- Google verified purchases now use the provider-issued order ID as the idempotency key; regression tests reject missing or mismatched provider identity and prove client transaction IDs are not used for verified Google claims.
+- Acceptance: transaction, Apple, and Google regression tests pass. These mock transaction propagation, provider verification, and unique-conflict behavior; a disposable-PostgreSQL two-session race and real store sandbox/refund testing remain required.
 
 ### Strict Apple purchase claims — code-level checks
 
@@ -82,7 +88,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 | Check | Result | Limits |
 |---|---|---|
 | Focused security, upload, and IAP regression tests | PASS, 35/35 | Includes legacy privacy, call signaling, club roster reads, membership and staff visibility, PNG validation, IAP transaction handling, and Apple claim binding. |
-| Backend full suite | PASS, 274/274 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
+| Backend full suite | PASS, 279/279 | Requires permission for three tests to bind temporary loopback servers; all passed in the permitted run. |
 | Changed backend files syntax/lint | PASS | Not equivalent to full backend lint; repository-wide lint has historical failures. |
 | Frontend production build | PASS | Existing large-chunk warning remains; unrelated to this phase. |
 | Mobile parity static checks | PASS | Static source checks only; does not prove device runtime behavior. |
@@ -91,7 +97,7 @@ This is **not a production release approval**. Adult-to-minor communication poli
 
 ## Ordered work plan
 
-1. **Close child/roster access paths:** review the pushed membership-list authorization fix and commit the current public staff visibility fix; extend authorization verification for guardian and coach cases through HTTP routes.
+1. **Close child/roster access paths:** membership list authorization is covered by helper and route tests, including an unverified club denial while public approved rosters remain visible. Continue HTTP authorization coverage for linked guardians and assigned coaches, then run role workflows on web/mobile.
 2. **Resolve child contact policy:** product/legal decision on adult-to-minor DMs, calls and comments, including whether consent enables contact or only profile/tournament access. Implement only after this rule is approved.
 3. **Payments:** prove the new atomic IAP claim with a disposable PostgreSQL concurrency test; verify Google refund/revocation/acknowledgement states and Apple/Google sandbox cases. Keep payment flags disabled.
 4. **Media and deletion:** choose private/signed delivery for restricted minor media; test copied URL access after consent withdrawal and account deletion; map retention exceptions.

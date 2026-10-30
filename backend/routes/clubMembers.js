@@ -11,6 +11,7 @@ const { Op } = require('sequelize');
 const { createNotification } = require('../controllers/notifications');
 const { isMinorAthlete, hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
 const { visibleAthleteMemberships } = require('../utils/athleteMembershipVisibility');
+const { isVerifiedClub } = require('../utils/managedAthleteRegistration');
 
 const notifyClubMembershipRequest = async ({ clubId, athleteId, membershipId, position }) => {
   try {
@@ -84,8 +85,15 @@ router.get('/club/:clubId', optionalAuth, async (req, res) => {
     const { clubId } = req.params;
     const { status } = req.query; // pending, approved, rejected
 
-    const where = { clubId: parseInt(clubId, 10) };
-    const isManager = req.user && (req.user.role === 'admin' || Number(req.user.id) === Number(clubId));
+    const numericClubId = parseInt(clubId, 10);
+    const where = { clubId: numericClubId };
+    let isManager = String(req.user?.role || '').toLowerCase() === 'admin';
+    if (!isManager && String(req.user?.role || '').toLowerCase() === 'club' && Number(req.user.id) === numericClubId) {
+      const club = await User.findByPk(numericClubId, {
+        attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'],
+      });
+      isManager = isVerifiedClub(club);
+    }
     if ((status === 'pending' || status === 'rejected') && !isManager) {
       return res.status(403).json({ msg: 'Access denied' });
     }
