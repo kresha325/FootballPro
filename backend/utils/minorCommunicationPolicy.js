@@ -13,9 +13,12 @@ const CHANNELS = Object.freeze({
 });
 
 function isMinorAthlete(user) {
-  if (String(user?.role || '').toLowerCase() !== 'athlete' || !user?.dateOfBirth) return false;
+  if (String(user?.role || '').toLowerCase() !== 'athlete') return false;
+  // Missing or malformed age data must never silently make an athlete eligible
+  // for adult contact. Treat unknown age as a minor until it is verified.
+  if (!user?.dateOfBirth) return true;
   const age = ageFromDateOnly(user.dateOfBirth);
-  return Number.isFinite(age) && age < 18;
+  return !Number.isFinite(age) || age < 18;
 }
 
 function scopeChannels(scope) {

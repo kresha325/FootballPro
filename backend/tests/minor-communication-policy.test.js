@@ -76,6 +76,25 @@ function communicationConsent(channel, { adultUserId = coach.id, clubId = club.i
 }
 
 describe('minor communication policy', () => {
+  it('fails closed for athlete accounts with missing or invalid birth dates', async () => {
+    const fixture = policyFixture({ consents: [] });
+    const users = [
+      { id: 11, role: 'athlete', email: 'unknown-age@example.test', dateOfBirth: null },
+      { id: 12, role: 'athlete', email: 'invalid-age@example.test', dateOfBirth: 'not-a-date' },
+    ];
+    for (const unknownAgeAthlete of users) {
+      fixture.User.findByPk = async (id) => Number(id) === coach.id ? coach :
+        Number(id) === unknownAgeAthlete.id ? unknownAgeAthlete : null;
+      const result = await authorizeMinorDirectContact({
+        actorId: coach.id,
+        targetId: unknownAgeAthlete.id,
+        channel: CHANNELS.DIRECT_MESSAGE,
+        ...fixture,
+      });
+      assert.equal(result.allowed, false);
+    }
+  });
+
   it('denies unrelated adults by default and does not infer contact consent from account consent', async () => {
     const fixture = policyFixture({ consents: [accountConsent()] });
     const result = await authorizeMinorDirectContact({

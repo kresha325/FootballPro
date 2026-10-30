@@ -40,7 +40,7 @@
 - Mobile `npm run release:preflight`: passed.
 - Frontend Vite build: passed with a >500 kB chunk warning.
 - No UI automation, browser E2E, native simulator run, store sandbox purchase, or real-device test was run in this audit.
-- Backend full suite passed 300/300 on this local branch; focused child-contact and revocation tests passed 36/36. These tests use mocks for the new policy paths; the consent-event migration and guardian email workflow still need a disposable PostgreSQL integration run.
+- Backend full suite passed 301/301 on this local branch; focused child-contact and revocation tests passed 37/37. All repository migrations applied successfully to a disposable PostgreSQL cluster, and 8 integration assertions passed against the real Sequelize models (adult denial, assigned coach, exact-channel grant, channel mismatch, group denial, unknown DOB, revocation, guardian access). Guardian email delivery itself was not exercised against Resend.
 
 ## Required parity tests before pilot
 
