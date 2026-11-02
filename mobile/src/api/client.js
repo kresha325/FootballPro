@@ -423,6 +423,12 @@ export const resendManagedAthleteConsentRequest = (athleteId) => api.post(`/api/
 export const adminCreateManagedAthleteRequest = (payload) => api.post('/api/admin/ops/players/managed', payload);
 export const adminVerifiedClubsRequest = (params = {}) => api.get('/api/admin/ops/clubs', { params });
 export const adminSessionRequest = () => api.get('/api/admin/ops/session');
+export const adminOpsGetRequest = (path, params = {}) =>
+  api.get(`/api/admin/ops/${String(path || '').replace(/^\/+/, '')}`, { params });
+export const adminOpsPostRequest = (path, payload = {}) =>
+  api.post(`/api/admin/ops/${String(path || '').replace(/^\/+/, '')}`, payload);
+export const adminOpsPutRequest = (path, payload = {}) =>
+  api.put(`/api/admin/ops/${String(path || '').replace(/^\/+/, '')}`, payload);
 export const gamificationBadgesRequest = () => api.get('/api/gamification/badges');
 export const gamificationLeaderboardRequest = () => api.get('/api/gamification/leaderboard');
 

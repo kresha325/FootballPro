@@ -55,6 +55,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import RegisterOnboardingScreen from '../screens/RegisterOnboardingScreen';
 import ClubRosterScreen from '../screens/ClubRosterScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminOperationsScreen from '../screens/AdminOperationsScreen';
 import ParentVerificationScreen from '../screens/ParentVerificationScreen';
 import LiveViewerScreen from '../screens/LiveViewerScreen';
 import LegalScreen from '../screens/LegalScreen';
@@ -420,6 +421,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="Legal" component={LegalScreen} options={{ title: 'Info & ligjore' }} />
       <MoreStack.Screen name="ClubRoster" component={ClubRosterScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: APP_BRAND_NAME }} />
+      <MoreStack.Screen name="AdminOperations" component={AdminOperationsScreen} options={{ title: 'Admin Operations' }} />
       <MoreStack.Screen name="ParentVerification" component={ParentVerificationScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="LiveViewer" component={LiveViewerFeatureScreen} options={{ title: APP_BRAND_NAME }} />
       <MoreStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: APP_BRAND_NAME }} />

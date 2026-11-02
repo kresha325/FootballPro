@@ -210,6 +210,13 @@ export default function MoreScreen({ navigation }) {
             onPress: () => navigation.navigate('AdminDashboard'),
           })
         : null}
+      {isAdmin
+        ? btn({
+            title: t('Admin Operations Center'),
+            subtitle: t('Players, clubs, competitions, finance, system and audit tools'),
+            onPress: () => navigation.navigate('AdminOperations'),
+          })
+        : null}
 
       {!canUseScouting ? (
         <View
