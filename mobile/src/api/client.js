@@ -435,6 +435,11 @@ export const gamificationLeaderboardRequest = () => api.get('/api/gamification/l
 export const tournamentsRequest = () => api.get('/api/tournaments');
 export const tournamentByIdRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}`);
 export const createTournamentRequest = (payload) => api.post('/api/tournaments', payload);
+export const verifiedTournamentClubsRequest = (params = {}) => api.get('/api/tournaments/verified-clubs', { params });
+export const tournamentClubEntriesRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/club-entries`);
+export const clubTournamentEntriesRequest = (clubId) => api.get(`/api/tournaments/club-entries/club/${clubId}`);
+export const claimTournamentClubEntryRequest = (entryId) => api.post(`/api/tournaments/club-entries/${entryId}/claim`);
+export const saveTournamentClubPlayerStatsRequest = (entryId, players) => api.post(`/api/tournaments/club-entries/${entryId}/player-stats`, { players });
 export const tournamentStandingsRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/standings`);
 export const tournamentMatchesRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/matches`);
 export const tournamentBracketRequest = (tournamentId) => api.get(`/api/tournaments/${tournamentId}/bracket`);

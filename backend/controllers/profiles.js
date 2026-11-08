@@ -13,6 +13,7 @@ const { Tournament, TournamentParticipant } = require('../models/Tournament');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const Match = require('../models/Match');
 const MatchScorer = require('../models/MatchScorer');
+const TournamentClubPlayerStat = require('../models/TournamentClubPlayerStat');
 const sequelize = require('../config/database');
 const { parseClubJoinedYear, syncCurrentClubCareer, buildCareerHistoryFromTransfers, isAutoCareerHistory, applyCurrentClubJoinedYear } = require('../utils/currentClubCareer');
 const { loadRecentMatchesForUser } = require('../utils/userRecentMatches');
@@ -1998,7 +1999,23 @@ exports.getUserTournamentSummary = async (req, res) => {
       order: [['updatedAt', 'DESC']],
     });
 
-    if (!participations.length && !squadRows.length) {
+    const targetAthlete = await User.findByPk(userId, { attributes: ['id', 'role', 'dateOfBirth', 'parentVerified'] });
+    let clubReportedRows = [];
+    if (String(targetAthlete?.role || '').toLowerCase() === 'athlete') {
+      const { hasActiveGuardianConsent, hasGuardianAuthorization } = require('../utils/parentalAuthorization');
+      const canExposeClubReportedStats = hasGuardianAuthorization(
+        targetAthlete,
+        await hasActiveGuardianConsent(targetAthlete.id)
+      );
+      if (canExposeClubReportedStats) {
+        clubReportedRows = await TournamentClubPlayerStat.findAll({
+          where: { athleteUserId: userId },
+          include: [{ model: require('../models/TournamentClubEntry'), as: 'entry', attributes: ['id', 'tournamentId', 'clubUserId'], required: true }],
+        });
+      }
+    }
+
+    if (!participations.length && !squadRows.length && !clubReportedRows.length) {
       return res.json({
         userId,
         tournaments: [],
@@ -2018,6 +2035,7 @@ exports.getUserTournamentSummary = async (req, res) => {
       ...new Set([
         ...participations.map((p) => p.tournamentId),
         ...squadRows.map((s) => s.tournamentId),
+        ...clubReportedRows.map((row) => row.entry?.tournamentId),
       ].filter(Boolean)),
     ];
     const tournamentRows = await Tournament.findAll({ where: { id: tournamentIds } });
@@ -2051,6 +2069,14 @@ exports.getUserTournamentSummary = async (req, res) => {
     const assistsByTournament = {};
     for (const row of assistRows) {
       assistsByTournament[row.tournamentId] = Number(row.scorerAssists) || 0;
+    }
+    const clubReportedByTournament = {};
+    for (const row of clubReportedRows) {
+      const tournamentId = Number(row.entry?.tournamentId);
+      if (!tournamentId) continue;
+      if (!clubReportedByTournament[tournamentId]) clubReportedByTournament[tournamentId] = { goals: 0, assists: 0 };
+      clubReportedByTournament[tournamentId].goals += Number(row.goals) || 0;
+      clubReportedByTournament[tournamentId].assists += Number(row.assists) || 0;
     }
 
     const allParticipants = await TournamentParticipant.findAll({
@@ -2116,8 +2142,10 @@ exports.getUserTournamentSummary = async (req, res) => {
         goalsFor: myRow.goalsFor,
         goalsAgainst: myRow.goalsAgainst,
         goalDifference: myRow.goalDifference,
-        scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
-        scorerAssists: assistsByTournament[t.id] ?? 0,
+        scorerGoals: Math.max(scorerGoalsByTournament[t.id] ?? 0, clubReportedByTournament[t.id]?.goals ?? 0),
+        scorerAssists: Math.max(assistsByTournament[t.id] ?? 0, clubReportedByTournament[t.id]?.assists ?? 0),
+        clubReportedGoals: clubReportedByTournament[t.id]?.goals ?? 0,
+        clubReportedAssists: clubReportedByTournament[t.id]?.assists ?? 0,
         played: (myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0),
         pointsPossible:
           ((myRow.wins || 0) + (myRow.draws || 0) + (myRow.losses || 0)) * 3,
@@ -2178,8 +2206,8 @@ exports.getUserTournamentSummary = async (req, res) => {
           tournaments[idx] = {
             ...tournaments[idx],
             ...clubStanding,
-            scorerGoals: tournaments[idx].scorerGoals,
-            scorerAssists: tournaments[idx].scorerAssists,
+            scorerGoals: Math.max(tournaments[idx].scorerGoals || 0, clubReportedByTournament[s.tournamentId]?.goals || 0),
+            scorerAssists: Math.max(tournaments[idx].scorerAssists || 0, clubReportedByTournament[s.tournamentId]?.assists || 0),
           };
         }
         continue;
@@ -2196,8 +2224,54 @@ exports.getUserTournamentSummary = async (req, res) => {
         tournamentCategory: t.category || 'open',
         participantStatus: 'accepted',
         ...clubStanding,
-        scorerGoals: scorerGoalsByTournament[t.id] ?? 0,
-        scorerAssists: assistsByTournament[t.id] ?? 0,
+        scorerGoals: Math.max(scorerGoalsByTournament[t.id] ?? 0, clubReportedByTournament[t.id]?.goals ?? 0),
+        scorerAssists: Math.max(assistsByTournament[t.id] ?? 0, clubReportedByTournament[t.id]?.assists ?? 0),
+        clubReportedGoals: clubReportedByTournament[t.id]?.goals ?? 0,
+        clubReportedAssists: clubReportedByTournament[t.id]?.assists ?? 0,
+      });
+    }
+
+    for (const [tournamentIdKey, stats] of Object.entries(clubReportedByTournament)) {
+      const tournamentId = Number(tournamentIdKey);
+      if (seenTournamentIds.has(tournamentId)) {
+        const idx = tournaments.findIndex((row) => Number(row.tournamentId) === tournamentId);
+        if (idx >= 0) {
+          tournaments[idx].scorerGoals = Math.max(tournaments[idx].scorerGoals || 0, stats.goals);
+          tournaments[idx].scorerAssists = Math.max(tournaments[idx].scorerAssists || 0, stats.assists);
+          tournaments[idx].clubReportedGoals = stats.goals;
+          tournaments[idx].clubReportedAssists = stats.assists;
+        }
+        continue;
+      }
+      const t = tournamentById[tournamentId];
+      if (!t) continue;
+      seenTournamentIds.add(tournamentId);
+      tournaments.push({
+        tournamentId: t.id,
+        tournamentName: t.name,
+        tournamentDescription: t.description || null,
+        tournamentSeason: t.season || null,
+        tournamentType: t.type,
+        tournamentStatus: t.status,
+        tournamentCategory: t.category || 'open',
+        participantStatus: 'accepted',
+        viaSquad: false,
+        viaClubReport: true,
+        clubUserId: clubReportedRows.find((row) => Number(row.entry?.tournamentId) === tournamentId)?.entry?.clubUserId || null,
+        rank: null,
+        points: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        scorerGoals: Math.max(scorerGoalsByTournament[tournamentId] || 0, stats.goals),
+        scorerAssists: Math.max(assistsByTournament[tournamentId] || 0, stats.assists),
+        clubReportedGoals: stats.goals,
+        clubReportedAssists: stats.assists,
+        played: 0,
+        pointsPossible: 0,
       });
     }
 

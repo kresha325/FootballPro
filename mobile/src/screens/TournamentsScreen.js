@@ -17,6 +17,7 @@ import {
 } from '../theme/nativeComponents';
 import {
   createTournamentRequest,
+  verifiedTournamentClubsRequest,
   extractErrorMessage,
   joinTournamentRequest,
   profileTournamentSummaryRequest,
@@ -111,12 +112,29 @@ export default function TournamentsScreen({ navigation }) {
     maxParticipants: 8,
     participantType: 'individual',
     category: 'open',
+    clubTeams: [],
   });
+  const [verifiedClubs, setVerifiedClubs] = useState([]);
+  const [selectedClubId, setSelectedClubId] = useState('');
+  const [newClubName, setNewClubName] = useState('');
+  const [clubGroup, setClubGroup] = useState('A');
+  const [loadingVerifiedClubs, setLoadingVerifiedClubs] = useState(false);
 
   const canCreateTournament = ['liga', 'club', 'scout'].includes(user?.role);
   const isLigaCreator = user?.role === 'liga';
 
   const seasonPreview = previewTournamentSeason(form.type, form.startDate);
+
+  useEffect(() => {
+    if (!showCreate || !isLigaCreator) return undefined;
+    let cancelled = false;
+    setLoadingVerifiedClubs(true);
+    verifiedTournamentClubsRequest()
+      .then((response) => { if (!cancelled) setVerifiedClubs(Array.isArray(response.data) ? response.data : []); })
+      .catch(() => { if (!cancelled) setVerifiedClubs([]); })
+      .finally(() => { if (!cancelled) setLoadingVerifiedClubs(false); });
+    return () => { cancelled = true; };
+  }, [showCreate, isLigaCreator]);
 
   const loadData = useCallback(
     async ({ silent } = { silent: false }) => {
@@ -231,6 +249,7 @@ export default function TournamentsScreen({ navigation }) {
         participantType: form.participantType || 'individual',
         category: form.category || 'open',
       };
+      if (isLigaCreator) payload.clubTeams = form.clubTeams || [];
       if (!isLigaCreator) {
         payload.name = form.name.trim();
       }
@@ -247,6 +266,7 @@ export default function TournamentsScreen({ navigation }) {
         maxParticipants: 8,
         participantType: 'individual',
         category: 'open',
+        clubTeams: [],
       });
       await loadData({ silent: true });
       Alert.alert('Created', 'Tournament created successfully.');
@@ -255,6 +275,27 @@ export default function TournamentsScreen({ navigation }) {
     } finally {
       setCreating(false);
     }
+  };
+
+  const addRegisteredClub = () => {
+    const club = verifiedClubs.find((item) => String(item.id) === String(selectedClubId));
+    if (!club) return;
+    setForm((current) => {
+      if ((current.clubTeams || []).some((entry) => Number(entry.clubUserId) === Number(club.id) || entry.clubName.trim().toLocaleLowerCase() === club.name.trim().toLocaleLowerCase())) return current;
+      return { ...current, clubTeams: [...(current.clubTeams || []), { clubUserId: club.id, clubName: club.name, groupName: clubGroup }] };
+    });
+    setSelectedClubId('');
+  };
+
+  const addManualClub = () => {
+    const clubName = newClubName.trim().replace(/\s+/g, ' ');
+    if (!clubName) return;
+    if ((form.clubTeams || []).some((entry) => entry.clubName.trim().toLocaleLowerCase() === clubName.toLocaleLowerCase())) {
+      Alert.alert(t('Klubi është shtuar tashmë'));
+      return;
+    }
+    setForm((current) => ({ ...current, clubTeams: [...(current.clubTeams || []), { clubName, groupName: clubGroup }] }));
+    setNewClubName('');
   };
 
   const merged = useMemo(() => {
@@ -388,6 +429,19 @@ export default function TournamentsScreen({ navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
+              {isLigaCreator ? (
+                <View style={styles.clubEntryPanel}>
+                  <Text style={styles.label}>{t('Ekipet pjesëmarrëse')}</Text>
+                  <Text style={styles.helperText}>{t('Zgjidh klubet e verifikuara ose regjistro ekipin me emër. Cakto grupin për secilin.')}</Text>
+                  <View style={styles.chipRow}>{['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((group) => <TouchableOpacity key={group} style={[styles.chip, clubGroup === group && styles.chipActive]} onPress={() => setClubGroup(group)}><Text style={[styles.chipText, clubGroup === group && styles.chipTextActive]}>{t('Grupi')} {group}</Text></TouchableOpacity>)}</View>
+                  <Text style={styles.helperText}>{loadingVerifiedClubs ? t('Duke ngarkuar klubet…') : t('Klube të verifikuara')}</Text>
+                  <View style={styles.chipRow}>{verifiedClubs.map((club) => <TouchableOpacity key={club.id} style={[styles.chip, String(selectedClubId) === String(club.id) && styles.chipActive]} onPress={() => setSelectedClubId(String(club.id))}><Text style={[styles.chipText, String(selectedClubId) === String(club.id) && styles.chipTextActive]}>{club.name}</Text></TouchableOpacity>)}</View>
+                  <TouchableOpacity disabled={!selectedClubId} style={[styles.addClubButton, !selectedClubId && styles.disabledButton]} onPress={addRegisteredClub}><Text style={styles.addClubButtonText}>{t('Shto klubin e zgjedhur')}</Text></TouchableOpacity>
+                  <TextInput style={styles.input} placeholder={t('Emri i klubit pa profil')} placeholderTextColor="#94a3b8" maxLength={160} value={newClubName} onChangeText={setNewClubName} />
+                  <TouchableOpacity disabled={!newClubName.trim()} style={[styles.addClubButton, !newClubName.trim() && styles.disabledButton]} onPress={addManualClub}><Text style={styles.addClubButtonText}>{t('Shto me emër')}</Text></TouchableOpacity>
+                  {(form.clubTeams || []).map((team, index) => <View key={`${team.clubUserId || 'manual'}-${team.clubName}`} style={styles.clubEntryRow}><Text style={styles.clubEntryName}>{team.clubName} · {t('Grupi')} {team.groupName}{team.clubUserId ? '' : ` · ${t('pa profil')}`}</Text><TouchableOpacity onPress={() => setForm((current) => ({ ...current, clubTeams: current.clubTeams.filter((_, itemIndex) => itemIndex !== index) }))}><Text style={styles.removeClubText}>×</Text></TouchableOpacity></View>)}
+                </View>
+              ) : null}
               <TextInput
                 style={styles.input}
                 placeholder={t('Start date (YYYY-MM-DD)')}
@@ -401,7 +455,7 @@ export default function TournamentsScreen({ navigation }) {
               </Text>
               <Text style={styles.label}>Type: {form.type}</Text>
               <View style={styles.chipRow}>
-                {['knockout', 'league', 'cup'].map((t) => (
+                {['knockout', 'league', 'cup', 'group_knockout'].map((t) => (
                   <TouchableOpacity
                     key={t}
                     style={[styles.chip, form.type === t && styles.chipActive]}
@@ -532,6 +586,14 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 16 },
   modalScroll: { flexGrow: 1, justifyContent: 'center' },
   modalCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16 },
+  clubEntryPanel: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 10, marginBottom: 12, backgroundColor: '#f8fafc' },
+  helperText: { color: '#64748b', fontSize: 12, marginBottom: 8 },
+  addClubButton: { backgroundColor: '#9A6B12', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginBottom: 8 },
+  addClubButtonText: { color: '#fff', fontWeight: '700' },
+  disabledButton: { opacity: 0.45 },
+  clubEntryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingVertical: 8 },
+  clubEntryName: { flex: 1, color: '#0f172a', fontSize: 13 },
+  removeClubText: { color: '#b91c1c', fontSize: 22, fontWeight: '700', paddingHorizontal: 6 },
   modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, color: '#0f172a' },
   input: {
     borderWidth: 1,

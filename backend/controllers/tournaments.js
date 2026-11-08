@@ -6,6 +6,8 @@ const Profile = require('../models/Profile');
 const Liga = require('../models/Liga');
 const { MatchScorer } = require('../models');
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
+const TournamentClubEntry = require('../models/TournamentClubEntry');
 const { notifyMessage, notifyTournament } = require('./notifications');
 const { resolveTournamentSeason } = require('../utils/footballSeason');
 const { saveMatchGoalEvents, sumGoalsForSide } = require('../utils/matchGoalEvents');
@@ -103,6 +105,44 @@ exports.createTournament = async (req, res) => {
     if (!Number.isFinite(maxN) || maxN < 2 || maxN > 500) {
       return res.status(400).json({ msg: 'Numri i pjesëmarrësve duhet të jetë midis 2 dhe 500 (p.sh. 7).' });
     }
+    const wantsDraft = req.body.lifecycle === 'draft' || req.body.status === 'draft';
+
+    const clubEntries = [];
+    if (req.body.clubTeams !== undefined) {
+      if (role !== 'liga' || pt !== 'club' || !Array.isArray(req.body.clubTeams)) {
+        return res.status(400).json({ msg: 'Ekipet mund t’i caktojë liga gjatë krijimit të turneut të saj.' });
+      }
+      if (req.body.clubTeams.length > maxN) return res.status(400).json({ msg: 'Numri i ekipeve tejkalon kapacitetin e turneut.' });
+      const selectedIds = [...new Set(req.body.clubTeams.map((row) => Number(row.clubUserId)).filter((id) => Number.isInteger(id) && id > 0))];
+      const verifiedClubs = selectedIds.length ? await User.findAll({
+        where: { id: selectedIds, role: 'club', adminVerified: true, bannedAt: null, deletedAt: null },
+        attributes: ['id', 'firstName', 'lastName'],
+        include: [{ model: Profile, attributes: ['club'], required: false }],
+      }) : [];
+      if (verifiedClubs.length !== selectedIds.length) return res.status(400).json({ msg: 'Zgjidh vetëm klube të verifikuara në platformë.' });
+      const verifiedById = new Map(verifiedClubs.map((club) => [Number(club.id), club]));
+      const usedNames = new Set();
+      for (const row of req.body.clubTeams) {
+        const clubUserId = row.clubUserId ? Number(row.clubUserId) : null;
+        const groupName = row.groupName ? String(row.groupName).trim().toUpperCase() : 'A';
+        if (groupName && !'ABCDEFGH'.includes(groupName)) return res.status(400).json({ msg: 'Grupi duhet të jetë nga A deri në H.' });
+        const club = clubUserId ? verifiedById.get(clubUserId) : null;
+        if (row.clubUserId && !club) return res.status(400).json({ msg: 'Klubi i zgjedhur nuk është i verifikuar.' });
+        const clubName = String(row.clubName || (club && (club.Profile?.club || `${club.firstName || ''} ${club.lastName || ''}`)) || '').trim().replace(/\s+/g, ' ');
+        if (!clubName || clubName.length > 160) return res.status(400).json({ msg: 'Emri i klubit është i detyrueshëm (deri në 160 karaktere).' });
+        const key = clubName.normalize('NFKC').toLocaleLowerCase();
+        if (usedNames.has(key)) return res.status(409).json({ msg: `Klubi "${clubName}" është shtuar më shumë se një herë.` });
+        usedNames.add(key);
+        clubEntries.push({ clubUserId, clubName, groupName, claimStatus: clubUserId ? 'linked' : 'unclaimed' });
+      }
+      if (!wantsDraft && clubEntries.length < 2) return res.status(400).json({ msg: 'Cakto të paktën dy ekipe për turneun e ligës.' });
+      const grouped = new Map();
+      for (const entry of clubEntries) {
+        const group = entry.groupName || 'A';
+        grouped.set(group, (grouped.get(group) || 0) + 1);
+      }
+      if ([...grouped.values()].some((count) => count < 2)) return res.status(400).json({ msg: 'Çdo grup duhet të ketë së paku dy ekipe.' });
+    }
 
     if (role === 'liga') {
       const liga = await Liga.findOne({ where: { userId: req.user.id } });
@@ -127,7 +167,59 @@ exports.createTournament = async (req, res) => {
             dirty = true;
           }
         }
-        if (dirty) await existing.save();
+        if (dirty && !clubEntries.length) await existing.save();
+        if (clubEntries.length) {
+          const hasMatches = await Match.count({ where: { tournamentId: existing.id } });
+          if (hasMatches || ['active', 'completed', 'cancelled'].includes(existing.lifecycle || existing.status)) {
+            return res.status(409).json({ msg: 'Turneu ekzistues ka filluar. Krijo edicion të ri para se t’i ndryshosh ekipet.' });
+          }
+          if (dirty) await existing.save();
+          if (clubEntries.length > Number(existing.maxParticipants || 0)) {
+            return res.status(400).json({ msg: 'Numri i ekipeve tejkalon kapacitetin e turneut ekzistues.' });
+          }
+          await sequelize.transaction(async (transaction) => {
+            const currentLinked = await TournamentClubEntry.findAll({ where: { tournamentId: existing.id, clubUserId: { [Op.ne]: null } }, transaction });
+            for (const current of currentLinked) {
+              if (!clubEntries.some((row) => Number(row.clubUserId) === Number(current.clubUserId))) {
+                current.groupName = null;
+                await current.save({ transaction });
+                await TournamentParticipant.update({ status: 'rejected' }, { where: { tournamentId: existing.id, userId: current.clubUserId }, transaction });
+              }
+            }
+            const currentExternal = await TournamentClubEntry.findAll({ where: { tournamentId: existing.id, clubUserId: null }, transaction });
+            for (const current of currentExternal) {
+              if (!clubEntries.some((row) => !row.clubUserId && row.clubName.normalize('NFKC').toLocaleLowerCase() === current.clubName.normalize('NFKC').toLocaleLowerCase())) {
+                current.groupName = null;
+                await current.save({ transaction });
+              }
+            }
+            for (const row of clubEntries) {
+              let entry;
+              if (row.clubUserId) {
+                [entry] = await TournamentClubEntry.findOrCreate({
+                  where: { tournamentId: existing.id, clubUserId: row.clubUserId },
+                  defaults: { ...row, tournamentId: existing.id },
+                  transaction,
+                });
+              } else {
+                const externalRows = await TournamentClubEntry.findAll({ where: { tournamentId: existing.id, clubUserId: null }, transaction });
+                entry = externalRows.find((candidate) => candidate.clubName.normalize('NFKC').toLocaleLowerCase() === row.clubName.normalize('NFKC').toLocaleLowerCase());
+                if (!entry) entry = await TournamentClubEntry.create({ ...row, tournamentId: existing.id }, { transaction });
+              }
+              await entry.update({ clubName: row.clubName, groupName: row.groupName, claimStatus: row.clubUserId ? 'linked' : entry.claimStatus }, { transaction });
+              if (row.clubUserId) {
+                await TournamentParticipant.findOrCreate({
+                  where: { tournamentId: existing.id, userId: row.clubUserId },
+                  defaults: { tournamentId: existing.id, userId: row.clubUserId, status: 'accepted', groupName: row.groupName },
+                  transaction,
+                });
+                await TournamentParticipant.update({ groupName: row.groupName, status: 'accepted' }, { where: { tournamentId: existing.id, userId: row.clubUserId }, transaction });
+              }
+            }
+          });
+          const entries = await TournamentClubEntry.findAll({ where: { tournamentId: existing.id }, order: [['groupName', 'ASC'], ['clubName', 'ASC']] });
+          return res.status(200).json({ ...serializeTournament(existing), clubEntries: entries });
+        }
         return res.status(200).json(existing);
       }
     } else if (!name) {
@@ -152,36 +244,46 @@ exports.createTournament = async (req, res) => {
     });
     if (!inputCheck.ok) return res.status(inputCheck.status).json({ msg: inputCheck.msg });
 
-    const wantsDraft = req.body.lifecycle === 'draft' || req.body.status === 'draft';
-    const tournament = await Tournament.create({
-      name,
-      description,
-      type,
-      season: resolvedSeason,
-      startDate,
-      endDate,
-      maxParticipants: maxN,
-      participantType: pt,
-      creatorId: req.user.id,
-      ligaId,
-      sourceRole: role,
-      category,
-      logo: req.body.logo || null,
-      organizer: req.body.organizer || null,
-      country: req.body.country || null,
-      city: req.body.city || null,
-      gender: req.body.gender || 'open',
-      registrationDeadline: req.body.registrationDeadline || null,
-      homeAndAway: req.body.homeAndAway == null
-        ? type === 'league'
-        : !!req.body.homeAndAway,
-      groupsCount: req.body.groupsCount || null,
-      qualifyPerGroup: req.body.qualifyPerGroup || 2,
-      lifecycle: wantsDraft ? 'draft' : 'registration',
-      status: wantsDraft ? 'draft' : 'open',
+    const tournament = await sequelize.transaction(async (transaction) => {
+      const created = await Tournament.create({
+        name,
+        description,
+        type,
+        season: resolvedSeason,
+        startDate,
+        endDate,
+        maxParticipants: maxN,
+        participantType: pt,
+        creatorId: req.user.id,
+        ligaId,
+        sourceRole: role,
+        category,
+        logo: req.body.logo || null,
+        organizer: req.body.organizer || null,
+        country: req.body.country || null,
+        city: req.body.city || null,
+        gender: req.body.gender || 'open',
+        registrationDeadline: req.body.registrationDeadline || null,
+        homeAndAway: req.body.homeAndAway == null ? type === 'league' : !!req.body.homeAndAway,
+        groupsCount: req.body.groupsCount || null,
+        qualifyPerGroup: req.body.qualifyPerGroup || 2,
+        lifecycle: wantsDraft ? 'draft' : 'registration',
+        status: wantsDraft ? 'draft' : 'open',
+      }, { transaction });
+      created.slug = slugifyCompetitionName(created.name, created.id);
+      await created.save({ transaction });
+      if (clubEntries.length) {
+        await TournamentClubEntry.bulkCreate(clubEntries.map((entry) => ({ ...entry, tournamentId: created.id })), { transaction });
+        for (const entry of clubEntries.filter((row) => row.clubUserId)) {
+          await TournamentParticipant.findOrCreate({
+            where: { tournamentId: created.id, userId: entry.clubUserId },
+            defaults: { tournamentId: created.id, userId: entry.clubUserId, status: 'accepted', groupName: entry.groupName },
+            transaction,
+          });
+        }
+      }
+      return created;
     });
-    tournament.slug = slugifyCompetitionName(tournament.name, tournament.id);
-    await tournament.save();
     res.status(201).json(serializeTournament(tournament));
   } catch (err) {
     console.error('createTournament:', err);
@@ -444,6 +546,9 @@ exports.joinTournament = async (req, res) => {
     }
 
     const participants = await TournamentParticipant.findAll({ where: { tournamentId: req.params.id } });
+    const leagueClubEntries = isLigaTournament
+      ? await TournamentClubEntry.findAll({ where: { tournamentId: tournament.id }, attributes: ['id', 'clubUserId'] })
+      : [];
     // Count only standings participants (clubs for club tournaments)
     let standingCount = participants.length;
     if (participantType === 'club') {
@@ -454,12 +559,20 @@ exports.joinTournament = async (req, res) => {
       const clubIds = new Set(users.filter((u) => u.role === 'club').map((u) => u.id));
       standingCount = participants.filter((p) => clubIds.has(p.userId)).length;
     }
+    const participantUserIds = new Set(participants.map((participant) => Number(participant.userId)));
+    const additionalLeagueEntries = leagueClubEntries.filter((entry) =>
+      !entry.clubUserId || !participantUserIds.has(Number(entry.clubUserId))
+    ).length;
+    standingCount += additionalLeagueEntries;
     if (standingCount >= tournament.maxParticipants) return res.status(400).json({ msg: 'Tournament full' });
 
     const registration = assertRegistration({
-      existingUserIds: participants.map((p) => p.userId),
+      existingUserIds: [
+        ...participants.map((p) => p.userId),
+        ...leagueClubEntries.filter((entry) => !entry.clubUserId).map((entry) => -Number(entry.id)),
+      ],
       userId: req.user.id,
-      maxParticipants: standingCount < tournament.maxParticipants ? participants.length + 1 : participants.length,
+      maxParticipants: tournament.maxParticipants,
       tournament,
     });
     if (!registration.ok) return res.status(registration.status).json({ msg: registration.msg });

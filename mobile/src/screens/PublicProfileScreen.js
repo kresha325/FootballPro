@@ -40,6 +40,7 @@ import {
   requestCommunicationConsentRequest,
   profileByIdRequest,
   profileTournamentSummaryRequest,
+  clubTournamentEntriesRequest,
   rejectTransferHistoryRequest,
   sponsorsByUserRequest,
   transferHistoryByUserRequest,
@@ -138,6 +139,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [joncoinBalance, setJoncoinBalance] = useState(null);
   const [platformAchievements, setPlatformAchievements] = useState([]);
   const [tournamentSummary, setTournamentSummary] = useState({ tournaments: [], totals: null });
+  const [clubTournamentEntries, setClubTournamentEntries] = useState([]);
   /** Profile tab key (avoid name `activeTab` — clashes with some tooling / stale bundles). */
   const [profileTab, setProfileTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -190,6 +192,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     const r = String(profile?.role || '').toLowerCase();
     return r === 'athlete';
   }, [profile?.role]);
+  const isClub = useMemo(() => String(profile?.role || '').toLowerCase() === 'club', [profile?.role]);
 
   useEffect(() => {
     if (!isSelf && profileTab === 'sponsors') {
@@ -434,7 +437,7 @@ export default function PublicProfileScreen({ route, navigation }) {
         setVideos(Array.isArray(videosRes?.data) ? videosRes.data : []);
         setYoutubeMedia(Array.isArray(ytMediaRes?.data?.items) ? ytMediaRes.data.items : []);
       } else if (section === 'overview') {
-        const [staffRes, membersRes, clubStaffRes, rosterRes, transferRes, tournamentSummaryRes, galleryRes, videosRes] =
+        const [staffRes, membersRes, clubStaffRes, rosterRes, transferRes, tournamentSummaryRes, clubTournamentEntriesRes, galleryRes, videosRes] =
           await Promise.all([
             role === 'coach' || role === 'trajner'
               ? clubStaffAssignmentsRequest(uid).catch(() => ({ data: [] }))
@@ -454,6 +457,9 @@ export default function PublicProfileScreen({ route, navigation }) {
             role === 'athlete'
               ? profileTournamentSummaryRequest(uid).catch(() => ({ data: { tournaments: [], totals: null } }))
               : Promise.resolve({ data: { tournaments: [], totals: null } }),
+            role === 'club'
+              ? clubTournamentEntriesRequest(clubId).catch(() => ({ data: { entries: [] } }))
+              : Promise.resolve({ data: { entries: [] } }),
             userGalleryRequest(uid).catch(() => ({ data: [] })),
             userVideosRequest(uid).catch(() => ({ data: [] })),
           ]);
@@ -470,6 +476,9 @@ export default function PublicProfileScreen({ route, navigation }) {
             totals: tData.totals || null,
           });
           sectionCache.current.set(`${uid}:tournaments`, Date.now());
+          setClubTournamentEntries([]);
+        } else if (role === 'club') {
+          setClubTournamentEntries(Array.isArray(clubTournamentEntriesRes?.data?.entries) ? clubTournamentEntriesRes.data.entries : []);
         }
         if (role === 'club') {
           let members = Array.isArray(membersRes?.data) ? membersRes.data : [];
@@ -518,11 +527,15 @@ export default function PublicProfileScreen({ route, navigation }) {
             tournaments: Array.isArray(tData.tournaments) ? tData.tournaments : [],
             totals: tData.totals || null,
           });
+        } else if (role === 'club') {
+          const res = await clubTournamentEntriesRequest(clubId).catch(() => ({ data: { entries: [] } }));
+          if (gen !== requestGen.current) return;
+          setClubTournamentEntries(Array.isArray(res?.data?.entries) ? res.data.entries : []);
         }
       }
       if (gen !== requestGen.current) return;
       sectionCache.current.set(cacheKey, Date.now());
-      setSectionsReady((prev) => ({ ...prev, [section]: true, ...(section === 'overview' ? { gallery: true, tournaments: role === 'athlete' ? true : prev.tournaments } : {}) }));
+      setSectionsReady((prev) => ({ ...prev, [section]: true, ...(section === 'overview' ? { gallery: true, tournaments: ['athlete', 'club'].includes(role) ? true : prev.tournaments } : {}) }));
     } finally {
       done();
       if (gen === requestGen.current) setSectionLoading(false);
@@ -813,6 +826,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       base.push({ key: 'tournaments', label: t('Turne') });
       base.push({ key: 'achievements', label: t('Arritje') });
     }
+    if (isClub) base.push({ key: 'tournaments', label: t('Turnet e klubit') });
     base.push(
       { key: 'gallery', label: t('Galeria') },
       { key: 'videos', label: t('Videot') },
@@ -821,7 +835,7 @@ export default function PublicProfileScreen({ route, navigation }) {
     );
     if (isSelf) base.push({ key: 'sponsors', label: t('Sponsorë') });
     return base;
-  }, [isSelf, isAthlete, t]);
+  }, [isSelf, isAthlete, isClub, t]);
 
   const onOpenInsights = useCallback(() => {
     const parent = navigation.getParent?.();
@@ -1163,6 +1177,19 @@ export default function PublicProfileScreen({ route, navigation }) {
                   onPressTournament={(tournamentId) => openTournamentDetail(navigation, tournamentId)}
                 />
               ) : null}
+              {tabReady && profileTab === 'tournaments' && isClub ? (
+                <View style={styles.sectionCard}>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('Statistikat e turneve të klubit')}</Text>
+                  {clubTournamentEntries.length ? clubTournamentEntries.map((entry) => (
+                    <View key={entry.id} style={[styles.clubTournamentCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                      <Text style={[styles.clubTournamentName, { color: theme.text }]}>{entry.Tournament?.name || entry.clubName}</Text>
+                      <Text style={{ color: theme.muted }}>{entry.Tournament?.season || ''}{entry.groupName ? ` · ${t('Grupi')} ${entry.groupName}` : ''}</Text>
+                      <Text style={{ color: theme.text, marginTop: 6 }}>{entry.played || 0} {t('ndeshje')} · {entry.wins || 0} {t('fitore')} · {entry.goalsFor || 0}:{entry.goalsAgainst || 0} · {entry.points || 0} {t('pikë')}</Text>
+                      {entry.playerStats?.length ? entry.playerStats.map((player) => <Text key={player.id} style={{ color: theme.muted, marginTop: 4 }}>{player.athleteName}: {player.goals} {t('gola')} · {player.assists} {t('asiste')}</Text>) : null}
+                    </View>
+                  )) : <Text style={{ color: theme.muted }}>{t('Nuk ka ende statistika turnesh të lidhura me profilin e klubit.')}</Text>}
+                </View>
+              ) : null}
               {tabReady && profileTab === 'achievements' && isAthlete ? (
                 <PublicProfileAchievementsTab
                   profile={profile}
@@ -1404,6 +1431,10 @@ export default function PublicProfileScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  sectionCard: { borderRadius: 12, padding: 12, marginVertical: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 10 },
+  clubTournamentCard: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
+  clubTournamentName: { fontSize: 15, fontWeight: '800', marginBottom: 3 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   cover: {
     width: '100%',

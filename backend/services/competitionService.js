@@ -16,6 +16,7 @@ const MediaItem = require('../models/MediaItem');
 const Stream = require('../models/Stream');
 const ScoutingReport = require('../models/ScoutingReport');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
+const TournamentClubEntry = require('../models/TournamentClubEntry');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { saveMatchGoalEvents, syncProfileGoalAssistStats } = require('../utils/matchGoalEvents');
@@ -32,6 +33,7 @@ const {
 } = require('../utils/competitionLifecycle');
 const {
   planCompetitionFixtures,
+  roundRobinFixtures,
   findDuplicateFixtures,
   fixtureIdentity,
   planGroupQualification,
@@ -197,6 +199,15 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   if (!authz.ok) throw fail(authz.status, authz.msg);
 
   const isLigaCompetition = Boolean(tournament.ligaId || tournament.sourceRole === 'liga');
+  if (isLigaCompetition) {
+    const unlinkedEntries = await TournamentClubEntry.findAll({
+      where: { tournamentId: tournament.id, clubUserId: null },
+      attributes: ['id'],
+    });
+    if (unlinkedEntries.length) {
+      throw fail(409, 'Liga nuk mund ta nisë ende orarin: klubet e futura me emër duhet të regjistrohen dhe të lidhen me profilin e tyre së pari. Statistikat e tyre ruhen deri atëherë.');
+    }
+  }
   const hasExistingFixtures = await Match.count({ where: { tournamentId: tournament.id } });
   if (isLigaCompetition && tournament.participantType !== 'club') {
     tournament.participantType = 'club';
@@ -242,7 +253,7 @@ async function startCompetition({ tournamentId, user, options = {} }) {
 
   const doubleRound = options.homeAndAway != null ? !!options.homeAndAway : !!tournament.homeAndAway;
   const groupCount = options.groupsCount || tournament.groupsCount || undefined;
-  const plan = planCompetitionFixtures(
+  let plan = planCompetitionFixtures(
     seeded.map((p) => p.userId),
     {
       type: tournament.type,
@@ -252,6 +263,49 @@ async function startCompetition({ tournamentId, user, options = {} }) {
       endDate: options.endDate || tournament.endDate,
     }
   );
+  // Liga-created club tournaments may have explicit group assignments. Keep
+  // the existing automatic seeding for all other tournaments, but honor those
+  // saved assignments when the league has selected them.
+  if (isLigaCompetition && tournament.type === 'group_knockout') {
+    const clubEntries = await TournamentClubEntry.findAll({
+      where: { tournamentId: tournament.id, clubUserId: { [Op.ne]: null }, groupName: { [Op.ne]: null } },
+      attributes: ['clubUserId', 'groupName'],
+    });
+    if (clubEntries.length) {
+      const expectedClubIds = new Set(seeded.map((participant) => Number(participant.userId)));
+      const groupsByName = new Map();
+      for (const entry of clubEntries) {
+        const clubId = Number(entry.clubUserId);
+        if (!expectedClubIds.has(clubId)) continue;
+        const groupName = String(entry.groupName || '').trim().toUpperCase();
+        if (!groupsByName.has(groupName)) groupsByName.set(groupName, []);
+        groupsByName.get(groupName).push(clubId);
+      }
+      const groups = [...groupsByName.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, teamIds]) => ({ name, teamIds }));
+      if (groups.some((group) => group.teamIds.length < 2)) {
+        throw fail(400, 'Çdo grup i turneut duhet të ketë të paktën dy klube.');
+      }
+      const assignedIds = new Set(groups.flatMap((group) => group.teamIds));
+      if (assignedIds.size !== expectedClubIds.size || [...expectedClubIds].some((id) => !assignedIds.has(id))) {
+        throw fail(400, 'Cakto grup për çdo klub të regjistruar përpara nisjes së turneut.');
+      }
+      const fixtures = groups.flatMap((group) => roundRobinFixtures(group.teamIds, {
+        doubleRound,
+        stage: 'group',
+        groupName: group.name,
+      }));
+      const duplicates = findDuplicateFixtures(fixtures, { doubleRound });
+      if (duplicates.length) throw fail(400, 'Gjenerimi i ndeshjeve krijoi çiftime të përsëritura.');
+      const dated = scheduleFixtureDates(fixtures, {
+        startDate: options.startDate || tournament.startDate,
+        endDate: options.endDate || tournament.endDate,
+      });
+      if (!dated.ok) throw fail(400, dated.msg);
+      plan = { ok: true, groups, fixtures: dated.fixtures };
+    }
+  }
   if (!plan.ok) throw fail(400, plan.msg);
 
   let existingMatchesToRepair = [];

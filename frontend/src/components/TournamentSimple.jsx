@@ -65,6 +65,88 @@ function scorerLine(row, t) {
   return name;
 }
 
+function TournamentClubEntriesPanel({ entries = [], user, tournamentId, onSaved }) {
+  const { t } = useLocale();
+  const [drafts, setDrafts] = useState({});
+  const [playerDrafts, setPlayerDrafts] = useState({});
+  const [busyId, setBusyId] = useState(null);
+  const isLigaManager = ['liga', 'admin'].includes(user?.role);
+
+  const saveTeamStats = async (entry) => {
+    setBusyId(entry.id);
+    try {
+      const stats = drafts[entry.id] || entry;
+      await API.put(`/tournaments/${tournamentId}/club-entries/${entry.id}/stats`, Object.fromEntries(
+        ['played', 'wins', 'draws', 'losses', 'goalsFor', 'goalsAgainst', 'points'].map((key) => [key, Number(stats[key] || 0)])
+      ));
+      await onSaved?.();
+    } catch (error) {
+      alert(error.response?.data?.msg || t('Statistikat nuk u ruajtën.'));
+    } finally { setBusyId(null); }
+  };
+
+  const savePlayers = async (entry) => {
+    setBusyId(entry.id);
+    try {
+      const players = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
+      await API.post(`/tournaments/club-entries/${entry.id}/player-stats`, { players });
+      await onSaved?.();
+    } catch (error) {
+      alert(error.response?.data?.msg || t('Statistikat e lojtarëve nuk u ruajtën.'));
+    } finally { setBusyId(null); }
+  };
+
+  const requestClaim = async (entry) => {
+    try {
+      await API.post(`/tournaments/club-entries/${entry.id}/claim`);
+      await onSaved?.();
+    } catch (error) { alert(error.response?.data?.msg || t('Kërkesa nuk u dërgua.')); }
+  };
+
+  const reviewClaim = async (entry, approve) => {
+    try {
+      await API.put(`/tournaments/${tournamentId}/club-entries/${entry.id}/claim`, { approve });
+      await onSaved?.();
+    } catch (error) { alert(error.response?.data?.msg || t('Kërkesa nuk u përditësua.')); }
+  };
+
+  if (!entries.length) return <p className="rounded-lg border border-dashed border-[var(--xt-color-border)] p-5 text-center text-sm text-[var(--xt-color-text-muted)]">{t('Liga ende nuk ka caktuar ekipe për këtë turne.')}</p>;
+  return (
+    <div className="space-y-3">
+      {entries.filter((entry) => entry.groupName || entry.clubUserId || entry.claimStatus === 'pending').map((entry) => {
+        const isClubOwner = Number(entry.clubUserId) === Number(user?.id) && user?.role === 'club';
+        const currentPlayers = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
+        const addPlayer = () => setPlayerDrafts((current) => ({ ...current, [entry.id]: [...(current[entry.id] || currentPlayers), { athleteName: '', goals: 0, assists: 0 }] }));
+        const updatePlayer = (index, key, value) => setPlayerDrafts((current) => ({ ...current, [entry.id]: currentPlayers.map((player, i) => i === index ? { ...player, [key]: value } : player) }));
+        return (
+          <article key={entry.id} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0"><h4 className="truncate font-bold">{entry.clubName}</h4><p className="text-xs text-[var(--xt-color-text-muted)]">{entry.groupName ? `${t('Grupi')} ${entry.groupName}` : t('Pa grup')} · {entry.claimStatus === 'linked' ? t('Klub i lidhur') : entry.claimStatus === 'pending' ? t('Pret aprovim nga liga') : t('Klub pa profil')}</p></div>
+              <span className="rounded-full bg-[var(--xt-color-gold)]/15 px-3 py-1 text-sm font-bold text-[var(--xt-color-gold-bright)]">{entry.points} {t('Pkt')}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+              {[['Nd', 'played'], ['Fit', 'wins'], ['Bar', 'draws'], ['Humb', 'losses'], ['GF', 'goalsFor'], ['GA', 'goalsAgainst'], ['Pkt', 'points']].map(([label, key]) => (
+                <div key={key} className="rounded-lg bg-[var(--xt-color-surface-raised)] px-1 py-2"><span className="block text-[var(--xt-color-text-subtle)]">{label}</span>{isLigaManager ? <input aria-label={`${entry.clubName} ${label}`} type="number" min="0" max="10000" value={(drafts[entry.id] || entry)[key] ?? 0} onChange={(event) => setDrafts((current) => ({ ...current, [entry.id]: { ...entry, ...(current[entry.id] || {}), [key]: event.target.value } }))} className="mt-1 w-full bg-transparent text-center font-semibold text-[var(--xt-color-text)]" /> : <strong className="mt-1 block">{entry[key] ?? 0}</strong>}</div>
+              ))}
+            </div>
+            {isLigaManager && <button type="button" disabled={busyId === entry.id} onClick={() => saveTeamStats(entry)} className="mt-3 min-h-10 rounded-lg bg-[var(--xt-color-gold)] px-4 text-sm font-semibold disabled:opacity-50">{busyId === entry.id ? t('Duke ruajtur…') : t('Ruaj statistikat e ekipit')}</button>}
+            {isClubOwner && (
+              <div className="mt-4 border-t border-[var(--xt-color-border)] pt-3">
+                <h5 className="font-semibold">{t('Golat dhe asistet e lojtarëve')}</h5>
+                <p className="mb-2 text-xs text-[var(--xt-color-text-muted)]">{t('Për lojtarët pa profil, shkruaj emrin. Për atletët në roster mund të lidhësh statistikën me llogarinë e tyre.')}</p>
+                <div className="space-y-2">{currentPlayers.map((player, index) => <div key={`${player.athleteName}-${index}`} className="grid grid-cols-[1fr_64px_64px] gap-2"><input aria-label={t('Emri i atletit')} value={player.athleteName} onChange={(event) => updatePlayer(index, 'athleteName', event.target.value)} placeholder={t('Emri i atletit')} className="min-h-10 min-w-0 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-2 text-sm" /><input aria-label={t('Golat')} type="number" min="0" value={player.goals} onChange={(event) => updatePlayer(index, 'goals', event.target.value)} className="min-h-10 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-2 text-center text-sm" /><input aria-label={t('Asistet')} type="number" min="0" value={player.assists} onChange={(event) => updatePlayer(index, 'assists', event.target.value)} className="min-h-10 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-2 text-center text-sm" /></div>)}</div>
+                <div className="mt-2 flex gap-2"><button type="button" onClick={addPlayer} className="min-h-10 rounded-lg border border-[var(--xt-color-border)] px-3 text-sm">+ {t('Shto lojtar')}</button><button type="button" disabled={busyId === entry.id} onClick={() => savePlayers(entry)} className="min-h-10 rounded-lg bg-[var(--xt-color-gold)] px-3 text-sm font-semibold">{t('Ruaj golat/asistet')}</button></div>
+              </div>
+            )}
+            {!entry.clubUserId && user?.role === 'club' && entry.claimStatus !== 'pending' && <button type="button" onClick={() => requestClaim(entry)} className="mt-3 min-h-10 rounded-lg border border-[var(--xt-color-border)] px-3 text-sm font-semibold">{t('Kërko lidhjen me klubin tim')}</button>}
+            {isLigaManager && entry.claimStatus === 'pending' && <div className="mt-3 flex gap-2"><button type="button" onClick={() => reviewClaim(entry, true)} className="min-h-10 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white">{t('Aprovo klubin')}</button><button type="button" onClick={() => reviewClaim(entry, false)} className="min-h-10 rounded-lg border border-red-400 px-3 text-sm text-red-600">{t('Refuzo')}</button></div>}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 function MatchBroadcastModal({
   open,
   loading,
@@ -349,6 +431,11 @@ export default function TournamentSimple() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [verifiedClubs, setVerifiedClubs] = useState([]);
+  const [clubRosterLoading, setClubRosterLoading] = useState(false);
+  const [newClubUserId, setNewClubUserId] = useState('');
+  const [newClubName, setNewClubName] = useState('');
+  const [newClubGroup, setNewClubGroup] = useState('A');
   const [editTournament, setEditTournament] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -367,6 +454,7 @@ export default function TournamentSimple() {
     standings: null,
     matches: [],
     stats: null,
+    clubEntries: [],
   });
   const [matchModal, setMatchModal] = useState({ open: false, loading: false, error: null, data: null });
   const [savingMatch, setSavingMatch] = useState(false);
@@ -415,12 +503,24 @@ export default function TournamentSimple() {
     participantType: 'individual',
     category: 'open',
     homeAndAway: false,
+    clubTeams: [],
   });
 
   const canCreateTournament = ['liga', 'club', 'scout'].includes(user?.role);
   const isLigaCreator = user?.role === 'liga';
 
   const createSeasonPreview = previewTournamentSeason(newTournament.type, newTournament.startDate);
+
+  useEffect(() => {
+    if (!showCreateModal || !isLigaCreator) return;
+    let cancelled = false;
+    setClubRosterLoading(true);
+    API.get('/tournaments/verified-clubs')
+      .then((response) => { if (!cancelled) setVerifiedClubs(Array.isArray(response.data) ? response.data : []); })
+      .catch(() => { if (!cancelled) setVerifiedClubs([]); })
+      .finally(() => { if (!cancelled) setClubRosterLoading(false); });
+    return () => { cancelled = true; };
+  }, [showCreateModal, isLigaCreator]);
 
   useEffect(() => {
     fetchTournaments();
@@ -497,11 +597,12 @@ export default function TournamentSimple() {
       setDetailLoading(true);
       setDetailError('');
       try {
-        const [tRes, stRes, mRes, statRes] = await Promise.all([
+        const [tRes, stRes, mRes, statRes, clubEntriesRes] = await Promise.all([
           API.get(`/tournaments/${id}`),
           API.get(`/tournaments/${id}/standings`).catch(() => ({ data: null })),
           API.get(`/tournaments/${id}/matches`).catch(() => ({ data: [] })),
           API.get(`/tournaments/${id}/stats`).catch(() => ({ data: null })),
+          API.get(`/tournaments/${id}/club-entries`).catch(() => ({ data: { entries: [] } })),
         ]);
         if (cancelled) return;
         setSelectedTournament(tRes.data);
@@ -509,6 +610,7 @@ export default function TournamentSimple() {
           standings: stRes.data,
           matches: Array.isArray(mRes.data) ? mRes.data : [],
           stats: statRes.data,
+          clubEntries: clubEntriesRes.data?.entries || [],
         });
       } catch (error) {
         if (!cancelled) {
@@ -530,7 +632,7 @@ export default function TournamentSimple() {
     closeMatchModal();
     setDetailTab('overview');
     setSelectedTournament(null);
-    setDetailExtras({ standings: null, matches: [], stats: null });
+    setDetailExtras({ standings: null, matches: [], stats: null, clubEntries: [] });
     if (deepLinkTournamentId) {
       navigate('/tournaments', { replace: true });
     }
@@ -539,17 +641,19 @@ export default function TournamentSimple() {
   const refreshTournamentDetail = async () => {
     const id = selectedTournament?.id;
     if (!id) return;
-    const [tRes, stRes, mRes, statRes] = await Promise.all([
+    const [tRes, stRes, mRes, statRes, clubEntriesRes] = await Promise.all([
       API.get(`/tournaments/${id}`),
       API.get(`/tournaments/${id}/standings`).catch(() => ({ data: null })),
       API.get(`/tournaments/${id}/matches`).catch(() => ({ data: [] })),
       API.get(`/tournaments/${id}/stats`).catch(() => ({ data: null })),
+      API.get(`/tournaments/${id}/club-entries`).catch(() => ({ data: { entries: [] } })),
     ]);
     setSelectedTournament(tRes.data);
     setDetailExtras({
       standings: stRes.data,
       matches: Array.isArray(mRes.data) ? mRes.data : [],
       stats: statRes.data,
+      clubEntries: clubEntriesRes.data?.entries || [],
     });
   };
 
@@ -616,6 +720,7 @@ export default function TournamentSimple() {
         homeAndAway: newTournament.type === 'league' ? Boolean(newTournament.homeAndAway) : false,
         maxParticipants: maxN,
       };
+      if (!isLigaCreator) delete payload.clubTeams;
       await API.post('/tournaments', payload);
       setShowCreateModal(false);
       setNewTournament({
@@ -627,12 +732,30 @@ export default function TournamentSimple() {
         participantType: 'individual',
         category: 'open',
         homeAndAway: false,
+        clubTeams: [],
       });
       fetchTournaments();
     } catch (error) {
       console.error('Error creating tournament:', error);
       alert(error.response?.data?.msg || t('Failed to create tournament'));
     }
+  };
+
+  const appendLeagueClub = (clubEntry) => {
+    const key = String(clubEntry.clubName || '').trim().toLocaleLowerCase();
+    if (!key) return;
+    if ((newTournament.clubTeams || []).some((entry) => String(entry.clubName || '').trim().toLocaleLowerCase() === key)) {
+      alert(t('Ky klub është shtuar tashmë.'));
+      return;
+    }
+    setNewTournament((current) => ({ ...current, clubTeams: [...(current.clubTeams || []), clubEntry] }));
+  };
+
+  const addSelectedLeagueClub = () => {
+    const club = verifiedClubs.find((item) => String(item.id) === String(newClubUserId));
+    if (!club) return;
+    appendLeagueClub({ clubUserId: club.id, clubName: club.name, groupName: newClubGroup });
+    setNewClubUserId('');
   };
 
   const openClubSquadPicker = async (tournament, mode = 'join') => {
@@ -1245,6 +1368,43 @@ export default function TournamentSimple() {
                 </label>
               )}
 
+              {isLigaCreator && (
+                <section className="space-y-3 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-3 sm:p-4">
+                  <div>
+                    <h3 className="font-semibold">{t('Ekipet pjesëmarrëse')}</h3>
+                    <p className="text-xs text-[var(--xt-color-text-muted)]">{t('Zgjidh klubet e verifikuara ose shto një klub që ende nuk ka profil. Cakto grupin për secilin ekip.')}</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_100px_auto]">
+                    <select value={newClubUserId} onChange={(event) => setNewClubUserId(event.target.value)} className="min-h-11 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-3 text-[var(--xt-color-text)]">
+                      <option value="">{clubRosterLoading ? t('Duke ngarkuar klubet…') : t('Zgjidh klub të verifikuar')}</option>
+                      {verifiedClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
+                    </select>
+                    <select value={newClubGroup} onChange={(event) => setNewClubGroup(event.target.value)} className="min-h-11 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-3 text-[var(--xt-color-text)]">
+                      {'ABCDEFGH'.split('').map((group) => <option key={group} value={group}>{t('Grupi')} {group}</option>)}
+                    </select>
+                    <button type="button" onClick={addSelectedLeagueClub} disabled={!newClubUserId} className="min-h-11 rounded-lg bg-[var(--xt-color-gold)] px-4 font-semibold disabled:opacity-50">{t('Shto klub')}</button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_100px_auto]">
+                    <input value={newClubName} onChange={(event) => setNewClubName(event.target.value)} maxLength={160} placeholder={t('Emri i klubit të paregjistruar')} className="min-h-11 rounded-lg border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-3 text-[var(--xt-color-text)]" />
+                    <span className="hidden sm:block" />
+                    <button type="button" onClick={() => { appendLeagueClub({ clubName: newClubName.trim(), groupName: newClubGroup }); setNewClubName(''); }} disabled={!newClubName.trim()} className="min-h-11 rounded-lg border border-[var(--xt-color-border)] px-4 font-semibold disabled:opacity-50">{t('Shto me emër')}</button>
+                  </div>
+                  {(newTournament.clubTeams || []).length > 0 && (
+                    <ul className="space-y-2">
+                      {newTournament.clubTeams.map((club, index) => (
+                        <li key={`${club.clubUserId || 'external'}-${club.clubName}`} className="flex items-center gap-2 rounded-lg border border-[var(--xt-color-border)] px-3 py-2 text-sm">
+                          <span className="min-w-0 flex-1 truncate">{club.clubName}{club.clubUserId ? '' : ` · ${t('pa profil')}`}</span>
+                          <select aria-label={`${t('Grupi')} ${club.clubName}`} value={club.groupName || 'A'} onChange={(event) => setNewTournament((current) => ({ ...current, clubTeams: current.clubTeams.map((row, rowIndex) => rowIndex === index ? { ...row, groupName: event.target.value } : row) }))} className="rounded-md border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] px-2 py-1 text-[var(--xt-color-text)]">
+                            {'ABCDEFGH'.split('').map((group) => <option key={group} value={group}>{group}</option>)}
+                          </select>
+                          <button type="button" aria-label={t('Hiq klubin')} onClick={() => setNewTournament((current) => ({ ...current, clubTeams: current.clubTeams.filter((_, rowIndex) => rowIndex !== index) }))} className="rounded px-2 py-1 text-red-600">×</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-[var(--xt-color-text-muted)] mb-2">
                   {t("Numri i pjesëmarrësve")}
@@ -1480,7 +1640,7 @@ export default function TournamentSimple() {
 
             {!detailLoading && (
               <nav
-                className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1 sm:grid-cols-4"
+                className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-1 sm:grid-cols-5"
                 aria-label={t('Seksione turneu')}
               >
                 {[
@@ -1488,6 +1648,7 @@ export default function TournamentSimple() {
                   { id: 'table', label: t('Tabela · pikë') },
                   { id: 'matches', label: t('Ndeshjet') },
                   { id: 'squad', label: t('Pjesëmarrësit') },
+                  ...((selectedTournament.ligaId || selectedTournament.sourceRole === 'liga') ? [{ id: 'teams', label: t('Ekipet dhe statistikat') }] : []),
                 ].map(({ id, label }) => (
                   <button
                     key={id}
@@ -1728,6 +1889,13 @@ export default function TournamentSimple() {
                   })}
                 </ul>
               </div>
+            )}
+
+            {detailTab === 'teams' && !detailLoading && (selectedTournament.ligaId || selectedTournament.sourceRole === 'liga') && (
+              <section className="mb-8 space-y-3">
+                <div><h3 className="text-lg font-bold">{t('Ekipet dhe statistikat')}</h3><p className="text-sm text-[var(--xt-color-text-muted)]">{t('Klubet e paregjistruara ruhen sipas emrit. Lidhja me profil bëhet vetëm pasi liga ta aprovojë pretendimin e një klubi të verifikuar.')}</p></div>
+                <TournamentClubEntriesPanel entries={detailExtras.clubEntries} user={user} tournamentId={selectedTournament.id} onSaved={refreshTournamentDetail} />
+              </section>
             )}
 
             {detailTab === 'matches' && !detailLoading && (!detailExtras.matches || detailExtras.matches.length === 0) && (

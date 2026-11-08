@@ -25,6 +25,9 @@ import {
   tournamentStandingsRequest,
   tournamentStatsRequest,
   updateTournamentMatchScoreRequest,
+  tournamentClubEntriesRequest,
+  claimTournamentClubEntryRequest,
+  saveTournamentClubPlayerStatsRequest,
 } from '../api/client';
 import TournamentBracketView from '../components/TournamentBracketView';
 import UserAvatar, { resolveUserPhotoUri } from '../components/UserAvatar';
@@ -203,6 +206,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [goalEvents, setGoalEvents] = useState([]);
   const [startingTournament, setStartingTournament] = useState(false);
   const [expandedSquadClubId, setExpandedSquadClubId] = useState(null);
+  const [clubEntries, setClubEntries] = useState([]);
+  const [clubPlayerDrafts, setClubPlayerDrafts] = useState({});
+  const [savingClubStats, setSavingClubStats] = useState(null);
 
   const parseGoalEvents = (data) => {
     const all = [
@@ -222,18 +228,22 @@ export default function TournamentDetailScreen({ route, navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [tRes, stRes, mRes, statRes, bracketRes] = await Promise.all([
+      const [tRes, stRes, mRes, statRes, bracketRes, clubEntriesRes] = await Promise.all([
         tournamentByIdRequest(tournamentId),
         tournamentStandingsRequest(tournamentId).catch(() => ({ data: null })),
         tournamentMatchesRequest(tournamentId).catch(() => ({ data: [] })),
         tournamentStatsRequest(tournamentId).catch(() => ({ data: null })),
         tournamentBracketRequest(tournamentId).catch(() => ({ data: null })),
+        tournamentClubEntriesRequest(tournamentId).catch(() => ({ data: { entries: [] } })),
       ]);
       setTournament(tRes.data);
       setStandings(stRes.data);
       setMatches(Array.isArray(mRes.data) ? mRes.data : []);
       setStats(statRes.data);
       setBracketData(bracketRes.data);
+      const entries = Array.isArray(clubEntriesRes.data?.entries) ? clubEntriesRes.data.entries : [];
+      setClubEntries(entries);
+      setClubPlayerDrafts(Object.fromEntries(entries.map((entry) => [entry.id, (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: String(row.goals ?? 0), assists: String(row.assists ?? 0) }))])));
     } catch (err) {
       setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i turneut'));
     } finally {
@@ -562,7 +572,29 @@ export default function TournamentDetailScreen({ route, navigation }) {
     { key: 'table', label: 'Renditja' },
     ...(isKnockoutType ? [{ key: 'bracket', label: 'Braketa' }] : []),
     { key: 'matches', label: 'Ndeshjet' },
+    ...(isLigaTournament ? [{ key: 'teams', label: 'Ekipet' }] : []),
   ];
+
+  const saveClubPlayers = async (entry) => {
+    setSavingClubStats(entry.id);
+    try {
+      await saveTournamentClubPlayerStatsRequest(entry.id, clubPlayerDrafts[entry.id] || []);
+      Alert.alert('Sukses', 'Statistikat e lojtarëve u ruajtën.');
+      await loadDetail();
+    } catch (err) {
+      Alert.alert('Gabim', extractErrorMessage(err, 'Statistikat nuk u ruajtën.'));
+    } finally { setSavingClubStats(null); }
+  };
+
+  const requestClubEntryClaim = async (entry) => {
+    try {
+      await claimTournamentClubEntryRequest(entry.id);
+      Alert.alert('Kërkesa u dërgua', 'Liga duhet ta aprovojë lidhjen me klubin.');
+      await loadDetail();
+    } catch (err) {
+      Alert.alert('Nuk u dërgua', extractErrorMessage(err, 'Kontrollo emrin dhe verifikimin e klubit.'));
+    }
+  };
 
   const matchesGrouped = groupMatchesByRound(matches);
   const bracketRounds =
@@ -794,6 +826,40 @@ export default function TournamentDetailScreen({ route, navigation }) {
             participantType={pt}
             onMatchPress={(m) => openMatch(m.id)}
           />
+        </View>
+      ) : null}
+
+      {tab === 'teams' && isLigaTournament ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Ekipet dhe statistikat</Text>
+          {clubEntries.filter((entry) => entry.groupName || entry.clubUserId).length === 0 ? <Text style={styles.muted}>Liga ende nuk ka caktuar ekipe.</Text> : clubEntries.filter((entry) => entry.groupName || entry.clubUserId).map((entry) => {
+            const isClubOwner = user?.role === 'club' && Number(user.id) === Number(entry.clubUserId);
+            const players = clubPlayerDrafts[entry.id] || [];
+            return (
+              <View key={entry.id} style={styles.teamEntryCard}>
+                <Text style={styles.teamEntryName}>{entry.clubName}</Text>
+                <Text style={styles.muted}>Grupi {entry.groupName || '—'} · {entry.claimStatus === 'linked' ? 'Klub i lidhur' : entry.claimStatus === 'pending' ? 'Pret aprovim nga liga' : 'Klub pa profil'}</Text>
+                <Text style={styles.teamEntryStats}>{entry.played || 0} ndeshje · {entry.wins || 0} fitore · {entry.goalsFor || 0}:{entry.goalsAgainst || 0} · {entry.points || 0} pikë</Text>
+                {isClubOwner ? (
+                  <View style={styles.clubStatsEditor}>
+                    <Text style={styles.sectionTitle}>Golat dhe asistet e lojtarëve</Text>
+                    <Text style={styles.muted}>Plotëso sipas emrit. Lidhja me llogarinë e atletit bëhet vetëm kur është pjesëtar i aprovuar i klubit.</Text>
+                    {players.map((player, index) => <View key={`${player.athleteName}-${index}`} style={styles.clubPlayerRow}>
+                      <TextInput style={[styles.input, styles.playerNameInput]} value={player.athleteName} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, athleteName: value } : row) }))} placeholder="Emri i atletit" />
+                      <TextInput style={styles.statInput} value={String(player.goals)} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, goals: value } : row) }))} keyboardType="number-pad" placeholder="Gola" />
+                      <TextInput style={styles.statInput} value={String(player.assists)} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, assists: value } : row) }))} keyboardType="number-pad" placeholder="Asiste" />
+                    </View>)}
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity style={styles.secondaryBtn} onPress={() => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: [...players, { athleteName: '', goals: '0', assists: '0' }] }))}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.primaryBtn} disabled={savingClubStats === entry.id} onPress={() => saveClubPlayers(entry)}><Text style={styles.primaryBtnText}>{savingClubStats === entry.id ? 'Duke ruajtur…' : 'Ruaj statistikat'}</Text></TouchableOpacity>
+                    </View>
+                    {entry.playerStats?.length ? entry.playerStats.map((player) => <Text key={player.id} style={styles.muted}>{player.athleteName}: {player.goals} gola · {player.assists} asiste</Text>) : null}
+                  </View>
+                ) : null}
+                {!entry.clubUserId && user?.role === 'club' && entry.claimStatus !== 'pending' ? <TouchableOpacity style={styles.secondaryBtn} onPress={() => requestClubEntryClaim(entry)}><Text style={styles.secondaryBtnText}>Kërko lidhjen me klubin tim</Text></TouchableOpacity> : null}
+              </View>
+            );
+          })}
         </View>
       ) : null}
 
@@ -1120,6 +1186,16 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   cardTitle: { fontWeight: '800', color: '#0f172a', marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
+  teamEntryCard: { marginTop: 10, padding: 10, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, backgroundColor: '#f8fafc' },
+  teamEntryName: { color: '#0f172a', fontSize: 16, fontWeight: '800' },
+  teamEntryStats: { color: '#334155', marginTop: 4, marginBottom: 8, fontWeight: '600' },
+  clubStatsEditor: { borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingTop: 10, marginTop: 8 },
+  clubPlayerRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
+  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, color: '#0f172a', backgroundColor: '#fff' },
+  playerNameInput: { flex: 1, minWidth: 0 },
+  statInput: { width: 64, textAlign: 'center', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 4, color: '#0f172a', backgroundColor: '#fff' },
+  actionRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8, marginBottom: 6 },
   row: { color: '#334155', marginBottom: 4 },
   participantRow: {
     flexDirection: 'row',

@@ -200,6 +200,7 @@ export const profileAPI = {
   getProfile: (id) => API.get(`/profiles/${id}`),
   getPublicCv: (id) => API.get(`/profiles/cv/${id}`),
   getProfileTournamentSummary: (userId) => API.get(`/profiles/${userId}/tournament-summary`),
+  getClubTournamentEntries: (clubId) => API.get(`/tournaments/club-entries/club/${clubId}`),
   createProfile: (data) => API.post(`/profiles/me`, data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

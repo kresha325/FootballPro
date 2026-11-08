@@ -25,6 +25,8 @@ const TournamentModule = require('./Tournament');
 const Tournament = TournamentModule.Tournament;
 const TournamentParticipant = TournamentModule.TournamentParticipant;
 const TournamentSquadMember = require('./TournamentSquadMember');
+const TournamentClubEntry = require('./TournamentClubEntry');
+const TournamentClubPlayerStat = require('./TournamentClubPlayerStat');
 const Match = require('./Match');
 const MatchScorer = require('./MatchScorer');
 const MatchEvent = require('./MatchEvent');
@@ -120,6 +122,14 @@ if (Tournament && Liga) {
   Tournament.belongsTo(Liga, { foreignKey: 'ligaId', as: 'liga' });
   Liga.hasMany(Tournament, { foreignKey: 'ligaId', as: 'tournaments' });
 }
+if (Tournament && TournamentClubEntry) {
+  Tournament.hasMany(TournamentClubEntry, { foreignKey: 'tournamentId', as: 'clubEntries' });
+  TournamentClubEntry.belongsTo(Tournament, { foreignKey: 'tournamentId' });
+  TournamentClubEntry.belongsTo(User, { foreignKey: 'clubUserId', as: 'club' });
+  TournamentClubEntry.hasMany(TournamentClubPlayerStat, { foreignKey: 'tournamentClubEntryId', as: 'playerStats' });
+  TournamentClubPlayerStat.belongsTo(TournamentClubEntry, { foreignKey: 'tournamentClubEntryId', as: 'entry' });
+  TournamentClubPlayerStat.belongsTo(User, { foreignKey: 'athleteUserId', as: 'athlete' });
+}
 if (Tournament && TournamentSquadMember && User) {
   Tournament.hasMany(TournamentSquadMember, { foreignKey: 'tournamentId', as: 'squadMembers' });
   TournamentSquadMember.belongsTo(Tournament, { foreignKey: 'tournamentId' });
@@ -185,6 +195,8 @@ module.exports = {
   Tournament,
   TournamentParticipant,
   TournamentSquadMember,
+  TournamentClubEntry,
+  TournamentClubPlayerStat,
   Follow,
   Subscription,
   Profile,

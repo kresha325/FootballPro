@@ -32,12 +32,21 @@ const {
   saveTournamentPlayerStats,
   transitionCompetition,
 } = require('../controllers/tournaments');
+const clubEntries = require('../controllers/tournamentClubEntries');
 
 // Tournament CRUD
 router.post('/', auth, createTournament);
 router.put('/:id', auth, updateTournament);
 router.get('/', auth.optionalAuth, getTournaments);
 router.get('/trending', auth.optionalAuth, getTrendingTournaments);
+router.get('/verified-clubs', auth, clubEntries.getVerifiedClubs);
+router.get('/club-entries/club/:clubId', auth.optionalAuth, clubEntries.getClubTournamentEntries);
+router.post('/club-entries/:entryId/claim', auth, clubEntries.requestClubEntryClaim);
+router.post('/club-entries/:entryId/player-stats', auth, clubEntries.saveClubPlayerStats);
+router.get('/:id/club-entries', auth.optionalAuth, clubEntries.getTournamentClubEntries);
+router.put('/:id/club-entries', auth, clubEntries.replaceTournamentClubEntries);
+router.put('/:id/club-entries/:entryId/stats', auth, clubEntries.updateTournamentClubEntryStats);
+router.put('/:id/club-entries/:entryId/claim', auth, clubEntries.reviewClubEntryClaim);
 
 router.delete('/:id', auth, async (req, res) => {
   try {

@@ -106,6 +106,7 @@ const Profile = () => {
     following: 0,
   });
   const [tournamentSummary, setTournamentSummary] = useState({ tournaments: [], totals: null });
+  const [clubTournamentEntries, setClubTournamentEntries] = useState([]);
   // Shtojme state per modalin e fotos full screen
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [avatarBroken, setAvatarBroken] = useState(false);
@@ -439,7 +440,17 @@ const Profile = () => {
           } catch {
             setTournamentSummary({ tournaments: [], totals: null });
           }
+          setClubTournamentEntries([]);
+        } else if (String(res.data?.role || '').toLowerCase() === 'club') {
+          try {
+            const entriesRes = await profileAPI.getClubTournamentEntries(id);
+            setClubTournamentEntries(Array.isArray(entriesRes.data?.entries) ? entriesRes.data.entries : []);
+          } catch {
+            setClubTournamentEntries([]);
+          }
+          setTournamentSummary({ tournaments: [], totals: null });
         } else {
+          setClubTournamentEntries([]);
           setTournamentSummary({ tournaments: [], totals: null });
         }
       } catch (err) {
@@ -593,6 +604,7 @@ const Profile = () => {
   );
 
   const isAthlete = String(profile?.role || '').toLowerCase() === 'athlete';
+  const isClub = String(profile?.role || '').toLowerCase() === 'club';
   const displayName = publicProfileName(profile) || 'Profil';
   const isSponsoredProfile = sponsorList.length > 0;
   const completionFields = [
@@ -617,6 +629,7 @@ const Profile = () => {
   if (isAthlete) {
     tabs.push({ key: 'stats', label: 'Performanca' }, { key: 'tournaments', label: 'Turnet' });
   }
+  if (isClub) tabs.push({ key: 'club-tournaments', label: 'Turnet e klubit' });
   tabs.push(
     { key: 'gallery', label: 'Foto' },
     { key: 'videos', label: 'Video' },
@@ -1202,6 +1215,19 @@ const Profile = () => {
                 tournaments={tournamentSummary.tournaments}
                 totals={tournamentSummary.totals}
               />
+            )}
+
+            {activeTab === 'club-tournaments' && isClub && (
+              <div className="space-y-3">
+                <h2 className="text-xl font-bold">{t('Statistikat e turneve të klubit')}</h2>
+                {clubTournamentEntries.length ? clubTournamentEntries.map((entry) => (
+                  <article key={entry.id} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-bold">{entry.Tournament?.name || entry.clubName}</h3><p className="text-sm text-[var(--xt-color-text-muted)]">{entry.Tournament?.season || ''}{entry.groupName ? ` · ${t('Grupi')} ${entry.groupName}` : ''}</p></div><strong>{entry.points || 0} {t('Pkt')}</strong></div>
+                    <div className="mt-3 grid grid-cols-4 gap-2 text-center text-sm">{[[t('Ndeshje'), entry.played], [t('Fitore'), entry.wins], [t('Gola'), entry.goalsFor], [t('Pikë'), entry.points]].map(([label, value]) => <div key={label} className="rounded-lg bg-[var(--xt-color-surface-raised)] p-2"><span className="block text-xs text-[var(--xt-color-text-muted)]">{label}</span><strong>{value || 0}</strong></div>)}</div>
+                    {entry.playerStats?.length ? <div className="mt-3 border-t border-[var(--xt-color-border)] pt-3"><h4 className="mb-2 font-semibold">{t('Statistikat e lojtarëve')}</h4><ul className="space-y-1 text-sm">{entry.playerStats.map((player) => <li key={player.id} className="flex justify-between gap-3"><span>{player.athleteName}</span><span>{player.goals} {t('gola')} · {player.assists} {t('asiste')}</span></li>)}</ul></div> : null}
+                  </article>
+                )) : <p className="rounded-lg border border-dashed border-[var(--xt-color-border)] p-5 text-sm text-[var(--xt-color-text-muted)]">{t('Nuk ka ende statistika turnesh të lidhura me profilin e klubit.')}</p>}
+              </div>
             )}
 
             {activeTab === 'gallery' && (
