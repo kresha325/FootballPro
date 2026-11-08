@@ -34,23 +34,21 @@ function BroadcastStage({ muted, videoOff, cameraFacing, onCameraFacingChange, s
     if (!localParticipant || switchingCamera) return;
     const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     const publication = localParticipant.getTrackPublication(Track.Source.Camera);
-    const mediaTrack = publication?.track?.mediaStreamTrack;
-    if (!mediaTrack) {
+    const localVideoTrack = publication?.track;
+    if (!localVideoTrack?.mediaStreamTrack || typeof localVideoTrack.restartTrack !== 'function') {
       Alert.alert('Kamera', 'Kamera nuk është gati. Provo përsëri pas pak.');
       return;
     }
 
     onSwitchingCameraChange(true);
     try {
-      if (typeof mediaTrack.applyConstraints === 'function') {
-        await mediaTrack.applyConstraints({ facingMode: nextFacing });
-      } else if (typeof mediaTrack._switchCamera === 'function') {
-        mediaTrack._switchCamera();
-      } else {
-        throw new Error('Camera switching is unavailable on this device.');
-      }
+      // Reacquire the actual native camera and replace the published track.
+      // applyConstraints can leave the active capture device unchanged on some
+      // React Native WebRTC builds, which makes the preview appear only mirrored.
+      await localVideoTrack.restartTrack({ facingMode: nextFacing });
       onCameraFacingChange(nextFacing);
-    } catch (_error) {
+    } catch (error) {
+      console.warn('Live camera switch failed:', error?.message || error);
       Alert.alert('Kamera', 'Nuk u ndërrua kamera. Kontrollo lejet dhe provo përsëri.');
     } finally {
       onSwitchingCameraChange(false);
@@ -72,10 +70,10 @@ function BroadcastStage({ muted, videoOff, cameraFacing, onCameraFacingChange, s
         style={styles.localVideo}
         trackRef={local[0]}
         objectFit="cover"
-        mirror={cameraFacing === 'user'}
+        mirror={false}
       />
       <TouchableOpacity style={styles.switchCameraButton} onPress={switchCamera} disabled={switchingCamera}>
-        <Text style={styles.controlText}>{switchingCamera ? '…' : cameraFacing === 'environment' ? 'Kamera e përparme' : 'Kamera e pasme'}</Text>
+        <Text style={styles.controlText}>{switchingCamera ? '…' : cameraFacing === 'environment' ? 'Kalo te kamera e përparme' : 'Kalo te kamera e pasme'}</Text>
       </TouchableOpacity>
     </View>
   );
