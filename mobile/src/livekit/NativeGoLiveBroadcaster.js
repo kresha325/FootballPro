@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,7 +17,7 @@ import {
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 import { ensureLiveKitNative } from './register';
 
-function BroadcastStage({ muted, videoOff }) {
+function BroadcastStage({ muted, videoOff, cameraFacing, onCameraFacingChange, switchingCamera, onSwitchingCameraChange }) {
   // eslint-disable-next-line global-require
   const { useTracks, VideoTrack, isTrackReference, useLocalParticipant } = require('@livekit/react-native');
   const { localParticipant } = useLocalParticipant();
@@ -26,8 +27,35 @@ function BroadcastStage({ muted, videoOff }) {
   useEffect(() => {
     if (!localParticipant) return;
     localParticipant.setMicrophoneEnabled(!muted).catch(() => {});
-    localParticipant.setCameraEnabled(!videoOff).catch(() => {});
-  }, [localParticipant, muted, videoOff]);
+    localParticipant.setCameraEnabled(!videoOff, { facingMode: cameraFacing }).catch(() => {});
+  }, [localParticipant, muted, videoOff, cameraFacing]);
+
+  const switchCamera = useCallback(async () => {
+    if (!localParticipant || switchingCamera) return;
+    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    const publication = localParticipant.getTrackPublication(Track.Source.Camera);
+    const mediaTrack = publication?.track?.mediaStreamTrack;
+    if (!mediaTrack) {
+      Alert.alert('Kamera', 'Kamera nuk është gati. Provo përsëri pas pak.');
+      return;
+    }
+
+    onSwitchingCameraChange(true);
+    try {
+      if (typeof mediaTrack.applyConstraints === 'function') {
+        await mediaTrack.applyConstraints({ facingMode: nextFacing });
+      } else if (typeof mediaTrack._switchCamera === 'function') {
+        mediaTrack._switchCamera();
+      } else {
+        throw new Error('Camera switching is unavailable on this device.');
+      }
+      onCameraFacingChange(nextFacing);
+    } catch (_error) {
+      Alert.alert('Kamera', 'Nuk u ndërrua kamera. Kontrollo lejet dhe provo përsëri.');
+    } finally {
+      onSwitchingCameraChange(false);
+    }
+  }, [localParticipant, switchingCamera, cameraFacing, onSwitchingCameraChange, onCameraFacingChange]);
 
   if (videoOff || !local[0]) {
     return (
@@ -39,12 +67,17 @@ function BroadcastStage({ muted, videoOff }) {
   }
 
   return (
-    <VideoTrack
-      style={styles.localVideo}
-      trackRef={local[0]}
-      objectFit="cover"
-      mirror
-    />
+    <View style={styles.videoStage}>
+      <VideoTrack
+        style={styles.localVideo}
+        trackRef={local[0]}
+        objectFit="cover"
+        mirror={cameraFacing === 'user'}
+      />
+      <TouchableOpacity style={styles.switchCameraButton} onPress={switchCamera} disabled={switchingCamera}>
+        <Text style={styles.controlText}>{switchingCamera ? '…' : cameraFacing === 'environment' ? 'Kamera e përparme' : 'Kamera e pasme'}</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -89,6 +122,8 @@ export default function NativeGoLiveBroadcaster({
   const [videoOff, setVideoOff] = useState(false);
   const [ending, setEnding] = useState(false);
   const [viewers, setViewers] = useState(0);
+  const [cameraFacing, setCameraFacing] = useState('environment');
+  const [switchingCamera, setSwitchingCamera] = useState(false);
 
   const roomName = useMemo(() => `stream-${streamId}`, [streamId]);
   const onViewersChange = useCallback((n) => {
@@ -195,7 +230,7 @@ export default function NativeGoLiveBroadcaster({
         token={creds.token}
         connect
         audio
-        video
+        video={{ facingMode: cameraFacing }}
         onDisconnected={() => {
           if (!ending) {
             endLive();
@@ -204,7 +239,14 @@ export default function NativeGoLiveBroadcaster({
         style={styles.flex}
       >
         <ViewerSync streamId={streamId} onViewersChange={onViewersChange} />
-        <BroadcastStage muted={muted} videoOff={videoOff} />
+        <BroadcastStage
+          muted={muted}
+          videoOff={videoOff}
+          cameraFacing={cameraFacing}
+          onCameraFacingChange={setCameraFacing}
+          switchingCamera={switchingCamera}
+          onSwitchingCameraChange={setSwitchingCamera}
+        />
       </LiveKitRoom>
 
       <View style={styles.controls}>
@@ -250,6 +292,18 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, color: '#F8FAFC', fontWeight: '700', fontSize: 16 },
   viewerCount: { color: '#FCD34D', fontWeight: '700', fontSize: 13, marginLeft: 8 },
   localVideo: { flex: 1, width: '100%' },
+  videoStage: { flex: 1, backgroundColor: '#000' },
+  switchCameraButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderWidth: 1,
+    borderColor: '#64748B',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
   placeholder: {
     flex: 1,
     alignItems: 'center',

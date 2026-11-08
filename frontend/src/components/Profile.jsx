@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ProfileTournaments from './ProfileTournaments';
 import UserAvatarLink from './UserAvatarLink';
 import { getJonCoinBalance } from '../services/joncoin';
@@ -1585,7 +1586,7 @@ const Profile = () => {
 
       {/* Modal për live stream */}
       {isOwner && showLiveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
+        createPortal(<div className="fixed inset-0 bg-black bg-opacity-60 flex items-start md:items-center justify-center z-[1000] overflow-y-auto p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Nis transmetim live</h2>
             <form onSubmit={handleStartLiveStream}>
@@ -1642,7 +1643,7 @@ const Profile = () => {
               </>
             ) : null}
           </div>
-        </div>
+        </div>, document.body)
       )}
 
         </div>

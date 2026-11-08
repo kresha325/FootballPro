@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { createPortal } from 'react-dom';
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import NotificationBell from './NotificationBell';
@@ -674,7 +675,7 @@ function Navbar() {
 
       {/* Modal për live stream */}
       {user && showLiveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center z-50 overflow-y-auto p-3 sm:p-4">
+        createPortal(<div className="fixed inset-0 bg-black bg-opacity-60 flex items-start md:items-center justify-center z-[1000] overflow-y-auto p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{t('Nis transmetim live')}</h2>
             <form onSubmit={handleStartLiveStream}>
@@ -716,7 +717,7 @@ function Navbar() {
               <button type="button" onClick={() => { stopCameraPreview(); setShowLiveModal(false); }} className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium mt-2">Anulo</button>
             </form>
           </div>
-        </div>
+        </div>, document.body)
       )}
     </nav>
   );
