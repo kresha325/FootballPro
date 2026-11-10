@@ -351,7 +351,7 @@ function Matches() {
       <header className="xt-card relative overflow-hidden p-5 sm:p-7">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-[var(--xt-color-gold)]/10 to-transparent" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Qendra e ndeshjeve')}</p><h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{t('Ndeshjet')}</h1><p className="mt-2 max-w-xl text-sm text-[var(--xt-color-text-muted)]">{t('Kalendar, ndeshje live dhe rezultatet e turneve.')}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Qendra e ndeshjeve')}</p><h1 className="mt-2 text-3xl font-black tracking-tight text-[var(--xt-color-text)] sm:text-4xl">{t('Ndeshjet')}</h1><p className="mt-2 max-w-xl text-sm text-[var(--xt-color-text-muted)]">{t('Kalendar, ndeshje live dhe rezultatet e turneve.')}</p></div>
           {canCreateMatch && <button onClick={() => setShowCreateModal(true)} className="btn btn-primary min-h-11 shrink-0">+ {t('Krijo ndeshje')}</button>}
         </div>
       </header>
@@ -361,7 +361,7 @@ function Matches() {
       </div>
 
       <nav className="xt-card grid grid-cols-3 gap-1 p-1" aria-label="Filtrim i ndeshjeve">
-        {[['upcoming', 'Kalendar', upcomingMatches.length], ['live', 'Live', liveMatches.length], ['results', 'Rezultatet', completedMatches.length]].map(([id, label, count]) => <button key={id} type="button" aria-pressed={activeTab === id} onClick={() => setActiveTab(id)} className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition ${activeTab === id ? 'bg-[var(--xt-color-gold)] text-slate-950' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5'}`}>{label}<span className="ml-2 tabular-nums opacity-75">{count}</span></button>)}
+        {[['upcoming', 'Kalendar', upcomingMatches.length], ['live', 'Live', liveMatches.length], ['results', 'Rezultatet', completedMatches.length]].map(([id, label, count]) => <button key={id} type="button" aria-pressed={activeTab === id} onClick={() => setActiveTab(id)} className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition ${activeTab === id ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5'}`}>{label}<span className="ml-2 tabular-nums opacity-75">{count}</span></button>)}
       </nav>
 
       <section className="space-y-3" aria-live="polite">

@@ -1779,7 +1779,7 @@ export default function TournamentSimple() {
                     onClick={() => setDetailTab(id)}
                     className={`min-h-10 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition sm:text-sm ${
                       detailTab === id
-                        ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-sm'
+                        ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-sm'
                         : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white'
                     }`}
                   >

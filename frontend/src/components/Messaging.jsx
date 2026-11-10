@@ -1065,10 +1065,10 @@ function Messaging() {
           </a>
         )}
         {message.content && (
-          <p className={`whitespace-pre-wrap break-words ${isMine ? 'text-slate-950' : ''}`}>
+          <p className={`whitespace-pre-wrap break-words ${isMine ? 'text-[var(--xt-color-on-gold)]' : ''}`}>
             <Linkify
               text={message.content}
-              className={isMine ? 'text-slate-950' : ''}
+              className={isMine ? 'text-[var(--xt-color-on-gold)]' : ''}
               linkClassName={isMine ? 'underline break-all text-slate-900 hover:text-black' : 'underline break-all opacity-95 hover:opacity-100'}
             />
           </p>
@@ -1253,7 +1253,7 @@ function Messaging() {
                         className={`w-12 h-12 rounded-full object-cover border-4 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-400'}`}
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-[var(--xt-color-gold)] text-slate-950 flex items-center justify-center font-bold text-lg">
+                      <div className="w-12 h-12 rounded-full bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] flex items-center justify-center font-bold text-lg">
                         {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                       </div>
                     )}
@@ -1336,7 +1336,7 @@ function Messaging() {
                 type="button"
                 onClick={createGroupConversation}
                 disabled={creatingGroup}
-                className="px-3 py-2 rounded-lg bg-[var(--xt-color-gold)] hover:bg-[var(--xt-color-gold-bright)] text-slate-950 text-sm disabled:opacity-60"
+                className="px-3 py-2 rounded-lg bg-[var(--xt-color-gold)] hover:bg-[var(--xt-color-gold-bright)] text-[var(--xt-color-on-gold)] text-sm disabled:opacity-60"
               >
                 {creatingGroup ? t('Creating...') : t('Create Group')}
               </button>
@@ -1437,7 +1437,7 @@ function Messaging() {
                           className="h-10 w-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--xt-color-gold)] text-sm font-bold text-slate-950">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--xt-color-gold)] text-sm font-bold text-[var(--xt-color-on-gold)]">
                           {name.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -1585,7 +1585,7 @@ function Messaging() {
                             className={`w-10 h-10 rounded-full object-cover border-2 transition-all duration-300 ${onlineStatus[other.id] === true ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'}`}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-[var(--xt-color-gold)] text-slate-950 flex items-center justify-center font-bold text-sm">
+                          <div className="w-10 h-10 rounded-full bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] flex items-center justify-center font-bold text-sm">
                             {(other.name && typeof other.name === 'string' && other.name.length > 0) ? other.name.charAt(0).toUpperCase() : '?'}
                           </div>
                         )}
@@ -1719,7 +1719,7 @@ function Messaging() {
                         highlightId === message.id ? 'ring-2 ring-amber-400' : ''
                       } ${
                         isMine
-                          ? 'bg-[var(--xt-color-gold)] text-slate-950 rounded-br-md'
+                          ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-br-md'
                           : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)] border border-[var(--xt-color-border)] rounded-bl-md'
                       }`}
                     >
@@ -1831,7 +1831,7 @@ function Messaging() {
               type="button"
               aria-label={t('Shko poshtë')}
               onClick={() => scrollToBottom(false)}
-              className="absolute bottom-24 right-4 z-20 rounded-full bg-[var(--xt-color-gold)] p-3 text-slate-950 shadow-lg transition md:bottom-8"
+              className="absolute bottom-24 right-4 z-20 rounded-full bg-[var(--xt-color-gold)] p-3 text-[var(--xt-color-on-gold)] shadow-lg transition md:bottom-8"
             >
               <FiChevronDown className="w-5 h-5" />
             </button>
@@ -2013,7 +2013,7 @@ function Messaging() {
                 const id = person.id ?? person.userId;
                 const name = `${person.firstName || ''} ${person.lastName || ''}`.trim() || 'Përdorues';
                 return <button type="button" key={id} onClick={() => startConversationWith(person)} disabled={openingUserId != null} className="flex w-full items-center gap-3 border-b border-[var(--xt-color-border)] px-1 py-3 text-left hover:bg-[var(--xt-color-canvas)] disabled:opacity-60" aria-label={`Hap bisedë me ${name}`}>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--xt-color-gold)] font-bold text-slate-950">{name.charAt(0).toUpperCase()}</span>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--xt-color-gold)] font-bold text-[var(--xt-color-on-gold)]">{name.charAt(0).toUpperCase()}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{name}</span><span className="block truncate text-xs text-[var(--xt-color-text-muted)]">{person.role || person.club || ''}</span></span>
                   {openingUserId === id ? <span className="text-sm">{t('Duke hapur…')}</span> : <span aria-hidden="true">›</span>}
                 </button>;

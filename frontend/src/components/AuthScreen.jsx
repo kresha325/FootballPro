@@ -366,7 +366,7 @@ export default function AuthScreen({ initialMode }) {
               role="tab"
               aria-selected={mode === tab.id}
               className={`min-h-11 flex-1 rounded-md px-1 text-xs font-semibold transition-colors sm:text-sm ${
-                mode === tab.id ? 'bg-[var(--xt-color-gold)] text-[#101114]' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-text)]'
+                mode === tab.id ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]' : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-[var(--xt-color-text)]'
               }`}
             >
               {tab.label}

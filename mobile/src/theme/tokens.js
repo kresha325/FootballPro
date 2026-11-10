@@ -8,7 +8,8 @@ export const lightColors = {
   text: '#111827',
   textSecondary: '#344054',
   muted: '#667085',
-  mutedSoft: '#98A2B3',
+  // Small helper/disabled labels must still meet AA on light surfaces.
+  mutedSoft: '#667085',
   primary: '#9A6B12',
   primarySoft: '#FBF3E2',
   primaryBorder: '#E8CB8D',

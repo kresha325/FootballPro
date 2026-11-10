@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import {
   ActivityIndicator,
   Alert,
@@ -193,6 +194,7 @@ function participantJoinStatus(p) {
 
 export default function TournamentDetailScreen({ route, navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const tournamentId = route?.params?.tournamentId;
   const initialTab = route?.params?.initialTab || 'overview';
 
@@ -713,7 +715,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       <View style={styles.actions}>
         {canJoin ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={onJoin}>
-            <Text style={styles.primaryBtnText}>Bashkohu</Text>
+            <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Bashkohu</Text>
           </TouchableOpacity>
         ) : null}
         {!isJoined && user?.role === 'athlete' && isLigaTournament && tournament?.status === 'open' ? (
@@ -736,7 +738,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
             disabled={startingTournament}
           >
             {startingTournament ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.onPrimary} size="small" />
             ) : (
               <Text style={styles.startBtnText}>Nis turneun</Text>
             )}
@@ -764,7 +766,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
               onPress={() => setTab(t.key)}
             >
-              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive, tab === t.key && { color: colors.onPrimary }]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -1027,6 +1029,17 @@ export default function TournamentDetailScreen({ route, navigation }) {
                   {matchModal.data.match.homeName || matchModal.data.match.homeClubEntry?.clubName || participantLabel(matchModal.data.match.homeUser, pt)} vs{' '}
                   {matchModal.data.match.awayName || matchModal.data.match.awayClubEntry?.clubName || participantLabel(matchModal.data.match.awayUser, pt)}
                 </Text>
+                <View
+                  accessible
+                  accessibilityRole="text"
+                  accessibilityLabel={`Rezultati zyrtar: ${matchModal.data.match.scoreHome ?? 'pa rezultat'} me ${matchModal.data.match.scoreAway ?? 'pa rezultat'}`}
+                  style={[styles.officialScoreCard, { backgroundColor: colors.bg, borderColor: colors.border }]}
+                >
+                  <Text style={[styles.officialScore, { color: colors.text }]}>
+                    {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
+                  </Text>
+                  <Text style={[styles.officialScoreLabel, { color: colors.muted }]}>Rezultati zyrtar</Text>
+                </View>
                 <Text style={styles.muted}>
                   Status: {matchModal.data.match.status}
                   {matchModal.data.match.matchDate ? ` · ${new Date(matchModal.data.match.matchDate).toLocaleString()}` : ''}
@@ -1225,8 +1238,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                   </View>
                 ) : (
                   <Text style={styles.row}>
-                    Rezultati: {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
-                    {'\n'}Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
+                    Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
                   </Text>
                 )}
                 {canEditMatchPlayerStats(matchModal.data.match) && matchModal.data.match.status === 'finished' ? (
@@ -1407,6 +1419,9 @@ const styles = StyleSheet.create({
   modalClose: { alignSelf: 'flex-end', marginBottom: 8 },
   modalCloseText: { color: '#9A6B12', fontWeight: '700' },
   modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  officialScoreCard: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 12, paddingVertical: 12, marginVertical: 8 },
+  officialScore: { fontSize: 32, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: 1 },
+  officialScoreLabel: { marginTop: 2, fontSize: 12, fontWeight: '700' },
   goalEventRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -100,7 +100,7 @@ export default function RegisterOnboarding() {
                   onClick={() => setCountry(c)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
                     country === c
-                      ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[#101114]'
+                      ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]'
                       : 'border-[var(--xt-color-border-strong)] bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text)]'
                   }`}
                 >

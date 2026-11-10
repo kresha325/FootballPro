@@ -253,7 +253,7 @@ const Notifications = () => {
             onClick={() => setFilter(id)}
             className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-bold ${
               filter === id
-                ? 'bg-[var(--xt-color-gold)] text-[#101114]'
+                ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]'
                 : 'bg-white/5 text-[var(--xt-color-text-muted)]'
             }`}
           >

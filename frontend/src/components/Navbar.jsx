@@ -328,7 +328,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`min-h-10 px-3 text-sm font-medium rounded-l-lg border transition-colors ${followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-l-lg border transition-colors ${followedOnly ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={followedOnly}
               aria-label="Show My feed"
             >
@@ -341,7 +341,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`min-h-10 px-3 text-sm font-medium rounded-r-lg border transition-colors ${!followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-r-lg border transition-colors ${!followedOnly ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={!followedOnly}
               aria-label="Show All feed"
             >

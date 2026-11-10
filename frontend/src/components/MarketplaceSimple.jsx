@@ -359,7 +359,7 @@ export default function MarketplaceSimple() {
             onClick={() => setCategory(cat.value)}
             className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all ${
               category === cat.value
-                ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-md'
+                ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-md'
                 : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
             }`}
           >
@@ -507,7 +507,7 @@ export default function MarketplaceSimple() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+            className="px-6 py-3 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-xl hover:bg-[var(--xt-color-gold-bright)] transition-colors font-semibold"
           >
             {t("Shto Produktin e Parë")}
           </button>
@@ -636,7 +636,7 @@ export default function MarketplaceSimple() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-bright)] transition-colors font-medium"
                 >
                   {t("Shto Produktin")}
                 </button>
@@ -903,7 +903,7 @@ export default function MarketplaceSimple() {
                 type="button"
                 onClick={checkoutCart}
                 disabled={cartChecking || items.length === 0}
-                className="w-full py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
+                className="w-full py-3 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-bright)] font-semibold disabled:opacity-50"
               >
                 {cartChecking ? '…' : 'Paguaj me XCoin'}
               </button>

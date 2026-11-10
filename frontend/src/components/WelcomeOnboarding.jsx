@@ -136,7 +136,7 @@ export default function WelcomeOnboarding() {
         <button
           type="button"
           onClick={goNext}
-          className="w-full py-3.5 rounded-xl bg-[var(--xt-color-gold)] text-[#101114] font-bold text-lg hover:opacity-95 transition"
+          className="w-full py-3.5 rounded-xl bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] font-bold text-lg hover:opacity-95 transition"
         >
           {index >= SLIDES.length - 1 ? t('start') : t('continue')}
         </button>
