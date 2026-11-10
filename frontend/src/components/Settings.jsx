@@ -186,7 +186,7 @@ const Settings = () => {
           {LANGUAGES.map((item) => (
             <button key={item.code} type="button" onClick={() => selectLanguage(item.code)}
               aria-pressed={language === item.code}
-              className={`rounded-full border px-3 py-1.5 text-sm ${language === item.code ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-black' : 'border-[var(--xt-color-border)]'}`}>
+              className={`rounded-full border px-3 py-1.5 text-sm ${language === item.code ? 'border-[var(--xt-color-gold)] bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]' : 'border-[var(--xt-color-border)]'}`}>
               {item.name}
             </button>
           ))}

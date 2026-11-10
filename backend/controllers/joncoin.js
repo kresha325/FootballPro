@@ -9,7 +9,7 @@ const {
   lockUsers,
   publicTransaction,
 } = require('../services/economy/ledger');
-const { TX_FILTERS } = require('../services/economy/rules');
+const { TX_FILTERS, sameIdempotentPayload } = require('../services/economy/rules');
 const {
   economyPublicConfig,
   getWithdrawCommissionPercent,
@@ -277,6 +277,30 @@ exports.withdraw = async (req, res) => {
     if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key është i detyrueshëm' });
 
     const result = await sequelize.transaction(async (transaction) => {
+      await lockUsers([req.user.id], transaction);
+      const ledgerKey = `withdraw:${req.user.id}:${idempotencyKey}`;
+      const existing = await JonCoinTransaction.findOne({
+        where: { idempotencyKey: ledgerKey },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (existing) {
+        if (!sameIdempotentPayload(existing, { userId: req.user.id, type: 'withdrawal', amountCents: gross })) {
+          const conflict = new Error('Çelësi i idempotencës është përdorur për një veprim tjetër');
+          conflict.status = 409;
+          throw conflict;
+        }
+        const priorWithdrawal = await WithdrawalRequest.findByPk(existing.relatedEntityId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        if (!priorWithdrawal) {
+          const missing = new Error('Kërkesa e tërheqjes nuk u gjet');
+          missing.status = 409;
+          throw missing;
+        }
+        return { withdrawal: priorWithdrawal, tx: existing, duplicate: true, grossCents: gross };
+      }
       const withdrawal = await WithdrawalRequest.create({
         userId: req.user.id,
         amount: fromCents(net),
@@ -288,7 +312,7 @@ exports.withdraw = async (req, res) => {
           type: 'withdrawal',
           amountCents: gross,
           status: 'pending',
-          idempotencyKey: idempotencyKey ? `withdraw:${req.user.id}:${idempotencyKey}` : null,
+          idempotencyKey: ledgerKey,
           relatedEntityType: 'withdrawal',
           relatedEntityId: withdrawal.id,
           description: feeAmount > 0
@@ -297,18 +321,20 @@ exports.withdraw = async (req, res) => {
         },
         transaction
       );
-      return { withdrawal, tx: posted.entry, duplicate: posted.duplicate };
+      return { withdrawal, tx: posted.entry, duplicate: posted.duplicate, grossCents: gross };
     });
 
     await safeWallet(result.tx);
+    const netCents = toCents(result.withdrawal.amount) || 0;
+    const feeCents = Math.max(0, result.grossCents - netCents);
     return res.json({
       success: true,
       duplicate: result.duplicate,
       withdrawal: result.withdrawal,
-      commissionPercent: feePct,
-      grossAmount: fromCents(gross),
-      feeAmount: fromCents(feeAmount),
-      netPayout: fromCents(net),
+      commissionPercent: result.grossCents > 0 ? Math.round((feeCents / result.grossCents) * 10000) / 100 : feePct,
+      grossAmount: fromCents(result.grossCents),
+      feeAmount: fromCents(feeCents),
+      netPayout: fromCents(netCents),
     });
   } catch (err) {
     return sendError(res, err);

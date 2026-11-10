@@ -200,7 +200,7 @@ html.dark .xt-bottom-nav { background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 2
 .xt-gamification .xt-game-tabs { overflow-x: auto; gap: .5rem; padding: .3rem; border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-lg); background: var(--xt-color-surface); scrollbar-width: thin; }
 .xt-gamification .xt-game-tabs button { min-height: 44px; flex: 0 0 auto; padding: .65rem 1rem; border: 1px solid transparent; border-radius: var(--xt-radius-md); color: var(--xt-color-text-muted); font-weight: 650; white-space: nowrap; }
 .xt-gamification .xt-game-tabs button:hover { color: var(--xt-color-text); background: var(--xt-color-surface-raised); }
-.xt-gamification .xt-game-tabs button.is-active { color: #111; background: var(--xt-color-gold); }
+.xt-gamification .xt-game-tabs button.is-active { color: var(--xt-color-on-gold); background: var(--xt-color-gold); }
 .xt-gamification .bg-gradient-to-br { background: radial-gradient(ellipse at 100% 0%, rgb(217 164 65 / 14%), transparent 48%), var(--xt-color-surface) !important; border-color: var(--xt-color-border) !important; }
 .xt-gamification .bg-gradient-to-r { background-image: linear-gradient(90deg, var(--xt-color-gold-deep), var(--xt-color-gold-bright)) !important; }
 .xt-gamification tr:hover { background: var(--xt-color-surface-hover); }

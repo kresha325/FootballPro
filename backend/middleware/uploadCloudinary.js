@@ -45,7 +45,7 @@ const localStorage = multer.diskStorage({
 	}
 });
 
-// Images default 8MB; videos 100MB. Both follow UPLOAD_MAX_*_BYTES.
+// Images default 10MB; videos 100MB. Both follow UPLOAD_MAX_*_BYTES.
 const { maxImage: MAX_IMAGE_SIZE, maxVideo: MAX_VIDEO_SIZE, maxFile: MAX_FILE_SIZE } = uploadByteLimits();
 
 function fileFilter(req, file, cb) {

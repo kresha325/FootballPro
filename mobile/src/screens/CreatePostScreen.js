@@ -8,6 +8,7 @@ import { createPostRequest, extractErrorMessage, setPostSponsorsRequest, sponsor
 import { useAuth } from '../context/AuthContext';
 import AiCaptionButton from '../components/AiCaptionButton';
 import { useLocale } from '../context/LocaleContext';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 export default function CreatePostScreen({ navigation }) {
   const { t } = useLocale();
@@ -53,14 +54,13 @@ export default function CreatePostScreen({ navigation }) {
     if (!result.canceled && result.assets && result.assets[0]) {
       const asset = result.assets[0];
       const isVideo = asset.type === 'video' || String(asset.mimeType || '').startsWith('video/');
-      const fileSize = Number(asset.fileSize || asset.filesize || 0);
-      const maxBytes = isVideo ? 80 * 1024 * 1024 : 12 * 1024 * 1024;
-      if (fileSize > 0 && fileSize > maxBytes) {
+      const maxBytes = isVideo ? UPLOAD_LIMITS.video : UPLOAD_LIMITS.image;
+      if (isAssetOverLimit(asset, maxBytes)) {
         Alert.alert(
           t('File too large'),
           isVideo
-            ? t('Video max ~80MB. Compress it or choose a shorter video.')
-            : t('Photo max ~12MB. Choose a smaller image.')
+            ? t('Video max 100MB. Compress it or choose a shorter video.')
+            : t('Photo max 10MB. Choose a smaller image.')
         );
         return;
       }

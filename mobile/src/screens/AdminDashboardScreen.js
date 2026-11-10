@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 import OptimizedImage from '../components/media/OptimizedImage';
 import {
   Alert,
@@ -173,6 +174,10 @@ export default function AdminDashboardScreen() {
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    if (isAssetOverLimit(asset, UPLOAD_LIMITS.image)) {
+      setError(t('Photo max 10MB. Choose a smaller image.'));
+      return;
+    }
     setStadiumPhotoFile({
       uri: asset.uri,
       name: asset.fileName || `stadium-${Date.now()}.jpg`,

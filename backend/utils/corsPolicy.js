@@ -6,6 +6,17 @@
 
 const PRODUCTION_ORIGINS = ['https://xtalenti.com', 'https://www.xtalenti.com'];
 
+// Keep browser checkout requests working when the client sends an idempotency
+// key to prevent duplicate orders after retries.
+const ALLOWED_CORS_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'Origin',
+  'X-Requested-With',
+  'Accept',
+  'Idempotency-Key',
+];
+
 const DEVELOPMENT_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -47,6 +58,7 @@ function isAllowedOrigin(origin, env = process.env, allowedOrigins = buildAllowe
 
 module.exports = {
   PRODUCTION_ORIGINS,
+  ALLOWED_CORS_HEADERS,
   DEVELOPMENT_ORIGINS,
   normalizeOrigin,
   buildAllowedOrigins,

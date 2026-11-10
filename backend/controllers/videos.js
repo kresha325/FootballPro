@@ -10,6 +10,7 @@ const fs = require('fs');
 const { viewerCanSeeVideo } = require('../utils/videoAccess');
 const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
 const { canView, normalizePrivacy } = require('../utils/profilePrivacy');
+const { uploadByteLimits } = require('../utils/uploadLimits');
 
 async function filterByProfileVideoPrivacy(videos, req) {
   const rows = Array.isArray(videos) ? videos : [];
@@ -60,7 +61,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit
+    fileSize: uploadByteLimits().maxVideo,
   },
 });
 

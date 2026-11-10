@@ -1239,6 +1239,10 @@ export default function PublicProfileScreen({ route, navigation }) {
       <PublicProfilePostsTab
         posts={tabReady ? posts : []}
         theme={theme}
+        onOpenCommentAuthor={(commentUserId) => {
+          if (commentUserId == null) return;
+          navigation.push('PublicProfile', { userId: commentUserId });
+        }}
         hasMore={postsHasMore}
         loadingMore={postsLoadingMore}
         onLoadMore={loadMoreProfilePosts}

@@ -328,7 +328,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`min-h-10 px-3 text-sm font-medium rounded-l-lg border transition-colors ${followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-l-lg border transition-colors ${followedOnly ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={followedOnly}
               aria-label="Show My feed"
             >
@@ -341,7 +341,7 @@ function Navbar() {
                 setFollowedOnly(newVal);
                 fetchPosts({ followedOnly: newVal });
               }}
-              className={`min-h-10 px-3 text-sm font-medium rounded-r-lg border transition-colors ${!followedOnly ? 'bg-[var(--xt-color-gold)] text-[#101114] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
+              className={`min-h-10 px-3 text-sm font-medium rounded-r-lg border transition-colors ${!followedOnly ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] border-[var(--xt-color-gold)]' : 'bg-[var(--xt-color-surface)] text-[var(--xt-color-text-muted)] border-white/15'}`}
               aria-pressed={!followedOnly}
               aria-label="Show All feed"
             >
@@ -694,7 +694,7 @@ function Navbar() {
               <button
                 type="button"
                 onClick={handleOpenCameraFirst}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium mt-1"
+                className="bg-blue-600 hover:bg-[var(--xt-color-gold-bright)] text-white px-4 py-2 rounded-lg font-medium mt-1"
               >
                 {cameraReady ? 'Kamera gati' : 'Hap kamerën fillimisht'}
               </button>

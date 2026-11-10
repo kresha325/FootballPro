@@ -24,6 +24,7 @@ import { isEarlyAccessEnabled, EARLY_ACCESS_LABS_KEY } from '../utils/profileThe
 import { tournamentIdFromNotification } from '../utils/notificationLinks';
 import { formatTotalsPoints } from '../utils/tournamentPoints';
 import { publicProfileName, publicProfileInitials } from '../utils/orgProfile';
+import { UPLOAD_LIMITS, MEDIA_UPLOAD_ACCEPT } from '../utils/uploadLimits';
 import './ProfileTheme.css';
 import { useLocale } from '../contexts/LocaleContext';
 
@@ -364,7 +365,7 @@ const Feed = () => {
     const file = e.target.files[0];
     if (!file) return;
     const isVideo = String(file.type || '').startsWith('video/');
-    const maxBytes = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxBytes = isVideo ? UPLOAD_LIMITS.video : UPLOAD_LIMITS.image;
     if (file.size > maxBytes) {
       alert(isVideo ? t('Videoja është shumë e madhe (max 100MB).') : t('Fotoja është shumë e madhe (max 10MB).'));
       e.target.value = '';
@@ -427,7 +428,7 @@ const Feed = () => {
     const file = e.target.files[0];
     if (file) {
       const isVideo = String(file.type || '').startsWith('video/');
-      const maxBytes = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      const maxBytes = isVideo ? UPLOAD_LIMITS.video : UPLOAD_LIMITS.image;
       if (file.size > maxBytes) {
         alert(
           isVideo
@@ -751,7 +752,7 @@ const Feed = () => {
                 Foto ose video
                 <input
                   type="file"
-                  accept="image/*,video/*"
+                  accept={MEDIA_UPLOAD_ACCEPT}
                   onChange={handleFileSelect}
                   className="sr-only"
                 />
@@ -956,7 +957,7 @@ const Feed = () => {
                               <label className="block text-sm font-medium mb-1">{t('Logo/Fotografia')}</label>
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif"
                                 className="w-full"
                                 onChange={handleSponsorImage}
                               />
@@ -1257,7 +1258,7 @@ const Feed = () => {
               </div>
             )}
             <label className="inline-flex items-center gap-2 text-sm text-blue-600 cursor-pointer">
-              <input type="file" accept="image/*,video/*" className="hidden" onChange={handleEditFileSelect} />
+              <input type="file" accept={MEDIA_UPLOAD_ACCEPT} className="hidden" onChange={handleEditFileSelect} />
               Ndrysho foton / videon
             </label>
             <div className="flex justify-end gap-2 pt-2">

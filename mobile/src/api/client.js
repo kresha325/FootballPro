@@ -152,6 +152,9 @@ export const profilesRequest = (params = {}) => api.get('/api/profiles', { param
 export const clubMembersRequestMembership = (payload) => api.post('/api/club-members/request', payload);
 export const clubMembersByClubRequest = (clubId, status = 'approved') =>
   api.get(`/api/club-members/club/${clubId}`, { params: status ? { status } : {} });
+export const removeClubMemberRequest = (membershipId) => api.delete(`/api/club-members/${membershipId}`);
+export const updateClubMemberStatusRequest = (membershipId, status, extra = {}) =>
+  api.put(`/api/club-members/${membershipId}/status`, { status, ...extra });
 export const createMyProfileRequest = (payload = {}) => api.post('/api/profiles/me', payload);
 export const updateMyProfileRequest = (payload = {}) => {
   const form = new FormData();

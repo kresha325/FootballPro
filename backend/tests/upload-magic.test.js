@@ -45,7 +45,7 @@ describe('upload magic bytes', () => {
     assert.equal(fs.existsSync(html.path), false);
   });
 
-  it('defaults images to 8MB and videos to 100MB unless the env overrides them', () => {
+  it('defaults images to 10MB and videos to 100MB unless the env overrides them', () => {
     const prevImage = process.env.UPLOAD_MAX_IMAGE_BYTES;
     const prevVideo = process.env.UPLOAD_MAX_VIDEO_BYTES;
     const prevCloud = process.env.CLOUDINARY_MAX_FILE_SIZE;
@@ -54,7 +54,7 @@ describe('upload magic bytes', () => {
     delete process.env.CLOUDINARY_MAX_FILE_SIZE;
     try {
       const limits = uploadByteLimits();
-      assert.equal(limits.maxImage, 8 * 1024 * 1024);
+      assert.equal(limits.maxImage, 10 * 1024 * 1024);
       assert.equal(limits.maxVideo, 100 * 1024 * 1024);
     } finally {
       if (prevImage == null) delete process.env.UPLOAD_MAX_IMAGE_BYTES;

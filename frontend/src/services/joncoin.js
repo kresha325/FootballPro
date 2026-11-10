@@ -5,6 +5,7 @@ export const updateJonCoinTransactionStatus = async (id, status) => {
 };
 
 import axios from 'axios';
+import { APP_COIN_NAME } from '../config/branding';
 
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -31,10 +32,10 @@ export const getJonCoinBalance = async () => {
       joncoinPerEur: Number(d.joncoinPerEur) || 1,
       marketplaceFeePercent: Number(d.marketplaceFeePercent) || 0,
       cardDepositsEnabled: Boolean(d.cardDepositsEnabled),
-      currency: d.currency || 'JON',
+      currency: APP_COIN_NAME,
     };
   } catch {
-    return { balance: 0, spendable: 0, withdrawCommissionPercent: 5, joncoinPerEur: 1, marketplaceFeePercent: 0, cardDepositsEnabled: false, currency: 'JON' };
+    return { balance: 0, spendable: 0, withdrawCommissionPercent: 5, joncoinPerEur: 1, marketplaceFeePercent: 0, cardDepositsEnabled: false, currency: APP_COIN_NAME };
   }
 };
 
@@ -47,6 +48,16 @@ export const getJonCoinTransactions = async () => {
 
 export const purchaseJonCoin = async (amount) => {
   const res = await API.post('/joncoin/purchase', { amount }, { headers: { 'Idempotency-Key': newIdempotencyKey('deposit') } });
+  return res.data;
+};
+
+export const createJonCoinDepositCheckout = async (amount) => {
+  const res = await API.post('/joncoin/deposit-checkout', { amount });
+  return res.data;
+};
+
+export const verifyJonCoinDepositSession = async (sessionId) => {
+  const res = await API.get(`/payments/verify-session/${encodeURIComponent(sessionId)}`);
   return res.data;
 };
 

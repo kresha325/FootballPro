@@ -112,7 +112,7 @@ export default function OpsDashboard() {
           <Metric label="Live streams" value={data.metrics?.liveStreams} />
           <Metric label="Orders" value={data.metrics?.orders} />
           <Metric label="Revenue" value={displayRevenue(data.metrics?.revenue)} />
-          <Metric label="JonCoin circulation" value={data.metrics?.joncoinCirculation} />
+          <Metric label="XCoin circulation" value={data.metrics?.joncoinCirculation} />
           <Metric label="Open reports" value={data.metrics?.openReports} />
         </div>
       </section>

@@ -8,6 +8,10 @@ import { apiError, canPermission } from './opsFormat';
 import { DangerConfirm, ExportButton, Pager, Pill } from './ui';
 import ManagedAthleteRegistrationForm from '../ManagedAthleteRegistrationForm';
 
+const displayCurrency = (value) => (
+  ['JON', 'JC', 'JONCOIN', 'XCOIN'].includes(String(value || '').toUpperCase()) ? 'XCoin' : value
+);
+
 function useList(loader) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
@@ -507,7 +511,7 @@ export function MarketplacePage({ permissions }) {
           { key: 'userId', label: 'User' },
           { key: 'sellerId', label: 'Seller' },
           { key: 'status', label: 'Status' },
-          { key: 'totalAmount', label: 'Total', render: (row) => `${row.totalAmount} ${row.currency}` },
+          { key: 'totalAmount', label: 'Total', render: (row) => `${row.totalAmount} ${displayCurrency(row.currency)}` },
         ] : section === 'sellers' ? [
           { key: 'id', label: 'Seller' },
           { key: 'email', label: 'Email' },
@@ -517,7 +521,7 @@ export function MarketplacePage({ permissions }) {
           { key: 'Seller', label: 'Seller', render: (row) => row.Seller?.email || row.sellerId },
           { key: 'status', label: 'Status' },
           { key: 'stock', label: 'Stock' },
-          { key: 'price', label: 'Price', render: (row) => `${row.price} ${row.currency}` },
+          { key: 'price', label: 'Price', render: (row) => `${row.price} ${displayCurrency(row.currency)}` },
         ]}
         actions={{
           items: section === 'products' ? [
@@ -721,7 +725,7 @@ export function FinancePage({ permissions }) {
       <h1 className="text-2xl font-semibold">Finance</h1>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded border bg-white p-3 text-sm"><p className="text-gray-500">JonCoin circulation</p><p className="text-xl">{data?.joncoinCirculation ?? 'N/A'}</p></div>
+        <div className="rounded border bg-white p-3 text-sm"><p className="text-gray-500">XCoin circulation</p><p className="text-xl">{data?.joncoinCirculation ?? 'N/A'}</p></div>
         <div className="rounded border bg-white p-3 text-sm"><p className="text-gray-500">Volume 24h</p><p className="text-xl">{data?.transactionVolume24h ?? 'N/A'}</p></div>
         <div className="rounded border bg-white p-3 text-sm"><p className="text-gray-500">Successful payments</p><p className="text-xl">{data?.payments?.successful ?? 'N/A'}</p></div>
         <div className="rounded border bg-white p-3 text-sm"><p className="text-gray-500">Failed payments</p><p className="text-xl">{data?.payments?.failed ?? 'N/A'}</p></div>
@@ -735,7 +739,7 @@ export function FinancePage({ permissions }) {
           { key: 'provider', label: 'Provider' },
           { key: 'providerId', label: 'Provider ID' },
           { key: 'userId', label: 'User' },
-          { key: 'amount', label: 'Amount', render: (row) => `${row.amount} ${row.currency}` },
+          { key: 'amount', label: 'Amount', render: (row) => `${row.amount} ${displayCurrency(row.currency)}` },
           { key: 'status', label: 'Status' },
           { key: 'createdAt', label: 'Created', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString() : '—' },
         ]}
@@ -858,7 +862,7 @@ export function SystemPage({ permissions }) {
         <div className="space-y-2">
           {flags.map((flag) => (
             <div key={flag.flag} className="flex items-center justify-between rounded border bg-white px-3 py-2 text-sm">
-              <span>{flag.flag}</span>
+              <span>{flag.flag === 'JONCOIN' ? 'XCOIN' : flag.flag}</span>
               <button
                 type="button"
                 className="underline"

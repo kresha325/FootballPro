@@ -16,6 +16,7 @@ import { ALLOW_MOBILE_DIGITAL_PURCHASES, WEB_APP_URL } from '../config/constants
 import { JONCOIN_PACKS } from '../iap/products';
 import { purchaseAndFulfill } from '../iap/purchase';
 import { useLocale } from '../context/LocaleContext';
+import { APP_COIN_NAME } from '../config/branding';
 
 function WalletSkeleton() {
   return (
@@ -90,7 +91,7 @@ export default function WalletScreen() {
       const bal = data?.fulfillment?.joncoinBalance;
       Alert.alert(
         'XCoin',
-        bal != null ? `U shtuan ${pack.amount} JC. Balanca: ${bal}` : `${pack.label} u blenë me sukses.`
+        bal != null ? `U shtuan ${pack.amount} ${APP_COIN_NAME}. Balanca: ${bal}` : `${pack.label} u blenë me sukses.`
       );
       await loadData({ silent: true });
     } catch (err) {
@@ -286,7 +287,7 @@ export default function WalletScreen() {
             sellerOrders.map((o) => (
               <View key={`sale-${o.id}`} style={styles.orderRow}>
                 <Text style={styles.orderText}>
-                  #{o.id} · {o.totalAmount} JC · {o.status || '—'}
+                  #{o.id} · {o.totalAmount} {APP_COIN_NAME} · {o.status || '—'}
                 </Text>
                 <Text style={styles.orderMeta}>
                   Nga: {o.buyerName || `#${o.userId}`} · {(o.products || []).map((p) => p.name).filter(Boolean).join(', ') || '—'}
@@ -325,7 +326,7 @@ export default function WalletScreen() {
             orders.map((o) => (
               <View key={String(o.id)} style={styles.orderRow}>
                 <Text style={styles.orderText}>
-                  #{o.id} · {o.totalAmount} JC · {o.status || '—'}
+                  #{o.id} · {o.totalAmount} {APP_COIN_NAME} · {o.status || '—'}
                 </Text>
                 <Text style={styles.orderMeta}>
                   Shitësi: {o.sellerName || `#${o.sellerId}`} · {(o.products || []).map((p) => p.name).filter(Boolean).join(', ') || '—'}
@@ -364,7 +365,7 @@ export default function WalletScreen() {
       renderItem={({ item }) => (
         <View style={styles.txCard}>
           <Text style={styles.txType}>{item?.type || 'transaction'} ({item?.status || 'pending'})</Text>
-          <Text style={styles.txAmount}>{item?.amount} {item?.currency || 'XCoin'}</Text>
+          <Text style={styles.txAmount}>{item?.amount} {APP_COIN_NAME}</Text>
           <Text style={styles.txDesc}>{item?.description || 'No description'}</Text>
           <Text style={styles.txDesc}>{item?.createdAt ? new Date(item.createdAt).toLocaleString() : ''} · {item?.referenceType || item?.relatedEntityType || '—'} {item?.referenceId || item?.relatedEntityId || ''}</Text>
         </View>

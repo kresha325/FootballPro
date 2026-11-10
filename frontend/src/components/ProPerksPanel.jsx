@@ -142,7 +142,7 @@ export default function ProPerksPanel({ user, profileTheme = 'default', onThemeS
                 onClick={() => toggleLab(f.id)}
                 className={`min-h-9 shrink-0 rounded-md px-3 text-xs font-semibold ${
                   labs[f.id]
-                    ? 'bg-[var(--xt-color-gold)] text-slate-950'
+                    ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]'
                     : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
                 } disabled:opacity-50`}
               >

@@ -39,6 +39,7 @@ const ProfilePostRow = React.memo(function ProfilePostRow({
   onChangeDraft,
   onSend,
   onPlay,
+  onOpenCommentAuthor,
 }) {
   const sponsors = postSponsors(post);
   const hasSponsors = sponsors.length > 0;
@@ -106,9 +107,18 @@ const ProfilePostRow = React.memo(function ProfilePostRow({
           {(comments || []).map((c) => {
             const u = c.User;
             const name = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : 'User';
+            const commentUserId = c.userId ?? u?.id;
             return (
               <View key={String(c.id)} style={styles.commentRow}>
-                <Text style={[styles.commentAuthor, { color: theme.text }]}>{name}</Text>
+                <TouchableOpacity
+                  onPress={() => onOpenCommentAuthor?.(commentUserId)}
+                  disabled={commentUserId == null || !onOpenCommentAuthor}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open commenter's profile"
+                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                >
+                  <Text style={[styles.commentAuthor, { color: theme.text }]}>{name}</Text>
+                </TouchableOpacity>
                 <Text style={[styles.commentBody, { color: theme.muted }]}>{c.content}</Text>
               </View>
             );
@@ -125,6 +135,7 @@ export default function PublicProfilePostsTab({
   hasMore = false,
   loadingMore = false,
   onLoadMore,
+  onOpenCommentAuthor,
   listHeader = null,
   refreshControl,
   pageStyle,
@@ -234,10 +245,11 @@ export default function PublicProfilePostsTab({
           onChangeDraft={onChangeDraft}
           onSend={onSend}
           onPlay={onPlay}
+          onOpenCommentAuthor={onOpenCommentAuthor}
         />
       </View>
     ),
-    [commentsByPost, drafts, expanded, frame, loadingComments, onChangeDraft, onLike, onPlay, onSend, onToggleComments, sending, theme]
+    [commentsByPost, drafts, expanded, frame, loadingComments, onChangeDraft, onLike, onOpenCommentAuthor, onPlay, onSend, onToggleComments, sending, theme]
   );
 
   const footer = (

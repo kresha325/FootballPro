@@ -6,6 +6,7 @@ const sequelize = require('../config/database');
 const IapPurchase = require('../models/IapPurchase');
 const User = require('../models/User');
 const { JonCoinTransaction } = require('../models');
+const economyLedger = require('../services/economy/ledger');
 const invoices = require('../utils/invoices');
 const googlePlay = require('../utils/googlePlay');
 
@@ -27,6 +28,8 @@ test('Google verification persists the verified orderId instead of the client tr
     createPurchase: IapPurchase.create,
     findUser: User.findByPk,
     createLedger: JonCoinTransaction.create,
+    postLedgerEntry: economyLedger.postLedgerEntry,
+    getCompletedBalance: economyLedger.getCompletedLedgerBalance,
     createInvoice: invoices.createInvoiceIfNeeded,
     verifyGoogle: googlePlay.verifyGooglePlayPurchase,
   };
@@ -59,15 +62,14 @@ test('Google verification persists the verified orderId instead of the client tr
     stored.purchase = attributes;
     return { id: 45, ...attributes, async save(saveOptions) { assert.equal(saveOptions.transaction, transaction); } };
   };
-  const user = { id: 7, joncoinBalance: '5.00', async save(options) { assert.equal(options.transaction, transaction); } };
-  User.findByPk = async (_id, options) => {
-    assert.equal(options.transaction, transaction);
-    return user;
-  };
-  JonCoinTransaction.create = async (attributes, options) => {
-    assert.equal(options.transaction, transaction);
+  economyLedger.postLedgerEntry = async (attributes, usedTransaction) => {
+    assert.equal(usedTransaction, transaction);
     stored.ledger = attributes;
-    return { id: 56, ...attributes };
+    return { entry: { id: 56, ...attributes }, duplicate: false };
+  };
+  economyLedger.getCompletedLedgerBalance = async (_userId, options) => {
+    assert.equal(options.transaction, transaction);
+    return 105;
   };
   invoices.createInvoiceIfNeeded = async (attributes) => {
     assert.equal(attributes.transaction, transaction);
@@ -100,6 +102,8 @@ test('Google verification persists the verified orderId instead of the client tr
     IapPurchase.create = originals.createPurchase;
     User.findByPk = originals.findUser;
     JonCoinTransaction.create = originals.createLedger;
+    economyLedger.postLedgerEntry = originals.postLedgerEntry;
+    economyLedger.getCompletedLedgerBalance = originals.getCompletedBalance;
     invoices.createInvoiceIfNeeded = originals.createInvoice;
     googlePlay.verifyGooglePlayPurchase = originals.verifyGoogle;
     for (const key of envKeys) {

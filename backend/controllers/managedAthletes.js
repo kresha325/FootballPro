@@ -9,7 +9,7 @@ const Profile = require('../models/Profile');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
 const GuardianConsent = require('../models/GuardianConsent');
-const { sendEmail } = require('../services/emailService');
+const emailService = require('../services/emailService');
 const { createRawToken, hashToken } = require('../utils/guardianConsentSecurity');
 const { syncOverallVerified } = require('../utils/userVerification');
 const {
@@ -23,7 +23,6 @@ const {
 const CONSENT_SCOPE = ['account_access', 'sports_profile', 'tournaments', 'safety_moderation'];
 const CONSENT_POLICY_VERSION = process.env.PARENTAL_CONSENT_POLICY_VERSION || '2026-10-v1';
 const CONSENT_TTL_MS = 48 * 60 * 60 * 1000;
-const TEAM_TYPES = ['first_team', 'youth', 'women', 'men', 'u23', 'u21', 'u19', 'u17', 'u15', 'u13', 'u11', 'u9'];
 
 function errorResponse(res, status, msg) {
   return res.status(status).json({ msg });
@@ -69,13 +68,6 @@ async function getAuthorizedClub(actor, requestedClubId, transaction = null) {
   return { club };
 }
 
-function makeManagedIdentity() {
-  // This is an unclaimable alias, not a deliverable contact address or activation secret.
-  const suffix = crypto.randomBytes(18).toString('hex');
-  const rawPassword = crypto.randomBytes(48).toString('base64url');
-  return { email: `managed-${suffix}@athlete.invalid`, rawPassword };
-}
-
 async function createParentConsentRequest(user, guardianEmail, transaction) {
   const token = createRawToken();
   const now = new Date();
@@ -103,7 +95,13 @@ async function createParentConsentRequest(user, guardianEmail, transaction) {
 
 async function emailParentConsent(user, token) {
   const athleteName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Atleti';
-  return sendEmail(user.parentEmail, 'parentVerification', athleteName, token, user.language || 'sq');
+  return emailService.sendEmail(user.parentEmail, 'parentVerification', athleteName, token, user.language || 'sq');
+}
+
+async function emailAthleteAccountActivation(user, token) {
+  const baseUrl = (process.env.FRONTEND_URL || 'https://xtalenti.com').replace(/\/$/, '');
+  const activationUrl = `${baseUrl}/reset-password/${token}`;
+  return emailService.sendEmail(user.email, 'passwordReset', user.firstName || 'Atleti', activationUrl, user.language || 'sq');
 }
 
 exports.createManagedAthlete = async (req, res) => {
@@ -114,6 +112,7 @@ exports.createManagedAthlete = async (req, res) => {
   let user;
   let membership;
   let parentToken = null;
+  let activationToken = null;
 
   try {
     const result = await sequelize.transaction(async (transaction) => {
@@ -133,6 +132,21 @@ exports.createManagedAthlete = async (req, res) => {
           replacements: { identityLock },
           transaction,
         });
+        await sequelize.query('SELECT pg_advisory_xact_lock(hashtext(:emailLock))', {
+          replacements: { emailLock: `managed-athlete-email:${input.email}` },
+          transaction,
+        });
+      }
+
+      const emailOwner = await User.findOne({
+        where: sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), input.email),
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (emailOwner) {
+        const error = new Error('Ky email është i lidhur me një llogari ekzistuese. Përdor rikuperimin e llogarisë ose një email tjetër të atletit.');
+        error.status = 409;
+        throw error;
       }
 
       // Locking the verified club row also serializes roster writes for that club.
@@ -162,11 +176,14 @@ exports.createManagedAthlete = async (req, res) => {
         throw error;
       }
 
-      const identity = makeManagedIdentity();
-      const password = await bcrypt.hash(identity.rawPassword, 12);
+      const temporaryPassword = crypto.randomBytes(48).toString('base64url');
+      const password = await bcrypt.hash(temporaryPassword, 12);
+      activationToken = createRawToken();
       user = await User.create({
-        email: identity.email,
+        email: input.email,
         password,
+        resetPasswordToken: hashToken(activationToken),
+        resetPasswordExpire: Date.now() + 60 * 60 * 1000,
         role: 'athlete',
         firstName: input.firstName,
         lastName: input.lastName,
@@ -214,11 +231,19 @@ exports.createManagedAthlete = async (req, res) => {
     user = result.user;
     membership = result.membership;
 
-    let emailSent = false;
+    let activationEmailSent = false;
+    try {
+      const sent = await emailAthleteAccountActivation(user, activationToken);
+      activationEmailSent = Boolean(sent?.success);
+    } catch (emailError) {
+      console.warn('Managed athlete activation email failed for user id:', user.id, emailError?.message || 'send failed');
+    }
+
+    let guardianEmailSent = false;
     if (input.minor && parentToken) {
       try {
         const sent = await emailParentConsent(user, parentToken);
-        emailSent = Boolean(sent?.success);
+        guardianEmailSent = Boolean(sent?.success);
       } catch (emailError) {
         console.warn('Managed athlete guardian email failed for user id:', user.id, emailError?.message || 'send failed');
       }
@@ -244,10 +269,15 @@ exports.createManagedAthlete = async (req, res) => {
         jerseyNumber: membership.jerseyNumber,
       },
       parentAuthorizationPending: input.minor,
-      guardianEmailSent: input.minor ? emailSent : null,
-      msg: input.minor
-        ? emailSent ? 'Atleti u regjistrua; në pritje të autorizimit të kujdestarit.' : 'Atleti u regjistrua në mënyrë të kufizuar; emaili i autorizimit nuk u dërgua.'
-        : 'Atleti u regjistrua në skuadrën e klubit.',
+      accountActivationEmailSent: activationEmailSent,
+      guardianEmailSent: input.minor ? guardianEmailSent : null,
+      msg: !activationEmailSent
+        ? 'Atleti u regjistrua, por emaili i aktivizimit nuk u dërgua. Atleti mund të kërkojë rivendosjen e fjalëkalimit me emailin e regjistruar.'
+        : input.minor
+          ? guardianEmailSent
+            ? 'Atleti u regjistrua; linku i hyrjes iu dërgua atletit dhe autorizimi prindëror është në pritje.'
+            : 'Atleti u regjistrua; linku i hyrjes iu dërgua atletit, por emaili i autorizimit prindëror nuk u dërgua.'
+          : 'Atleti u regjistrua; linku për vendosjen e fjalëkalimit iu dërgua në emailin e hyrjes.',
     });
   } catch (error) {
     if (error.status) return errorResponse(res, error.status, error.message);
@@ -256,6 +286,7 @@ exports.createManagedAthlete = async (req, res) => {
     return errorResponse(res, 500, 'Regjistrimi i atletit dështoi. Provo përsëri.');
   } finally {
     parentToken = null;
+    activationToken = null;
   }
 };
 

@@ -28,7 +28,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ firstName: '', lastName: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
   const minor = useMemo(() => isMinorDob(form.dateOfBirth), [form.dateOfBirth]);
 
   useEffect(() => {
@@ -62,6 +62,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
+      email: form.email.trim(),
       dateOfBirth: form.dateOfBirth,
       teamType: form.teamType || undefined,
       competitionCategory: form.competitionCategory,
@@ -76,7 +77,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
         ? await managedAthletesAPI.createAsAdmin(payload)
         : await managedAthletesAPI.create(payload);
       setSuccess(result.data?.msg || 'Atleti u regjistrua.');
-      setForm({ firstName: '', lastName: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
+      setForm({ firstName: '', lastName: '', email: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
       onSuccess?.(result.data);
     } catch (err) {
       setError(extractApiMessage(err, 'Regjistrimi dështoi.'));
@@ -89,7 +90,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
     <form onSubmit={submit} className="space-y-4 rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-4 sm:p-5">
       <div>
         <h2 className="text-lg font-bold text-[var(--xt-color-text)]">{t('Regjistro atlet')}</h2>
-        <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Llogaria krijohet pa fjalëkalim ose kredenciale hyrjeje.</p>
+        <p className="mt-1 text-sm text-[var(--xt-color-text-muted)]">Atleti e përdor këtë email për hyrje. Linku për vendosjen e fjalëkalimit dërgohet drejtpërdrejt te atleti; stafi nuk e sheh fjalëkalimin.</p>
       </div>
       {mode !== 'club' ? (
         <label className="block space-y-1.5 text-sm font-medium">{t('Klubi')}
@@ -103,6 +104,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1.5 text-sm font-medium">{t('Emri')}<input className={fieldClass} value={form.firstName} onChange={setField('firstName')} autoComplete="given-name" maxLength={100} required /></label>
         <label className="space-y-1.5 text-sm font-medium">{t('Mbiemri')}<input className={fieldClass} value={form.lastName} onChange={setField('lastName')} autoComplete="family-name" maxLength={100} required /></label>
+        <label className="space-y-1.5 text-sm font-medium sm:col-span-2">{t('Emaili i hyrjes')}<input className={fieldClass} type="email" value={form.email} onChange={setField('email')} autoComplete="email" autoCapitalize="none" maxLength={320} required /><span className="block text-xs font-normal text-[var(--xt-color-text-muted)]">{t('Përdor emailin e atletit, jo të klubit.')}</span></label>
         <label className="space-y-1.5 text-sm font-medium">{t('Datëlindja')}<input className={fieldClass} type="date" value={form.dateOfBirth} onChange={setField('dateOfBirth')} max={new Date().toISOString().slice(0, 10)} required /></label>
         <label className="space-y-1.5 text-sm font-medium">{t('Ekipi')}
           <select className={fieldClass} value={form.teamType} onChange={setField('teamType')}>

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const { uploadByteLimits } = require('../utils/uploadLimits');
+const { EXT_TO_MIME, BLOCKED_EXT, discardUpload } = require('../utils/messageUpload');
 const rateLimit = require('express-rate-limit');
 const auth = require('../middleware/auth');
 const {
@@ -39,22 +41,21 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: uploadByteLimits().maxAttachment },
   fileFilter: (req, file, cb) => {
-    const extnameOk = /\.(jpe?g|png|gif|webp|pdf|docx?|mp4|mov|avi|webm|mp3|wav|ogg)$/i
-      .test(path.extname(file.originalname));
-    const mimetypeOk = /^(image\/(jpeg|png|gif|webp)|video\/(mp4|quicktime|x-msvideo|webm)|audio\/(mpeg|wav|ogg)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/i
-      .test(file.mimetype);
-    if (extnameOk && mimetypeOk) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const mime = String(file.mimetype || '').toLowerCase();
+    if (!BLOCKED_EXT.has(ext) && (EXT_TO_MIME[ext] || []).includes(mime)) {
       return cb(null, true);
     }
     cb(new Error('Invalid file type'));
   },
 });
 
+const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
 const avatarUpload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: AVATAR_MAX_SIZE },
   fileFilter: (req, file, cb) => {
     const extnameOk = /\.(jpe?g|png|gif|webp)$/i.test(path.extname(file.originalname || ''));
     const mimetypeOk = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype || '');
@@ -63,14 +64,22 @@ const avatarUpload = multer({
   },
 });
 
-function runUpload(uploader) {
+function runUpload(uploader, maxBytes = uploadByteLimits().maxAttachment, enforceImageLimit = false) {
   return (req, res, next) => {
     uploader(req, res, (err) => {
-      if (!err) return next();
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ msg: 'Skedari është shumë i madh' });
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ msg: `Skedari është shumë i madh. Maksimumi është ${Math.round(maxBytes / 1024 / 1024)}MB.` });
+        }
+        return res.status(400).json({ msg: 'Ky lloj skedari nuk lejohet' });
       }
-      return res.status(400).json({ msg: 'Ky lloj skedari nuk lejohet' });
+      if (!req.file) return next();
+      const cap = enforceImageLimit && String(req.file.mimetype || '').startsWith('image/')
+        ? uploadByteLimits().maxImage
+        : maxBytes;
+      if (req.file.size <= cap) return next();
+      discardUpload(req.file);
+      return res.status(413).json({ msg: `Skedari është shumë i madh. Maksimumi është ${Math.round(cap / 1024 / 1024)}MB.` });
     });
   };
 }
@@ -105,14 +114,14 @@ router.put('/conversations/:conversationId/members/:userId/role', auth, setGroup
 router.post('/conversations/:conversationId/transfer', auth, transferGroupOwnership);
 router.post('/conversations/:conversationId/leave', auth, leaveGroup);
 router.put('/conversations/:conversationId', auth, updateGroup);
-router.post('/conversations/:conversationId/avatar', auth, runUpload(avatarUpload.single('avatar')), updateGroupAvatar);
+router.post('/conversations/:conversationId/avatar', auth, runUpload(avatarUpload.single('avatar'), AVATAR_MAX_SIZE), updateGroupAvatar);
 
 // Get messages in a conversation
 router.get('/conversations/:conversationId/messages/search', auth, searchMessages);
 router.get('/conversations/:conversationId/messages', auth, getMessages);
 
 // Send message
-router.post('/conversations/:conversationId/messages', auth, sendLimiter, runUpload(upload.single('file')), sendMessage);
+router.post('/conversations/:conversationId/messages', auth, sendLimiter, runUpload(upload.single('file'), uploadByteLimits().maxAttachment, true), sendMessage);
 
 // Mark conversation as read
 router.put('/conversations/:conversationId/read', auth, markAsRead);

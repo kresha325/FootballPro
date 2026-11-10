@@ -527,7 +527,7 @@ export default function MarketplaceSimple() {
                               </label>
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif"
                                 onChange={e => setImageFile(e.target.files[0])}
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--xt-color-gold)]"
                               />
@@ -658,7 +658,7 @@ export default function MarketplaceSimple() {
                 </label>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif"
                   onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--xt-color-text)]"
                 />

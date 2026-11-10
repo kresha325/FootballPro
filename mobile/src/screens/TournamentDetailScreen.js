@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import {
   ActivityIndicator,
   Alert,
@@ -193,6 +194,7 @@ function participantJoinStatus(p) {
 
 export default function TournamentDetailScreen({ route, navigation }) {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const tournamentId = route?.params?.tournamentId;
   const initialTab = route?.params?.initialTab || 'overview';
 
@@ -713,7 +715,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       <View style={styles.actions}>
         {canJoin ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={onJoin}>
-            <Text style={styles.primaryBtnText}>Bashkohu</Text>
+            <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Bashkohu</Text>
           </TouchableOpacity>
         ) : null}
         {!isJoined && user?.role === 'athlete' && isLigaTournament && tournament?.status === 'open' ? (
@@ -736,7 +738,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
             disabled={startingTournament}
           >
             {startingTournament ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.onPrimary} size="small" />
             ) : (
               <Text style={styles.startBtnText}>Nis turneun</Text>
             )}
@@ -764,7 +766,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
               onPress={() => setTab(t.key)}
             >
-              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive, tab === t.key && { color: colors.onPrimary }]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -941,7 +943,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     </View>)}
                     <View style={styles.actionRow}>
                       <TouchableOpacity style={styles.secondaryBtn} onPress={() => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: [...players, { athleteIdentityKey: createAthleteIdentityKey(), athleteName: '', goals: '0', assists: '0' }] }))}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
-                      <TouchableOpacity style={styles.primaryBtn} disabled={savingClubStats === entry.id} onPress={() => saveClubPlayers(entry)}><Text style={styles.primaryBtnText}>{savingClubStats === entry.id ? 'Duke ruajtur…' : 'Ruaj statistikat'}</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.primaryBtn} disabled={savingClubStats === entry.id} onPress={() => saveClubPlayers(entry)}><Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>{savingClubStats === entry.id ? 'Duke ruajtur…' : 'Ruaj statistikat'}</Text></TouchableOpacity>
                     </View>
                     {entry.playerStats?.length ? entry.playerStats.map((player) => <Text key={player.id} style={styles.muted}>{player.athleteName}: {player.goals} gola · {player.assists} asiste</Text>) : null}
                   </View>
@@ -955,7 +957,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
       {tab === 'matches' ? (
         <View style={styles.card}>
-          {isLigaTournament && isCreator && ['active', 'in_progress'].includes(tournament?.lifecycle || tournament?.status) && clubEntries.length >= 2 ? <TouchableOpacity style={[styles.primaryBtn, { marginBottom: 10 }]} onPress={() => { const now = new Date(); setFixtureDate(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)); setManualFixtureOpen(true); }}><Text style={styles.primaryBtnText}>+ Shto ndeshje</Text></TouchableOpacity> : null}
+          {isLigaTournament && isCreator && ['active', 'in_progress'].includes(tournament?.lifecycle || tournament?.status) && clubEntries.length >= 2 ? <TouchableOpacity style={[styles.primaryBtn, { marginBottom: 10 }]} onPress={() => { const now = new Date(); setFixtureDate(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)); setManualFixtureOpen(true); }}><Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>+ Shto ndeshje</Text></TouchableOpacity> : null}
           {matches.length === 0 ? (
             <Text style={styles.muted}>Nuk ka ndeshje të planifikuara.</Text>
           ) : isKnockoutType && matchesByRound.length > 0 ? (
@@ -1007,7 +1009,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
             <TextInput style={[styles.input, { marginTop: 8 }]} value={fixtureDate} onChangeText={setFixtureDate} placeholder="YYYY-MM-DDTHH:mm (ora lokale)" />
             <TextInput style={[styles.input, { marginTop: 8 }]} value={fixtureVenue} onChangeText={setFixtureVenue} placeholder="Stadiumi" />
             {fixturePickerSide ? <ScrollView style={{ maxHeight: 220, marginTop: 8 }}>{clubEntries.map((entry) => <TouchableOpacity key={entry.id} style={styles.participantRow} onPress={() => { if (fixturePickerSide === 'home') setFixtureHomeId(String(entry.id)); else setFixtureAwayId(String(entry.id)); setFixturePickerSide(null); }}><Text style={styles.row}>{entry.clubName}</Text></TouchableOpacity>)}</ScrollView> : null}
-            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }]} disabled={savingFixture} onPress={createManualFixture}>{savingFixture ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Krijo ndeshjen</Text>}</TouchableOpacity>
+            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }]} disabled={savingFixture} onPress={createManualFixture}>{savingFixture ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Krijo ndeshjen</Text>}</TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1027,6 +1029,17 @@ export default function TournamentDetailScreen({ route, navigation }) {
                   {matchModal.data.match.homeName || matchModal.data.match.homeClubEntry?.clubName || participantLabel(matchModal.data.match.homeUser, pt)} vs{' '}
                   {matchModal.data.match.awayName || matchModal.data.match.awayClubEntry?.clubName || participantLabel(matchModal.data.match.awayUser, pt)}
                 </Text>
+                <View
+                  accessible
+                  accessibilityRole="text"
+                  accessibilityLabel={`Rezultati zyrtar: ${matchModal.data.match.scoreHome ?? 'pa rezultat'} me ${matchModal.data.match.scoreAway ?? 'pa rezultat'}`}
+                  style={[styles.officialScoreCard, { backgroundColor: colors.bg, borderColor: colors.border }]}
+                >
+                  <Text style={[styles.officialScore, { color: colors.text }]}>
+                    {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
+                  </Text>
+                  <Text style={[styles.officialScoreLabel, { color: colors.muted }]}>Rezultati zyrtar</Text>
+                </View>
                 <Text style={styles.muted}>
                   Status: {matchModal.data.match.status}
                   {matchModal.data.match.matchDate ? ` · ${new Date(matchModal.data.match.matchDate).toLocaleString()}` : ''}
@@ -1217,16 +1230,15 @@ export default function TournamentDetailScreen({ route, navigation }) {
                       disabled={savingScore}
                     >
                       {savingScore ? (
-                        <ActivityIndicator color="#fff" size="small" />
+                        <ActivityIndicator color={colors.onPrimary} size="small" />
                       ) : (
-                        <Text style={styles.primaryBtnText}>Ruaj rezultatin</Text>
+                        <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Ruaj rezultatin</Text>
                       )}
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <Text style={styles.row}>
-                    Rezultati: {matchModal.data.match.scoreHome ?? '—'} : {matchModal.data.match.scoreAway ?? '—'}
-                    {'\n'}Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
+                    Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
                   </Text>
                 )}
                 {canEditMatchPlayerStats(matchModal.data.match) && matchModal.data.match.status === 'finished' ? (
@@ -1251,7 +1263,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     })}
                     <View style={styles.actionRow}>
                       <TouchableOpacity style={styles.secondaryBtn} onPress={() => setMatchPlayerStats((all) => [...all, { userId: '', athleteName: '', side: clubStatsSide(matchModal.data.match) || coachStatsSide || 'home', minutes: '0', goals: '0', assists: '0', yellowCards: '0', redCards: '0' }])}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
-                      <TouchableOpacity style={[styles.primaryBtn, savingPlayerStats && styles.btnDisabled]} disabled={savingPlayerStats} onPress={onSaveMatchPlayerStats}>{savingPlayerStats ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Ruaj statistikat</Text>}</TouchableOpacity>
+                      <TouchableOpacity style={[styles.primaryBtn, savingPlayerStats && styles.btnDisabled]} disabled={savingPlayerStats} onPress={onSaveMatchPlayerStats}>{savingPlayerStats ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Ruaj statistikat</Text>}</TouchableOpacity>
                     </View>
                   </View>
                 ) : null}
@@ -1407,6 +1419,9 @@ const styles = StyleSheet.create({
   modalClose: { alignSelf: 'flex-end', marginBottom: 8 },
   modalCloseText: { color: '#9A6B12', fontWeight: '700' },
   modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  officialScoreCard: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 12, paddingVertical: 12, marginVertical: 8 },
+  officialScore: { fontSize: 32, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: 1 },
+  officialScoreLabel: { marginTop: 2, fontSize: 12, fontWeight: '700' },
   goalEventRow: {
     flexDirection: 'row',
     alignItems: 'center',

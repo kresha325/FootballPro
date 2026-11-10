@@ -34,7 +34,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ firstName: '', lastName: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
   const minor = useMemo(() => isMinor(form.dateOfBirth), [form.dateOfBirth]);
 
   useEffect(() => {
@@ -64,8 +64,8 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
   const submit = async () => {
     setError('');
     setSuccess('');
-    if (!form.firstName.trim() || !form.lastName.trim() || !form.dateOfBirth || (minor && !form.parentEmail.trim())) {
-      setError('Plotëso emrin, mbiemrin, datëlindjen dhe email-in e kujdestarit për të miturin.');
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.dateOfBirth || !form.email.trim() || (minor && !form.parentEmail.trim())) {
+      setError('Plotëso emrin, mbiemrin, emailin e hyrjes, datëlindjen dhe email-in e kujdestarit për të miturin.');
       return;
     }
     if (mode !== 'club' && !clubId) {
@@ -76,6 +76,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
+      email: form.email.trim(),
       dateOfBirth: form.dateOfBirth,
       teamType: form.teamType || undefined,
       competitionCategory: form.competitionCategory,
@@ -90,7 +91,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
         ? await adminCreateManagedAthleteRequest(payload)
         : await createManagedAthleteRequest(payload);
       setSuccess(response.data?.msg || 'Atleti u regjistrua.');
-      setForm({ firstName: '', lastName: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
+      setForm({ firstName: '', lastName: '', email: '', dateOfBirth: '', teamType: '', competitionCategory: 'open', squadGroup: '', position: '', jerseyNumber: '', parentEmail: '' });
       onSuccess?.(response.data);
     } catch (err) {
       setError(extractErrorMessage(err, 'Regjistrimi dështoi.'));
@@ -106,7 +107,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={[styles.title, { color: colors.text }]}>{t('Regjistro atlet')}</Text>
-      <Text style={[styles.help, { color: colors.muted }]}>Krijohet pa fjalëkalim ose kredenciale hyrjeje.</Text>
+      <Text style={[styles.help, { color: colors.muted }]}>Atleti e përdor këtë email për hyrje. Linku për vendosjen e fjalëkalimit dërgohet drejtpërdrejt te atleti; stafi nuk e sheh fjalëkalimin.</Text>
       {mode !== 'club' ? (
         <>
           <Text style={labelStyle}>{t('Klubi')}</Text>
@@ -132,6 +133,7 @@ export default function ManagedAthleteRegistrationForm({ mode = 'club', onSucces
       <View style={styles.grid}>
         <View style={styles.field}><Text style={labelStyle}>{t('Emri')}</Text><TextInput value={form.firstName} onChangeText={setField('firstName')} style={inputStyle} maxLength={100} autoComplete="given-name" /></View>
         <View style={styles.field}><Text style={labelStyle}>{t('Mbiemri')}</Text><TextInput value={form.lastName} onChangeText={setField('lastName')} style={inputStyle} maxLength={100} autoComplete="family-name" /></View>
+        <View style={[styles.field, { width: '100%' }]}><Text style={labelStyle}>{t('Emaili i hyrjes')}</Text><TextInput value={form.email} onChangeText={setField('email')} style={inputStyle} keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={320} /></View>
         <View style={styles.field}><Text style={labelStyle}>{t('Datëlindja')}</Text><TextInput value={form.dateOfBirth} onChangeText={setField('dateOfBirth')} style={inputStyle} placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} maxLength={10} /></View>
         <View style={styles.field}>
           <Text style={labelStyle}>{t('Ekipi')}</Text>

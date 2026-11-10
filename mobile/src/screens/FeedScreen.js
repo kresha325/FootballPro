@@ -168,6 +168,7 @@ const PostCard = React.memo(function PostCard({
       {hasSponsors ? (
         <View style={styles.sponsoredBanner}>
           <Text style={styles.sponsoredBannerText}>{t('Sponsored')}</Text>
+          <PostSponsorStrip sponsors={sponsors} isDark={isDark} variant="overlay" />
         </View>
       ) : null}
 
@@ -199,11 +200,6 @@ const PostCard = React.memo(function PostCard({
               ) : null}
             </View>
           </View>
-          {hasSponsors ? (
-            <View style={styles.headerSponsorWrap}>
-              <PostSponsorStrip sponsors={sponsors} isDark={isDark} variant="overlay" />
-            </View>
-          ) : null}
           {isOwnPost ? (
             <View style={styles.ownerActions}>
               {onEditPost ? (
@@ -335,7 +331,15 @@ const PostCard = React.memo(function PostCard({
             return (
               <View key={String(comment.id)} style={[styles.commentItem, isDark && styles.commentItemDark]}>
                 <View style={styles.commentHeaderRow}>
-                  <Text style={[styles.commentAuthor, isDark && styles.textPrimaryDark]}>{name}</Text>
+                  <TouchableOpacity
+                    onPress={() => onOpenAuthorProfile?.(commentUserId)}
+                    disabled={commentUserId == null || !onOpenAuthorProfile}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Hap profilin e komentuesit')}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  >
+                    <Text style={[styles.commentAuthor, isDark && styles.textPrimaryDark]}>{name}</Text>
+                  </TouchableOpacity>
                   {isOwnComment && onDeleteComment ? (
                     <TouchableOpacity
                       onPress={() => onDeleteComment(comment, item.id)}
@@ -1140,6 +1144,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(6,78,59,0.22)',
   },
   sponsoredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 12,
   },
   sponsoredBannerText: {
@@ -1234,11 +1242,6 @@ const styles = StyleSheet.create({
   editModalSaveText: {
     color: '#fff',
     fontWeight: '700',
-  },
-  headerSponsorWrap: {
-    marginLeft: 8,
-    width: '44%',
-    alignItems: 'flex-end',
   },
   avatar: {
     width: 40,

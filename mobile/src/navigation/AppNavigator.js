@@ -440,7 +440,9 @@ const TAB_ICONS = {
 const feedTabOptions = { headerShown: false, tabBarLabel: 'Lajmet' };
 const marketplaceTabOptions = { headerShown: false, tabBarLabel: 'Tregu' };
 const messagesTabOptions = { headerShown: false, tabBarLabel: 'Bisedat' };
-const moreTabOptions = { headerShown: false };
+// Returning to More should always reopen the module directory instead of
+// restoring a stale screen (for example Notifications) from the nested stack.
+const moreTabOptions = { headerShown: false, popToTopOnBlur: true };
 
 const profileTabOptions = {
   headerShown: false,

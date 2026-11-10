@@ -1373,7 +1373,7 @@ export default function TournamentSimple() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-[var(--xt-color-gold-bright)] transition-colors font-semibold"
             >
               {t("Krijo Turne")}
             </button>
@@ -1594,7 +1594,7 @@ export default function TournamentSimple() {
                 >
                   {t("Anulo")}
                 </button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-[var(--xt-color-gold-bright)] transition-colors font-medium">
                   {t("Krijo")}
                 </button>
               </div>
@@ -1779,7 +1779,7 @@ export default function TournamentSimple() {
                     onClick={() => setDetailTab(id)}
                     className={`min-h-10 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition sm:text-sm ${
                       detailTab === id
-                        ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-sm'
+                        ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-sm'
                         : 'text-[var(--xt-color-text-muted)] hover:bg-white/5 hover:text-white'
                     }`}
                   >

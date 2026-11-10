@@ -256,7 +256,7 @@ export default function GlobalSearch() {
           <button
             type="submit"
             disabled={loading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-[var(--xt-color-gold)] px-6 py-2 font-medium text-[#101114] hover:opacity-95 disabled:opacity-50"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-[var(--xt-color-gold)] px-6 py-2 font-medium text-[var(--xt-color-on-gold)] hover:opacity-95 disabled:opacity-50"
           >
             {loading ? '…' : t('Kërko')}
           </button>
@@ -271,7 +271,7 @@ export default function GlobalSearch() {
             onClick={() => handleTabChange(tab.id)}
             className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
               activeTab === tab.id
-                ? 'bg-[var(--xt-color-gold)] text-[#101114]'
+                ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)]'
                 : 'bg-[var(--xt-color-surface-raised)] text-[var(--xt-color-text-muted)]'
             }`}
           >

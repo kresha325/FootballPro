@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
+import { Alert, FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from '../theme/nativeComponents';
 import { useRoute } from '@react-navigation/native';
 import {
   approveClubRosterRequest,
   clubRosterByClubRequest,
   clubRosterPendingRequest,
   clubRosterRequestsRequest,
+  clubMembersByClubRequest,
+  removeClubMemberRequest,
+  updateClubMemberStatusRequest,
   clubStaffByClubRequest,
   extractErrorMessage,
   rejectClubRosterRequest,
@@ -47,8 +50,27 @@ export default function ClubRosterScreen() {
     setError('');
     try {
       const [allRes, pendingRes] = await Promise.all([clubRosterRequestsRequest(), clubRosterPendingRequest()]);
-      setRequests(Array.isArray(allRes?.data) ? allRes.data : []);
-      setPending(Array.isArray(pendingRes?.data) ? pendingRes.data : []);
+      let nextRequests = Array.isArray(allRes?.data) ? allRes.data : [];
+      let nextPending = Array.isArray(pendingRes?.data) ? pendingRes.data : [];
+
+      // Managed registrations use ClubMembers; keep legacy ClubRosterRequest
+      // records visible while bringing club-managed athletes into the same UI.
+      if (isClub && user?.id && user?.adminVerified === true) {
+        const [approvedMembers, pendingMembers] = await Promise.all([
+          clubMembersByClubRequest(user.id, 'approved'),
+          clubMembersByClubRequest(user.id, 'pending'),
+        ]);
+        nextRequests = [
+          ...nextRequests,
+          ...(Array.isArray(approvedMembers?.data) ? approvedMembers.data.map((row) => ({ ...row, _membershipSource: 'clubMember' })) : []),
+        ];
+        nextPending = [
+          ...nextPending,
+          ...(Array.isArray(pendingMembers?.data) ? pendingMembers.data.map((row) => ({ ...row, _membershipSource: 'clubMember' })) : []),
+        ];
+      }
+      setRequests(nextRequests);
+      setPending(nextPending);
 
       if (athleteForm.clubId) {
         const rosterRes = await clubRosterByClubRequest(Number(athleteForm.clubId));
@@ -93,6 +115,34 @@ export default function ClubRosterScreen() {
       setError(extractErrorMessage(err, 'Action failed'));
     }
   };
+
+  const removeRosterMember = (item) => {
+    Alert.alert(
+      t('Hiqe nga rosteri?'),
+      t('Atleti do të hiqet nga klubi. Llogaria dhe profili i tij nuk do të fshihen.'),
+      [
+        { text: t('Anulo'), style: 'cancel' },
+        {
+          text: t('Hiqe'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await (item?._membershipSource === 'clubMember'
+                ? removeClubMemberRequest(item.id)
+                : removeClubRosterRequest(item.id));
+              await loadData({ silent: true });
+            } catch (err) {
+              setError(extractErrorMessage(err, t('Atleti nuk u hoq nga rosteri.')));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const updateMemberStatus = (item, status) => item?._membershipSource === 'clubMember'
+    ? updateClubMemberStatusRequest(item.id, status)
+    : (status === 'approved' ? approveClubRosterRequest(item.id) : rejectClubRosterRequest(item.id));
 
   const handleStaffAction = async (staffId, status) => {
     try {
@@ -149,7 +199,9 @@ export default function ClubRosterScreen() {
             ? myRequests
             : publicRoster
       }
-      keyExtractor={(item, idx) => String(item?.id || idx)}
+      keyExtractor={(item, idx) => item?._membershipSource === 'clubMember'
+        ? `club-member-${item.id}`
+        : String(item?.id || idx)}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -326,18 +378,25 @@ export default function ClubRosterScreen() {
             <Text style={styles.meta}>{item?.parentAuthorizationPending ? 'Në pritje të autorizimit prindëror' : `Status: ${item?.status || 'pending'}`}</Text>
 
             {isClub && isPending && item?.parentAuthorizationPending ? (
-              <Text style={styles.meta}>Prindi ose kujdestari duhet të japë autorizimin. Klubi nuk mund ta zëvendësojë këtë verifikim.</Text>
+              <>
+                <Text style={styles.meta}>Prindi ose kujdestari duhet të japë autorizimin. Klubi nuk mund ta zëvendësojë këtë verifikim.</Text>
+                {item?._membershipSource === 'clubMember' && item?.creationSource === 'club_managed_registration' ? (
+                  <TouchableOpacity style={[styles.action, styles.remove]} onPress={() => removeRosterMember(item)}>
+                    <Text style={styles.actionText}>{t('Anulo regjistrimin')}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </>
             ) : isClub && isPending && activeTab !== 'staff' ? (
               <View style={styles.actionsRow}>
-                <TouchableOpacity style={[styles.action, styles.ok]} onPress={() => performAction(approveClubRosterRequest, item.id)}>
+                <TouchableOpacity style={[styles.action, styles.ok]} onPress={() => performAction(() => updateMemberStatus(item, 'approved'), item.id)}>
                   <Text style={styles.actionText}>Approve</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.action, styles.warn]} onPress={() => performAction(rejectClubRosterRequest, item.id)}>
+                <TouchableOpacity style={[styles.action, styles.warn]} onPress={() => performAction(() => updateMemberStatus(item, 'rejected'), item.id)}>
                   <Text style={styles.actionText}>Reject</Text>
                 </TouchableOpacity>
               </View>
             ) : isClub ? (
-              <TouchableOpacity style={[styles.action, styles.remove]} onPress={() => performAction(removeClubRosterRequest, item.id)}>
+              <TouchableOpacity style={[styles.action, styles.remove]} onPress={() => removeRosterMember(item)}>
                 <Text style={styles.actionText}>Remove</Text>
               </TouchableOpacity>
             ) : null}

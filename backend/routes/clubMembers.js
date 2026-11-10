@@ -381,8 +381,11 @@ router.put('/:membershipId/status', protect, async (req, res) => {
       return res.status(404).json({ msg: 'Membership not found' });
     }
 
-    // Verify user is the club owner
-    if (membership.clubId !== req.user.id) {
+    // Only the owning club account may approve or reject this membership.
+    if (
+      String(req.user?.role || '').toLowerCase() !== 'club' ||
+      Number(membership.clubId) !== Number(req.user?.id)
+    ) {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 
@@ -567,8 +570,12 @@ router.delete('/:membershipId', protect, async (req, res) => {
       return res.status(404).json({ msg: 'Membership not found' });
     }
 
-    // Verify user is the club owner
-    if (membership.clubId !== req.user.id) {
+    // Only the owning club account may remove this roster relationship. Cast
+    // IDs to numbers because JWT claims can be serialized as strings.
+    if (
+      String(req.user?.role || '').toLowerCase() !== 'club' ||
+      Number(membership.clubId) !== Number(req.user?.id)
+    ) {
       return res.status(403).json({ msg: 'Not authorized' });
     }
 

@@ -453,7 +453,7 @@ export default function AdminOperationsScreen() {
         <View key={flag.flag} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>{flag.flag}</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>{flag.flag === 'JONCOIN' ? 'XCOIN' : flag.flag}</Text>
               <Text style={[styles.detailLabel, { color: colors.muted }]}>{flag.enabled ? t('Enabled') : t('Disabled')}</Text>
             </View>
             {hasPermission(permissions, 'flags.manage') ? <ActionButton label={flag.enabled ? t('Disable') : t('Enable')} colors={colors} onPress={() => startFlagAction(flag)} /> : null}

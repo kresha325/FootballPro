@@ -12,6 +12,7 @@ const { toAbsoluteUploadsUrl } = require('../utils/url');
 const { requireConversationMember } = require('../utils/conversationAcl');
 const { validateMessageText, escapeLike, safeDisplayFileName } = require('../utils/messageContent');
 const { inspectUploadedFile, discardUpload } = require('../utils/messageUpload');
+const { uploadByteLimits } = require('../utils/uploadLimits');
 const { DIRECT_PAIR_SQL, pairKey, conversationIdFromRow } = require('../utils/directConversation');
 const {
   normalizeReactionEmoji,
@@ -198,7 +199,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  limits: { fileSize: uploadByteLimits().maxAttachment },
 });
 
 exports.upload = upload;

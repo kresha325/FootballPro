@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
-import { getJonCoinBalance, transferJonCoin, purchaseJonCoin, withdrawJonCoin, getJonCoinTransactions } from '../services/joncoin';
+import { getJonCoinBalance, transferJonCoin, purchaseJonCoin, withdrawJonCoin, getJonCoinTransactions, createJonCoinDepositCheckout, verifyJonCoinDepositSession } from '../services/joncoin';
 import { ordersAPI } from '../services/api';
 import { useLocale } from '../contexts/LocaleContext';
 
@@ -59,6 +59,7 @@ const JonCoinWallet = () => {
   const [transactions, setTransactions] = useState([]);
   const [txFilter, setTxFilter] = useState('all');
   const [rate, setRate] = useState(1);
+  const [cardDepositsEnabled, setCardDepositsEnabled] = useState(false);
   const [orders, setOrders] = useState([]);
   const [sellerOrders, setSellerOrders] = useState([]);
   const [orderBusyId, setOrderBusyId] = useState(null);
@@ -94,16 +95,40 @@ const JonCoinWallet = () => {
   }, []);
 
   const fetchBalance = useCallback(async () => {
-    const { balance: b, withdrawCommissionPercent, joncoinPerEur } = await getJonCoinBalance();
+    const { balance: b, withdrawCommissionPercent, joncoinPerEur, cardDepositsEnabled: cardEnabled } = await getJonCoinBalance();
     setBalance(b);
     setWithdrawFeePct(withdrawCommissionPercent);
     setRate(joncoinPerEur || 1);
+    setCardDepositsEnabled(cardEnabled);
   }, []);
 
   useEffect(() => {
-    fetchBalance();
-    fetchTransactions();
-    fetchOrders();
+    Promise.resolve().then(() => Promise.all([fetchBalance(), fetchTransactions(), fetchOrders()]));
+  }, [fetchBalance, fetchTransactions, fetchOrders]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sessionId = url.searchParams.get('session_id');
+    const depositStatus = url.searchParams.get('deposit');
+    if (depositStatus === '0') {
+      Promise.resolve().then(() => setMessage('Pagesa u anulua. Balanca e XCoin nuk ndryshoi.'));
+      url.searchParams.delete('deposit');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+      return;
+    }
+    if (!sessionId || depositStatus !== '1') return;
+    verifyJonCoinDepositSession(sessionId)
+      .then(async (result) => {
+        setMessage(result?.deposit ? 'Pagesa u verifikua. XCoin u shtua në wallet.' : 'Pagesa është në verifikim. Rifresko wallet-in pak më vonë.');
+        await Promise.all([fetchBalance(), fetchTransactions(), fetchOrders()]);
+      })
+      .catch((err) => setMessage(err.response?.data?.msg || 'Nuk u verifikua pagesa. Kontrollo wallet-in më vonë.'))
+      .finally(() => {
+        url.searchParams.delete('deposit');
+        url.searchParams.delete('session_id');
+        window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+      });
   }, [fetchBalance, fetchTransactions, fetchOrders]);
 
   const refreshAll = async () => {
@@ -158,6 +183,12 @@ const JonCoinWallet = () => {
     e.preventDefault();
     setMessage('');
     try {
+      if (cardDepositsEnabled) {
+        const checkout = await createJonCoinDepositCheckout(Number(buyAmount));
+        if (!checkout?.url) throw new Error('Nuk u krijua sesioni i pagesës.');
+        window.location.assign(checkout.url);
+        return;
+      }
       const res = await purchaseJonCoin(Number(buyAmount));
       const auto = res?.autoCompleted;
       setMessage(
@@ -209,7 +240,12 @@ const JonCoinWallet = () => {
   return (
     <div className="mx-auto min-h-screen max-w-5xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Portofoli')}</p><h1 className="mt-1 text-3xl font-black text-white">XCoin</h1></div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-deep)] dark:text-[var(--xt-color-gold-bright)]">
+            X TALENTI · {t('Portofoli')}
+          </p>
+          <h1 className="mt-1 text-3xl font-black text-[var(--xt-color-text)]">XCoin</h1>
+        </div>
         <Link
           to="/marketplace"
           className="btn btn-outline min-h-11 text-sm"
@@ -222,7 +258,7 @@ const JonCoinWallet = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="xt-card p-4 sm:p-6">
           <div className="mb-2 text-sm text-[var(--xt-color-text-muted)]">{t('Bilanci i disponueshëm')}</div>
-          <div className="mb-6 flex items-baseline gap-2 text-white">
+          <div className="mb-6 flex items-baseline gap-2 text-[var(--xt-color-text)]">
             <span className="font-mono text-4xl font-black tabular-nums text-[var(--xt-color-gold-bright)]">{balance}</span>
             <span className="font-semibold text-[var(--xt-color-text-muted)]">XCoin</span>
           </div>
@@ -231,7 +267,9 @@ const JonCoinWallet = () => {
           <form onSubmit={handleBuy} className="space-y-3 mb-6">
             <div className="font-semibold text-[var(--xt-color-text)]">{t('Bli XCoin')}</div>
             <p className="text-xs text-[var(--xt-color-text-subtle)]">
-              {t('Kërkesa nuk shton XCoin. Kreditohet vetëm pasi pagesa verifikohet ose admini e konfirmon.')}
+              {cardDepositsEnabled
+                ? t('Pagesa kryhet me kartë dhe XCoin kreditohet pas verifikimit të pagesës.')
+                : t('Kërkesa nuk shton XCoin. Kreditohet vetëm pasi pagesa verifikohet ose admini e konfirmon.')}
             </p>
             <input
               type="number"
@@ -239,7 +277,9 @@ const JonCoinWallet = () => {
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
               className="input"
-              min="1"
+              min={cardDepositsEnabled ? '1' : '0.01'}
+              max={cardDepositsEnabled ? '1000' : undefined}
+              step="0.01"
               required
             />
             <button type="submit" className="btn btn-primary w-full">

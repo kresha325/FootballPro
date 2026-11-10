@@ -157,7 +157,8 @@ function App() {
             <Route path="/login" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Navigate to="/feed" />) : <Login />} />
             <Route path="/register" element={user ? (isOnboardingPending() ? <Navigate to="/onboarding" /> : <Navigate to="/feed" />) : <Register />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/feed" /> : <ForgotPassword />} />
-            <Route path="/reset-password/:token" element={user ? <Navigate to="/feed" /> : <ResetPassword />} />
+            {/* Activation/reset links must remain usable when a staff member is signed in on the same browser. */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/facebook/callback" element={<OAuthCodeRelay provider="facebook" />} />
             <Route path="/auth/google/callback" element={<OAuthCodeRelay provider="google" />} />

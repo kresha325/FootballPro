@@ -76,7 +76,7 @@ const EditScoutProfile = ({ user, onSave, loading, errors }) => {
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1">{t('Foto e profilit')}</label>
         {preview ? <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" /> : null}
-        <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+        <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif" onChange={handleFileChange} />
       </div>
       <h3 className="text-lg font-semibold mb-3">{t('Profili i Scout')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

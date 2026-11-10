@@ -11,6 +11,7 @@ const ClubMember = require('../models/ClubMember');
 const managedAthletes = require('../controllers/managedAthletes');
 const sequelize = require('../config/database');
 const emailService = require('../services/emailService');
+const { hashToken } = require('../utils/guardianConsentSecurity');
 const {
   validateManagedAthleteInput,
   isActiveCoachAssignment,
@@ -27,7 +28,7 @@ function response() {
   };
 }
 
-async function withCreateMocks({ minor = false, duplicate = null, emailSent = true } = {}, run) {
+async function withCreateMocks({ minor = false, duplicate = null, emailDuplicate = null, emailSent = true, activationEmailSent = true } = {}, run) {
   const originals = {
     transaction: sequelize.transaction,
     dialect: sequelize.getDialect,
@@ -43,7 +44,7 @@ async function withCreateMocks({ minor = false, duplicate = null, emailSent = tr
     consentCreate: GuardianConsent.create,
     sendEmail: emailService.sendEmail,
   };
-  const created = { users: [], profiles: [], members: [], consents: [], emailArgs: null };
+  const created = { users: [], profiles: [], members: [], consents: [], emailArgs: [] };
   const createdUser = {
     id: 401,
     getAge() { return minor ? 11 : 23; },
@@ -54,7 +55,11 @@ async function withCreateMocks({ minor = false, duplicate = null, emailSent = tr
   sequelize.getDialect = () => 'sqlite';
   sequelize.query = async () => [];
   User.findByPk = async (id) => ({ id, role: 'club', adminVerified: true, language: 'sq', firstName: 'Club', lastName: 'Test' });
-  User.findOne = async () => duplicate;
+  let userFindOneCalls = 0;
+  User.findOne = async () => {
+    userFindOneCalls += 1;
+    return userFindOneCalls === 1 ? emailDuplicate : duplicate;
+  };
   User.create = async (payload) => {
     created.users.push(payload);
     Object.assign(createdUser, payload);
@@ -66,7 +71,10 @@ async function withCreateMocks({ minor = false, duplicate = null, emailSent = tr
   ClubMember.create = async (payload) => { created.members.push(payload); return { id: 402, ...payload }; };
   GuardianConsent.update = async () => [0];
   GuardianConsent.create = async (payload) => { created.consents.push(payload); return payload; };
-  emailService.sendEmail = async (...args) => { created.emailArgs = args; return { success: emailSent }; };
+  emailService.sendEmail = async (...args) => {
+    created.emailArgs.push(args);
+    return { success: args[1] === 'passwordReset' ? activationEmailSent : emailSent };
+  };
   try { await run(created); }
   finally {
     sequelize.transaction = originals.transaction;
@@ -114,22 +122,25 @@ describe('managed athlete registration policy', () => {
 
   it('accepts only valid athlete fields and requires a guardian contact for minors', () => {
     const minor = validateManagedAthleteInput({
-      firstName: '  Arta  ', lastName: 'Test', dateOfBirth: '2015-05-12',
+      firstName: '  Arta  ', lastName: 'Test', email: 'athlete@example.com', dateOfBirth: '2015-05-12',
       competitionCategory: 'u13', squadGroup: 'B',
     });
     assert.equal(minor.ok, false);
     assert.match(minor.message, /kujdestarit/i);
 
     const valid = validateManagedAthleteInput({
-      firstName: '  Arta  ', lastName: ' Test ', dateOfBirth: '2015-05-12',
+      firstName: '  Arta  ', lastName: ' Test ', email: ' ATHLETE@Example.com ', dateOfBirth: '2015-05-12',
       parentEmail: ' GUARDIAN@example.com ', competitionCategory: 'u13', squadGroup: 'b',
       position: 'Goalkeeper', jerseyNumber: '1',
     });
     assert.equal(valid.ok, true);
     assert.equal(valid.value.firstName, 'Arta');
+    assert.equal(valid.value.email, 'athlete@example.com');
     assert.equal(valid.value.squadGroup, 'B');
     assert.equal(valid.value.parentEmail, 'guardian@example.com');
+    assert.equal(validateManagedAthleteInput({ firstName: 'A', lastName: 'B', dateOfBirth: '2015-01-01' }).ok, false);
     assert.equal(validateManagedAthleteInput({ firstName: 'A', lastName: 'B', dateOfBirth: '2015-01-01', parentEmail: 'x@y.com', competitionCategory: 'u13', squadGroup: 'D' }).ok, false);
+    assert.equal(validateManagedAthleteInput({ firstName: 'A', lastName: 'B', dateOfBirth: '2015-01-01', email: 'not-an-email', parentEmail: 'x@y.com' }).ok, false);
   });
 
   it('requires the assigned coach identity, club, active state, coaching role, and unexpired contract', () => {
@@ -187,36 +198,48 @@ describe('managed athlete registration policy', () => {
       const res = response();
       await managedAthletes.createManagedAthlete({
         user: { id: 8, role: 'club' },
-        body: { firstName: 'Adult', lastName: 'Athlete', dateOfBirth: '2000-01-01', position: 'Forward', jerseyNumber: '9' },
+        body: { firstName: 'Adult', lastName: 'Athlete', email: ' Adult@Example.com ', dateOfBirth: '2000-01-01', position: 'Forward', jerseyNumber: '9' },
       }, res);
       assert.equal(res.statusCode, 201);
       assert.equal(created.users[0].role, 'athlete');
-      assert.equal(created.users[0].email.endsWith('@athlete.invalid'), true);
+      assert.equal(created.users[0].email, 'adult@example.com');
       assert.notEqual(created.users[0].password, undefined);
       assert.equal(created.users[0].password.startsWith('$2'), true);
+      assert.match(created.users[0].resetPasswordToken, /^[a-f0-9]{64}$/);
+      assert.ok(created.users[0].resetPasswordExpire > Date.now());
+      assert.equal(created.emailArgs.length, 1);
+      assert.equal(created.emailArgs[0][0], 'adult@example.com');
+      assert.equal(created.emailArgs[0][1], 'passwordReset');
+      const activationToken = created.emailArgs[0][3].match(/\/reset-password\/([^/?#]+)/)?.[1];
+      assert.ok(activationToken);
+      assert.equal(hashToken(activationToken), created.users[0].resetPasswordToken);
       assert.equal(created.profiles.length, 1);
       assert.equal(created.members[0].status, 'approved');
       assert.equal(created.members[0].createdByUserId, 8);
       assert.equal(created.members[0].creationSource, 'club_managed_registration');
       assert.equal(res.body.parentAuthorizationPending, false);
+      assert.equal(res.body.accountActivationEmailSent, true);
       assert.equal(JSON.stringify(res.body).includes('password'), false);
       assert.equal(JSON.stringify(res.body).includes('token'), false);
     });
   });
 
   it('keeps a minor pending and stores only a hashed guardian token', async () => {
-    await withCreateMocks({ minor: true }, async (created) => {
+    await withCreateMocks({ minor: true, emailSent: false }, async (created) => {
       const res = response();
       await managedAthletes.createManagedAthlete({
         user: { id: 8, role: 'club' },
-        body: { firstName: 'Minor', lastName: 'Athlete', dateOfBirth: '2015-01-01', parentEmail: 'guardian@example.com', competitionCategory: 'u13', squadGroup: 'A' },
+        body: { firstName: 'Minor', lastName: 'Athlete', email: 'minor@example.com', dateOfBirth: '2015-01-01', parentEmail: 'guardian@example.com', competitionCategory: 'u13', squadGroup: 'A' },
       }, res);
       assert.equal(res.statusCode, 201);
       assert.equal(created.users[0].parentVerified, false);
       assert.equal(created.users[0].verified, false);
       assert.equal(created.members[0].status, 'pending');
       assert.equal(res.body.parentAuthorizationPending, true);
+      assert.equal(res.body.accountActivationEmailSent, true);
       assert.equal(res.body.guardianEmailSent, false);
+      assert.equal(created.emailArgs[0][0], 'minor@example.com');
+      assert.equal(created.emailArgs[1][0], 'guardian@example.com');
       assert.equal(created.consents.length, 1);
       assert.equal(created.consents[0].guardianEmail, 'guardian@example.com');
       assert.equal(created.consents[0].verificationTokenHash.length, 64);
@@ -230,12 +253,41 @@ describe('managed athlete registration policy', () => {
       const res = response();
       await managedAthletes.createManagedAthlete({
         user: { id: 8, role: 'club' },
-        body: { firstName: 'Existing', lastName: 'Athlete', dateOfBirth: '2000-01-01' },
+        body: { firstName: 'Existing', lastName: 'Athlete', email: 'existing@example.com', dateOfBirth: '2000-01-01' },
       }, res);
       assert.equal(res.statusCode, 409);
       assert.equal(created.users.length, 0);
       assert.equal(created.profiles.length, 0);
       assert.equal(created.members.length, 0);
+    });
+  });
+
+  it('rejects an email already linked to another account', async () => {
+    await withCreateMocks({ emailDuplicate: { id: 77 } }, async (created) => {
+      const res = response();
+      await managedAthletes.createManagedAthlete({
+        user: { id: 8, role: 'club' },
+        body: { firstName: 'New', lastName: 'Athlete', email: 'existing@example.com', dateOfBirth: '2000-01-01' },
+      }, res);
+      assert.equal(res.statusCode, 409);
+      assert.match(res.body.msg, /email.*llogari/i);
+      assert.equal(created.users.length, 0);
+      assert.equal(created.profiles.length, 0);
+      assert.equal(created.members.length, 0);
+    });
+  });
+
+  it('reports activation email delivery failure without exposing the token', async () => {
+    await withCreateMocks({ activationEmailSent: false }, async (created) => {
+      const res = response();
+      await managedAthletes.createManagedAthlete({
+        user: { id: 8, role: 'club' },
+        body: { firstName: 'Adult', lastName: 'Athlete', email: 'adult@example.com', dateOfBirth: '2000-01-01' },
+      }, res);
+      assert.equal(res.statusCode, 201);
+      assert.equal(res.body.accountActivationEmailSent, false);
+      assert.match(res.body.msg, /rivendosjen e fjalëkalimit/i);
+      assert.equal(JSON.stringify(res.body).includes(created.users[0].resetPasswordToken), false);
     });
   });
 

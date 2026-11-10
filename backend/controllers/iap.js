@@ -1,8 +1,8 @@
 const https = require('https');
 const sequelize = require('../config/database');
 const IapPurchase = require('../models/IapPurchase');
-const User = require('../models/User');
-const { JonCoinTransaction } = require('../models');
+const economyLedger = require('../services/economy/ledger');
+const { toCents } = require('../utils/money');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 const { verifyAppleSignedPayload } = require('../utils/appleJws');
 const {
@@ -218,10 +218,6 @@ async function verifyGooglePurchase({ productId, purchaseToken, isSubscription }
   };
 }
 
-function round2(n) {
-  return Math.round(Number(n) * 100) / 100;
-}
-
 function publicPurchase(purchase) {
   if (!purchase) return null;
   const row = purchase.toJSON ? purchase.toJSON() : purchase;
@@ -355,24 +351,21 @@ exports.verifyAndFulfill = async (req, res) => {
           await fulfillment.invoice.save({ transaction });
         }
       } else if (catalog.kind === 'joncoin') {
-        const user = await User.findByPk(req.user.id, { transaction, lock: transaction.LOCK.UPDATE });
-        if (!user) {
-          const missingUser = new Error('Përdoruesi nuk u gjet');
-          missingUser.code = 'IAP_USER_NOT_FOUND';
-          throw missingUser;
-        }
         const amount = Number(catalog.amount);
-        user.joncoinBalance = round2(parseFloat(user.joncoinBalance || 0) + amount);
-        await user.save({ transaction });
-        joncoinTx = await JonCoinTransaction.create({
+        const amountCents = toCents(amount);
+        const posted = await economyLedger.postLedgerEntry({
           userId: req.user.id,
           type: 'purchase',
-          amount,
+          amountCents,
+          currency: 'JON',
           status: 'completed',
           idempotencyKey: `iap:${canonicalTransactionId}`,
+          relatedEntityType: 'iap',
           description: `IAP ${productId}`,
-        }, { transaction });
-        fulfillment = { joncoinBalance: user.joncoinBalance, transaction: joncoinTx };
+        }, transaction);
+        joncoinTx = posted.entry;
+        const balance = await economyLedger.getCompletedLedgerBalance(req.user.id, { transaction });
+        fulfillment = { joncoinBalance: balance, transaction: joncoinTx };
 
         const { createInvoiceIfNeeded } = require('../utils/invoices');
         await createInvoiceIfNeeded({
@@ -380,7 +373,7 @@ exports.verifyAndFulfill = async (req, res) => {
           kind: 'joncoin',
           source: 'iap',
           amount: Number(catalog.amount),
-          currency: 'JC',
+          currency: 'XCOIN',
           description: `XCoin pack ${catalog.amount}`,
           productId,
           joncoinAmount: Number(catalog.amount),

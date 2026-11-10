@@ -13,6 +13,7 @@ import {
   videosRequest,
 } from '../api/client';
 import { useLocale } from '../context/LocaleContext';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 function VideosSkeleton() {
   return (
@@ -96,6 +97,10 @@ export default function VideosScreen() {
 
     if (!result.canceled && result.assets && result.assets[0]) {
       const asset = result.assets[0];
+      if (isAssetOverLimit(asset, UPLOAD_LIMITS.video)) {
+        Alert.alert(t('File too large'), t('Video max 100MB. Compress it or choose a shorter video.'));
+        return;
+      }
       setSelectedVideo({
         uri: asset.uri,
         type: asset.mimeType || 'video/mp4',

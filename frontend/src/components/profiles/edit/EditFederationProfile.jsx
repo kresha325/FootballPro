@@ -66,7 +66,7 @@ const EditFederationProfile = ({ user, onSave, loading, errors }) => {
         {preview && (
           <img src={preview} alt={t('Preview')} className="w-24 h-24 rounded-full object-cover mb-2" />
         )}
-        <input type="file" name="profilePhoto" accept="image/*" onChange={handleFileChange} />
+        <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif" onChange={handleFileChange} />
       </div>
       <h3 className="text-lg font-semibold mb-3">{t('Federation Profile')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

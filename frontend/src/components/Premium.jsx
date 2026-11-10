@@ -164,7 +164,7 @@ function Premium() {
           onClick={() => setSelectedPlan('monthly')}
           className={`btn min-h-11 px-6 font-medium transition ${
             selectedPlan === 'monthly'
-              ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-lg'
+              ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-lg'
               : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
           }`}
         >
@@ -174,7 +174,7 @@ function Premium() {
           onClick={() => setSelectedPlan('yearly')}
           className={`btn min-h-11 px-6 font-medium transition relative ${
             selectedPlan === 'yearly'
-              ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-lg'
+              ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-lg'
               : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
           }`}
         >
@@ -230,7 +230,7 @@ function Premium() {
 
         {/* Premium Plan */}
         <div className="xt-card relative overflow-hidden border-2 border-[var(--xt-color-gold)]/50 bg-[var(--xt-color-surface-raised)] p-5 text-[var(--xt-color-text)] shadow-xl sm:p-8">
-          <div className="absolute right-0 top-0 rounded-bl-lg bg-[var(--xt-color-gold)] px-4 py-1 text-sm font-bold text-slate-950">
+          <div className="absolute right-0 top-0 rounded-bl-lg bg-[var(--xt-color-gold)] px-4 py-1 text-sm font-bold text-[var(--xt-color-on-gold)]">
             {t('RECOMMENDED')}
           </div>
           <h3 className="mb-2 text-2xl font-bold text-[var(--xt-color-text)]">Premium</h3>

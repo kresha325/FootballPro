@@ -7,6 +7,7 @@ const IapPurchase = require('../models/IapPurchase');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const { JonCoinTransaction } = require('../models');
+const economyLedger = require('../services/economy/ledger');
 const invoices = require('../utils/invoices');
 const { verifyAndFulfill } = require('../controllers/iap');
 
@@ -42,6 +43,8 @@ describe('IAP transaction claiming and fulfillment', () => {
     createPurchase: IapPurchase.create,
     findUser: User.findByPk,
     createLedger: JonCoinTransaction.create,
+    postLedgerEntry: economyLedger.postLedgerEntry,
+    getCompletedBalance: economyLedger.getCompletedLedgerBalance,
     findPayment: Payment.findOne,
     createPayment: Payment.create,
     createInvoice: invoices.createInvoiceIfNeeded,
@@ -67,24 +70,22 @@ describe('IAP transaction claiming and fulfillment', () => {
       created.purchases.push(row);
       return row;
     };
-    const user = {
-      id: 7,
-      joncoinBalance: '25.00',
-      async save(options) {
-        assert.equal(options.transaction, transaction);
-        created.transactionSeen.push(options.transaction);
-      },
-    };
-    User.findByPk = async (_id, options) => {
-      assert.equal(options.transaction, transaction);
-      assert.equal(options.lock, transaction.LOCK.UPDATE);
-      return user;
-    };
-    JonCoinTransaction.create = async (attributes, options) => {
-      assert.equal(options.transaction, transaction);
-      const row = { id: 22, ...attributes };
+    economyLedger.postLedgerEntry = async (attributes, usedTransaction) => {
+      assert.equal(usedTransaction, transaction);
+      assert.equal(attributes.userId, 7);
+      assert.equal(attributes.type, 'purchase');
+      assert.equal(attributes.amountCents, 10000);
+      assert.equal(attributes.currency, 'JON');
+      assert.equal(attributes.status, 'completed');
+      assert.equal(attributes.idempotencyKey, 'iap:store-tx-100');
+      const row = { id: 22, amount: '100.00', ...attributes };
       created.ledger.push(row);
-      return row;
+      return { entry: row, duplicate: false };
+    };
+    economyLedger.getCompletedLedgerBalance = async (userId, options) => {
+      assert.equal(userId, 7);
+      assert.equal(options.transaction, transaction);
+      return 125;
     };
     invoices.createInvoiceIfNeeded = async (attributes) => {
       assert.equal(attributes.transaction, transaction);
@@ -97,11 +98,12 @@ describe('IAP transaction claiming and fulfillment', () => {
       await verifyAndFulfill(request(), res);
       assert.equal(res.statusCode, 200);
       assert.equal(res.body.success, true);
-      assert.equal(user.joncoinBalance, 125);
+      assert.equal(res.body.fulfillment.joncoinBalance, 125);
       assert.equal(created.purchases[0].status, 'completed');
       assert.equal(created.ledger.length, 1);
       assert.equal(created.ledger[0].idempotencyKey, 'iap:store-tx-100');
       assert.equal(created.invoices.length, 1);
+      assert.equal(created.invoices[0].currency, 'XCOIN');
       assert.ok(created.transactionSeen.every((seen) => seen === transaction));
       assert.equal(res.body.purchase.purchaseToken, undefined);
       assert.equal(res.body.purchase.rawPayload, undefined);
@@ -111,6 +113,8 @@ describe('IAP transaction claiming and fulfillment', () => {
       IapPurchase.create = originals.createPurchase;
       User.findByPk = originals.findUser;
       JonCoinTransaction.create = originals.createLedger;
+      economyLedger.postLedgerEntry = originals.postLedgerEntry;
+      economyLedger.getCompletedLedgerBalance = originals.getCompletedBalance;
       invoices.createInvoiceIfNeeded = originals.createInvoice;
       if (originals.env.NODE_ENV === undefined) delete process.env.NODE_ENV;
       else process.env.NODE_ENV = originals.env.NODE_ENV;

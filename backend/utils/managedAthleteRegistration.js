@@ -26,6 +26,10 @@ function normalizeName(value) {
 }
 
 function validateManagedAthleteInput(body = {}) {
+  const email = String(body.email || '').trim().toLowerCase();
+  if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, status: 400, message: 'Email-i i hyrjes i atletit është i detyrueshëm dhe duhet të jetë i vlefshëm.' };
+  }
   const firstName = normalizeName(body.firstName);
   const lastName = normalizeName(body.lastName);
   if (!firstName || firstName.length > 100 || !lastName || lastName.length > 100) {
@@ -87,6 +91,7 @@ function validateManagedAthleteInput(body = {}) {
   return {
     ok: true,
     value: {
+      email,
       firstName,
       lastName,
       dateOfBirth: dob.value,
