@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { alertMediaLibraryDenied, ensureMediaLibraryPermission } from '../utils/mediaPermissions';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 function SponsorRow({ item, onEdit, onDelete, deleting }) {
   const { t } = useLocale();
@@ -101,6 +102,10 @@ export default function SponsorsScreen() {
 
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
+      if (isAssetOverLimit(asset, UPLOAD_LIMITS.image)) {
+        setError(t('Photo max 10MB. Choose a smaller image.'));
+        return;
+      }
       setImage({
         uri: asset.uri,
         name: asset.fileName || `sponsor-${Date.now()}.jpg`,

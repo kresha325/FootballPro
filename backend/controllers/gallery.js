@@ -1,9 +1,10 @@
 const Gallery = require('../models/Gallery');
-const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl } = require('../utils/url');
 const { canView, canViewGalleryItem, normalizePrivacy } = require('../utils/profilePrivacy');
 const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
+const upload = require('../middleware/uploadLocal');
+const { VIDEO_EXTS } = require('../utils/uploadNames');
 
 const GALLERY_ORDER = [
   ['featured', 'DESC'],
@@ -28,32 +29,6 @@ function presentGalleryItem(req, item) {
   if (obj.videoUrl) obj.videoUrl = toAbsoluteUploadsUrl(req, obj.videoUrl);
   return obj;
 }
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const { IMAGE_EXTS, VIDEO_EXTS, storedFilename } = require('../utils/uploadNames');
-    const allowed = new Set([...IMAGE_EXTS, ...VIDEO_EXTS]);
-    const name = storedFilename(file, allowed);
-    if (!name) return cb(new Error('Invalid file type'));
-    cb(null, name);
-  },
-});
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
-  fileFilter: (req, file, cb) => {
-    const allowed = new Set(['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif', '.mp4', '.mov', '.avi']);
-    const ext = path.extname(file.originalname || '').toLowerCase();
-    if (allowed.has(ext)) {
-      return cb(null, true);
-    }
-    cb(new Error('Invalid file type'));
-  }
-});
 
 exports.upload = upload;
 
@@ -131,7 +106,8 @@ exports.createGalleryItem = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });
     }
-    const isVideo = req.file.mimetype.startsWith('video/');
+    const ext = path.extname(req.file.originalname || req.file.filename || '').toLowerCase();
+    const isVideo = VIDEO_EXTS.has(ext);
     const mediaKind = isVideo ? 'video' : 'gallery';
     const deliveryType = await requiresAuthenticatedDelivery(req.user?.id, visibility, { kind: mediaKind }) ? 'authenticated' : 'upload';
     let cloudRes;

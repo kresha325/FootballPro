@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
 import { absoluteBackendUrl } from '../config/constants';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 const CATEGORIES = [
   { value: 'gear', label: 'Gear' },
@@ -92,6 +93,10 @@ export default function EditProductScreen({ route, navigation }) {
     });
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
+      if (isAssetOverLimit(asset, UPLOAD_LIMITS.image)) {
+        Alert.alert(t('File too large'), t('Photo max 10MB. Choose a smaller image.'));
+        return;
+      }
       setImage({
         uri: asset.uri,
         type: asset.mimeType || 'image/jpeg',

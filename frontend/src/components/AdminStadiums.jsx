@@ -226,7 +226,7 @@ export default function AdminStadiums() {
               <div className="flex-1 space-y-2 w-full">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif"
                   onChange={handlePhotoChange}
                   className="block w-full text-sm text-gray-600"
                 />

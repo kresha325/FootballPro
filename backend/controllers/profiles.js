@@ -227,6 +227,7 @@ async function enrichClubDisplayFields(req, response) {
 const multer = require('multer');
 const path = require('path');
 const { toAbsoluteUploadsUrl, toCloudinaryVideoPosterUrl } = require('../utils/url');
+const { uploadByteLimits } = require('../utils/uploadLimits');
 const { normalizeYoutubeChannelId } = require('../utils/youtubeChannel');
 const { isOrgProfileRole, getFoundingYear } = require('../utils/orgProfile');
 const { findLigasForClub } = require('../utils/ligaTournaments');
@@ -332,15 +333,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  limits: { fileSize: uploadByteLimits().maxImage },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|bmp|webp|svg|tiff|ico|heic|heif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = /image\//.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(null, true); // Allow all files to pass through
+    const allowedTypes = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic', '.heif']);
+    const extname = path.extname(file.originalname || '').toLowerCase();
+    const mimetype = /^image\/(jpeg|png|gif|webp|bmp|heic|heif)$/i.test(file.mimetype || '');
+    if (allowedTypes.has(extname) && mimetype) return cb(null, true);
+    return cb(new Error('Invalid image file'));
   }
 });
 

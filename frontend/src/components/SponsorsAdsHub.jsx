@@ -314,7 +314,7 @@ export default function SponsorsAdsHub() {
               {!editingId ? (
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif"
                   onChange={(e) => setSImage(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-gray-600 dark:text-gray-300"
                 />

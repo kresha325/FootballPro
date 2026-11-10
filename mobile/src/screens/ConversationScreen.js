@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserAvatar from '../components/UserAvatar';
 import { openUserProfile } from '../utils/openUserProfile';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 import {
   conversationDetailRequest,
   conversationsRequest,
@@ -783,6 +784,14 @@ export default function ConversationScreen({ route, navigation }) {
     const asset = result.assets[0];
     const isVideo =
       asset.type === 'video' || String(asset.mimeType || '').toLowerCase().startsWith('video/');
+    const maxBytes = isVideo ? UPLOAD_LIMITS.messageAttachment : UPLOAD_LIMITS.image;
+    if (isAssetOverLimit(asset, maxBytes)) {
+      Alert.alert(
+        t('File too large'),
+        isVideo ? t('Message attachment max 25MB.') : t('Photo max 10MB. Choose a smaller image.')
+      );
+      return;
+    }
     const name =
       asset.fileName || (isVideo ? `video-${Date.now()}.mp4` : `image-${Date.now()}.jpg`);
     const mime = asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');

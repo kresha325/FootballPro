@@ -13,6 +13,7 @@ import {
   View,
 } from '../theme/nativeComponents';
 import * as ImagePicker from 'expo-image-picker';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 import OptimizedImage from '../components/media/OptimizedImage';
 import {
   clubMembersRequestMembership,
@@ -274,6 +275,10 @@ export default function EditProfileScreen({ navigation }) {
     });
     if (!result.canceled && result.assets && result.assets[0]) {
       const asset = result.assets[0];
+      if (isAssetOverLimit(asset, UPLOAD_LIMITS.image)) {
+        Alert.alert(t('File too large'), t('Photo max 10MB. Choose a smaller image.'));
+        return;
+      }
       setProfilePhotoFile({
         uri: asset.uri,
         name: `profilePhoto-${Date.now()}.jpg`,

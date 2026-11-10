@@ -391,17 +391,17 @@ function ClubRoster() {
   };
 
   const handleRemove = async (membershipId) => {
-    if (!confirm('Are you sure you want to remove this athlete from the club?')) {
+    if (!confirm('Atleti do të hiqet nga rosteri i klubit. Llogaria e tij nuk do të fshihet. Të vazhdohet?')) {
       return;
     }
 
     try {
       await clubMembersAPI.removeMember(membershipId);
       fetchRosterData();
-      alert('Athlete removed from club');
+      alert('Atleti u hoq nga rosteri i klubit.');
     } catch (error) {
       console.error('Error removing member:', error);
-      alert('Failed to remove athlete');
+      alert('Atleti nuk u hoq nga rosteri. Provo përsëri.');
     }
   };
 
@@ -893,9 +893,20 @@ function ClubRoster() {
 
                   {/* Club approval cannot replace guardian authorization. */}
                   {membership.parentAuthorizationPending ? (
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                      Në pritje të autorizimit të prindit ose kujdestarit.
-                    </p>
+                    <div className="flex flex-col gap-3 sm:items-end">
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                        Në pritje të autorizimit të prindit ose kujdestarit.
+                      </p>
+                      {membership.creationSource === 'club_managed_registration' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(membership.id)}
+                          className="btn btn-quiet text-sm text-[var(--xt-color-danger)]"
+                        >
+                          Anulo regjistrimin
+                        </button>
+                      ) : null}
+                    </div>
                   ) : <div className="flex gap-2">
                     <button
                       onClick={() => handleApprove(membership.id)}

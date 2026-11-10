@@ -11,6 +11,7 @@ import VerifiedBadge from './VerifiedBadge';
 
 import { API_URL, BACKEND_URL } from '../config/api';
 import { outboundChatStatus, replyUnavailable } from '../utils/messagePresentation';
+import { UPLOAD_LIMITS, MESSAGE_UPLOAD_ACCEPT } from '../utils/uploadLimits';
 import { useLocale } from '../contexts/LocaleContext';
 
 const QUICK_EMOJIS = ['⚽', '🔥', '😀', '😂', '👍', '❤️', '🎉', '👏', '🙌', '😮'];
@@ -958,6 +959,10 @@ function Messaging() {
 
   const changeGroupAvatar = async (file) => {
     if (!file || !selectedConversation?.id) return;
+    if (file.size > UPLOAD_LIMITS.groupAvatar) {
+      setActionError(t('Group avatar max 5MB.'));
+      return;
+    }
     const form = new FormData();
     form.append('avatar', file);
     try {
@@ -968,6 +973,21 @@ function Messaging() {
     } catch (err) {
       setActionError(err?.response?.data?.msg || 'Fotoja e grupit nuk u ndryshua');
     }
+  };
+
+  const selectMessageAttachment = (event) => {
+    const selected = event.target.files?.[0] || null;
+    if (!selected) return;
+    const isImage = String(selected.type || '').startsWith('image/');
+    const maxBytes = isImage ? UPLOAD_LIMITS.image : UPLOAD_LIMITS.messageAttachment;
+    if (selected.size > maxBytes) {
+      setActionError(isImage ? t('Photo max 10MB.') : t('Message attachment max 25MB.'));
+      event.target.value = '';
+      setFile(null);
+      return;
+    }
+    setActionError('');
+    setFile(selected);
   };
 
   const removeGroupMember = async (memberId) => {
@@ -1918,10 +1938,10 @@ function Messaging() {
               <input
                 type="file"
                 ref={fileInputRef}
-                onChange={(e) => setFile(e.target.files[0])}
+                onChange={selectMessageAttachment}
                 className="hidden"
                 disabled={!!editingMessage}
-                accept="image/*,video/*,.pdf,.doc,.docx,.mp3,.wav"
+                accept={MESSAGE_UPLOAD_ACCEPT}
               />
               <button
                 type="button"

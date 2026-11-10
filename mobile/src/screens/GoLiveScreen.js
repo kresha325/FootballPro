@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { confirmGoLiveAlert, getProfileYoutubeChannelId } from '../utils/goLiveConfirm';
 import { requestCameraAndMicrophonePermissions } from '../utils/mediaPermissions';
 import { hasTier } from '../utils/subscriptionAccess';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 const STREAMS_CACHE_KEY = 'mobile_streams_cache_v1';
 const STREAMS_CACHE_TTL_MS = 3 * 60 * 1000;
@@ -260,6 +261,10 @@ export default function GoLiveScreen({ route, navigation }) {
       if (pick.canceled || !pick.assets?.[0]) return;
 
       const asset = pick.assets[0];
+      if (isAssetOverLimit(asset, UPLOAD_LIMITS.video)) {
+        Alert.alert(t('File too large'), t('Video max 100MB. Compress it or choose a shorter video.'));
+        return;
+      }
       const video = {
         uri: asset.uri,
         name: asset.fileName || `recording-${Date.now()}.mp4`,

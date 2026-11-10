@@ -672,7 +672,7 @@ const Profile = () => {
         {/* Upload cover photo button (only for owner) */}
         {isOwner && (
           <div className="absolute bottom-4 right-4">
-            <input type="file" accept="image/*" onChange={handleCoverFileChange} className="hidden" id="cover-upload-input" />
+            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/heic,image/heif" onChange={handleCoverFileChange} className="hidden" id="cover-upload-input" />
             <label htmlFor="cover-upload-input" className="btn btn-quiet cursor-pointer">{t('Ndrysho kopertinën')}</label>
           </div>
         )}

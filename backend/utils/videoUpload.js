@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { uploadByteLimits } = require('./uploadLimits');
 
 const ALLOWED_MIME = new Set([
   'video/mp4',
@@ -8,7 +9,7 @@ const ALLOWED_MIME = new Set([
 ]);
 
 const ALLOWED_EXT = new Set(['.mp4', '.webm', '.ogg', '.mov']);
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_VIDEO_BYTES = uploadByteLimits().maxVideo;
 
 function extensionOf(name) {
   const raw = String(name || '').toLowerCase();
@@ -31,7 +32,8 @@ function assertVideoFile(file) {
   }
   const size = Number(file.size);
   if (Number.isFinite(size) && size > MAX_VIDEO_BYTES) {
-    const err = new Error('Video exceeds the 100MB limit.');
+    const maxMb = Math.round(MAX_VIDEO_BYTES / (1024 * 1024));
+    const err = new Error(`Video exceeds the ${maxMb}MB limit.`);
     err.statusCode = 413;
     throw err;
   }

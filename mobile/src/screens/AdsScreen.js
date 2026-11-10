@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { adsRequest, createAdRequest, extractErrorMessage } from '../api/client';
 import { alertMediaLibraryDenied, ensureMediaLibraryPermission } from '../utils/mediaPermissions';
 import { useLocale } from '../context/LocaleContext';
+import { UPLOAD_LIMITS, isAssetOverLimit } from '../utils/uploadLimits';
 
 const EUR_PER_UNIT = 1;
 const SECONDS_PER_UNIT = 3;
@@ -113,6 +114,11 @@ export default function AdsScreen() {
       const asset = result.assets[0];
       const isVideo =
         asset.type === 'video' || String(asset.mimeType || '').startsWith('video/');
+      const maxBytes = isVideo ? UPLOAD_LIMITS.video : UPLOAD_LIMITS.image;
+      if (isAssetOverLimit(asset, maxBytes)) {
+        setError(isVideo ? t('Video max 100MB.') : t('Photo max 10MB. Choose a smaller image.'));
+        return;
+      }
       const durationSec = isVideo && asset.duration != null
         ? Math.max(1, Math.round(Number(asset.duration) > 1000 ? Number(asset.duration) / 1000 : Number(asset.duration)))
         : null;
