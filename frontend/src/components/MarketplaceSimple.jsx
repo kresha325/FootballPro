@@ -334,7 +334,7 @@ export default function MarketplaceSimple() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('marketplace')}</p><h1 className="mt-1 text-3xl font-black text-white mb-2">{t('marketplace')}</h1>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('marketplace')}</p><h1 className="mt-1 text-3xl font-black text-[var(--xt-color-text)] mb-2">{t('marketplace')}</h1>
           <p className="text-[var(--xt-color-text-muted)]">{t('Bli dhe shit pajisje sportive')}</p>
         </div>
         <button
