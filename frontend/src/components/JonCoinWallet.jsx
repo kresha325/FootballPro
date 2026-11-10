@@ -209,7 +209,12 @@ const JonCoinWallet = () => {
   return (
     <div className="mx-auto min-h-screen max-w-5xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('Portofoli')}</p><h1 className="mt-1 text-3xl font-black text-white">XCoin</h1></div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-deep)] dark:text-[var(--xt-color-gold-bright)]">
+            X TALENTI · {t('Portofoli')}
+          </p>
+          <h1 className="mt-1 text-3xl font-black text-[var(--xt-color-text)]">XCoin</h1>
+        </div>
         <Link
           to="/marketplace"
           className="btn btn-outline min-h-11 text-sm"
@@ -222,7 +227,7 @@ const JonCoinWallet = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="xt-card p-4 sm:p-6">
           <div className="mb-2 text-sm text-[var(--xt-color-text-muted)]">{t('Bilanci i disponueshëm')}</div>
-          <div className="mb-6 flex items-baseline gap-2 text-white">
+          <div className="mb-6 flex items-baseline gap-2 text-[var(--xt-color-text)]">
             <span className="font-mono text-4xl font-black tabular-nums text-[var(--xt-color-gold-bright)]">{balance}</span>
             <span className="font-semibold text-[var(--xt-color-text-muted)]">XCoin</span>
           </div>
