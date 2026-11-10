@@ -8,6 +8,7 @@ const INTERVALS = {
   analytics_retention: 6 * 60 * 60 * 1000,
   stream_expiry: 5 * 60 * 1000,
   notification_reminders: 10 * 60 * 1000,
+  cloudinary_media_retry: 5 * 60 * 1000,
 };
 
 const RETRYABLE = new Set(Object.keys(INTERVALS));
@@ -20,7 +21,14 @@ function jobHandlers() {
     analytics_retention: () => require('../analytics/retention').purgeExpiredAnalyticsEvents(),
     stream_expiry: () => require('../../utils/streamLive').expireStaleLiveStreams(),
     notification_reminders: () => require('../notifications/scheduler').runDueNotifications(),
+    cloudinary_media_retry: runCloudinaryMediaRetryJob,
   };
+}
+
+async function runCloudinaryMediaRetryJob() {
+  const result = await require('../cloudinaryMediaJobs').processCloudinaryMediaJobs();
+  if (result.failed) throw new Error(`${result.failed} Cloudinary media restriction job(s) remain pending for retry.`);
+  return result;
 }
 
 async function persist(record) {
@@ -122,6 +130,7 @@ module.exports = {
   INTERVALS,
   RETRYABLE,
   runTrackedJob,
+  runCloudinaryMediaRetryJob,
   retryJob,
   listJobs,
   failedJobCount,

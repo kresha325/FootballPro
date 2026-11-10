@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import ParticipantPickGrid from './ParticipantPickGrid';
 import { resolveParticipantUserId } from '../utils/tournamentParticipants';
+import { createAthleteIdentityKey } from '../utils/athleteIdentity';
 
 function eventsFromMatchData(data) {
   const all = [
@@ -10,6 +11,7 @@ function eventsFromMatchData(data) {
   return all.map((row) => ({
     userId: row.userId ? String(row.userId) : '',
     athleteName: row.athleteName || '',
+    athleteIdentityKey: row.userId ? null : row.athleteIdentityKey || createAthleteIdentityKey(),
     minute: row.minute != null ? String(row.minute) : '',
     assistUserId: row.assistUserId ? String(row.assistUserId) : '',
     side: row.side || '',
@@ -48,6 +50,7 @@ export default function MatchGoalEventsForm({
   homeUserId,
   awayUserId,
   initialEvents = [],
+  manualAthletesBySide = {},
   onChange,
   onScoreChange,
   variant = 'light',
@@ -84,7 +87,7 @@ export default function MatchGoalEventsForm({
   };
 
   const addEvent = () => {
-    emit([...events, { userId: '', athleteName: '', minute: '', assistUserId: '', side: 'home' }]);
+    emit([...events, { userId: '', athleteName: '', athleteIdentityKey: createAthleteIdentityKey(), minute: '', assistUserId: '', side: 'home' }]);
   };
 
   const updateEvent = (index, patch) => {
@@ -98,6 +101,7 @@ export default function MatchGoalEventsForm({
           );
           if (next.userId && !allowed.has(String(next.userId))) next.userId = '';
           if (next.assistUserId && !allowed.has(String(next.assistUserId))) next.assistUserId = '';
+          if (!next.userId && next.athleteName) next.athleteIdentityKey = createAthleteIdentityKey();
         }
         return next;
       })
@@ -195,8 +199,9 @@ export default function MatchGoalEventsForm({
                       </p>
                     ) : (
                       <>
-                        {sideMembers.length > 0 && <ParticipantPickGrid options={scorerOptions} value={ev.userId} onSelect={(userId) => updateEvent(index, { userId, athleteName: '', side })} />}
-                        <input aria-label="Emri i golashënuesit" value={ev.athleteName || ''} onChange={(e) => updateEvent(index, { athleteName: e.target.value, userId: '', assistUserId: '' })} placeholder={sideMembers.length ? 'Ose shkruaj emrin e atletit pa profil' : 'Shkruaj emrin e atletit të panjohur'} className={`${fieldClass} mt-2`} />
+                        {sideMembers.length > 0 && <ParticipantPickGrid options={scorerOptions} value={ev.userId} onSelect={(userId) => updateEvent(index, { userId, athleteName: '', athleteIdentityKey: null, side })} />}
+                        <input aria-label="Emri i golashënuesit" value={ev.athleteName || ''} onChange={(e) => updateEvent(index, { athleteName: e.target.value, athleteIdentityKey: createAthleteIdentityKey(), userId: '', assistUserId: '' })} placeholder={sideMembers.length ? 'Ose shkruaj emrin e atletit pa profil' : 'Shkruaj emrin e atletit të panjohur'} className={`${fieldClass} mt-2`} />
+                        {(manualAthletesBySide[side] || []).length > 0 && <select aria-label="Atlet pa profil në këtë ekip" value={manualAthletesBySide[side].some((item) => item.athleteIdentityKey === ev.athleteIdentityKey) ? ev.athleteIdentityKey : ''} onChange={(e) => { const player = manualAthletesBySide[side].find((item) => item.athleteIdentityKey === e.target.value); if (player) updateEvent(index, { athleteName: player.athleteName, athleteIdentityKey: player.athleteIdentityKey, userId: '', assistUserId: '' }); }} className={`${fieldClass} mt-2`}><option value="">Zgjidh atletin e regjistruar pa profil</option>{manualAthletesBySide[side].map((player) => <option key={player.athleteIdentityKey} value={player.athleteIdentityKey}>{player.athleteName} · #{String(player.athleteIdentityKey).slice(0, 6)}</option>)}</select>}
                       </>
                     )}
                   </div>

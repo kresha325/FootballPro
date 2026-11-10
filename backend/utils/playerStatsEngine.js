@@ -9,6 +9,8 @@
 function blank(userId) {
   return {
     userId: Number(userId),
+    athleteIdentityKey: null,
+    athleteName: null,
     appearances: 0,
     starts: 0,
     minutes: 0,
@@ -29,11 +31,42 @@ function blank(userId) {
   };
 }
 
+function blankUnknown(identityKey, athleteName) {
+  return {
+    ...blank(null),
+    athleteIdentityKey: identityKey || null,
+    athleteName: athleteName || null,
+  };
+}
+
 function bucket(map, userId) {
   const id = Number(userId);
   if (!Number.isFinite(id) || id <= 0) return null;
   if (!map[id]) map[id] = blank(id);
   return map[id];
+}
+
+function identityFor(row, source, fallbackIndex) {
+  const id = Number(row?.userId);
+  if (Number.isInteger(id) && id > 0) return `u:${id}`;
+  const identityKey = String(row?.athleteIdentityKey || '').trim().toLowerCase();
+  if (identityKey) return `i:${identityKey}`;
+  // Historical name-only rows are deliberately kept distinct. Their identity
+  // cannot be reconstructed safely from a shared name.
+  return `legacy:${source}:${row?.id ?? fallbackIndex}`;
+}
+
+function identityBucket(map, row, source, fallbackIndex) {
+  const userId = Number(row?.userId);
+  const key = identityFor(row, source, fallbackIndex);
+  if (!map[key]) {
+    map[key] = Number.isInteger(userId) && userId > 0
+      ? blank(userId)
+      : blankUnknown(row?.athleteIdentityKey || null, row?.athleteName || null);
+  } else if (!map[key].athleteName && row?.athleteName) {
+    map[key].athleteName = row.athleteName;
+  }
+  return map[key];
 }
 
 function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matches = [] } = {}) {
@@ -47,12 +80,11 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
   const startedByMatchUser = new Set();
   const appearedByMatchUser = new Set();
 
-  for (const row of scorers) {
-    const player = bucket(map, row.userId);
-    if (!player) continue;
+  for (const [index, row] of scorers.entries()) {
+    const player = identityBucket(map, row, 'scorer', index);
     const goals = Number(row.goals) || 0;
     player.goals += goals;
-    const goalKey = `${row.matchId}:${row.userId}`;
+    const goalKey = `${row.matchId}:${identityFor(row, 'scorer', index)}`;
     scorerGoalsByMatchUser.add(goalKey);
     scorerGoalTotalsByMatchUser.set(goalKey, (scorerGoalTotalsByMatchUser.get(goalKey) || 0) + goals);
     if (row.assistUserId) {
@@ -66,36 +98,33 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
     }
   }
 
-  for (const event of events) {
-    const player = bucket(map, event.userId);
-    if (!player) {
-      continue;
-    }
+  for (const [index, event] of events.entries()) {
+    const player = identityBucket(map, event, 'event', index);
+    const eventKey = `${event.matchId}:${identityFor(event, 'event', index)}`;
     if (event.type === 'yellow_card') {
       player.yellowCards += 1;
-      yellowByMatchUser.add(`${event.matchId}:${event.userId}`);
+      yellowByMatchUser.add(eventKey);
     } else if (event.type === 'red_card') {
       player.redCards += 1;
-      redByMatchUser.add(`${event.matchId}:${event.userId}`);
+      redByMatchUser.add(eventKey);
     }
     else if (event.type === 'own_goal') player.ownGoals += 1;
-    else if (event.type === 'assist' && !assistByMatchUser.has(`${event.matchId}:${event.userId}`)) {
+    else if (event.type === 'assist' && !assistByMatchUser.has(eventKey)) {
       player.assists += 1;
-      assistByMatchUser.add(`${event.matchId}:${event.userId}`);
+      assistByMatchUser.add(eventKey);
     } else if (
       (event.type === 'goal' || event.type === 'penalty') &&
-      !scorerGoalsByMatchUser.has(`${event.matchId}:${event.userId}`)
+      !scorerGoalsByMatchUser.has(eventKey)
     ) {
       player.goals += 1;
-      scorerGoalsByMatchUser.add(`${event.matchId}:${event.userId}`);
+      scorerGoalsByMatchUser.add(eventKey);
     }
   }
 
   const matchById = Object.fromEntries((matches || []).map((m) => [Number(m.id), m]));
 
-  for (const row of statRows) {
-    const player = bucket(map, row.userId);
-    if (!player) continue;
+  for (const [index, row] of statRows.entries()) {
+    const player = identityBucket(map, row, 'stat', index);
     const minutes = Number(row.minutes) || 0;
     player.minutes += minutes;
     player.shots += Number(row.shots) || 0;
@@ -105,30 +134,30 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
     player.fouls += Number(row.fouls) || 0;
     player.saves += Number(row.saves) || 0;
     if (row.started) player.starts += 1;
-    const key = `${row.matchId}:${row.userId}`;
+    const key = `${row.matchId}:${identityFor(row, 'stat', index)}`;
     if (row.started) startedByMatchUser.add(key);
     if (minutes > 0 || row.started) {
       player.appearances += 1;
       appearedByMatchUser.add(key);
     }
-    const goalKey = `${row.matchId}:${row.userId}`;
+    const goalKey = `${row.matchId}:${identityFor(row, 'stat', index)}`;
     const extraGoals = Math.max(0, (Number(row.goals) || 0) - (scorerGoalTotalsByMatchUser.get(goalKey) || 0));
     if (extraGoals) player.goals += extraGoals;
-    const assistKey = `${row.matchId}:${row.userId}`;
+    const assistKey = `${row.matchId}:${identityFor(row, 'stat', index)}`;
     const extraAssists = Math.max(0, (Number(row.assists) || 0) - (assistTotalsByMatchUser.get(assistKey) || 0));
     if (extraAssists) player.assists += extraAssists;
-    if (!yellowByMatchUser.has(`${row.matchId}:${row.userId}`)) {
+    if (!yellowByMatchUser.has(`${row.matchId}:${identityFor(row, 'stat', index)}`)) {
       const extraYellow = Number(row.yellowCards) || 0;
       if (extraYellow) {
         player.yellowCards += extraYellow;
-        yellowByMatchUser.add(`${row.matchId}:${row.userId}`);
+        yellowByMatchUser.add(`${row.matchId}:${identityFor(row, 'stat', index)}`);
       }
     }
-    if (!redByMatchUser.has(`${row.matchId}:${row.userId}`)) {
+    if (!redByMatchUser.has(`${row.matchId}:${identityFor(row, 'stat', index)}`)) {
       const extraRed = Number(row.redCards) || 0;
       if (extraRed) {
         player.redCards += extraRed;
-        redByMatchUser.add(`${row.matchId}:${row.userId}`);
+        redByMatchUser.add(`${row.matchId}:${identityFor(row, 'stat', index)}`);
       }
     }
     if (row.rating != null && row.rating !== '') {
@@ -175,10 +204,11 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
       ...row,
       rating: row.ratingCount ? Math.round((row.ratingSum / row.ratingCount) * 10) / 10 : null,
     }))
-    .sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.userId - b.userId);
+    .sort((a, b) => b.goals - a.goals || b.assists - a.assists || (Number(a.userId) || 0) - (Number(b.userId) || 0) || String(a.athleteName || '').localeCompare(String(b.athleteName || '')) || String(a.athleteIdentityKey || '').localeCompare(String(b.athleteIdentityKey || '')));
 }
 
 module.exports = {
   blank,
+  identityFor,
   aggregatePlayerStats,
 };

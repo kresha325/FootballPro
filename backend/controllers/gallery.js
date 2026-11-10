@@ -132,7 +132,8 @@ exports.createGalleryItem = async (req, res) => {
       return res.status(400).json({ msg: 'No file uploaded' });
     }
     const isVideo = req.file.mimetype.startsWith('video/');
-    const deliveryType = await requiresAuthenticatedDelivery(req.user?.id, visibility) ? 'authenticated' : 'upload';
+    const mediaKind = isVideo ? 'video' : 'gallery';
+    const deliveryType = await requiresAuthenticatedDelivery(req.user?.id, visibility, { kind: mediaKind }) ? 'authenticated' : 'upload';
     let cloudRes;
     if (isVideo) {
       cloudRes = await cloudinary.uploader.upload(req.file.path, {
@@ -186,6 +187,12 @@ exports.updateGalleryItem = async (req, res) => {
     if (visibility != null) {
       const nextVisibility = galleryVisibility(visibility);
       if (!nextVisibility) return res.status(400).json({ msg: 'Visibility must be public, followers, or private.' });
+      if (nextVisibility !== 'public') {
+        const { restrictCloudinaryAsset } = require('../services/cloudinaryMediaJobs');
+        const options = { reason: 'gallery_visibility_change', userId: req.user.id, preserveExplicitPublicReferences: true, excludeGalleryId: item.id };
+        if (item.imageUrl) item.imageUrl = (await restrictCloudinaryAsset(item.imageUrl, options)).restrictedUrl;
+        if (item.videoUrl) item.videoUrl = (await restrictCloudinaryAsset(item.videoUrl, options)).restrictedUrl;
+      }
       item.visibility = nextVisibility;
     }
     if (featured != null) item.featured = featured === true || featured === 'true';

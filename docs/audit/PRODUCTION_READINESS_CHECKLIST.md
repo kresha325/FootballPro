@@ -2,7 +2,37 @@
 
 This checklist records audit evidence, not release approval.
 
-## Latest evidence update — 2026-11-10
+## Final security audit evidence — 2026-11-10
+
+This section supersedes earlier snapshots below. Fetched `origin/main` is `b5275ac0d0a9453c35901be8266d98774cc33bc2`; review branch `fix/xtalenti-v1-final-security` is based on it. No production systems, data, migrations, Cloudinary settings, or assets were accessed or modified.
+
+| Priority | Finding | Verification | Remaining release gate |
+|---|---|---|---|
+| P0 Cloudinary media | Restricted uploads now use authenticated delivery; JSON responses sign authenticated URLs for logged-in API callers and redact them for anonymous callers. Privacy transitions and withdrawal/deletion convert provider delivery with CDN invalidation and queue failed conversions for retry. Legacy backfill is dry-run by default and bounded. Public club logos and eligible public media are preserved. | Unit coverage verifies signing/redaction, private upload policy, withdrawal/deletion URL conversion, retry idempotence and pending-minor public-reference handling. Full backend tests passed. No Cloudinary credentials or non-production provider account were exercised. | **NOT VERIFIED / P0 BLOCKER:** In a non-production Cloudinary environment, upload a restricted asset, retain its old URL, revoke consent/delete, and prove direct URL fetch fails after invalidation. Confirm authenticated signed delivery works on Web and React Native. Inventory legacy assets and review dry-run output before any approved batch. |
+| P1 athlete identity | Same-name unregistered athletes use stable UUID identities across scorer, match-stat and tournament-club-stat flows. Legacy unknown rows get separate keys; registered IDs remain authoritative; ambiguous history is not attached to a registered user. | Regression aggregation test; new migration test with legacy records, same-name identities, registered rows, repeat-up behavior, LiveStreamReplay timestamp compatibility and guarded rollback. | Validate two same-name manual athletes across multiple tournament matches in staging Web/mobile. Read-only inspect production migration ledger/schema before rollout. |
+| Database/deployment | Full repository migration chain and new identity/media migration completed on disposable PostgreSQL. New migration is additive and its down path intentionally refuses rollback. | Backend full suite includes competition, guardian-consent, league-migration and identity/media-migration PostgreSQL checks. | Run production schema/migration-ledger inspection read-only. Apply migrations only via the approved release process before new app code. Keep a forward-repair plan; do not roll back the migration. |
+
+### Latest command ledger
+
+| Command/check | Result |
+|---|---|
+| `npm test` (backend; four disposable PostgreSQL integration checks enabled) | PASS — 323 passed, 0 failed, 0 skipped. Full log: `/private/tmp/xtalenti-final-backend-test.log`. |
+| Fresh local migration chain (`sequelize-cli db:migrate`, disposable DB) | PASS — complete migration chain including `20261110150000-add-cloudinary-retry-and-athlete-identities.js`. |
+| New migration + Cloudinary focused regression tests | PASS — 11/11. |
+| `npm run build` (frontend) | PASS — existing bundle chunk warning. |
+| `npm test -- --run` (frontend) | PASS — 4 suites, 9 tests. |
+| `npm run lint` (frontend) | PASS — 0 errors, 147 warnings. |
+| `npm run lint` (backend) | FAIL — 260 repository-wide errors from legacy lint debt; no new-file lint errors. |
+| Scoped ESLint on new backend files | PASS. |
+| `npm run verify:parity` (mobile) | PASS — static parity checks. |
+| `npm run release:preflight` (mobile) | PASS — no EAS/device build performed. |
+| Cloudinary live delivery/cache, browser/device, production database | NOT RUN / NOT VERIFIED. |
+
+### Release decision
+
+**NO-GO.** The P1 stable identity fix is locally verified. P0 Cloudinary security remains blocked on direct provider/CDN validation with an old copied URL, plus staging Web/native confirmation. Production migration state must be checked read-only before release; no production migration or asset operation was run.
+
+## Prior evidence update — 2026-11-10
 
 Remote refs fetched: `main=752af2f22d4a3f1170bbdac2fc6b075ab87dd580`; `fix/xtalenti-v1-p1-security=1d7d3c931c3a88a9fff4dffb974affe38aebc30f`. Merge-base is the security SHA and the security branch is already an ancestor of main. Current audit branch is based on that main SHA.
 

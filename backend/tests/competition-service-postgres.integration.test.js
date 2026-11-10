@@ -201,6 +201,8 @@ test('PostgreSQL competition service protects fixture creation, audits deletion,
       TournamentClubEntry.create({ tournamentId: statsTournament.id, clubName: 'Stats Away', groupName: 'A' }),
     ]);
     const statsMatches = [];
+    const homeScorerIdentity = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const awayScorerIdentity = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
     for (let index = 0; index < 15; index += 1) {
       const homeScored = index < 13;
       const match = await Match.create({
@@ -220,6 +222,7 @@ test('PostgreSQL competition service protects fixture creation, audits deletion,
       await MatchScorer.create({
         matchId: match.id,
         athleteName: 'Same Name',
+        athleteIdentityKey: homeScored ? homeScorerIdentity : awayScorerIdentity,
         goals: 1,
         side: homeScored ? 'home' : 'away',
       });

@@ -131,7 +131,7 @@ exports.saveMatchScorers = async (req, res) => {
     const authz = canFillMatchStats(match.Tournament, req.user, match);
     if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
-    await saveMatchGoalEvents(matchId, events, match);
+    await saveMatchGoalEvents(matchId, events, match, { actorUserId: req.user.id });
 
     try {
       await notifyMatchParticipants(match, match.Tournament, { kind: 'stats' });

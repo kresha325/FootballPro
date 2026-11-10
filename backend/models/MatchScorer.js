@@ -26,6 +26,7 @@ const MatchScorer = sequelize.define('MatchScorer', {
     allowNull: true,
   },
   athleteName: { type: DataTypes.STRING(160), allowNull: true },
+  athleteIdentityKey: { type: DataTypes.UUID, allowNull: true },
   goals: {
     type: DataTypes.INTEGER,
     defaultValue: 1,

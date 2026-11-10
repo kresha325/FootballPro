@@ -2,10 +2,39 @@
 
 **Last verified:** 2026-11-10
 **Repository:** `kresha325/FootballPro`
-**Working branch:** `fix/xtalenti-v1-release-hardening`
+**Working branch:** `fix/xtalenti-v1-final-security`
 **Production state:** No deployment or production database access performed.
 
-## Release hardening verification — 2026-11-10
+## Final security audit — 2026-11-10
+
+This section supersedes earlier audit snapshots below. Latest fetched `origin/main` is `b5275ac0d0a9453c35901be8266d98774cc33bc2`; local review branch `fix/xtalenti-v1-final-security` is based on it. No production service, Cloudinary account, database or deployment was accessed or changed.
+
+### Verified P0/P1 findings and fixes
+
+| Priority | Finding | Evidence and implementation | Disposition |
+|---|---|---|---|
+| P0 | Restricted/minor Cloudinary media could remain publicly deliverable through copied upload URLs; failed conversions had no durable retry record. | Private uploads now use `authenticated` delivery; API JSON signs those URLs for authenticated responses and redacts them for anonymous responses. Gallery/video privacy transitions and withdrawal/deletion paths update stored references, invalidate Cloudinary CDN copies, and persist retry jobs on provider failure. The dry-run backfill inventories restricted legacy references, with apply gated and batched. Explicitly public assets remain public when an eligible public reference uses them. | Code and local regressions pass. **Provider behavior is NOT VERIFIED**: Cloudinary delivery configuration, copied URL failure after invalidation, and legacy inventory/apply need non-production operator validation. This remains a P0 release blocker. |
+| P1 | Unregistered athletes with the same name could collide in match scorers, match stats and club tournament stats. | Added stable UUID identity keys to these models and validated ownership when a match or club-entry identity is reused. New web/mobile match forms submit stable keys. Migration backfills each unknown legacy row separately; registered athletes continue to use `userId`. Ambiguous name-only history is not linked to user accounts. | Fixed and tested, including same-name distinct identity aggregation and a disposable PostgreSQL migration fixture. |
+
+### Migration and release notes
+
+- New migration: `20261110150000-add-cloudinary-retry-and-athlete-identities.js`. It creates `CloudinaryMediaJobs`, adds `LiveStreamReplays.updatedAt` if missing, adds UUID identity columns and indexes, backfills unknown legacy rows independently, and replaces the name-based club-stat uniqueness rule with identity uniqueness.
+- This migration is additive and intentionally refuses `down`; application rollback must retain the new columns, indexes, retry history, and row identities. Run it before deploying code that writes identity keys or Cloudinary retry jobs. Verify the migration ledger/schema read-only in production first; do not use `sync` or manual production DDL.
+- Run the Cloudinary backfill in dry-run mode, review results, and process bounded batches only after an explicit production change approval. Do not use `--apply` against production as part of this audit.
+- Current release recommendation: **NO-GO** until a non-production Cloudinary copied-URL test proves provider/CDN invalidation, production migration state is checked read-only, and browser/native media behavior is manually verified.
+
+### Validation on 2026-11-10
+
+- Backend `npm test`, including four disposable PostgreSQL integration checks: **323 passed, 0 failed, 0 skipped**. Full migrations were applied to a fresh local PostgreSQL database; the identity migration was independently exercised twice with legacy rows and guarded rollback.
+- Focused media/competition regressions before the final suite: **36/36 passed**; migration/media focused suite: **11/11 passed**.
+- Frontend `npm run build`: **PASS** (existing large-chunk warning).
+- Frontend `npm test -- --run`: **4 files / 9 tests passed**.
+- Frontend `npm run lint`: **0 errors / 147 warnings**.
+- Backend `npm run lint`: **FAIL**, 260 existing repository-wide errors. Scoped lint on newly added backend files passed; linting changed legacy files still reports existing unused-variable errors. No lint failures were found in the new files.
+- Mobile `npm run verify:parity` and `npm run release:preflight`: **PASS**; static checks only, no simulator/device or provider test.
+- Cloudinary credentials, live provider delivery, copied URL invalidation, physical devices, and production database were **NOT TESTED**.
+
+## Prior release-hardening verification — 2026-11-10
 
 This section supersedes older branch and release-status statements below. Remote refs fetched for this audit: `main=752af2f22d4a3f1170bbdac2fc6b075ab87dd580`; `fix/xtalenti-v1-p1-security=1d7d3c931c3a88a9fff4dffb974affe38aebc30f`. The security branch is an ancestor of main (`merge-base` equals the security SHA), so those changes are already on main. This working branch is based on that main SHA.
 

@@ -3,6 +3,7 @@ const db = require('../models');
 const sequelize = require('../config/database');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
+const { createAthleteIdentityKey, normalizeAthleteIdentityKey } = require('../utils/athleteIdentity');
 
 const GROUPS = new Set('ABCDEFGH'.split(''));
 const MANAGER_ROLES = new Set(['president', 'vice_president', 'chairman', 'ceo', 'general_manager', 'sporting_director', 'technical_director', 'director_of_football', 'academy_director', 'youth_director', 'team_manager', 'secretary_general', 'secretary', 'head_coach']);
@@ -183,7 +184,7 @@ async function getTournamentClubEntries(req, res) {
       if (isLigaManager || isClubOwner || isAuthorizedCoach) {
         row.playerStats = await db.TournamentClubPlayerStat.findAll({
           where: { tournamentClubEntryId: entry.id },
-          attributes: ['id', 'athleteUserId', 'athleteName', 'goals', 'assists'],
+          attributes: ['id', 'athleteIdentityKey', 'athleteUserId', 'athleteName', 'goals', 'assists'],
           order: [['athleteName', 'ASC']],
         });
       }
@@ -285,17 +286,16 @@ async function saveClubPlayerStats(req, res) {
     }
     const rows = req.body?.players;
     if (!Array.isArray(rows) || rows.length > 100) { await transaction.rollback(); return res.status(400).json({ msg: 'Lista e lojtarëve është e pavlefshme.' }); }
+    const existingRows = await db.TournamentClubPlayerStat.findAll({ where: { tournamentClubEntryId: entry.id }, transaction });
     const seen = new Set();
     for (const row of rows) {
       const athleteName = String(row.athleteName || '').trim().replace(/\s+/g, ' ');
       const goals = Number(row.goals ?? 0);
       const assists = Number(row.assists ?? 0);
-      const key = normalized(athleteName);
-      if (!athleteName || athleteName.length > 160 || seen.has(key) || !Number.isInteger(goals) || goals < 0 || goals > 1000 || !Number.isInteger(assists) || assists < 0 || assists > 1000) {
+      if (!athleteName || athleteName.length > 160 || !Number.isInteger(goals) || goals < 0 || goals > 1000 || !Number.isInteger(assists) || assists < 0 || assists > 1000) {
         await transaction.rollback();
         return res.status(400).json({ msg: 'Kontrollo emrat dhe vlerat e golave/asisteve.' });
       }
-      seen.add(key);
       let athleteUserId = null;
       if (row.athleteUserId) {
         athleteUserId = Number(row.athleteUserId);
@@ -311,12 +311,35 @@ async function saveClubPlayerStats(req, res) {
         const matches = roster.filter((membership) => normalized(`${membership.athlete?.firstName || ''} ${membership.athlete?.lastName || ''}`) === normalized(athleteName));
         if (matches.length === 1) athleteUserId = Number(matches[0].athleteId);
       }
-      const existingRows = await db.TournamentClubPlayerStat.findAll({ where: { tournamentClubEntryId: entry.id }, transaction });
-      const existing = existingRows.find((stat) => normalized(stat.athleteName) === key);
-      if (existing) await existing.update({ athleteUserId, goals, assists, updatedByUserId: actor.id }, { transaction });
-      else await db.TournamentClubPlayerStat.create({ tournamentClubEntryId: entry.id, athleteUserId, athleteName, goals, assists, updatedByUserId: actor.id }, { transaction });
+      let athleteIdentityKey = normalizeAthleteIdentityKey(row.athleteIdentityKey);
+      if (row.athleteIdentityKey && !athleteIdentityKey) {
+        await transaction.rollback();
+        return res.status(400).json({ msg: 'Identiteti i atletit është i pavlefshëm.' });
+      }
+      const sameNameRows = existingRows.filter((stat) => normalized(stat.athleteName) === normalized(athleteName));
+      if (!athleteIdentityKey) {
+        const existingUser = athleteUserId ? existingRows.find((stat) => Number(stat.athleteUserId) === athleteUserId) : null;
+        if (existingUser) athleteIdentityKey = existingUser.athleteIdentityKey;
+        else if (!athleteUserId && sameNameRows.length === 1) athleteIdentityKey = sameNameRows[0].athleteIdentityKey;
+        else if (!athleteUserId && sameNameRows.length > 1) {
+          await transaction.rollback();
+          return res.status(409).json({ msg: 'Ka disa atletë me këtë emër. Zgjidh identitetin ekzistues ose krijo një atlet të veçantë.' });
+        } else athleteIdentityKey = createAthleteIdentityKey();
+      }
+      const existing = existingRows.find((stat) => stat.athleteIdentityKey === athleteIdentityKey);
+      const identity = athleteUserId ? `u:${athleteUserId}` : `i:${athleteIdentityKey}`;
+      if (seen.has(identity)) {
+        await transaction.rollback();
+        return res.status(400).json({ msg: 'I njëjti atlet është përsëritur në listë.' });
+      }
+      seen.add(identity);
+      if (existing) await existing.update({ athleteUserId, athleteIdentityKey, athleteName, goals, assists, updatedByUserId: actor.id }, { transaction });
+      else {
+        const created = await db.TournamentClubPlayerStat.create({ tournamentClubEntryId: entry.id, athleteUserId, athleteIdentityKey, athleteName, goals, assists, updatedByUserId: actor.id }, { transaction });
+        existingRows.push(created);
+      }
     }
-    const saved = await db.TournamentClubPlayerStat.findAll({ where: { tournamentClubEntryId: entry.id }, order: [['athleteName', 'ASC']], transaction });
+    const saved = await db.TournamentClubPlayerStat.findAll({ where: { tournamentClubEntryId: entry.id }, order: [['athleteName', 'ASC'], ['id', 'ASC']], transaction });
     await transaction.commit();
     return res.json({ players: saved });
   } catch (err) {
@@ -335,7 +358,7 @@ async function getClubTournamentEntries(req, res) {
       where: { clubUserId: clubId, claimStatus: 'linked' },
       include: [
         { model: db.Tournament, attributes: ['id', 'name', 'season', 'category', 'status'] },
-        ...(privateDetails ? [{ model: db.TournamentClubPlayerStat, as: 'playerStats', required: false, attributes: ['id', 'athleteUserId', 'athleteName', 'goals', 'assists'] }] : []),
+        ...(privateDetails ? [{ model: db.TournamentClubPlayerStat, as: 'playerStats', required: false, attributes: ['id', 'athleteIdentityKey', 'athleteUserId', 'athleteName', 'goals', 'assists'] }] : []),
       ],
       order: [['updatedAt', 'DESC']],
     });

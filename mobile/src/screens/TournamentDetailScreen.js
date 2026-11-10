@@ -40,6 +40,7 @@ import { openUserProfile } from '../utils/openUserProfile';
 import { groupMatchesByRound, knockoutRoundLabel, roundsFromBracketApi } from '../utils/tournamentBracket';
 import { formatTournamentTitle } from '../utils/footballSeason';
 import { resolveParticipantUserId } from '../utils/tournamentParticipants';
+import { createAthleteIdentityKey } from '../utils/athleteIdentity';
 
 function participantLabel(p, participantType) {
   const club = p?.Profile?.club;
@@ -236,6 +237,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
     return all.map((row) => ({
       userId: row.userId ? String(row.userId) : '',
       athleteName: row.athleteName || '',
+      athleteIdentityKey: row.userId ? null : row.athleteIdentityKey || createAthleteIdentityKey(),
       minute: row.minute != null ? String(row.minute) : '',
       assistUserId: row.assistUserId ? String(row.assistUserId) : '',
       side: row.side || '',
@@ -262,7 +264,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       setBracketData(bracketRes.data);
       const entries = Array.isArray(clubEntriesRes.data?.entries) ? clubEntriesRes.data.entries : [];
       setClubEntries(entries);
-      setClubPlayerDrafts(Object.fromEntries(entries.map((entry) => [entry.id, (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: String(row.goals ?? 0), assists: String(row.assists ?? 0) }))])));
+      setClubPlayerDrafts(Object.fromEntries(entries.map((entry) => [entry.id, (entry.playerStats || []).map((row) => ({ athleteIdentityKey: row.athleteIdentityKey, athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: String(row.goals ?? 0), assists: String(row.assists ?? 0) }))])));
     } catch (err) {
       setError(extractErrorMessage(err, 'Nuk u arrit ngarkimi i turneut'));
     } finally {
@@ -378,7 +380,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
       setMatchDateInput(new Date(matchDate.getTime() - matchDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
       setMatchVenueInput(m?.venue || '');
       setMatchRefereeInput(m?.refereeName || '');
-      setMatchPlayerStats((m?.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', side: row.side || 'home', minutes: String(row.minutes || 0), goals: String(row.goals || 0), assists: String(row.assists || 0), yellowCards: String(row.yellowCards || 0), redCards: String(row.redCards || 0) })));
+      setMatchPlayerStats((m?.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', athleteIdentityKey: row.athleteIdentityKey || null, side: row.side || 'home', minutes: String(row.minutes || 0), goals: String(row.goals || 0), assists: String(row.assists || 0), yellowCards: String(row.yellowCards || 0), redCards: String(row.redCards || 0) })));
       setMatchModal({ open: true, loading: false, data: res.data, error: '' });
     } catch (err) {
       setMatchModal({
@@ -527,7 +529,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
   const addGoalEvent = () => {
     setGoalEvents((prev) => {
-      const next = [...prev, { userId: '', athleteName: '', minute: '', assistUserId: '', side: 'home' }];
+      const next = [...prev, { userId: '', athleteName: '', athleteIdentityKey: createAthleteIdentityKey(), minute: '', assistUserId: '', side: 'home' }];
       syncScoresFromGoals(next);
       return next;
     });
@@ -550,6 +552,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
           if (updated.assistUserId && !allowed.has(String(updated.assistUserId))) {
             updated.assistUserId = '';
           }
+          if (!updated.userId && updated.athleteName) updated.athleteIdentityKey = createAthleteIdentityKey();
         }
         return updated;
       });
@@ -586,6 +589,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
           .map((ev) => ({
             userId: ev.userId ? Number(ev.userId) : null,
             athleteName: ev.athleteName || null,
+            athleteIdentityKey: ev.userId ? null : ev.athleteIdentityKey,
             minute: ev.minute === '' ? null : Number(ev.minute),
             assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
             side: ev.side || undefined,
@@ -930,13 +934,13 @@ export default function TournamentDetailScreen({ route, navigation }) {
                   <View style={styles.clubStatsEditor}>
                     <Text style={styles.sectionTitle}>Golat dhe asistet e lojtarëve</Text>
                     <Text style={styles.muted}>Plotëso sipas emrit. Lidhja me llogarinë e atletit bëhet vetëm kur është pjesëtar i aprovuar i klubit.</Text>
-                    {players.map((player, index) => <View key={`${player.athleteName}-${index}`} style={styles.clubPlayerRow}>
+                    {players.map((player, index) => <View key={player.athleteIdentityKey || `${player.athleteName}-${index}`} style={styles.clubPlayerRow}>
                       <TextInput style={[styles.input, styles.playerNameInput]} value={player.athleteName} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, athleteName: value } : row) }))} placeholder="Emri i atletit" />
                       <TextInput style={styles.statInput} value={String(player.goals)} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, goals: value } : row) }))} keyboardType="number-pad" placeholder="Gola" />
                       <TextInput style={styles.statInput} value={String(player.assists)} onChangeText={(value) => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: players.map((row, rowIndex) => rowIndex === index ? { ...row, assists: value } : row) }))} keyboardType="number-pad" placeholder="Asiste" />
                     </View>)}
                     <View style={styles.actionRow}>
-                      <TouchableOpacity style={styles.secondaryBtn} onPress={() => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: [...players, { athleteName: '', goals: '0', assists: '0' }] }))}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.secondaryBtn} onPress={() => setClubPlayerDrafts((current) => ({ ...current, [entry.id]: [...players, { athleteIdentityKey: createAthleteIdentityKey(), athleteName: '', goals: '0', assists: '0' }] }))}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
                       <TouchableOpacity style={styles.primaryBtn} disabled={savingClubStats === entry.id} onPress={() => saveClubPlayers(entry)}><Text style={styles.primaryBtnText}>{savingClubStats === entry.id ? 'Duke ruajtur…' : 'Ruaj statistikat'}</Text></TouchableOpacity>
                     </View>
                     {entry.playerStats?.length ? entry.playerStats.map((player) => <Text key={player.id} style={styles.muted}>{player.athleteName}: {player.goals} gola · {player.assists} asiste</Text>) : null}
@@ -1079,6 +1083,8 @@ export default function TournamentDetailScreen({ route, navigation }) {
                       const assistOptions = sideMembers.filter(
                         (p) => String(athleteId(p)) !== String(ev.userId)
                       );
+                      const clubEntryId = side === 'home' ? match.homeClubEntryId : side === 'away' ? match.awayClubEntryId : null;
+                      const manualAthletes = clubEntries.find((entry) => Number(entry.id) === Number(clubEntryId))?.playerStats || [];
                       return (
                         <View key={`goal-${index}`} style={styles.goalPickerBox}>
                           <View style={styles.goalEventRow}>
@@ -1129,7 +1135,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                                     key={`scorer-${index}-${id}`}
                                     style={[styles.chipBtn, selected && styles.chipBtnActive]}
                                     onPress={() =>
-                                      updateGoalEvent(index, { userId: String(id), athleteName: '', side })
+                                      updateGoalEvent(index, { userId: String(id), athleteName: '', athleteIdentityKey: null, side })
                                     }
                                   >
                                     <Text
@@ -1145,7 +1151,11 @@ export default function TournamentDetailScreen({ route, navigation }) {
                               })}
                             </ScrollView>
                             )}
-                            <TextInput style={styles.goalMinuteInput} placeholder="Emri i golashënuesit pa profil" value={ev.athleteName || ''} onChangeText={(v) => updateGoalEvent(index, { athleteName: v, userId: '', assistUserId: '' })} />
+                            <TextInput style={styles.goalMinuteInput} placeholder="Emri i golashënuesit pa profil" value={ev.athleteName || ''} onChangeText={(v) => updateGoalEvent(index, { athleteName: v, athleteIdentityKey: createAthleteIdentityKey(), userId: '', assistUserId: '' })} />
+                            {manualAthletes.length > 0 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>{manualAthletes.map((player) => {
+                              const selected = ev.athleteIdentityKey === player.athleteIdentityKey;
+                              return <TouchableOpacity key={player.athleteIdentityKey} style={[styles.chipBtn, selected && styles.chipBtnActive]} onPress={() => updateGoalEvent(index, { athleteName: player.athleteName, athleteIdentityKey: player.athleteIdentityKey, userId: '', assistUserId: '' })}><Text style={[styles.chipBtnText, selected && styles.chipBtnTextActive]}>{player.athleteName} · #{String(player.athleteIdentityKey).slice(0, 6)}</Text></TouchableOpacity>;
+                            })}</ScrollView> : null}
                             </>
                           )}
                           <TextInput
@@ -1233,7 +1243,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                       return (
                         <View key={`match-stat-${row.userId}-${index}`} style={styles.teamEntryCard}>
                           {manager || user?.role === 'coach' ? <View style={styles.sideRow}>{[{ key: 'home', label: matchModal.data.match.homeName || 'Vendas' }, { key: 'away', label: matchModal.data.match.awayName || 'Mysafir' }].map((opt) => <TouchableOpacity key={opt.key} onPress={() => { if (user?.role === 'coach') setCoachStatsSide(opt.key); setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, side: opt.key, userId: '' } : item)); }} style={[styles.chipBtn, side === opt.key && styles.chipBtnActive]}><Text style={[styles.chipBtnText, side === opt.key && styles.chipBtnTextActive]}>{opt.label}</Text></TouchableOpacity>)}</View> : <Text style={styles.row}>{side === 'home' ? matchModal.data.match.homeName || 'Vendas' : matchModal.data.match.awayName || 'Mysafir'}</Text>}
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>{roster.map((athlete) => { const id = athleteId(athlete); const selected = String(row.userId) === String(id); return <TouchableOpacity key={id} disabled={!editable} onPress={() => setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, userId: String(id), athleteName: '' } : item))} style={[styles.chipBtn, selected && styles.chipBtnActive]}><Text style={[styles.chipBtnText, selected && styles.chipBtnTextActive]}>{athleteLabel(athlete)}</Text></TouchableOpacity>; })}</ScrollView>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>{roster.map((athlete) => { const id = athleteId(athlete); const selected = String(row.userId) === String(id); return <TouchableOpacity key={id} disabled={!editable} onPress={() => setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, userId: String(id), athleteName: '', athleteIdentityKey: null } : item))} style={[styles.chipBtn, selected && styles.chipBtnActive]}><Text style={[styles.chipBtnText, selected && styles.chipBtnTextActive]}>{athleteLabel(athlete)}</Text></TouchableOpacity>; })}</ScrollView>
                           <View style={styles.clubPlayerRow}>{[['minutes', 'Minuta'], ['goals', 'Gola'], ['assists', 'Asiste'], ['yellowCards', 'Të verdhë'], ['redCards', 'Të kuq']].map(([field, label]) => <TextInput key={field} accessibilityLabel={label} style={styles.statInput} editable={editable} keyboardType="number-pad" placeholder={label} value={row[field]} onChangeText={(value) => setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}</View>
                           {editable ? <TouchableOpacity onPress={() => setMatchPlayerStats((all) => all.filter((_, i) => i !== index))}><Text style={styles.rejectBtnText}>Hiq lojtarin</Text></TouchableOpacity> : null}
                         </View>

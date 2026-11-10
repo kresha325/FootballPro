@@ -9,6 +9,28 @@ const path = require('path');
 const fs = require('fs');
 const { viewerCanSeeVideo } = require('../utils/videoAccess');
 const { requiresAuthenticatedDelivery } = require('../utils/restrictedMedia');
+const { canView, normalizePrivacy } = require('../utils/profilePrivacy');
+
+async function filterByProfileVideoPrivacy(videos, req) {
+  const rows = Array.isArray(videos) ? videos : [];
+  const ownerIds = [...new Set(rows.map((video) => Number(video.userId)).filter(Number.isInteger))];
+  const profiles = ownerIds.length ? await Profile.findAll({ where: { userId: { [Op.in]: ownerIds } }, attributes: ['userId', 'privacy'] }) : [];
+  const profileByUser = new Map(profiles.map((profile) => [Number(profile.userId), profile]));
+  const accessByOwner = new Map();
+  return Promise.all(rows.map(async (video) => {
+    const ownerId = Number(video.userId);
+    if (req.user?.role === 'admin' || Number(req.user?.id) === ownerId) return true;
+    if (!accessByOwner.has(ownerId)) {
+      const { viewerAccess } = require('../utils/playerProfileCv');
+      accessByOwner.set(ownerId, viewerAccess(req, ownerId));
+    }
+    const viewer = await accessByOwner.get(ownerId);
+    const profile = profileByUser.get(ownerId);
+    return canView(normalizePrivacy(profile?.privacy).videos, viewer);
+  })).then((allowed) => rows.filter((_video, index) => allowed[index]));
+}
+
+exports.filterByProfileVideoPrivacy = filterByProfileVideoPrivacy;
 
 // Configure multer for video uploads
 const storage = multer.diskStorage({
@@ -216,7 +238,7 @@ exports.getVideos = async (req, res) => {
       offset: Math.max(0, parseInt(offset, 10) || 0),
     });
 
-    res.json(videos);
+    res.json(await filterByProfileVideoPrivacy(videos, req));
   } catch (error) {
     console.error('Get videos error:', error);
     res.status(500).json({ error: error.message });
@@ -245,6 +267,7 @@ exports.getVideo = async (req, res) => {
     if (visibility === 'private' && !isOwner && req.user?.role !== 'admin') {
       return res.status(404).json({ error: 'Video not found' });
     }
+    if (!(await filterByProfileVideoPrivacy([video], req)).length) return res.status(404).json({ error: 'Video not found' });
 
     if (video.isPremium && !req.user?.premium && !isOwner) {
       return res.status(403).json({ error: 'Premium content requires subscription' });
@@ -293,7 +316,8 @@ exports.getUserVideos = async (req, res) => {
       where,
       order: [['createdAt', 'DESC']],
     });
-    res.json(videos.filter((video) => viewerCanSeeVideo(video, req.user)));
+    const visibleByProfile = await filterByProfileVideoPrivacy(videos, req);
+    res.json(visibleByProfile.filter((video) => viewerCanSeeVideo(video, req.user)));
   } catch (error) {
     console.error('Get user videos error:', error);
     res.status(500).json({ error: error.message });
@@ -394,7 +418,7 @@ exports.getTrendingVideos = async (req, res) => {
       limit: parseInt(limit),
     });
 
-    res.json(videos);
+    res.json(await filterByProfileVideoPrivacy(videos, req));
   } catch (error) {
     console.error('Get trending videos error:', error);
     res.status(500).json({ error: error.message });

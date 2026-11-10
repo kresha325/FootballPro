@@ -182,6 +182,7 @@ const AdminJobRun = require('./AdminJobRun');
 const GuardianConsent = require('./GuardianConsent');
 const GuardianConsentEvent = require('./GuardianConsentEvent');
 const FinancialAdjustment = require('./FinancialAdjustment');
+const CloudinaryMediaJob = require('./CloudinaryMediaJob');
 
 module.exports = {
   User,
@@ -248,6 +249,7 @@ module.exports = {
   GuardianConsent,
   GuardianConsentEvent,
   FinancialAdjustment,
+  CloudinaryMediaJob,
 };
 
 

@@ -8,6 +8,7 @@ const Post = require('../models/Post');
 const Stream = require('../models/Stream');
 const LiveStreamReplay = require('../models/LiveStreamReplay');
 const { publicCloudinaryAsset, authenticatedDeliveryUrl } = require('../utils/cloudinaryMediaDelivery');
+const { enqueueCloudinaryMediaJob } = require('./cloudinaryMediaJobs');
 
 /** Convert this user's legacy Cloudinary public assets to authenticated delivery
  * and update stored URLs. Safe to retry. Local uploads and already-authenticated
@@ -62,6 +63,26 @@ async function restrictUserCloudinaryMedia(userId, options = {}) {
   for (const row of posts) { row.imageUrl = null; row.videoUrl = null; }
   for (const row of new Set([...galleries, ...videos, ...streams, ...profiles, ...posts])) await row.save();
 
+  // Replace discoverable references before any provider call. If Cloudinary
+  // is temporarily unavailable, API responses still fail closed and the
+  // durable job below retries the provider-side conversion.
+  if (!dryRun) {
+    for (const item of urls.values()) {
+      for (const ref of item.records) {
+        if (ref.omitReferenceUpdate) continue;
+        if (ref.entry) {
+          const liveVideos = Array.isArray(ref.row.liveVideos) ? [...ref.row.liveVideos] : [];
+          const index = liveVideos.indexOf(ref.entry);
+          if (index >= 0) liveVideos[index] = { ...liveVideos[index], url: ref.nextUrl };
+          ref.row.liveVideos = liveVideos;
+        } else {
+          ref.row[ref.key] = ref.nextUrl;
+        }
+      }
+      for (const row of new Set(item.records.filter((ref) => !ref.omitReferenceUpdate).map((ref) => ref.row))) await row.save();
+    }
+  }
+
   const errors = [];
   let secured = 0;
   for (const [assetKey, item] of urls) {
@@ -76,23 +97,17 @@ async function restrictUserCloudinaryMedia(userId, options = {}) {
           to_type: 'authenticated',
           invalidate: true,
         });
-        for (const ref of item.records) {
-          if (ref.omitReferenceUpdate) continue;
-          if (ref.entry) {
-            const liveVideos = Array.isArray(ref.row.liveVideos) ? [...ref.row.liveVideos] : [];
-            const index = liveVideos.indexOf(ref.entry);
-            if (index >= 0) liveVideos[index] = { ...liveVideos[index], url: ref.nextUrl };
-            ref.row.liveVideos = liveVideos;
-          } else {
-            ref.row[ref.key] = ref.nextUrl;
-          }
-        }
-        const rows = new Set(item.records.map((ref) => ref.row));
-        for (const row of rows) await row.save();
       }
       secured += 1;
     } catch (error) {
       errors.push({ asset: assetKey, message: error?.message || 'Cloudinary conversion failed' });
+      if (!dryRun) {
+        try {
+          await enqueueCloudinaryMediaJob({ asset: item.asset, reason: options.reason || 'guardian_withdrawal' });
+        } catch (queueError) {
+          errors.push({ asset: assetKey, message: `Retry job could not be recorded: ${queueError?.message || 'database error'}` });
+        }
+      }
     }
   }
   return { secured, skipped: records.length - [...urls.values()].reduce((n, item) => n + item.records.length, 0), errors };

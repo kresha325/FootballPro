@@ -12,6 +12,7 @@ const Video = require('../models/Video');
 const Post = require('../models/Post');
 const Stream = require('../models/Stream');
 const LiveStreamReplay = require('../models/LiveStreamReplay');
+const CloudinaryMediaJob = require('../models/CloudinaryMediaJob');
 
 test('only Cloudinary authenticated assets are signed; public and third-party media stay compatible', async () => {
   const client = { utils: { private_download_url: (id, format, options) => `signed:${id}.${format}:${options.expires_at}` } };
@@ -97,6 +98,48 @@ test('non-public uploads and underage athletes without consent require authentic
   }
 });
 
+test('profile gallery and video privacy settings force authenticated delivery for uploads', async () => {
+  const oldFindUser = User.findByPk;
+  const oldFindProfile = Profile.findOne;
+  try {
+    User.findByPk = async () => ({ id: 23, role: 'athlete', dateOfBirth: '1990-03-01', parentVerified: false });
+    Profile.findOne = async () => ({ privacy: { gallery: 'private', videos: 'public' } });
+    assert.equal(await requiresAuthenticatedDelivery(23, 'public', { kind: 'gallery' }), true);
+    assert.equal(await requiresAuthenticatedDelivery(23, 'public', { kind: 'video' }), true, 'private gallery privacy also restricts videos');
+    Profile.findOne = async () => ({ privacy: { gallery: 'public', videos: 'followers' } });
+    assert.equal(await requiresAuthenticatedDelivery(23, 'public', { kind: 'video' }), true);
+    assert.equal(await requiresAuthenticatedDelivery(23, 'public'), false, 'unrelated public media keeps public delivery');
+  } finally {
+    User.findByPk = oldFindUser;
+    Profile.findOne = oldFindProfile;
+  }
+});
+
+test('a public-reference exception does not let a pending minor keep a copied asset public', async () => {
+  const modelMethods = [Profile, Post, Video, Stream, Gallery].map((model) => [model, model.findAll]);
+  const oldFindUser = User.findByPk;
+  const oldFindConsent = GuardianConsent.findOne;
+  const url = 'https://res.cloudinary.com/test/image/upload/v1/gallery/minor.png';
+  try {
+    Profile.findAll = async () => [];
+    Post.findAll = async () => [{ userId: 77 }];
+    Video.findAll = async () => [];
+    Stream.findAll = async () => [];
+    Gallery.findAll = async () => [];
+    User.findByPk = async () => ({ id: 77, role: 'athlete', dateOfBirth: '2015-01-01', parentVerified: false });
+    GuardianConsent.findOne = async () => null;
+    const { hasExplicitPublicReference } = require('../services/cloudinaryMediaJobs');
+    assert.equal(await hasExplicitPublicReference(77, url), false, 'a feed row from a minor awaiting consent is not an explicit public reference');
+
+    User.findByPk = async () => ({ id: 77, role: 'athlete', dateOfBirth: '1990-01-01', parentVerified: false });
+    assert.equal(await hasExplicitPublicReference(77, url), true, 'approved adult public references keep shared public media compatible');
+  } finally {
+    modelMethods.forEach(([model, method]) => { model.findAll = method; });
+    User.findByPk = oldFindUser;
+    GuardianConsent.findOne = oldFindConsent;
+  }
+});
+
 test('withdrawal/deletion media cleanup converts unique legacy assets and invalidates CDN copies', async () => {
   const modelMethods = [Profile, Gallery, Video, Post, Stream, LiveStreamReplay].map((model) => [model, model.findAll]);
   const cloudinary = require('../utils/cloudinary');
@@ -137,5 +180,64 @@ test('withdrawal/deletion media cleanup converts unique legacy assets and invali
     for (const key of ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']) {
       if (env[key] === undefined) delete process.env[key]; else process.env[key] = env[key];
     }
+  }
+});
+
+test('privacy restriction returns authenticated URL and records a durable retry on provider failure', async () => {
+  const cloudinary = require('../utils/cloudinary');
+  const originalRename = cloudinary.uploader.rename;
+  const originalFind = CloudinaryMediaJob.findOne;
+  const originalCreate = CloudinaryMediaJob.create;
+  const queued = [];
+  try {
+    cloudinary.uploader.rename = async () => { throw new Error('temporary provider outage'); };
+    CloudinaryMediaJob.findOne = async () => null;
+    CloudinaryMediaJob.create = async (row) => { queued.push(row); return row; };
+    const { restrictCloudinaryAsset } = require('../services/cloudinaryMediaJobs');
+    const result = await restrictCloudinaryAsset('https://res.cloudinary.com/test/image/upload/v3/gallery/a.png', { reason: 'privacy_test' });
+    assert.match(result.restrictedUrl, /\/image\/authenticated\//);
+    assert.equal(result.queued, true);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0].publicId, 'gallery/a');
+    assert.equal(queued[0].reason, 'privacy_test');
+  } finally {
+    cloudinary.uploader.rename = originalRename;
+    CloudinaryMediaJob.findOne = originalFind;
+    CloudinaryMediaJob.create = originalCreate;
+  }
+});
+
+test('retry worker completes an asset already converted before a prior process interruption', async () => {
+  const cloudinary = require('../utils/cloudinary');
+  const originalApiResource = cloudinary.api.resource;
+  const originalFindAll = CloudinaryMediaJob.findAll;
+  const originalUpdate = CloudinaryMediaJob.update;
+  const job = {
+    id: 91, publicId: 'gallery/already-private', resourceType: 'image', fromType: 'upload', toType: 'authenticated',
+    attempts: 1, update: async (values) => Object.assign(job, values),
+  };
+  try {
+    cloudinary.api.resource = async (_id, options) => {
+      if (options.type === 'authenticated') return { public_id: 'gallery/already-private' };
+      const error = new Error('Not found'); error.http_code = 404; throw error;
+    };
+    CloudinaryMediaJob.findAll = async () => [job];
+    CloudinaryMediaJob.update = async () => [1];
+    const previous = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'].map((key) => process.env[key]);
+    process.env.CLOUDINARY_CLOUD_NAME = 'test'; process.env.CLOUDINARY_API_KEY = 'key'; process.env.CLOUDINARY_API_SECRET = 'secret';
+    try {
+      const { processCloudinaryMediaJobs } = require('../services/cloudinaryMediaJobs');
+      const result = await processCloudinaryMediaJobs();
+      assert.deepEqual(result, { attempted: 1, completed: 1, failed: 0 });
+      assert.equal(job.status, 'completed');
+    } finally {
+      ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'].forEach((key, index) => {
+        if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index];
+      });
+    }
+  } finally {
+    cloudinary.api.resource = originalApiResource;
+    CloudinaryMediaJob.findAll = originalFindAll;
+    CloudinaryMediaJob.update = originalUpdate;
   }
 });

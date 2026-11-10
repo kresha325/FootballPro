@@ -1362,6 +1362,43 @@ exports.updateProfile = async (req, res) => {
       await profile.update(updateData);
     }
 
+    // Privacy changes must also restrict the provider asset type. Hiding a
+    // field in API JSON alone does not revoke a previously copied Cloudinary
+    // upload URL. Existing public sports profile images remain unaffected;
+    // this applies to the gallery/video collections governed by these keys.
+    const effectivePrivacy = require('../utils/profilePrivacy').normalizePrivacy(profile.privacy);
+    if (effectivePrivacy.gallery !== 'public' || effectivePrivacy.videos !== 'public') {
+      const mediaRows = await Gallery.findAll({ where: { userId: req.user.id } });
+      const { restrictCloudinaryAsset } = require('../services/cloudinaryMediaJobs');
+      for (const media of mediaRows) {
+        const isVideo = ['video', 'highlight'].includes(String(media.type || '').toLowerCase()) || Boolean(media.videoUrl);
+        const mustRestrict = effectivePrivacy.gallery !== 'public' || (isVideo && effectivePrivacy.videos !== 'public');
+        if (!mustRestrict) continue;
+        const restriction = { reason: 'profile_privacy_change', userId: req.user.id, preserveExplicitPublicReferences: true, ignoreGallery: true, ignoreVideos: true };
+        if (media.imageUrl) media.imageUrl = (await restrictCloudinaryAsset(media.imageUrl, restriction)).restrictedUrl;
+        if (media.videoUrl) media.videoUrl = (await restrictCloudinaryAsset(media.videoUrl, restriction)).restrictedUrl;
+        await media.save();
+      }
+    }
+    if (effectivePrivacy.videos !== 'public') {
+      const videoRows = await require('../models/Video').findAll({ where: { userId: req.user.id } });
+      const { restrictCloudinaryAsset } = require('../services/cloudinaryMediaJobs');
+      const restriction = { reason: 'profile_video_privacy_change', userId: req.user.id, preserveExplicitPublicReferences: true, ignoreGallery: true, ignoreVideos: true };
+      for (const video of videoRows) {
+        if (video.videoUrl) video.videoUrl = (await restrictCloudinaryAsset(video.videoUrl, restriction)).restrictedUrl;
+        if (video.thumbnailUrl) video.thumbnailUrl = (await restrictCloudinaryAsset(video.thumbnailUrl, restriction)).restrictedUrl;
+        await video.save();
+      }
+      if (Array.isArray(profile.liveVideos)) {
+        profile.liveVideos = await Promise.all(profile.liveVideos.map(async (entry) => {
+          if (!entry?.url) return entry;
+          const result = await restrictCloudinaryAsset(entry.url, restriction);
+          return { ...entry, url: result.restrictedUrl };
+        }));
+        await profile.save();
+      }
+    }
+
     const currentProfilePhoto = profile?.profilePhoto || null;
     const currentCoverPhoto = profile?.coverPhoto || null;
     const profilePhotoChanged =
