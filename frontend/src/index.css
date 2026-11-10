@@ -14,6 +14,7 @@
   --xt-color-gold: #9a6b12;
   --xt-color-gold-bright: #b8812d;
   --xt-color-gold-deep: #78500c;
+  --xt-color-on-gold: #ffffff;
   --xt-color-text: #111827;
   --xt-color-text-muted: #475569;
   --xt-color-text-subtle: #64748b;
@@ -57,6 +58,7 @@ html.dark {
   --xt-color-gold: #d9a441;
   --xt-color-gold-bright: #f2c866;
   --xt-color-gold-deep: #b8812d;
+  --xt-color-on-gold: #101114;
   --xt-color-text: #f7f8fa;
   --xt-color-text-muted: #a7afba;
   --xt-color-text-subtle: #778393;
@@ -101,7 +103,7 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .xt-page-header p, .xt-section-header p { color: var(--xt-color-text-muted); }
   .btn { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: var(--xt-space-2); padding: .625rem 1rem; border: 1px solid transparent; border-radius: var(--xt-radius-md); font-weight: 650; line-height: 1.25; cursor: pointer; transition: color var(--xt-motion-fast), background var(--xt-motion-fast), border-color var(--xt-motion-fast), transform var(--xt-motion-fast); }
   .btn:disabled { opacity: .55; cursor: not-allowed; }
-  .btn-primary { color: #101114; background: var(--xt-color-gold); }
+  .btn-primary { color: var(--xt-color-on-gold); background: var(--xt-color-gold); }
   .btn-primary:hover:not(:disabled) { background: var(--xt-color-gold-bright); }
   .btn-outline { color: var(--xt-color-gold-bright); border-color: rgb(217 164 65 / 55%); background: transparent; }
   .btn-outline:hover:not(:disabled) { background: rgb(217 164 65 / 10%); }
@@ -137,6 +139,23 @@ html.dark .xt-app-nav { background: rgb(7 10 16 / 92%); }
 .xt-bottom-nav { border-top: 1px solid var(--xt-color-border); background: color-mix(in srgb, var(--xt-color-surface) 96%, transparent); box-shadow: 0 -8px 28px rgb(16 24 40 / 8%); backdrop-filter: blur(16px); }
 html.dark .xt-bottom-nav { background: rgb(13 20 32 / 96%); box-shadow: 0 -8px 28px rgb(0 0 0 / 22%); }
 .xt-toast { color: var(--xt-color-text); border: 1px solid var(--xt-color-border); border-radius: var(--xt-radius-md); background: var(--xt-color-surface-raised); box-shadow: var(--xt-shadow-popover); }
+
+/* Keep gold Marketplace actions readable in both themes, including hover states. */
+.marketplace-page .btn-primary:hover:not(:disabled) {
+  color: var(--xt-color-on-gold);
+  background: var(--xt-color-gold-deep);
+}
+.marketplace-page input,
+.marketplace-page select,
+.marketplace-page textarea,
+.marketplace-page .border-gray-300 {
+  border-color: var(--xt-color-text-muted);
+}
+.marketplace-page input::placeholder,
+.marketplace-page textarea::placeholder {
+  color: var(--xt-color-text-muted);
+  opacity: 1;
+}
 
 /* Dashboard family: Analytics, Gamification and Admin share the X TALENTI surfaces. */
 .xt-dashboard-page { color: var(--xt-color-text); }

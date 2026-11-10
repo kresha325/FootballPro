@@ -301,11 +301,11 @@ export default function MarketplaceSimple() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
+    <div className="marketplace-page mx-auto min-h-screen max-w-7xl space-y-5 bg-[var(--xt-color-canvas)] px-4 py-5 pb-24 text-[var(--xt-color-text)] sm:px-6 sm:py-8">
       {/* XCoin Balance Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <span className="xt-badge xt-badge-gold min-h-10 px-3" title={t('XCoin Balance')}>
+          <span className="xt-badge xt-badge-gold min-h-10 px-3 text-[var(--xt-color-gold-deep)]" title={t('XCoin Balance')}>
             {jonCoinBalance !== null ? `${jonCoinBalance} XCoin` : '...'}
 
           </span>
@@ -324,7 +324,7 @@ export default function MarketplaceSimple() {
             ) : null}
           </button>
           <button
-            className="btn btn-outline min-h-11"
+            className="btn btn-outline min-h-11 border-[var(--xt-color-gold)] text-[var(--xt-color-gold-deep)]"
             onClick={() => navigate('/wallet')}
           >
             {t("Shiko Wallet")}
@@ -334,7 +334,7 @@ export default function MarketplaceSimple() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-bright)]">X TALENTI · {t('marketplace')}</p><h1 className="mt-1 text-3xl font-black text-[var(--xt-color-text)] mb-2">{t('marketplace')}</h1>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--xt-color-gold-deep)]">X TALENTI · {t('marketplace')}</p><h1 className="mt-1 text-3xl font-black text-[var(--xt-color-text)] mb-2">{t('marketplace')}</h1>
           <p className="text-[var(--xt-color-text-muted)]">{t('Bli dhe shit pajisje sportive')}</p>
         </div>
         <button
@@ -359,7 +359,7 @@ export default function MarketplaceSimple() {
             onClick={() => setCategory(cat.value)}
             className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all ${
               category === cat.value
-                ? 'bg-[var(--xt-color-gold)] text-slate-950 shadow-md'
+                ? 'bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] shadow-md'
                 : 'xt-card text-[var(--xt-color-text-muted)] hover:border-[var(--xt-color-gold)]/50'
             }`}
           >
@@ -389,7 +389,7 @@ export default function MarketplaceSimple() {
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <ShoppingBagIcon className="h-14 w-14 text-[var(--xt-color-gold-bright)]" aria-hidden="true" />
+                  <ShoppingBagIcon className="h-14 w-14 text-[var(--xt-color-gold-deep)]" aria-hidden="true" />
                 )}
                 {isSold && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -412,7 +412,7 @@ export default function MarketplaceSimple() {
                 </h3>
 
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl font-bold text-[var(--xt-color-gold-bright)]">
+                  <span className="text-2xl font-bold text-[var(--xt-color-gold-deep)]">
                     {product.price} XCoin
                   </span>
                   <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-[var(--xt-color-text-muted)] rounded text-xs font-medium capitalize">
@@ -421,13 +421,13 @@ export default function MarketplaceSimple() {
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-[var(--xt-color-text-muted)] mb-3">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs border-2 border-white dark:border-gray-800">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-700 to-purple-700 text-white flex items-center justify-center font-bold text-xs border-2 border-white dark:border-gray-800">
                     {product.Seller?.firstName?.[0]}
                   </div>
                   {product.Seller?.id ? (
                     <a
                       href={`/profile/${product.Seller.id}`}
-                      className="hover:underline text-[var(--xt-color-gold-bright)]"
+                      className="hover:underline text-[var(--xt-color-gold-deep)]"
                       onClick={e => { e.stopPropagation(); }}
                     >
                       {product.Seller?.firstName} {product.Seller?.lastName}
@@ -454,7 +454,7 @@ export default function MarketplaceSimple() {
                       e.stopPropagation();
                       openEditModal(product);
                     }}
-                    className="w-full py-2 mb-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors"
+                    className="w-full py-2 mb-2 bg-[var(--xt-color-gold)] hover:bg-[var(--xt-color-gold-deep)] text-[var(--xt-color-on-gold)] rounded-lg font-semibold transition-colors"
                   >
                     {t("Ndrysho / stok / fshi")}
                   </button>
@@ -475,7 +475,7 @@ export default function MarketplaceSimple() {
                         }
                         className="w-20 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-[var(--xt-color-text)] bg-[var(--xt-color-surface)]"
                       />
-                      <span className="text-xs text-gray-500">{t("max")} {product.stock ?? 0}</span>
+                      <span className="text-xs text-[var(--xt-color-text-muted)]">{t("max")} {product.stock ?? 0}</span>
                     </div>
                     <button
                       type="button"
@@ -496,7 +496,7 @@ export default function MarketplaceSimple() {
 
       {!productsError && products.length === 0 && (
         <div className="text-center py-20">
-          <ShoppingBagIcon className="mx-auto mb-4 h-12 w-12 text-[var(--xt-color-gold)]" aria-hidden="true" />
+          <ShoppingBagIcon className="mx-auto mb-4 h-12 w-12 text-[var(--xt-color-gold-deep)]" aria-hidden="true" />
           <h3 className="text-xl font-bold text-[var(--xt-color-text)] mb-2">
             {t("Nuk ka produkte")}
           </h3>
@@ -507,7 +507,7 @@ export default function MarketplaceSimple() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+            className="px-6 py-3 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-xl hover:bg-[var(--xt-color-gold-deep)] transition-colors font-semibold"
           >
             {t("Shto Produktin e Parë")}
           </button>
@@ -636,7 +636,7 @@ export default function MarketplaceSimple() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-deep)] transition-colors font-medium"
                 >
                   {t("Shto Produktin")}
                 </button>
@@ -746,7 +746,7 @@ export default function MarketplaceSimple() {
                 >
                   {t("Anulo")}
                 </button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium">
+                <button type="submit" className="flex-1 px-4 py-2 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-deep)] font-medium">
                   {t("Ruaj")}
                 </button>
               </div>
@@ -903,7 +903,7 @@ export default function MarketplaceSimple() {
                 type="button"
                 onClick={checkoutCart}
                 disabled={cartChecking || items.length === 0}
-                className="w-full py-3 bg-[var(--xt-color-gold)] text-slate-950 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
+                className="w-full py-3 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-deep)] font-semibold disabled:opacity-50"
               >
                 {cartChecking ? '…' : 'Paguaj me XCoin'}
               </button>
@@ -928,7 +928,7 @@ export default function MarketplaceSimple() {
             </div>
 
             <div className="mb-6 flex aspect-video items-center justify-center rounded-xl bg-[var(--xt-color-surface-raised)]">
-              {!selectedProduct.imageUrl && <ShoppingBagIcon className="h-20 w-20 text-[var(--xt-color-gold)]" aria-hidden="true" />}
+              {!selectedProduct.imageUrl && <ShoppingBagIcon className="h-20 w-20 text-[var(--xt-color-gold-deep)]" aria-hidden="true" />}
                 {selectedProduct.imageUrl ? (
                   <img
                     src={productImageSrc(selectedProduct.imageUrl)}
@@ -942,7 +942,7 @@ export default function MarketplaceSimple() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-4xl font-bold text-[var(--xt-color-gold-bright)]">
+                <span className="text-4xl font-bold text-[var(--xt-color-gold-deep)]">
                   {selectedProduct.price} XCoin
                 </span>
                 <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-[var(--xt-color-text-muted)] rounded-full text-sm font-medium capitalize">
@@ -951,7 +951,7 @@ export default function MarketplaceSimple() {
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-700 to-purple-700 text-white flex items-center justify-center font-bold text-lg">
                   {selectedProduct.Seller?.Profile?.profilePhoto ? (
                     <img
                       src={selectedProduct.Seller.Profile.profilePhoto}
@@ -1040,7 +1040,7 @@ export default function MarketplaceSimple() {
                     onClick={() => {
                       openEditModal(selectedProduct);
                     }}
-                    className="w-full py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold text-lg"
+                    className="w-full py-3 bg-[var(--xt-color-gold)] text-[var(--xt-color-on-gold)] rounded-lg hover:bg-[var(--xt-color-gold-deep)] transition-colors font-semibold text-lg"
                   >
                     {t("Ndrysho produktin")}
                   </button>
