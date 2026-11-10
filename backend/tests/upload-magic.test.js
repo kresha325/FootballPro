@@ -48,19 +48,27 @@ describe('upload magic bytes', () => {
   it('defaults images to 10MB and videos to 100MB unless the env overrides them', () => {
     const prevImage = process.env.UPLOAD_MAX_IMAGE_BYTES;
     const prevVideo = process.env.UPLOAD_MAX_VIDEO_BYTES;
+    const prevAttachment = process.env.UPLOAD_MAX_ATTACHMENT_BYTES;
     const prevCloud = process.env.CLOUDINARY_MAX_FILE_SIZE;
     delete process.env.UPLOAD_MAX_IMAGE_BYTES;
     delete process.env.UPLOAD_MAX_VIDEO_BYTES;
+    delete process.env.UPLOAD_MAX_ATTACHMENT_BYTES;
     delete process.env.CLOUDINARY_MAX_FILE_SIZE;
     try {
       const limits = uploadByteLimits();
       assert.equal(limits.maxImage, 10 * 1024 * 1024);
       assert.equal(limits.maxVideo, 100 * 1024 * 1024);
+      assert.equal(limits.maxAttachment, 25 * 1024 * 1024);
+      assert.equal(limits.maxFile, 100 * 1024 * 1024);
+      process.env.UPLOAD_MAX_ATTACHMENT_BYTES = String(12 * 1024 * 1024);
+      assert.equal(uploadByteLimits().maxAttachment, 12 * 1024 * 1024);
     } finally {
       if (prevImage == null) delete process.env.UPLOAD_MAX_IMAGE_BYTES;
       else process.env.UPLOAD_MAX_IMAGE_BYTES = prevImage;
       if (prevVideo == null) delete process.env.UPLOAD_MAX_VIDEO_BYTES;
       else process.env.UPLOAD_MAX_VIDEO_BYTES = prevVideo;
+      if (prevAttachment == null) delete process.env.UPLOAD_MAX_ATTACHMENT_BYTES;
+      else process.env.UPLOAD_MAX_ATTACHMENT_BYTES = prevAttachment;
       if (prevCloud == null) delete process.env.CLOUDINARY_MAX_FILE_SIZE;
       else process.env.CLOUDINARY_MAX_FILE_SIZE = prevCloud;
     }
