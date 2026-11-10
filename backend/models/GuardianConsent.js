@@ -26,12 +26,14 @@ const GuardianConsent = sequelize.define('GuardianConsent', {
   verificationTokenExpiresAt: { type: DataTypes.DATE, allowNull: true },
   managementTokenHash: { type: DataTypes.STRING(64), allowNull: true, unique: true },
   managementTokenExpiresAt: { type: DataTypes.DATE, allowNull: true },
+  consentExpiresAt: { type: DataTypes.DATE, allowNull: true },
   verifiedAt: { type: DataTypes.DATE, allowNull: true },
   revokedAt: { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName: 'GuardianConsents',
   indexes: [
     { fields: ['minorUserId', 'verifiedAt', 'revokedAt'], name: 'guardian_consents_minor_state_idx' },
+    { fields: ['minorUserId', 'consentPurpose', 'consentExpiresAt'], name: 'guardian_consents_minor_purpose_expiry_idx' },
   ],
 });
 

@@ -27,6 +27,7 @@ const {
   COMPETITION_TYPES,
 } = require('../utils/competitionLifecycle');
 const competitionService = require('../services/competitionService');
+const { standingsFromMatches } = require('../utils/standingsEngine');
 const {
   attachSquadToSerializedTournament,
   setClubTournamentSquad,
@@ -822,10 +823,6 @@ exports.updateMatchScore = async (req, res) => {
   }
 };
 
-async function recomputeTournamentStandings(tournamentId) {
-  return competitionService.recomputeTournamentStandings(tournamentId);
-}
-
 // Get tournament matches
 exports.getMatches = async (req, res) => {
   try {
@@ -1014,24 +1011,30 @@ exports.getTournamentStats = async (req, res) => {
       0
     );
 
-    // Heal stored participant stats, then use them for summary leaders
-    await recomputeTournamentStandings(tournament.id);
-    const refreshed = await TournamentParticipant.findAll({
+    const participants = await TournamentParticipant.findAll({
       where: { tournamentId: req.params.id },
+      include: [{ model: User, attributes: ['id', 'role'] }],
     });
     const entries = await TournamentClubEntry.findAll({ where: { tournamentId: req.params.id } });
-
-    // Top scorer (goals for from standings / matches GF)
-    const topScorer = (entries.length ? entries : refreshed).reduce(
-      (max, p) => (Number(p.goalsFor) > (Number(max?.goalsFor) || 0) ? p : max),
-      null
-    );
-
-    // Top team by points
-    const topTeam = (entries.length ? entries : refreshed).reduce(
-      (max, p) => (Number(p.points) > (Number(max?.points) || 0) ? p : max),
-      null
-    );
+    let standingRows;
+    if (entries.length) {
+      const entryByClub = new Map(entries.filter((entry) => entry.clubUserId).map((entry) => [Number(entry.clubUserId), Number(entry.id)]));
+      const entryMatches = matches.map((match) => ({
+        ...match.get({ plain: true }),
+        homeUserId: match.homeClubEntryId ? Number(match.homeClubEntryId) : entryByClub.get(Number(match.homeUserId)) || null,
+        awayUserId: match.awayClubEntryId ? Number(match.awayClubEntryId) : entryByClub.get(Number(match.awayUserId)) || null,
+      }));
+      standingRows = standingsFromMatches(entries.map((entry) => entry.id), entryMatches, { headToHead: true });
+    } else {
+      const eligible = (tournament.participantType || 'individual') === 'club'
+        ? participants.filter((participant) => String(participant.User?.role || '').toLowerCase() === 'club')
+        : participants;
+      standingRows = standingsFromMatches(eligible.map((participant) => participant.userId), matches.map((match) => match.get({ plain: true })), { headToHead: true });
+    }
+    const teamById = new Map((entries.length ? entries : participants).map((row) => [Number(entries.length ? row.id : row.userId), row]));
+    const topTeamRow = [...standingRows].sort((a, b) => Number(b.points || 0) - Number(a.points || 0) ||
+      (Number(b.goalsFor || 0) - Number(b.goalsAgainst || 0)) - (Number(a.goalsFor || 0) - Number(a.goalsAgainst || 0)))[0] || null;
+    const topTeam = topTeamRow ? teamById.get(Number(topTeamRow.userId)) || null : null;
 
     const recentResults = await Match.findAll({
       where: { tournamentId: req.params.id, status: 'finished' },
@@ -1047,23 +1050,39 @@ exports.getTournamentStats = async (req, res) => {
 
     let topScorerName = null;
     let topTeamName = null;
-    let topScorerId = topScorer?.userId || null;
-    let topScorerGoals = topScorer?.goalsFor || 0;
-    if (topScorer?.userId) {
-      const u = await User.findByPk(topScorer.userId, {
-        attributes: ['firstName', 'lastName'],
-        include: [{ model: Profile, attributes: ['club'] }],
-      });
-      if (u) {
-        topScorerName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.Profile?.club || null;
-      }
-    }
+    let topScorerId = null;
+    let topScorerGoals = 0;
     if (entries.length) {
-      const matchIds = matches.map((match) => match.id);
+      const matchIds = finished.map((match) => match.id);
+      const scorerRows = matchIds.length ? await MatchScorer.findAll({ where: { matchId: { [Op.in]: matchIds } } }) : [];
+      const matchById = new Map(matches.map((match) => [Number(match.id), match]));
+      const totals = new Map();
+      for (const scorer of scorerRows) {
+        const match = matchById.get(Number(scorer.matchId));
+        const side = scorer.side === 'away' ? 'away' : 'home';
+        const entryId = side === 'home' ? match?.homeClubEntryId : match?.awayClubEntryId;
+        const clubId = side === 'home' ? match?.homeUserId : match?.awayUserId;
+        const teamIdentity = entryId ? `entry:${entryId}` : clubId ? `club:${clubId}` : `match:${scorer.matchId}:${side}`;
+        const normalizedName = String(scorer.athleteName || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+        const key = scorer.userId ? `u:${scorer.userId}` : `n:${teamIdentity}:${normalizedName}`;
+        const value = totals.get(key) || { userId: scorer.userId, name: scorer.athleteName || null, goals: 0, teamIdentity };
+        value.goals += Number(scorer.goals || 0);
+        totals.set(key, value);
+      }
+      const top = [...totals.values()].sort((a, b) => b.goals - a.goals)[0];
+      topScorerId = top?.userId || null;
+      topScorerGoals = top?.goals || 0;
+      topScorerName = top?.name || null;
+      if (topScorerId) {
+        const scorerUser = await User.findByPk(topScorerId, { attributes: ['firstName', 'lastName'] });
+        if (scorerUser) topScorerName = [scorerUser.firstName, scorerUser.lastName].filter(Boolean).join(' ').trim() || topScorerName;
+      }
+    } else {
+      const matchIds = finished.map((match) => match.id);
       const scorerRows = matchIds.length ? await MatchScorer.findAll({ where: { matchId: { [Op.in]: matchIds } } }) : [];
       const totals = new Map();
       for (const scorer of scorerRows) {
-        const key = scorer.userId ? `u:${scorer.userId}` : `n:${scorer.athleteName || 'unknown'}`;
+        const key = scorer.userId ? `u:${scorer.userId}` : `n:${scorer.matchId}:${scorer.side}:${String(scorer.athleteName || '').trim().toLocaleLowerCase()}`;
         const value = totals.get(key) || { userId: scorer.userId, name: scorer.athleteName || null, goals: 0 };
         value.goals += Number(scorer.goals || 0);
         totals.set(key, value);
@@ -1089,7 +1108,7 @@ exports.getTournamentStats = async (req, res) => {
     if (entries.length && topTeam) topTeamName = topTeam.clubName || null;
 
     const stats = {
-      totalParticipants: entries.length || refreshed.length,
+      totalParticipants: entries.length || participants.length,
       totalMatches: matches.length,
       finishedMatches,
       scheduledMatches,
@@ -1098,8 +1117,8 @@ exports.getTournamentStats = async (req, res) => {
       topScorerId,
       topScorerGoals,
       topScorerName,
-      topTeamId: topTeam?.clubUserId || topTeam?.userId,
-      topTeamPoints: topTeam?.points || 0,
+      topTeamId: topTeam?.clubUserId || topTeam?.userId || null,
+      topTeamPoints: topTeamRow?.points || 0,
       topTeamName,
       recentResults: recentResults.map((m) => ({
         id: m.id,

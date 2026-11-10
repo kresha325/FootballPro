@@ -11,6 +11,7 @@ module.exports = {
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL',
     }, { transaction });
+    await queryInterface.sequelize.query('ALTER TABLE "Matches" ALTER COLUMN "homeUserId" DROP NOT NULL', { transaction });
     await queryInterface.addColumn('Matches', 'homeClubEntryId', {
       type: Sequelize.INTEGER, allowNull: true,
       references: { model: 'TournamentClubEntries', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'SET NULL',
@@ -32,11 +33,16 @@ module.exports = {
       type: Sequelize.INTEGER, allowNull: true,
       references: { model: 'Users', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'SET NULL',
     }, { transaction });
+    // PostgreSQL Sequelize CLI versions in the supported deployment range can
+    // preserve the old NOT NULL constraint during changeColumn; make the
+    // nullable requirement explicit for manual scorers.
+    await queryInterface.sequelize.query('ALTER TABLE "MatchScorers" ALTER COLUMN "userId" DROP NOT NULL', { transaction });
     await queryInterface.addColumn('MatchScorers', 'athleteName', { type: Sequelize.STRING(160), allowNull: true }, { transaction });
     await queryInterface.changeColumn('PlayerMatchStats', 'userId', {
       type: Sequelize.INTEGER, allowNull: true,
       references: { model: 'Users', key: 'id' }, onUpdate: 'CASCADE', onDelete: 'SET NULL',
     }, { transaction });
+    await queryInterface.sequelize.query('ALTER TABLE "PlayerMatchStats" ALTER COLUMN "userId" DROP NOT NULL', { transaction });
     await queryInterface.addColumn('PlayerMatchStats', 'athleteName', { type: Sequelize.STRING(160), allowNull: true }, { transaction });
     await transaction.commit();
     } catch (error) {
@@ -57,8 +63,10 @@ module.exports = {
     }
     await queryInterface.removeColumn('PlayerMatchStats', 'athleteName', { transaction });
     await queryInterface.changeColumn('PlayerMatchStats', 'userId', { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' } }, { transaction });
+    await queryInterface.sequelize.query('ALTER TABLE "PlayerMatchStats" ALTER COLUMN "userId" SET NOT NULL', { transaction });
     await queryInterface.removeColumn('MatchScorers', 'athleteName', { transaction });
     await queryInterface.changeColumn('MatchScorers', 'userId', { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' } }, { transaction });
+    await queryInterface.sequelize.query('ALTER TABLE "MatchScorers" ALTER COLUMN "userId" SET NOT NULL', { transaction });
     await queryInterface.removeIndex('Matches', 'matches_home_club_entry_idx', { transaction });
     await queryInterface.removeIndex('Matches', 'matches_away_club_entry_idx', { transaction });
     await queryInterface.removeColumn('Matches', 'awayName', { transaction });
@@ -67,6 +75,7 @@ module.exports = {
     await queryInterface.removeColumn('Matches', 'awayClubEntryId', { transaction });
     await queryInterface.removeColumn('Matches', 'homeClubEntryId', { transaction });
     await queryInterface.changeColumn('Matches', 'homeUserId', { type: Sequelize.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' } }, { transaction });
+    await queryInterface.sequelize.query('ALTER TABLE "Matches" ALTER COLUMN "homeUserId" SET NOT NULL', { transaction });
     await transaction.commit();
     } catch (error) {
       await transaction.rollback();

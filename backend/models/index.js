@@ -27,6 +27,7 @@ const TournamentParticipant = TournamentModule.TournamentParticipant;
 const TournamentSquadMember = require('./TournamentSquadMember');
 const TournamentClubEntry = require('./TournamentClubEntry');
 const TournamentClubPlayerStat = require('./TournamentClubPlayerStat');
+const CompetitionAuditEvent = require('./CompetitionAuditEvent');
 const Match = require('./Match');
 const MatchScorer = require('./MatchScorer');
 const MatchEvent = require('./MatchEvent');
@@ -201,6 +202,7 @@ module.exports = {
   TournamentSquadMember,
   TournamentClubEntry,
   TournamentClubPlayerStat,
+  CompetitionAuditEvent,
   Follow,
   Subscription,
   Profile,

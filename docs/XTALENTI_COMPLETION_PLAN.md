@@ -1,9 +1,37 @@
 # XTALENTI V1 — Completion Plan
 
-**Last verified:** 2026-10-30
+**Last verified:** 2026-11-10
 **Repository:** `kresha325/FootballPro`
-**Working branch:** `codex/xtalenti-safety-media-phase`
+**Working branch:** `fix/xtalenti-v1-release-hardening`
 **Production state:** No deployment or production database access performed.
+
+## Release hardening verification — 2026-11-10
+
+This section supersedes older branch and release-status statements below. Remote refs fetched for this audit: `main=752af2f22d4a3f1170bbdac2fc6b075ab87dd580`; `fix/xtalenti-v1-p1-security=1d7d3c931c3a88a9fff4dffb974affe38aebc30f`. The security branch is an ancestor of main (`merge-base` equals the security SHA), so those changes are already on main. This working branch is based on that main SHA.
+
+### Verified P0/P1 matrix
+
+| Priority | Finding and code path | Evidence / coverage | Current disposition |
+|---|---|---|---|
+| P0 | Guardian communication authorization and active call revocation: `backend/utils/minorCommunicationPolicy.js`, guardian consent services/controllers, messaging/call/live routes and `backend/server.js` | Reproduction: unrelated adult, wrong channel, expired grant, or revoked grant attempts DM/call/private-live. Unit/route/socket tests and disposable PostgreSQL deny the coach without exact channel grant and deny expiry/revocation. | Code verified. Independent proof of guardian legal identity/relationship is not established; browser/device active-call revocation still needs staging validation. |
+| P0 | Cloudinary copied-URL access, invalidation and deletion: `backend/middleware/uploadCloudinary.js`, `backend/utils/cloudinaryMediaDelivery.js`, `backend/services/restrictUserCloudinaryMedia.js`, account deletion and backfill paths | Staging reproduction required: retain an existing minor/private asset URL, revoke consent/delete the account, then fetch the copied URL directly from Cloudinary/CDN. No live provider/configuration or copied-URL-after-revocation test was available. Restriction failures lack durable retry evidence. | **NOT VERIFIED — release blocker.** Do not describe restricted media as secured until provider-side behavior and legacy assets are validated. |
+| P1 | Tournament stats and GET side effects: `backend/controllers/tournaments.js` | Before fix, GET invoked standings repair. Repro: compare row timestamps/participant type before and after stats GET; compare >12 finished matches against full match/scorer rows. GET now computes standings read-only; PostgreSQL test checks 15 matches, totals, scorer rows, averages, and 12 recent items. | Fixed and integration-tested. The prior claim that all totals were capped to 12 was not confirmed in the inspected baseline; only recent results were capped. |
+| P1 | Group-knockout advancement did not resolve `TournamentClubEntry` identity | Repro: finish group matches for manually named clubs with no User IDs and inspect generated knockout teams/champion. PostgreSQL test advances manual A/B entries and verifies no synthetic negative public champion ID. | Fixed and integration-tested; legacy participant-mode tests remain in the backend suite. |
+| P1 | Fixture races, edits/deletes, audit and official-score consistency: `backend/services/competitionService.js`, `CompetitionAuditEvent` | Repro: create/start duplicate fixtures concurrently, mutate as unrelated liga, inspect edit/delete audit, and lower official score below recorded scorer totals without replacing goal events. PostgreSQL integration covers each and verifies a rejected result leaves scores unchanged. | Fixed and integration-tested. Audit rows are append-only in application/migration rollback policy. |
+| P1 | League fixture migration nullability and rollback: `20261110100000-support-league-entry-fixtures-and-unknown-athletes.js` | Clean full migration and isolated up/down migration with realistic legacy rows passed; `homeUserId`, `MatchScorers.userId`, and `PlayerMatchStats.userId` are nullable after up and restored on safe down. | Verified on disposable PostgreSQL only. Down refuses rollback when new-format rows would be lost. |
+
+### Database and deployment notes
+
+- Apply migrations `20261110120000-expire-minor-communication-consents.js` and `20261110130000-create-competition-audit-events.js` before serving code that requires consent expiry and competition audit writes. They are additive; rollback is forward-only because reviving expired grants or deleting audit history is unsafe.
+- The league-entry migration is safe for legacy rows in disposable PostgreSQL. Its down path is intentionally guarded when manual-entry fixtures/unknown-athlete rows exist.
+- No production connection, migration, deploy, or data change was performed. Production verification must be read-only: inspect `SequelizeMeta`, `information_schema.columns`, `information_schema.table_constraints`, and indexes for the named migrations, `GuardianConsents.consentExpiresAt`, nullable match/scorer/stat user IDs, and `CompetitionAuditEvents`. Do not run `db:migrate`, `sync`, or mutation statements for this check.
+- Legacy approved communication consents are bounded to one year from their `verifiedAt`; missing verification timestamps fail closed. Re-request guardian approval when the backfill expiry has passed.
+
+### Current release decision
+
+**NO-GO for child-safety pilot / production release.** Cloudinary provider behavior and legacy-asset privacy remain unverified P0 evidence. Also required before pilot: production migration-ledger/schema read-only confirmation; guardian identity assurance decision; browser and physical iOS/Android validation of consent request/revocation during active calls and private live invitations. Keep payment flags disabled. No deployment was performed.
+
+Historical sections below record prior snapshots and must not be read as the current branch state. Current test commands and outcomes are recorded in `docs/audit/PRODUCTION_READINESS_CHECKLIST.md`.
 
 ## Release status
 

@@ -20,6 +20,7 @@ const CONSENT_POLICY_VERSION = process.env.PARENTAL_CONSENT_POLICY_VERSION || '2
 const CONSENT_SCOPE = ['account_access', 'sports_profile', 'tournaments', 'safety_moderation'];
 const PARENT_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
 const MANAGEMENT_TOKEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+const COMMUNICATION_CONSENT_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 function setSensitiveResponseHeaders(res) {
   res.set({
@@ -559,6 +560,9 @@ exports.parentConfirm = async (req, res) => {
       consent.relationship = relationship;
       consent.verificationMethod = 'guardian_email_attestation';
       consent.verifiedAt = now;
+      consent.consentExpiresAt = communication
+        ? new Date(now.getTime() + COMMUNICATION_CONSENT_TTL_MS)
+        : null;
       consent.verificationTokenHash = null;
       consent.verificationTokenExpiresAt = null;
       consent.managementTokenHash = tokenHash(managementToken);
@@ -571,7 +575,7 @@ exports.parentConfirm = async (req, res) => {
         actorType: 'guardian_email',
         eventType: communication ? 'communication_consent_approved' : 'account_consent_approved',
         metadata: communication
-          ? { adultUserId: Number(communicationScope?.adultUserId), clubId: Number(communicationScope?.clubId) || null, channel: communicationScope?.channels?.[0] }
+          ? { adultUserId: Number(communicationScope?.adultUserId), clubId: Number(communicationScope?.clubId) || null, channel: communicationScope?.channels?.[0], expiresAt: consent.consentExpiresAt.toISOString() }
           : { policyVersion: consent.policyVersion },
         eventAt: now,
       }, { transaction });

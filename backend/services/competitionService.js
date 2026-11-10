@@ -17,6 +17,7 @@ const Stream = require('../models/Stream');
 const ScoutingReport = require('../models/ScoutingReport');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const TournamentClubEntry = require('../models/TournamentClubEntry');
+const CompetitionAuditEvent = require('../models/CompetitionAuditEvent');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
 const User = require('../models/User');
@@ -378,6 +379,17 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   }
 
   const created = await sequelize.transaction(async (transaction) => {
+    const lockedTournament = await Tournament.findByPk(tournament.id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!lockedTournament) throw fail(404, 'Tournament not found');
+    const currentMatches = await Match.findAll({ where: { tournamentId: tournament.id }, transaction });
+    if (existingMatchesToRepair.length) {
+      const expectedIds = new Set(existingMatchesToRepair.map((match) => Number(match.id)));
+      if (currentMatches.length !== expectedIds.size || currentMatches.some((match) => !expectedIds.has(Number(match.id)))) {
+        throw fail(409, 'Orari ndryshoi gjatë rindërtimit. Rifresko turneun dhe provo përsëri.');
+      }
+    } else if (currentMatches.length) {
+      throw fail(409, 'Ndeshjet u krijuan nga një kërkesë tjetër. Rifresko turneun.');
+    }
     if (existingMatchesToRepair.length) {
       await removeUnplayedLigaFixtures(tournament, existingMatchesToRepair, transaction);
     }
@@ -443,17 +455,42 @@ async function maybeAdvance(tournament, transaction) {
     const knockoutExists = plainMatches.some((m) => m.stage === 'knockout');
     const groupsDone = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished' || m.status === 'walkover');
     if (groupsDone && !knockoutExists) {
-      const participants = await TournamentParticipant.findAll({
-        where: { tournamentId: tournament.id, status: 'accepted' },
-        transaction,
+      const entries = await TournamentClubEntry.findAll({ where: { tournamentId: tournament.id }, transaction });
+      const entryById = new Map(entries.map((entry) => [Number(entry.id), entry]));
+      const entryByClub = new Map(entries.filter((entry) => entry.clubUserId).map((entry) => [Number(entry.clubUserId), entry]));
+      const canResolveEntry = (entryId, clubId) => entryId
+        ? entryById.has(Number(entryId))
+        : clubId == null || entryByClub.has(Number(clubId));
+      const entryMode = entries.length > 0 && groupMatches.every((match) =>
+        canResolveEntry(match.homeClubEntryId, match.homeUserId) && canResolveEntry(match.awayClubEntryId, match.awayUserId));
+      const participants = entryMode ? [] : await TournamentParticipant.findAll({
+        where: { tournamentId: tournament.id, status: 'accepted' }, transaction,
       });
+      const mapEntryId = (entryId, clubId) => entryId
+        ? Number(entryId)
+        : Number(entryByClub.get(Number(clubId))?.id) || null;
+      const qualificationMatches = entryMode ? groupMatches.map((match) => {
+        const homeEntryId = mapEntryId(match.homeClubEntryId, match.homeUserId);
+        const awayEntryId = mapEntryId(match.awayClubEntryId, match.awayUserId);
+        if (!homeEntryId || (match.awayUserId != null && !awayEntryId)) {
+          throw fail(409, 'Ndeshja e grupit ka klub që nuk është pjesëmarrës në turne.');
+        }
+        return {
+          ...match,
+          groupName: String(match.groupName || '').trim().toUpperCase(),
+          homeUserId: -homeEntryId,
+          awayUserId: awayEntryId ? -awayEntryId : null,
+        };
+      }) : groupMatches;
       const byGroup = {};
-      for (const participant of participants) {
-        if (!participant.groupName) continue;
-        if (!byGroup[participant.groupName]) byGroup[participant.groupName] = [];
-        byGroup[participant.groupName].push(participant.userId);
+      const qualifiers = entryMode ? entries : participants;
+      for (const participant of qualifiers) {
+        const groupName = String(participant.groupName || '').trim().toUpperCase();
+        if (!groupName) continue;
+        if (!byGroup[groupName]) byGroup[groupName] = [];
+        byGroup[groupName].push(entryMode ? -Number(participant.id) : participant.userId);
       }
-      const tables = groupStandings(byGroup, groupMatches, { headToHead: true });
+      const tables = groupStandings(byGroup, qualificationMatches, { headToHead: true });
       const qualified = planGroupQualification(tables, tournament.qualifyPerGroup || 2);
       if (!qualified.ok) return { advanced: false, reason: qualified.msg };
       const dated = scheduleFixtureDates(qualified.fixtures, {
@@ -463,8 +500,22 @@ async function maybeAdvance(tournament, transaction) {
       const fixtures = dated.ok ? dated.fixtures : qualified.fixtures.map((f) => ({ ...f, matchDate: new Date() }));
       const duplicates = findDuplicateFixtures(fixtures);
       if (duplicates.length) throw fail(409, 'Knockout bracket would duplicate a fixture.');
-      await createPlannedMatches(tournament, fixtures, transaction);
-      return { advanced: true, kind: 'group_knockout' };
+      const nextFixtures = entryMode ? fixtures.map((fixture) => {
+        const home = entryById.get(Math.abs(Number(fixture.homeUserId)));
+        const away = fixture.awayUserId == null ? null : entryById.get(Math.abs(Number(fixture.awayUserId)));
+        if (!home || (fixture.awayUserId != null && !away)) throw fail(409, 'Kualifikimi i grupit përmban klub që nuk ekziston më.');
+        return {
+          ...fixture,
+          homeUserId: home.clubUserId || null,
+          awayUserId: away?.clubUserId || null,
+          homeClubEntryId: home.id,
+          awayClubEntryId: away?.id || null,
+          homeName: home.clubName,
+          awayName: away?.clubName || null,
+        };
+      }) : fixtures;
+      await createPlannedMatches(tournament, nextFixtures, transaction);
+      return { advanced: true, kind: 'group_knockout', entryMode };
     }
   }
 
@@ -478,19 +529,70 @@ async function maybeAdvance(tournament, transaction) {
     const current = knockout.filter((m) => Number(m.round) === maxRound);
     const nextExists = knockout.some((m) => Number(m.round) === maxRound + 1);
     if (nextExists) return { advanced: false };
-    const plan = planKnockoutAdvancement(current);
+    const entries = await TournamentClubEntry.findAll({ where: { tournamentId: tournament.id }, transaction });
+    const entryById = new Map(entries.map((entry) => [Number(entry.id), entry]));
+    const entryByClub = new Map(entries.filter((entry) => entry.clubUserId).map((entry) => [Number(entry.clubUserId), entry]));
+    const entryMode = entries.length > 0 && current.every((match) => {
+      const homeExists = match.homeClubEntryId
+        ? entryById.has(Number(match.homeClubEntryId))
+        : entryByClub.has(Number(match.homeUserId));
+      const awayExists = match.awayUserId == null || (match.awayClubEntryId
+        ? entryById.has(Number(match.awayClubEntryId))
+        : entryByClub.has(Number(match.awayUserId)));
+      return homeExists && awayExists;
+    });
+    const entryMatches = entryMode ? current.map((match) => {
+      const homeEntryId = Number(match.homeClubEntryId || entryByClub.get(Number(match.homeUserId))?.id) || null;
+      const awayEntryId = match.awayClubEntryId
+        ? Number(match.awayClubEntryId)
+        : match.awayUserId == null
+          ? null
+          : Number(entryByClub.get(Number(match.awayUserId))?.id) || null;
+      if (!homeEntryId || (match.awayUserId != null && !awayEntryId)) {
+        throw fail(409, 'Ndeshja knockout ka pjesëmarrës që nuk është i lidhur me klubin e turneut.');
+      }
+      const winnerEntryId = Number(match.winnerClubEntryId || entryByClub.get(Number(match.winnerUserId))?.id) || null;
+      return {
+        ...match,
+        homeUserId: -homeEntryId,
+        awayUserId: awayEntryId ? -awayEntryId : null,
+        winnerUserId: winnerEntryId ? -winnerEntryId : null,
+      };
+    }) : current;
+    const plan = planKnockoutAdvancement(entryMatches);
     if (!plan.ok) return { advanced: false, reason: plan.reason };
     if (plan.championUserId) {
       tournament.lifecycle = 'completed';
       tournament.status = legacyStatusFor('completed');
       await tournament.save({ transaction });
-      return { advanced: true, championUserId: plan.championUserId };
+      const championEntry = entryMode ? entryById.get(Math.abs(Number(plan.championUserId))) : null;
+      return {
+        advanced: true,
+        championUserId: championEntry ? (championEntry.clubUserId || null) : plan.championUserId,
+        ...(championEntry ? { championClubEntryId: championEntry.id, championName: championEntry.clubName } : {}),
+      };
     }
     const dated = scheduleFixtureDates(plan.fixtures, {
       startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       endDate: tournament.endDate,
     });
-    const fixtures = dated.ok ? dated.fixtures : plan.fixtures;
+    const plannedFixtures = dated.ok ? dated.fixtures : plan.fixtures;
+    const fixtures = entryMode ? plannedFixtures.map((fixture) => {
+      const home = entryById.get(Math.abs(Number(fixture.homeUserId)));
+      const away = fixture.awayUserId == null ? null : entryById.get(Math.abs(Number(fixture.awayUserId)));
+      if (!home || (fixture.awayUserId != null && !away)) throw fail(409, 'Raundi tjetër përmban klub që nuk ekziston më.');
+      return {
+        ...fixture,
+        homeUserId: home.clubUserId || null,
+        awayUserId: away?.clubUserId || null,
+        homeClubEntryId: home.id,
+        awayClubEntryId: away?.id || null,
+        homeName: home.clubName,
+        awayName: away?.clubName || null,
+        winnerUserId: fixture.winnerUserId ? (entryById.get(Math.abs(Number(fixture.winnerUserId)))?.clubUserId || null) : null,
+        winnerClubEntryId: fixture.winnerUserId ? Math.abs(Number(fixture.winnerUserId)) : null,
+      };
+    }) : plannedFixtures;
     await createPlannedMatches(tournament, fixtures, transaction);
     return { advanced: true, kind: 'knockout' };
   }
@@ -548,33 +650,57 @@ async function recordOfficialResult({ matchId, user, payload = {} }) {
   }
 
   return sequelize.transaction(async (transaction) => {
-    await match.update(
+    const lockedTournament = await Tournament.findByPk(tournament.id, { transaction, lock: transaction.LOCK.UPDATE });
+    const lockedMatch = await Match.findByPk(match.id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!lockedTournament || !lockedMatch) throw fail(404, 'Ndeshja ose turneu nuk u gjet.');
+    const lockedAuthz = canFillMatchStats(lockedTournament, user, lockedMatch);
+    if (!lockedAuthz.ok) throw fail(lockedAuthz.status, lockedAuthz.msg);
+    const lockedGate = assertResultMutation(lockedTournament);
+    if (!lockedGate.ok && !(isLiga && resolveLifecycle(lockedTournament) === 'completed')) throw fail(lockedGate.status, lockedGate.msg);
+
+    if (!Array.isArray(goalEvents)) {
+      const existingScorers = await MatchScorer.findAll({ where: { matchId: lockedMatch.id }, transaction });
+      const scorerGoals = { home: 0, away: 0 };
+      for (const scorer of existingScorers) {
+        const side = scorer.side || (Number(scorer.userId) === Number(lockedMatch.homeUserId) ? 'home' : Number(scorer.userId) === Number(lockedMatch.awayUserId) ? 'away' : null);
+        if (side) scorerGoals[side] += Number(scorer.goals) || 0;
+      }
+      const officialGoals = {
+        home: Number(validated.patch.scoreHome || 0) + Number(validated.patch.extraTimeHome || 0),
+        away: Number(validated.patch.scoreAway || 0) + Number(validated.patch.extraTimeAway || 0),
+      };
+      if (scorerGoals.home > officialGoals.home || scorerGoals.away > officialGoals.away) {
+        throw fail(409, 'Përditëso golashënuesit bashkë me rezultatin që statistikat të përputhen.');
+      }
+    }
+
+    await lockedMatch.update(
       {
         ...validated.patch,
-        winnerUserId: validated.patch.winnerUserId === validationHomeId ? match.homeUserId : validated.patch.winnerUserId === validationAwayId ? match.awayUserId : null,
-        winnerClubEntryId: validated.patch.winnerUserId === validationHomeId ? (match.homeClubEntryId || null) : validated.patch.winnerUserId === validationAwayId ? (match.awayClubEntryId || null) : null,
-        refereeName: payload.refereeName !== undefined ? payload.refereeName : match.refereeName,
-        refereeUserId: payload.refereeUserId !== undefined ? payload.refereeUserId : match.refereeUserId,
-        venue: payload.venue !== undefined ? payload.venue : match.venue,
-        highlightsUrl: payload.highlightsUrl !== undefined ? payload.highlightsUrl : match.highlightsUrl,
+        winnerUserId: validated.patch.winnerUserId === validationHomeId ? lockedMatch.homeUserId : validated.patch.winnerUserId === validationAwayId ? lockedMatch.awayUserId : null,
+        winnerClubEntryId: validated.patch.winnerUserId === validationHomeId ? (lockedMatch.homeClubEntryId || null) : validated.patch.winnerUserId === validationAwayId ? (lockedMatch.awayClubEntryId || null) : null,
+        refereeName: payload.refereeName !== undefined ? payload.refereeName : lockedMatch.refereeName,
+        refereeUserId: payload.refereeUserId !== undefined ? payload.refereeUserId : lockedMatch.refereeUserId,
+        venue: payload.venue !== undefined ? payload.venue : lockedMatch.venue,
+        highlightsUrl: payload.highlightsUrl !== undefined ? payload.highlightsUrl : lockedMatch.highlightsUrl,
         clockPhase: 'FT',
       },
       { transaction }
     );
 
     if (Array.isArray(goalEvents)) {
-      await saveMatchGoalEvents(match.id, goalEvents, match, { transaction });
+      await saveMatchGoalEvents(lockedMatch.id, goalEvents, lockedMatch, { transaction });
     }
 
-    if (resolveLifecycle(tournament) === 'active') {
-      tournament.lifecycle = 'in_progress';
-      tournament.status = legacyStatusFor('in_progress');
-      await tournament.save({ transaction });
+    if (resolveLifecycle(lockedTournament) === 'active') {
+      lockedTournament.lifecycle = 'in_progress';
+      lockedTournament.status = legacyStatusFor('in_progress');
+      await lockedTournament.save({ transaction });
     }
 
-    await recomputeTournamentStandings(tournament.id, transaction);
-    const advancement = await maybeAdvance(tournament, transaction);
-    return { match, tournament, advancement, goalEvents };
+    await recomputeTournamentStandings(lockedTournament.id, transaction);
+    const advancement = await maybeAdvance(lockedTournament, transaction);
+    return { match: lockedMatch, tournament: lockedTournament, advancement, goalEvents };
   }).then(async (result) => {
     if (Array.isArray(result.goalEvents)) {
       const ids = [];
@@ -678,31 +804,65 @@ async function createLeagueFixture({ tournamentId, user, payload = {} }) {
   if (!authz.ok) throw fail(authz.status, authz.msg);
   if (!(tournament.ligaId || tournament.sourceRole === 'liga')) throw fail(400, 'Ndeshjet manuale mund t’i menaxhojë vetëm liga.');
   if (!['active', 'in_progress'].includes(resolveLifecycle(tournament))) throw fail(409, 'Nise turneun përpara se të shtosh ndeshje manuale.');
-  const homeEntry = await TournamentClubEntry.findOne({ where: { id: payload.homeClubEntryId, tournamentId: tournament.id } });
-  const awayEntry = await TournamentClubEntry.findOne({ where: { id: payload.awayClubEntryId, tournamentId: tournament.id } });
-  if (!homeEntry || !awayEntry) throw fail(400, 'Zgjidh dy ekipe pjesëmarrëse në këtë turne.');
-  if (Number(homeEntry.id) === Number(awayEntry.id)) throw fail(400, 'Një ekip nuk mund të luajë kundër vetes.');
   const matchDate = payload.matchDate;
   const dateError = dateWindowError(tournament, matchDate);
   if (dateError) throw fail(400, dateError);
-  const existing = await Match.findAll({ where: { tournamentId: tournament.id, homeClubEntryId: homeEntry.id, awayClubEntryId: awayEntry.id } });
-  if (existing.length) throw fail(409, 'Kjo ndeshje ekziston tashmë.');
-  return Match.create({
-    tournamentId: tournament.id,
-    homeUserId: homeEntry.clubUserId || null,
-    awayUserId: awayEntry.clubUserId || null,
-    homeClubEntryId: homeEntry.id,
-    awayClubEntryId: awayEntry.id,
-    homeName: homeEntry.clubName,
-    awayName: awayEntry.clubName,
-    matchDate,
-    round: Math.max(1, Number.parseInt(payload.round, 10) || 1),
-    roundLabel: String(payload.roundLabel || '').trim().slice(0, 40) || null,
-    groupName: String(payload.groupName || homeEntry.groupName || '').trim().slice(0, 8) || null,
-    stage: 'league',
-    venue: String(payload.venue || '').trim().slice(0, 160) || null,
-    refereeName: String(payload.refereeName || '').trim().slice(0, 120) || null,
-    status: 'scheduled',
+  return sequelize.transaction(async (transaction) => {
+    // Serialize fixture mutations for this tournament so simultaneous requests
+    // cannot both pass the duplicate check.
+    const lockedTournament = await Tournament.findByPk(tournament.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!lockedTournament) throw fail(404, 'Turneu nuk u gjet.');
+    const homeEntry = await TournamentClubEntry.findOne({ where: { id: payload.homeClubEntryId, tournamentId: tournament.id }, transaction });
+    const awayEntry = await TournamentClubEntry.findOne({ where: { id: payload.awayClubEntryId, tournamentId: tournament.id }, transaction });
+    if (!homeEntry || !awayEntry) throw fail(400, 'Zgjidh dy ekipe pjesëmarrëse në këtë turne.');
+    if (Number(homeEntry.id) === Number(awayEntry.id)) throw fail(400, 'Një ekip nuk mund të luajë kundër vetes.');
+    const round = Math.max(1, Number.parseInt(payload.round, 10) || 1);
+    const groupName = String(payload.groupName || homeEntry.groupName || '').trim().slice(0, 8) || null;
+    const candidate = {
+      homeUserId: -Number(homeEntry.id),
+      awayUserId: -Number(awayEntry.id),
+      round,
+      groupName,
+      stage: 'league',
+    };
+    const existing = await Match.findAll({ where: { tournamentId: tournament.id }, transaction });
+    const duplicate = existing.some((row) => {
+      const item = plain(row);
+      return fixtureIdentity({
+        ...item,
+        homeUserId: item.homeClubEntryId ? -Number(item.homeClubEntryId) : item.homeUserId,
+        awayUserId: item.awayClubEntryId ? -Number(item.awayClubEntryId) : item.awayUserId,
+      }, { doubleRound: !!tournament.homeAndAway }) === fixtureIdentity(candidate, { doubleRound: !!tournament.homeAndAway });
+    });
+    if (duplicate) throw fail(409, 'Kjo ndeshje ekziston tashmë.');
+    const match = await Match.create({
+      tournamentId: tournament.id,
+      homeUserId: homeEntry.clubUserId || null,
+      awayUserId: awayEntry.clubUserId || null,
+      homeClubEntryId: homeEntry.id,
+      awayClubEntryId: awayEntry.id,
+      homeName: homeEntry.clubName,
+      awayName: awayEntry.clubName,
+      matchDate,
+      round,
+      roundLabel: String(payload.roundLabel || '').trim().slice(0, 40) || null,
+      groupName,
+      stage: 'league',
+      venue: String(payload.venue || '').trim().slice(0, 160) || null,
+      refereeName: String(payload.refereeName || '').trim().slice(0, 120) || null,
+      status: 'scheduled',
+    }, { transaction });
+    await CompetitionAuditEvent.create({
+      tournamentId: tournament.id,
+      matchId: match.id,
+      actorUserId: Number(user.id),
+      eventType: 'fixture_created',
+      metadata: { source: 'league_manual', homeClubEntryId: homeEntry.id, awayClubEntryId: awayEntry.id },
+    }, { transaction });
+    return match;
   });
 }
 
@@ -718,14 +878,35 @@ async function deleteLeagueFixture({ matchId, user }) {
   ]);
   if (refs.some(Boolean)) throw fail(409, 'Ndeshja ka video, transmetim ose raport të lidhur dhe nuk mund të fshihet.');
   await sequelize.transaction(async (transaction) => {
+    const lockedTournament = await Tournament.findByPk(match.tournamentId, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!lockedTournament) throw fail(404, 'Turneu nuk u gjet.');
+    const lockedMatch = await Match.findByPk(match.id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!lockedMatch) throw fail(404, 'Ndeshja nuk u gjet.');
+    const lockedAuthz = canManageTournamentMatches(lockedTournament, user);
+    if (!lockedAuthz.ok) throw fail(lockedAuthz.status, lockedAuthz.msg);
+    await CompetitionAuditEvent.create({
+      tournamentId: lockedTournament.id,
+      matchId: lockedMatch.id,
+      actorUserId: Number(user.id),
+      eventType: 'fixture_deleted',
+      metadata: {
+        homeClubEntryId: lockedMatch.homeClubEntryId || null,
+        awayClubEntryId: lockedMatch.awayClubEntryId || null,
+        homeName: lockedMatch.homeName || null,
+        awayName: lockedMatch.awayName || null,
+        status: lockedMatch.status,
+        scoreHome: lockedMatch.scoreHome,
+        scoreAway: lockedMatch.scoreAway,
+      },
+    }, { transaction });
     await Promise.all([
-      MatchScorer.destroy({ where: { matchId: match.id }, transaction }),
-      MatchEvent.destroy({ where: { matchId: match.id }, transaction }),
-      PlayerMatchStat.destroy({ where: { matchId: match.id }, transaction }),
-      Bracket.destroy({ where: { matchId: match.id }, transaction }),
+      MatchScorer.destroy({ where: { matchId: lockedMatch.id }, transaction }),
+      MatchEvent.destroy({ where: { matchId: lockedMatch.id }, transaction }),
+      PlayerMatchStat.destroy({ where: { matchId: lockedMatch.id }, transaction }),
+      Bracket.destroy({ where: { matchId: lockedMatch.id }, transaction }),
     ]);
-    await match.destroy({ transaction });
-    await recomputeTournamentStandings(match.tournamentId, transaction);
+    await lockedMatch.destroy({ transaction });
+    await recomputeTournamentStandings(lockedTournament.id, transaction);
   });
   return { success: true };
 }
@@ -735,6 +916,7 @@ async function updateLeagueFixture({ matchId, user, payload = {} }) {
   if (!match) throw fail(404, 'Ndeshja nuk u gjet.');
   const authz = canManageTournamentMatches(match.Tournament, user);
   if (!authz.ok) throw fail(authz.status, authz.msg);
+  if (!(match.Tournament.ligaId || match.Tournament.sourceRole === 'liga')) throw fail(400, 'Vetëm liga mund ta ndryshojë këtë ndeshje.');
   const patch = {};
   if (payload.matchDate !== undefined) {
     const dateError = dateWindowError(match.Tournament, payload.matchDate);
@@ -745,7 +927,26 @@ async function updateLeagueFixture({ matchId, user, payload = {} }) {
   if (payload.refereeName !== undefined) patch.refereeName = String(payload.refereeName || '').trim().slice(0, 120) || null;
   if (payload.roundLabel !== undefined) patch.roundLabel = String(payload.roundLabel || '').trim().slice(0, 40) || null;
   if (payload.groupName !== undefined) patch.groupName = String(payload.groupName || '').trim().slice(0, 8) || null;
-  if (Object.keys(patch).length) await match.update(patch);
+  if (Object.keys(patch).length) {
+    await sequelize.transaction(async (transaction) => {
+      const lockedTournament = await Tournament.findByPk(match.tournamentId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!lockedTournament) throw fail(404, 'Turneu nuk u gjet.');
+      const lockedMatch = await Match.findByPk(match.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!lockedMatch) throw fail(404, 'Ndeshja nuk u gjet.');
+      const lockedAuthz = canManageTournamentMatches(lockedTournament, user);
+      if (!lockedAuthz.ok) throw fail(lockedAuthz.status, lockedAuthz.msg);
+      if (!(lockedTournament.ligaId || lockedTournament.sourceRole === 'liga')) throw fail(400, 'Vetëm liga mund ta ndryshojë këtë ndeshje.');
+      await lockedMatch.update(patch, { transaction });
+      await CompetitionAuditEvent.create({
+        tournamentId: lockedTournament.id,
+        matchId: lockedMatch.id,
+        actorUserId: Number(user.id),
+        eventType: 'fixture_updated',
+        metadata: { changedFields: Object.keys(patch) },
+      }, { transaction });
+    });
+    await match.reload();
+  }
   return match;
 }
 
@@ -757,14 +958,8 @@ function isTerminalTournament(tournament) {
 async function getStandings(idOrSlug) {
   const tournament = await loadTournament(idOrSlug);
   if (!tournament) return null;
-  if ((tournament.ligaId || tournament.sourceRole === 'liga') && tournament.participantType !== 'club') {
-    tournament.participantType = 'club';
-    await tournament.save();
-  }
-  if ((tournament.participantType || 'individual') === 'club') {
-    await demoteAthleteParticipantsOnClubTournament(tournament.id);
-  }
-  await recomputeTournamentStandings(tournament.id);
+  // A read computes its response from authoritative matches. Do not repair or
+  // demote persisted rows as a side effect of GET /standings.
   const leagueEntries = await TournamentClubEntry.findAll({
     where: { tournamentId: tournament.id },
     order: [['groupName', 'ASC'], ['clubName', 'ASC']],
@@ -811,7 +1006,9 @@ async function getStandings(idOrSlug) {
       },
     ],
   });
-  const participantType = tournament.participantType || 'individual';
+  const participantType = tournament.ligaId || tournament.sourceRole === 'liga'
+    ? 'club'
+    : tournament.participantType || 'individual';
   const standingParticipants = participantType === 'club'
     ? participants.filter((p) => String(p.User?.role || '').toLowerCase() === 'club')
     : participants;

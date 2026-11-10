@@ -71,6 +71,7 @@ function communicationConsent(channel, { adultUserId = coach.id, clubId = club.i
     consentPurpose: 'minor_communication',
     consentScope: { adultUserId, clubId, channels: [channel] },
     verifiedAt: new Date(),
+    consentExpiresAt: new Date(Date.now() + 60_000),
     revokedAt,
   };
 }
@@ -125,6 +126,20 @@ describe('minor communication policy', () => {
     assert.equal(deniedOtherChannel.allowed, false);
   });
 
+  it('denies communication grants that are expired or have no consent expiry', async () => {
+    for (const expiry of [new Date(Date.now() - 1_000), null]) {
+      const grant = { ...communicationConsent(CHANNELS.DIRECT_MESSAGE), consentExpiresAt: expiry };
+      const result = await authorizeMinorDirectContact({
+        actorId: coach.id,
+        targetId: minor.id,
+        channel: CHANNELS.DIRECT_MESSAGE,
+        ...policyFixture({ consents: [grant] }),
+      });
+      assert.equal(result.allowed, false);
+      assert.equal(result.reason, 'GUARDIAN_COMMUNICATION_CONSENT_REQUIRED');
+    }
+  });
+
   it('denies coach contact when roster membership or active staff assignment is absent', async () => {
     for (const fixture of [
       policyFixture({ consents: [communicationConsent(CHANNELS.DIRECT_MESSAGE)], membership: false }),
@@ -172,6 +187,7 @@ describe('minor communication policy', () => {
           consentPurpose: 'minor_communication',
           consentScope: { adultUserId: adult.id, channels: [CHANNELS.GUARDIAN_MEDIATED_GROUP] },
           verifiedAt: new Date(),
+          consentExpiresAt: new Date(Date.now() + 60_000),
           revokedAt: null,
         },
       ];
@@ -220,6 +236,7 @@ describe('minor communication policy', () => {
         consentPurpose: 'minor_communication',
         consentScope: { adultUserId: scout.id, channels: [CHANNELS.GUARDIAN_MEDIATED_GROUP] },
         verifiedAt: new Date(),
+        consentExpiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
       },
     ].filter((row) => row.minorUserId === where.minorUserId && row.consentPurpose === where.consentPurpose);

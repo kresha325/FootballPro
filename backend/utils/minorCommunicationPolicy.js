@@ -65,7 +65,10 @@ async function hasCommunicationConsent({ GuardianConsent, minorUserId, adultUser
       revokedAt: null,
     },
   });
+  const now = Date.now();
   return rows.some((row) => row.verifiedAt && !row.revokedAt &&
+    row.consentExpiresAt && Number.isFinite(new Date(row.consentExpiresAt).getTime()) &&
+    new Date(row.consentExpiresAt).getTime() > now &&
     scopeMatches(row.consentScope, { adultUserId, clubId, channel }));
 }
 
