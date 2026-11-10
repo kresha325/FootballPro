@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 
-const { isAllowedOrigin, buildAllowedOrigins } = require('../utils/corsPolicy');
+const { ALLOWED_CORS_HEADERS, isAllowedOrigin, buildAllowedOrigins } = require('../utils/corsPolicy');
 const { safeExtension, storedFilename, signatureOk, MEDIA_EXTS, BLOCKED_EXT } = require('../utils/uploadNames');
 const { unverifiedIapAllowed } = require('../utils/iapPolicy');
 const { sanitizeErrorBody } = require('../utils/errorSanitize');
@@ -239,6 +239,10 @@ describe('CORS', () => {
     const allowed = buildAllowedOrigins(prod);
     assert.equal(isAllowedOrigin('https://xtalenti.com', prod, allowed), true);
     assert.equal(isAllowedOrigin(undefined, prod, allowed), true);
+  });
+
+  it('allows the checkout idempotency header in browser preflight requests', () => {
+    assert.ok(ALLOWED_CORS_HEADERS.includes('Idempotency-Key'));
   });
 
   it('rejects localhost and wildcard origins in production', () => {

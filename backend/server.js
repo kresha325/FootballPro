@@ -2,7 +2,7 @@ const logger = require('./utils/logger');
 const express = require('express');
 const cors = require('cors');
 const { helmet, rateLimit, xss, mongoSanitize } = require('./config/security');
-const { buildAllowedOrigins, isAllowedOrigin } = require('./utils/corsPolicy');
+const { ALLOWED_CORS_HEADERS, buildAllowedOrigins, isAllowedOrigin } = require('./utils/corsPolicy');
 const { installErrorSanitizer } = require('./utils/errorSanitize');
 const dotenv = require('dotenv');
 const http = require('http');
@@ -137,7 +137,7 @@ function dynamicOrigin(origin, callback) {
 const corsOptions = {
   origin: dynamicOrigin,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ALLOWED_CORS_HEADERS,
   exposedHeaders: ['X-Page', 'X-Limit', 'X-Has-More'],
   credentials: true,
   optionsSuccessStatus: 200,
