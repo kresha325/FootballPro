@@ -1,6 +1,7 @@
 const logger = require('./logger');
 const MatchScorer = require('../models/MatchScorer');
 const Profile = require('../models/Profile');
+const { createAthleteIdentityKey, normalizeAthleteIdentityKey } = require('./athleteIdentity');
 
 function inferSide(userId, match) {
   const uid = Number(userId);
@@ -17,6 +18,7 @@ function normalizeGoalEvents(rawEvents, match) {
     const parsedUserId = parseInt(item.userId, 10);
     const userId = Number.isFinite(parsedUserId) ? parsedUserId : null;
     const athleteName = String(item.athleteName || '').trim().replace(/\s+/g, ' ').slice(0, 160) || null;
+    const athleteIdentityKey = normalizeAthleteIdentityKey(item.athleteIdentityKey);
     if (!userId && !athleteName) continue;
 
     const minuteRaw = item.minute;
@@ -33,6 +35,7 @@ function normalizeGoalEvents(rawEvents, match) {
       rows.push({
         userId,
         athleteName,
+        athleteIdentityKey: userId ? null : athleteIdentityKey || createAthleteIdentityKey(),
         goals: 1,
         minute: Number.isFinite(minute) ? minute : null,
         assistUserId: Number.isFinite(assistUserId) ? assistUserId : null,
@@ -50,6 +53,7 @@ function normalizeGoalEvents(rawEvents, match) {
         assistUserId: null,
         side,
         athleteName,
+        athleteIdentityKey: userId ? null : athleteIdentityKey || createAthleteIdentityKey(),
       });
     }
   }
@@ -102,6 +106,7 @@ async function syncProfileGoalAssistStats(userIds) {
  */
 async function saveMatchGoalEvents(matchId, rawEvents, match, options = {}) {
   const transaction = options.transaction;
+  const TournamentClubPlayerStat = require('../models/TournamentClubPlayerStat');
   const previous = await MatchScorer.findAll({
     where: { matchId },
     attributes: ['userId', 'assistUserId', 'goals'],
@@ -111,6 +116,35 @@ async function saveMatchGoalEvents(matchId, rawEvents, match, options = {}) {
 
   await MatchScorer.destroy({ where: { matchId }, transaction });
   const rows = normalizeGoalEvents(rawEvents, match).map((row) => ({ ...row, matchId }));
+
+  // Manual-club identity keys are registered against the participating entry.
+  // This keeps identical names in a club separate and lets later match-stat
+  // submissions refer to the same player key.
+  for (const row of rows) {
+    if (row.userId || !row.athleteIdentityKey || !options.actorUserId) continue;
+    const entryId = row.side === 'home' ? match.homeClubEntryId : match.awayClubEntryId;
+    if (!entryId) continue;
+    const identity = await TournamentClubPlayerStat.findOne({
+      where: { tournamentClubEntryId: entryId, athleteIdentityKey: row.athleteIdentityKey },
+      transaction,
+    });
+    if (identity) {
+      if (String(identity.athleteName || '').trim().normalize('NFKC').toLocaleLowerCase() !== String(row.athleteName || '').trim().normalize('NFKC').toLocaleLowerCase()) {
+        const error = new Error('Athlete identity does not match the registered team player.');
+        error.status = 409;
+        throw error;
+      }
+      continue;
+    }
+    await TournamentClubPlayerStat.create({
+      tournamentClubEntryId: entryId,
+      athleteIdentityKey: row.athleteIdentityKey,
+      athleteName: row.athleteName,
+      goals: 0,
+      assists: 0,
+      updatedByUserId: options.actorUserId,
+    }, { transaction });
+  }
 
   let created = [];
   if (rows.length) {

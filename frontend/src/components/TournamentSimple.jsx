@@ -17,6 +17,7 @@ import MatchGoalEventsForm, { eventsFromMatchData, squadMembersForSide } from '.
 import { TrophyIcon, ShieldCheckIcon, BoltIcon } from '@heroicons/react/24/outline';
 import { clubMembersAPI } from '../services/api';
 import { useLocale } from '../contexts/LocaleContext';
+import { createAthleteIdentityKey } from '../utils/athleteIdentity';
 
 const API = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 API.interceptors.request.use((config) => {
@@ -115,7 +116,7 @@ function TournamentClubEntriesPanel({ entries = [], user, tournamentId, hasFixtu
   const savePlayers = async (entry) => {
     setBusyId(entry.id);
     try {
-      const players = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
+      const players = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteIdentityKey: row.athleteIdentityKey, athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
       await API.post(`/tournaments/club-entries/${entry.id}/player-stats`, { players });
       await onSaved?.();
     } catch (error) {
@@ -142,8 +143,8 @@ function TournamentClubEntriesPanel({ entries = [], user, tournamentId, hasFixtu
     <div className="space-y-3">
       {entries.filter((entry) => entry.groupName || entry.clubUserId || entry.claimStatus === 'pending').map((entry) => {
         const isClubOwner = Number(entry.clubUserId) === Number(user?.id) && user?.role === 'club';
-        const currentPlayers = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
-        const addPlayer = () => setPlayerDrafts((current) => ({ ...current, [entry.id]: [...(current[entry.id] || currentPlayers), { athleteName: '', goals: 0, assists: 0 }] }));
+        const currentPlayers = playerDrafts[entry.id] || (entry.playerStats || []).map((row) => ({ athleteIdentityKey: row.athleteIdentityKey, athleteName: row.athleteName, athleteUserId: row.athleteUserId, goals: row.goals, assists: row.assists }));
+        const addPlayer = () => setPlayerDrafts((current) => ({ ...current, [entry.id]: [...(current[entry.id] || currentPlayers), { athleteIdentityKey: createAthleteIdentityKey(), athleteName: '', goals: 0, assists: 0 }] }));
         const updatePlayer = (index, key, value) => setPlayerDrafts((current) => ({ ...current, [entry.id]: currentPlayers.map((player, i) => i === index ? { ...player, [key]: value } : player) }));
         return (
           <article key={entry.id} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface)] p-3 sm:p-4">
@@ -184,6 +185,7 @@ function MatchBroadcastModal({
   onClose,
   canEdit = false,
   participants = [],
+  clubEntries = [],
   onSaveMatch,
   onSaveSchedule,
   onDeleteMatch,
@@ -213,7 +215,7 @@ function MatchBroadcastModal({
     setMatchDateInput(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     setVenueInput(m.venue || '');
     setRefereeInput(m.refereeName || '');
-    setPlayerStatsDraft((m.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', side: row.side || 'home', minutes: row.minutes || 0, goals: row.goals || 0, assists: row.assists || 0, yellowCards: row.yellowCards || 0, redCards: row.redCards || 0 })));
+    setPlayerStatsDraft((m.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', athleteIdentityKey: row.athleteIdentityKey || null, side: row.side || 'home', minutes: row.minutes || 0, goals: row.goals || 0, assists: row.assists || 0, yellowCards: row.yellowCards || 0, redCards: row.redCards || 0 })));
   }, [m?.id, data]);
 
   if (!open) return null;
@@ -434,6 +436,10 @@ function MatchBroadcastModal({
                 <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-4 ring-1 ring-emerald-500/20">
                   <MatchGoalEventsForm
                     participants={participants}
+                    manualAthletesBySide={{
+                      home: clubEntries.find((entry) => Number(entry.id) === Number(m.homeClubEntryId))?.playerStats || [],
+                      away: clubEntries.find((entry) => Number(entry.id) === Number(m.awayClubEntryId))?.playerStats || [],
+                    }}
                     homeUserId={m.homeUserId}
                     awayUserId={m.awayUserId}
                     initialEvents={goalEvents}
@@ -458,6 +464,7 @@ function MatchBroadcastModal({
                         .map((ev) => ({
                           userId: ev.userId ? Number(ev.userId) : null,
                           athleteName: ev.athleteName || null,
+                          athleteIdentityKey: ev.userId ? null : ev.athleteIdentityKey,
                           minute: ev.minute === '' ? null : Number(ev.minute),
                           assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
                           side: ev.side || undefined,
@@ -485,7 +492,7 @@ function MatchBroadcastModal({
                     const editable = isLigaManager || clubSide === side || (user?.role === 'coach' && coachStatsSide === side);
                     return <div key={`${row.userId}-${index}`} className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--xt-color-surface-raised)] p-2 sm:grid-cols-8">
                       {(isLigaManager || user?.role === 'coach') && <select aria-label={t('Skuadra')} className="input" value={side} onChange={(e) => { if (user?.role === 'coach') setCoachStatsSide(e.target.value); setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, side: e.target.value, userId: '' } : item)); }}><option value="home">{m.homeName || t('Vendas')}</option><option value="away">{m.awayName || t('Mysafir')}</option></select>}
-                      <select aria-label={t('Lojtari')} className="input sm:col-span-2" disabled={!editable} value={row.userId} onChange={(e) => setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, userId: e.target.value, athleteName: '' } : item))}><option value="">{t('Zgjidh atletin')}</option>{roster.map((athlete) => { const id = resolveParticipantUserId(athlete) || athlete.id; return <option key={id} value={id}>{[athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || `#${id}`}</option>; })}</select>
+                      <select aria-label={t('Lojtari')} className="input sm:col-span-2" disabled={!editable} value={row.userId} onChange={(e) => setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, userId: e.target.value, athleteName: '', athleteIdentityKey: null } : item))}><option value="">{t('Zgjidh atletin')}</option>{roster.map((athlete) => { const id = resolveParticipantUserId(athlete) || athlete.id; return <option key={id} value={id}>{[athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || `#${id}`}</option>; })}</select>
                       {['minutes', 'goals', 'assists', 'yellowCards', 'redCards'].map((field) => <label key={field} className="text-[10px] text-slate-400">{t(field === 'minutes' ? 'Minuta' : field === 'goals' ? 'Gola' : field === 'assists' ? 'Asiste' : field === 'yellowCards' ? 'Kartona të verdhë' : 'Kartona të kuq')}<input disabled={!editable} type="number" min="0" max={field === 'minutes' ? 180 : 20} value={row[field]} onChange={(e) => setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, [field]: e.target.value } : item))} className="input mt-1 w-full" /></label>)}
                       {editable && <button type="button" onClick={() => setPlayerStatsDraft((all) => all.filter((_, i) => i !== index))} className="btn btn-quiet text-red-500">{t('Hiq')}</button>}
                     </div>;
@@ -2276,6 +2283,7 @@ export default function TournamentSimple() {
         onClose={closeMatchModal}
         canEdit={canEditMatch(matchModal.data?.match)}
         participants={selectedTournament?.participants || []}
+        clubEntries={detailExtras.clubEntries || []}
         onSaveMatch={saveMatchReport}
         onSaveSchedule={saveMatchSchedule}
         onDeleteMatch={deleteMatch}

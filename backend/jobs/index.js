@@ -45,6 +45,11 @@ function startJobs() {
     );
     notifyStreamsStartingSoon().catch((err) => logger.warn('notifyStreamsStartingSoon:', err?.message || err));
   }, 5 * 60 * 1000);
+  setInterval(() => {
+    runTrackedJob('cloudinary_media_retry', () => require('../services/admin/jobs').runCloudinaryMediaRetryJob()).catch((err) =>
+      logger.warn('cloudinary_media_retry:', err?.message || err)
+    );
+  }, 5 * 60 * 1000);
 }
 
 module.exports = { startJobs, jobsEnabled };

@@ -169,9 +169,12 @@ function cloudinaryFields(fields) {
 										: undefined,
 								};
 								const requestPath = String(req.originalUrl || req.url || '').split('?')[0];
-								const visibilityIsEnforced = /^\/api\/(gallery|videos)(?:\/|$)/.test(requestPath);
+								const visibilityIsEnforced = /^\/api\/(gallery|videos|posts)(?:\/|$)/.test(requestPath);
 								const mediaVisibility = visibilityIsEnforced ? (req.body?.visibility || 'public') : 'public';
-								if (await requiresAuthenticatedDelivery(req.user?.id, mediaVisibility)) {
+								const mediaKind = /^\/api\/gallery(?:\/|$)/.test(requestPath)
+									? (resource_type === 'video' ? 'video' : 'gallery')
+									: null;
+								if (await requiresAuthenticatedDelivery(req.user?.id, mediaVisibility, { kind: mediaKind })) {
 									uploadOptions.type = 'authenticated';
 								}
 								const cloudRes = await cloudinary.uploader.upload(file.path, uploadOptions);

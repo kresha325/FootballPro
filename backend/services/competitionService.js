@@ -17,6 +17,7 @@ const Stream = require('../models/Stream');
 const ScoutingReport = require('../models/ScoutingReport');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const TournamentClubEntry = require('../models/TournamentClubEntry');
+const TournamentClubPlayerStat = require('../models/TournamentClubPlayerStat');
 const CompetitionAuditEvent = require('../models/CompetitionAuditEvent');
 const ClubMember = require('../models/ClubMember');
 const ClubStaff = require('../models/ClubStaff');
@@ -50,6 +51,7 @@ const {
   planKnockoutAdvancement,
 } = require('../utils/matchResult');
 const { aggregatePlayerStats } = require('../utils/playerStatsEngine');
+const { createAthleteIdentityKey, normalizeAthleteIdentityKey } = require('../utils/athleteIdentity');
 
 function fail(status, msg) {
   const err = new Error(msg);
@@ -689,7 +691,7 @@ async function recordOfficialResult({ matchId, user, payload = {} }) {
     );
 
     if (Array.isArray(goalEvents)) {
-      await saveMatchGoalEvents(lockedMatch.id, goalEvents, lockedMatch, { transaction });
+      await saveMatchGoalEvents(lockedMatch.id, goalEvents, lockedMatch, { transaction, actorUserId: user?.id });
     }
 
     if (resolveLifecycle(lockedTournament) === 'active') {
@@ -1157,6 +1159,7 @@ async function savePlayerStats({ matchId, user, players }) {
   const seen = new Set();
   return sequelize.transaction(async (transaction) => {
     const normalizedRows = [];
+    const scorerRowsForIdentity = await MatchScorer.findAll({ where: { matchId: match.id }, transaction });
     for (const row of players) {
       const parsedUserId = row.userId == null || row.userId === '' ? null : Number(row.userId);
       const userId = Number.isInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : null;
@@ -1164,11 +1167,49 @@ async function savePlayerStats({ matchId, user, players }) {
       const athleteName = String(row.athleteName || '').trim().replace(/\s+/g, ' ').slice(0, 160) || null;
       if (!side || !allowedSides.includes(side)) throw fail(403, 'Nuk mund të ndryshoni statistikat e skuadrës tjetër.');
       if (!userId && (!unknownAllowed || !athleteName)) throw fail(400, 'Lojtari i panjohur mund të regjistrohet vetëm nga liga me emër dhe skuadër.');
-      const identity = userId ? `u:${userId}` : `n:${side}:${athleteName.toLocaleLowerCase()}`;
+      let athleteIdentityKey = null;
+      if (!userId) {
+        athleteIdentityKey = normalizeAthleteIdentityKey(row.athleteIdentityKey);
+        if (row.athleteIdentityKey && !athleteIdentityKey) throw fail(400, 'Identiteti i lojtarit është i pavlefshëm.');
+        const entry = sideEntries[side];
+        const normalizedName = (value) => String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+        if (entry) {
+          const identityRows = await TournamentClubPlayerStat.findAll({ where: { tournamentClubEntryId: entry.id }, transaction });
+          if (athleteIdentityKey) {
+            const ownedIdentity = identityRows.find((item) => item.athleteIdentityKey === athleteIdentityKey);
+            if (!ownedIdentity || normalizedName(ownedIdentity.athleteName) !== normalizedName(athleteName)) {
+              throw fail(403, 'Identiteti i panjohur nuk i përket skuadrës së kësaj ndeshjeje.');
+            }
+          } else {
+            const matchingIds = new Set(identityRows.filter((item) => normalizedName(item.athleteName) === normalizedName(athleteName)).map((item) => item.athleteIdentityKey));
+            for (const scorer of scorerRowsForIdentity) {
+              if (scorer.side === side && !scorer.userId && normalizedName(scorer.athleteName) === normalizedName(athleteName) && scorer.athleteIdentityKey) matchingIds.add(scorer.athleteIdentityKey);
+            }
+            if (matchingIds.size > 1) throw fail(409, 'Ka disa atletë me këtë emër. Zgjidh identitetin e saktë para ruajtjes.');
+            athleteIdentityKey = matchingIds.values().next().value || createAthleteIdentityKey();
+            if (!matchingIds.size) {
+              await TournamentClubPlayerStat.create({
+                tournamentClubEntryId: entry.id,
+                athleteIdentityKey,
+                athleteName,
+                goals: 0,
+                assists: 0,
+                updatedByUserId: user.id,
+              }, { transaction });
+            }
+          }
+        } else if (!athleteIdentityKey) {
+          const matching = new Set(scorerRowsForIdentity
+            .filter((scorer) => scorer.side === side && !scorer.userId && normalizedName(scorer.athleteName) === normalizedName(athleteName))
+            .map((scorer) => scorer.athleteIdentityKey).filter(Boolean));
+          if (matching.size > 1) throw fail(409, 'Ka disa atletë me këtë emër. Dërgo identitetin e saktë.');
+          athleteIdentityKey = matching.values().next().value || createAthleteIdentityKey();
+        }
+      }
+      const identity = userId ? `u:${userId}` : `i:${athleteIdentityKey}`;
       if (seen.has(identity)) throw fail(409, 'Statistikat e lojtarit janë përsëritur.');
       seen.add(identity);
       if (userId) {
-        const sideUserId = side === 'home' ? match.homeUserId : match.awayUserId;
         const sideEntry = sideEntries[side];
         if (sideEntry) {
           const entry = sideEntry;
@@ -1183,6 +1224,7 @@ async function savePlayerStats({ matchId, user, players }) {
         matchId: match.id,
         userId,
         athleteName,
+        athleteIdentityKey,
         side,
         started: !!row.started,
         minutes: Math.max(0, parseInt(row.minutes, 10) || 0),
@@ -1205,8 +1247,10 @@ async function savePlayerStats({ matchId, user, players }) {
     }
     for (const side of allowedSides) {
       const sideWhere = { matchId: match.id, side };
-      if (manager.ok) await PlayerMatchStat.destroy({ where: sideWhere, transaction });
-      else await PlayerMatchStat.destroy({ where: { ...sideWhere, userId: { [Op.in]: (await PlayerMatchStat.findAll({ where: sideWhere, attributes: ['userId'], transaction })).map((r) => r.userId).filter(Boolean) } }, transaction });
+      // allowedSides is already derived from verified league/club/coach access.
+      // Replacing that side's submitted sheet must also replace unknown athletes,
+      // whose userId is null, or edits would silently accumulate duplicate rows.
+      await PlayerMatchStat.destroy({ where: sideWhere, transaction });
     }
     const officialScore = { home: Number(match.scoreHome), away: Number(match.scoreAway) };
     if (match.status !== 'finished' || !Number.isInteger(officialScore.home) || !Number.isInteger(officialScore.away)) {
@@ -1219,11 +1263,11 @@ async function savePlayerStats({ matchId, user, players }) {
       const scorerGoalCount = scorers.reduce((sum, scorer) => sum + Number(scorer.goals || 0), 0);
       const scorerGoalsByPlayer = new Map();
       for (const scorer of scorers) {
-        const key = scorer.userId ? `u:${scorer.userId}` : `n:${String(scorer.athleteName || '').trim().toLocaleLowerCase()}`;
+        const key = scorer.userId ? `u:${scorer.userId}` : `i:${scorer.athleteIdentityKey}`;
         scorerGoalsByPlayer.set(key, (scorerGoalsByPlayer.get(key) || 0) + Number(scorer.goals || 0));
       }
       const additionalStatGoals = normalizedRows.filter((row) => row.side === side).reduce((sum, row) => {
-        const key = row.userId ? `u:${row.userId}` : `n:${String(row.athleteName || '').trim().toLocaleLowerCase()}`;
+        const key = row.userId ? `u:${row.userId}` : `i:${row.athleteIdentityKey}`;
         return sum + Math.max(0, row.goals - (scorerGoalsByPlayer.get(key) || 0));
       }, 0);
       if (scorerGoalCount + additionalStatGoals > officialScore[side]) throw fail(400, `Golat e lojtarëve nuk mund të kalojnë rezultatin zyrtar të skuadrës ${side === 'home' ? 'vendase' : 'mysafire'}.`);
@@ -1231,7 +1275,7 @@ async function savePlayerStats({ matchId, user, players }) {
       for (const scorer of scorers) if (scorer.assistUserId) scorerAssistsByPlayer.set(`u:${scorer.assistUserId}`, (scorerAssistsByPlayer.get(`u:${scorer.assistUserId}`) || 0) + 1);
       const scorerAssistCount = [...scorerAssistsByPlayer.values()].reduce((sum, value) => sum + value, 0);
       const assistCount = scorerAssistCount + normalizedRows.filter((row) => row.side === side).reduce((sum, row) => {
-        const key = row.userId ? `u:${row.userId}` : `n:${String(row.athleteName || '').trim().toLocaleLowerCase()}`;
+        const key = row.userId ? `u:${row.userId}` : `i:${row.athleteIdentityKey}`;
         return sum + Math.max(0, row.assists - (scorerAssistsByPlayer.get(key) || 0));
       }, 0);
       if (assistCount > officialScore[side]) throw fail(400, `Asistet e lojtarëve nuk mund të kalojnë numrin e golave zyrtarë të skuadrës.`);

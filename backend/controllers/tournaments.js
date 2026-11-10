@@ -1064,7 +1064,13 @@ exports.getTournamentStats = async (req, res) => {
         const clubId = side === 'home' ? match?.homeUserId : match?.awayUserId;
         const teamIdentity = entryId ? `entry:${entryId}` : clubId ? `club:${clubId}` : `match:${scorer.matchId}:${side}`;
         const normalizedName = String(scorer.athleteName || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
-        const key = scorer.userId ? `u:${scorer.userId}` : `n:${teamIdentity}:${normalizedName}`;
+        const key = scorer.userId
+          ? `u:${scorer.userId}`
+          : scorer.athleteIdentityKey
+            ? `i:${teamIdentity}:${scorer.athleteIdentityKey}`
+            // Legacy name-only rows have no recoverable person identity. Keep
+            // them distinct instead of merging same-name athletes.
+            : `legacy:${teamIdentity}:${scorer.id ?? `${scorer.matchId}:${normalizedName}`}`;
         const value = totals.get(key) || { userId: scorer.userId, name: scorer.athleteName || null, goals: 0, teamIdentity };
         value.goals += Number(scorer.goals || 0);
         totals.set(key, value);
@@ -1082,7 +1088,11 @@ exports.getTournamentStats = async (req, res) => {
       const scorerRows = matchIds.length ? await MatchScorer.findAll({ where: { matchId: { [Op.in]: matchIds } } }) : [];
       const totals = new Map();
       for (const scorer of scorerRows) {
-        const key = scorer.userId ? `u:${scorer.userId}` : `n:${scorer.matchId}:${scorer.side}:${String(scorer.athleteName || '').trim().toLocaleLowerCase()}`;
+        const key = scorer.userId
+          ? `u:${scorer.userId}`
+          : scorer.athleteIdentityKey
+            ? `i:${scorer.athleteIdentityKey}`
+            : `legacy:${scorer.id ?? `${scorer.matchId}:${scorer.side}:${String(scorer.athleteName || '').trim().toLocaleLowerCase()}`}`;
         const value = totals.get(key) || { userId: scorer.userId, name: scorer.athleteName || null, goals: 0 };
         value.goals += Number(scorer.goals || 0);
         totals.set(key, value);

@@ -310,6 +310,24 @@ describe('match results and events', () => {
 });
 
 describe('player statistics and permissions', () => {
+  it('keeps unknown athletes with the same display name separate by stable identity', () => {
+    const players = aggregatePlayerStats({
+      scorers: [
+        { id: 1, matchId: 5, userId: null, athleteName: 'Alex Smith', athleteIdentityKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', goals: 1, side: 'home' },
+        { id: 2, matchId: 5, userId: null, athleteName: 'Alex Smith', athleteIdentityKey: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', goals: 1, side: 'home' },
+      ],
+      statRows: [
+        { id: 3, matchId: 5, userId: null, athleteName: 'Alex Smith', athleteIdentityKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', side: 'home', minutes: 90, goals: 1 },
+      ],
+    });
+    assert.equal(players.length, 2);
+    const first = players.find((row) => row.athleteIdentityKey.startsWith('aaaaaaaa'));
+    const second = players.find((row) => row.athleteIdentityKey.startsWith('bbbbbbbb'));
+    assert.equal(first.goals, 1, 'the stat row does not double-count the matching scorer');
+    assert.equal(first.minutes, 90);
+    assert.equal(second.goals, 1);
+  });
+
   it('does not double-count goals stored as both scorers and events', () => {
     const players = aggregatePlayerStats({
       scorers: [{ matchId: 1, userId: 9, goals: 1, assistUserId: 8 }],
