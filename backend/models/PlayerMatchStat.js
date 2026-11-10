@@ -6,7 +6,8 @@ const PlayerMatchStat = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     matchId: { type: DataTypes.INTEGER, allowNull: false },
-    userId: { type: DataTypes.INTEGER, allowNull: false },
+    userId: { type: DataTypes.INTEGER, allowNull: true },
+    athleteName: { type: DataTypes.STRING(160), allowNull: true },
     side: { type: DataTypes.STRING(8), allowNull: true },
     started: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     minutes: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },

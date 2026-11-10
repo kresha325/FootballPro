@@ -461,6 +461,14 @@ export const generateTournamentBracketRequest = (tournamentId) =>
   api.post(`/api/tournaments/${tournamentId}/bracket/generate`);
 export const updateTournamentMatchScoreRequest = (matchId, payload) =>
   api.put(`/api/tournaments/matches/${matchId}/score`, payload);
+export const saveTournamentMatchPlayerStatsRequest = (matchId, players) =>
+  api.put(`/api/tournaments/matches/${matchId}/player-stats`, { players });
+export const scheduleTournamentMatchRequest = (matchId, payload) =>
+  api.put(`/api/tournaments/matches/${matchId}/schedule`, payload);
+export const createTournamentMatchRequest = (tournamentId, payload) =>
+  api.post(`/api/tournaments/${tournamentId}/matches`, payload);
+export const deleteTournamentMatchRequest = (matchId) =>
+  api.delete(`/api/tournaments/matches/${matchId}`);
 
 export const acceptTournamentParticipantRequest = (tournamentId, userId) =>
   api.put(`/api/tournaments/${tournamentId}/participants/${userId}/accept`);

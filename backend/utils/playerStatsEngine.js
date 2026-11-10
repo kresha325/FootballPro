@@ -40,6 +40,8 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
   const map = {};
   const scorerGoalsByMatchUser = new Set();
   const assistByMatchUser = new Set();
+  const scorerGoalTotalsByMatchUser = new Map();
+  const assistTotalsByMatchUser = new Map();
   const yellowByMatchUser = new Set();
   const redByMatchUser = new Set();
   const startedByMatchUser = new Set();
@@ -50,12 +52,16 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
     if (!player) continue;
     const goals = Number(row.goals) || 0;
     player.goals += goals;
-    scorerGoalsByMatchUser.add(`${row.matchId}:${row.userId}`);
+    const goalKey = `${row.matchId}:${row.userId}`;
+    scorerGoalsByMatchUser.add(goalKey);
+    scorerGoalTotalsByMatchUser.set(goalKey, (scorerGoalTotalsByMatchUser.get(goalKey) || 0) + goals);
     if (row.assistUserId) {
       const assister = bucket(map, row.assistUserId);
       if (assister) {
         assister.assists += 1;
-        assistByMatchUser.add(`${row.matchId}:${row.assistUserId}`);
+        const assistKey = `${row.matchId}:${row.assistUserId}`;
+        assistByMatchUser.add(assistKey);
+        assistTotalsByMatchUser.set(assistKey, (assistTotalsByMatchUser.get(assistKey) || 0) + 1);
       }
     }
   }
@@ -105,20 +111,12 @@ function aggregatePlayerStats({ scorers = [], events = [], statRows = [], matche
       player.appearances += 1;
       appearedByMatchUser.add(key);
     }
-    if (!scorerGoalsByMatchUser.has(`${row.matchId}:${row.userId}`)) {
-      const extraGoals = Number(row.goals) || 0;
-      if (extraGoals) {
-        player.goals += extraGoals;
-        scorerGoalsByMatchUser.add(`${row.matchId}:${row.userId}`);
-      }
-    }
-    if (!assistByMatchUser.has(`${row.matchId}:${row.userId}`)) {
-      const extraAssists = Number(row.assists) || 0;
-      if (extraAssists) {
-        player.assists += extraAssists;
-        assistByMatchUser.add(`${row.matchId}:${row.userId}`);
-      }
-    }
+    const goalKey = `${row.matchId}:${row.userId}`;
+    const extraGoals = Math.max(0, (Number(row.goals) || 0) - (scorerGoalTotalsByMatchUser.get(goalKey) || 0));
+    if (extraGoals) player.goals += extraGoals;
+    const assistKey = `${row.matchId}:${row.userId}`;
+    const extraAssists = Math.max(0, (Number(row.assists) || 0) - (assistTotalsByMatchUser.get(assistKey) || 0));
+    if (extraAssists) player.assists += extraAssists;
     if (!yellowByMatchUser.has(`${row.matchId}:${row.userId}`)) {
       const extraYellow = Number(row.yellowCards) || 0;
       if (extraYellow) {

@@ -13,7 +13,7 @@ import {
   todayDateInputValue,
 } from '../utils/footballSeason';
 import axios from 'axios';
-import MatchGoalEventsForm, { eventsFromMatchData } from './MatchGoalEventsForm';
+import MatchGoalEventsForm, { eventsFromMatchData, squadMembersForSide } from './MatchGoalEventsForm';
 import { TrophyIcon, ShieldCheckIcon, BoltIcon } from '@heroicons/react/24/outline';
 import { clubMembersAPI } from '../services/api';
 import { useLocale } from '../contexts/LocaleContext';
@@ -26,9 +26,9 @@ API.interceptors.request.use((config) => {
 });
 
 function participantLabel(p, participantType, t) {
-  const club = p.Profile?.club;
-  const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim();
-  const role = p.role;
+  const club = p?.Profile?.club;
+  const name = [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim();
+  const role = p?.role;
   const uid = resolveParticipantUserId(p);
   const fallback = uid ? `#${uid}` : '';
   if (participantType === 'club') {
@@ -54,7 +54,7 @@ function avatarUrl(photo) {
 }
 
 function scorerLine(row, t) {
-  const name = [row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || `${t('Lojtari')} #${row.userId}`;
+  const name = [row.User?.firstName, row.User?.lastName].filter(Boolean).join(' ') || row.athleteName || `${t('Lojtari')} #${row.userId}`;
   const assistName = row.assistUser
     ? [row.assistUser.firstName, row.assistUser.lastName].filter(Boolean).join(' ')
     : null;
@@ -65,7 +65,34 @@ function scorerLine(row, t) {
   return name;
 }
 
-function TournamentClubEntriesPanel({ entries = [], user, tournamentId, onSaved }) {
+function LeagueManualFixtureForm({ tournamentId, entries = [], onSaved }) {
+  const { t } = useLocale();
+  const localDate = new Date();
+  const [homeClubEntryId, setHome] = useState('');
+  const [awayClubEntryId, setAway] = useState('');
+  const [matchDate, setDate] = useState(new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+  const [venue, setVenue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const create = async () => {
+    if (!homeClubEntryId || !awayClubEntryId || homeClubEntryId === awayClubEntryId) return;
+    setBusy(true);
+    try {
+      await API.post(`/tournaments/${tournamentId}/matches`, { homeClubEntryId: Number(homeClubEntryId), awayClubEntryId: Number(awayClubEntryId), matchDate: new Date(matchDate).toISOString(), venue });
+      await onSaved?.();
+      setHome(''); setAway('');
+    } catch (error) { alert(error.response?.data?.msg || t('Ndeshja nuk u krijua.')); }
+    finally { setBusy(false); }
+  };
+  return <div className="grid gap-2 rounded-xl border border-[var(--xt-color-border)] p-3 sm:grid-cols-2 lg:grid-cols-5">
+    <select aria-label={t('Ekipi vendas')} className="input" value={homeClubEntryId} onChange={(e) => setHome(e.target.value)}><option value="">{t('Zgjidh vendas')}</option>{entries.map((e) => <option key={e.id} value={e.id}>{e.clubName}</option>)}</select>
+    <select aria-label={t('Ekipi mysafir')} className="input" value={awayClubEntryId} onChange={(e) => setAway(e.target.value)}><option value="">{t('Zgjidh mysafir')}</option>{entries.map((e) => <option key={e.id} value={e.id}>{e.clubName}</option>)}</select>
+    <input aria-label={t('Data dhe ora')} type="datetime-local" className="input" value={matchDate} onChange={(e) => setDate(e.target.value)} />
+    <input aria-label={t('Stadiumi')} className="input" placeholder={t('Stadiumi')} value={venue} onChange={(e) => setVenue(e.target.value)} />
+    <button type="button" disabled={busy || !homeClubEntryId || !awayClubEntryId} onClick={create} className="btn btn-primary">{busy ? t('Duke ruajtur…') : t('Shto ndeshje')}</button>
+  </div>;
+}
+
+function TournamentClubEntriesPanel({ entries = [], user, tournamentId, hasFixtures = false, onSaved }) {
   const { t } = useLocale();
   const [drafts, setDrafts] = useState({});
   const [playerDrafts, setPlayerDrafts] = useState({});
@@ -130,7 +157,8 @@ function TournamentClubEntriesPanel({ entries = [], user, tournamentId, onSaved 
               ))}
             </div>
             {isLigaManager && <button type="button" disabled={busyId === entry.id} onClick={() => saveTeamStats(entry)} className="mt-3 min-h-10 rounded-lg bg-[var(--xt-color-gold)] px-4 text-sm font-semibold disabled:opacity-50">{busyId === entry.id ? t('Duke ruajtur…') : t('Ruaj statistikat e ekipit')}</button>}
-            {isClubOwner && (
+            {isClubOwner && hasFixtures && <p className="mt-4 rounded-lg bg-[var(--xt-color-surface-raised)] p-3 text-xs text-[var(--xt-color-text-muted)]">{t('Statistikat e lojtarëve vendosen te secila ndeshje pasi liga regjistron rezultatin zyrtar.')}</p>}
+            {isClubOwner && !hasFixtures && (
               <div className="mt-4 border-t border-[var(--xt-color-border)] pt-3">
                 <h5 className="font-semibold">{t('Golat dhe asistet e lojtarëve')}</h5>
                 <p className="mb-2 text-xs text-[var(--xt-color-text-muted)]">{t('Për lojtarët pa profil, shkruaj emrin. Për atletët në roster mund të lidhësh statistikën me llogarinë e tyre.')}</p>
@@ -157,12 +185,22 @@ function MatchBroadcastModal({
   canEdit = false,
   participants = [],
   onSaveMatch,
+  onSaveSchedule,
+  onDeleteMatch,
+  onSavePlayerStats,
+  user,
   saving = false,
 }) {
   const { t, language } = useLocale();
   const [scoreHomeInput, setScoreHomeInput] = useState('');
   const [scoreAwayInput, setScoreAwayInput] = useState('');
   const [goalEvents, setGoalEvents] = useState([]);
+  const [matchDateInput, setMatchDateInput] = useState('');
+  const [venueInput, setVenueInput] = useState('');
+  const [refereeInput, setRefereeInput] = useState('');
+  const [playerStatsDraft, setPlayerStatsDraft] = useState([]);
+  const [savingStats, setSavingStats] = useState(false);
+  const [coachStatsSide, setCoachStatsSide] = useState('home');
 
   const m = data?.match;
 
@@ -171,6 +209,11 @@ function MatchBroadcastModal({
     setScoreHomeInput(m.scoreHome != null ? String(m.scoreHome) : '');
     setScoreAwayInput(m.scoreAway != null ? String(m.scoreAway) : '');
     setGoalEvents(eventsFromMatchData(data));
+    const date = m.matchDate ? new Date(m.matchDate) : new Date();
+    setMatchDateInput(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setVenueInput(m.venue || '');
+    setRefereeInput(m.refereeName || '');
+    setPlayerStatsDraft((m.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', side: row.side || 'home', minutes: row.minutes || 0, goals: row.goals || 0, assists: row.assists || 0, yellowCards: row.yellowCards || 0, redCards: row.redCards || 0 })));
   }, [m?.id, data]);
 
   if (!open) return null;
@@ -182,6 +225,15 @@ function MatchBroadcastModal({
   const sh = m?.scoreHome;
   const sa = m?.scoreAway;
   const hasScore = sh != null && sa != null;
+  const isLigaManager = canEdit;
+  const clubSide = user?.role === 'club' ? (Number(user.id) === Number(m?.homeUserId) ? 'home' : Number(user.id) === Number(m?.awayUserId) ? 'away' : null) : null;
+  const canEditPlayerStats = isLigaManager || Boolean(clubSide) || user?.role === 'coach';
+  const canDeleteLeagueMatch = canEdit && Boolean(m?.Tournament?.ligaId || m?.Tournament?.sourceRole === 'liga');
+  const saveStats = async () => {
+    setSavingStats(true);
+    try { await onSavePlayerStats?.(playerStatsDraft.filter((row) => isLigaManager || (clubSide ? row.side === clubSide : user?.role === 'coach' && row.side === coachStatsSide))); }
+    finally { setSavingStats(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto" onClick={onClose} role="presentation">
@@ -223,6 +275,15 @@ function MatchBroadcastModal({
 
         {!loading && !error && m && (
           <>
+            {canEdit && (
+              <div className="grid gap-2 border-b border-white/10 px-4 py-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:px-6">
+                <label className="text-xs text-slate-400">{t('Data dhe ora')}<input type="datetime-local" value={matchDateInput} onChange={(e) => setMatchDateInput(e.target.value)} className="input mt-1 w-full text-sm" /></label>
+                <label className="text-xs text-slate-400">{t('Stadiumi')}<input value={venueInput} onChange={(e) => setVenueInput(e.target.value)} className="input mt-1 w-full text-sm" /></label>
+                <label className="text-xs text-slate-400">{t('Gjyqtari')}<input value={refereeInput} onChange={(e) => setRefereeInput(e.target.value)} className="input mt-1 w-full text-sm" /></label>
+                <button type="button" onClick={() => onSaveSchedule?.({ matchDate: new Date(matchDateInput).toISOString(), venue: venueInput, refereeName: refereeInput })} className="btn btn-primary self-end">{t('Ruaj orarin')}</button>
+              </div>
+            )}
+            {canDeleteLeagueMatch && <div className="flex justify-end border-b border-white/10 px-4 py-2 sm:px-6"><button type="button" onClick={() => onDeleteMatch?.(m.id)} className="btn btn-quiet min-h-9 text-red-500">{t('Fshi ndeshjen')}</button></div>}
             <div className="px-4 py-6 sm:px-8">
               <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-1 flex-col items-center gap-2 text-center sm:items-end sm:text-right min-w-0">
@@ -235,7 +296,7 @@ function MatchBroadcastModal({
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(home, participantType, t)}</p>
+                      <p className="text-base font-bold leading-tight sm:text-xl break-words">{m.homeName || m.homeClubEntry?.clubName || participantLabel(home, participantType, t)}</p>
                       {home?.Profile?.position && <p className="text-xs text-slate-400">{home.Profile.position}</p>}
                     </div>
                   </div>
@@ -270,7 +331,7 @@ function MatchBroadcastModal({
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-base font-bold leading-tight sm:text-xl break-words">{participantLabel(away, participantType, t)}</p>
+                    <p className="text-base font-bold leading-tight sm:text-xl break-words">{m.awayName || m.awayClubEntry?.clubName || participantLabel(away, participantType, t)}</p>
                     {away?.Profile?.position && <p className="text-xs text-slate-400">{away.Profile.position}</p>}
                   </div>
                 </div>
@@ -393,9 +454,10 @@ function MatchBroadcastModal({
                       scoreAway: Number(scoreAwayInput),
                       status: 'finished',
                       goalEvents: goalEvents
-                        .filter((ev) => ev.userId)
+                        .filter((ev) => ev.userId || ev.athleteName?.trim())
                         .map((ev) => ({
-                          userId: Number(ev.userId),
+                          userId: ev.userId ? Number(ev.userId) : null,
+                          athleteName: ev.athleteName || null,
                           minute: ev.minute === '' ? null : Number(ev.minute),
                           assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
                           side: ev.side || undefined,
@@ -411,6 +473,26 @@ function MatchBroadcastModal({
               <p className="border-t border-white/10 px-4 py-4 text-center text-sm text-slate-400 sm:px-6">
                 {t("Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.")}
               </p>
+            )}
+            {canEditPlayerStats && hasScore && (
+              <section className="border-t border-white/10 bg-slate-950/80 px-4 py-5 sm:px-6">
+                <h4 className="mb-1 font-bold">{t('Statistikat e lojtarëve')}</h4>
+                <p className="mb-3 text-xs text-slate-400">{t('Golat e lojtarëve në secilën anë nuk mund ta kalojnë rezultatin zyrtar.')}</p>
+                <div className="space-y-2">
+                  {playerStatsDraft.map((row, index) => {
+                    const side = row.side || 'home';
+                    const roster = squadMembersForSide(participants, side === 'home' ? m.homeUserId : m.awayUserId);
+                    const editable = isLigaManager || clubSide === side || (user?.role === 'coach' && coachStatsSide === side);
+                    return <div key={`${row.userId}-${index}`} className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--xt-color-surface-raised)] p-2 sm:grid-cols-8">
+                      {(isLigaManager || user?.role === 'coach') && <select aria-label={t('Skuadra')} className="input" value={side} onChange={(e) => { if (user?.role === 'coach') setCoachStatsSide(e.target.value); setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, side: e.target.value, userId: '' } : item)); }}><option value="home">{m.homeName || t('Vendas')}</option><option value="away">{m.awayName || t('Mysafir')}</option></select>}
+                      <select aria-label={t('Lojtari')} className="input sm:col-span-2" disabled={!editable} value={row.userId} onChange={(e) => setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, userId: e.target.value, athleteName: '' } : item))}><option value="">{t('Zgjidh atletin')}</option>{roster.map((athlete) => { const id = resolveParticipantUserId(athlete) || athlete.id; return <option key={id} value={id}>{[athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || `#${id}`}</option>; })}</select>
+                      {['minutes', 'goals', 'assists', 'yellowCards', 'redCards'].map((field) => <label key={field} className="text-[10px] text-slate-400">{t(field === 'minutes' ? 'Minuta' : field === 'goals' ? 'Gola' : field === 'assists' ? 'Asiste' : field === 'yellowCards' ? 'Kartona të verdhë' : 'Kartona të kuq')}<input disabled={!editable} type="number" min="0" max={field === 'minutes' ? 180 : 20} value={row[field]} onChange={(e) => setPlayerStatsDraft((all) => all.map((item, i) => i === index ? { ...item, [field]: e.target.value } : item))} className="input mt-1 w-full" /></label>)}
+                      {editable && <button type="button" onClick={() => setPlayerStatsDraft((all) => all.filter((_, i) => i !== index))} className="btn btn-quiet text-red-500">{t('Hiq')}</button>}
+                    </div>;
+                  })}
+                </div>
+                <div className="mt-3 flex gap-2"><button type="button" onClick={() => setPlayerStatsDraft((all) => [...all, { userId: '', side: clubSide || coachStatsSide || 'home', minutes: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 }])} className="btn btn-quiet">+ {t('Shto lojtar')}</button><button type="button" disabled={savingStats} onClick={saveStats} className="btn btn-primary">{savingStats ? t('Duke ruajtur…') : t('Ruaj statistikat')}</button></div>
+              </section>
             )}
           </>
         )}
@@ -682,6 +764,38 @@ export default function TournamentSimple() {
     } finally {
       setSavingMatch(false);
     }
+  };
+
+  const saveMatchSchedule = async (payload) => {
+    const matchId = matchModal.data?.match?.id;
+    if (!matchId) return;
+    try {
+      await API.put(`/tournaments/matches/${matchId}/schedule`, payload);
+      await openMatchDetail(matchId);
+      await refreshTournamentDetail();
+    } catch (error) {
+      alert(error.response?.data?.msg || t('Orari nuk u ruajt.'));
+    }
+  };
+
+  const deleteMatch = async (matchId) => {
+    if (!window.confirm(t('A dëshiron ta fshish këtë ndeshje dhe statistikat e saj?'))) return;
+    try {
+      await API.delete(`/tournaments/matches/${matchId}`);
+      setMatchModal({ open: false, loading: false, error: null, data: null });
+      await refreshTournamentDetail();
+    } catch (error) { alert(error.response?.data?.msg || t('Ndeshja nuk u fshi.')); }
+  };
+
+  const saveMatchPlayerStats = async (players) => {
+    const matchId = matchModal.data?.match?.id;
+    if (!matchId) return;
+    try {
+      await API.put(`/tournaments/matches/${matchId}/player-stats`, { players });
+      await openMatchDetail(matchId);
+      await refreshTournamentDetail();
+      alert(t('Statistikat e lojtarëve u ruajtën.'));
+    } catch (error) { alert(error.response?.data?.msg || t('Statistikat nuk u ruajtën.')); }
   };
 
   const openMatchDetail = async (matchId) => {
@@ -1035,12 +1149,14 @@ export default function TournamentSimple() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTournaments.map((tournament) => {
           const isCreator = tournament.creatorId === user?.id;
-          const participantCount = tournament.participants?.length || 0;
+          const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
+          const participantCount = isLigaTournament
+            ? (tournament.clubEntryCount ?? tournament.participants?.length ?? 0)
+            : (tournament.participants?.length || 0);
           const isJoined = tournament.participants?.some(
             (p) => resolveParticipantUserId(p) === user?.id
           );
           const pt = tournament.participantType || 'individual';
-          const isLigaTournament = !!(tournament.ligaId || tournament.sourceRole === 'liga');
           const joinBlocked =
             (user?.role === 'athlete' && isLigaTournament) ||
             (pt === 'club' && user?.role !== 'club') ||
@@ -1765,9 +1881,9 @@ export default function TournamentSimple() {
                       <tbody>
                         {detailExtras.standings.rows.map((row) => {
                           const u = row.User;
-                          const label = u ? participantLabel(u, selectedTournament.participantType || 'individual', t) : `#${row.userId}`;
+                          const label = row.clubName || (u ? participantLabel(u, selectedTournament.participantType || 'individual', t) : `#${row.userId || row.clubEntryId}`);
                           return (
-                            <tr key={row.userId} className="border-t border-gray-100 dark:border-gray-600">
+                            <tr key={row.clubEntryId || row.userId} className="border-t border-gray-100 dark:border-gray-600">
                               <td className="px-3 py-2">{row.rank}</td>
                               <td className="px-3 py-2 font-medium text-[var(--xt-color-text)]">
                                 <div className="flex items-center gap-2">
@@ -1798,9 +1914,9 @@ export default function TournamentSimple() {
                     <ol className="space-y-2 sm:hidden" aria-label={t('Renditja e ekipeve')}>
                       {detailExtras.standings.rows.map((row) => {
                         const u = row.User;
-                        const label = u ? participantLabel(u, selectedTournament.participantType || 'individual', t) : `#${row.userId}`;
+                        const label = row.clubName || (u ? participantLabel(u, selectedTournament.participantType || 'individual', t) : `#${row.userId || row.clubEntryId}`);
                         return (
-                          <li key={row.userId} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-3">
+                          <li key={row.clubEntryId || row.userId} className="rounded-xl border border-[var(--xt-color-border)] bg-[var(--xt-color-surface-raised)] p-3">
                             <div className="flex min-w-0 items-center justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
                                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--xt-color-gold)]/15 text-sm font-bold text-[var(--xt-color-gold-bright)]">{row.rank}</span>
@@ -1835,6 +1951,10 @@ export default function TournamentSimple() {
                   </p>
                 )}
               </div>
+            )}
+
+            {detailTab === 'matches' && !detailLoading && (selectedTournament.ligaId || selectedTournament.sourceRole === 'liga') && Number(selectedTournament.creatorId) === Number(user?.id) && ['active', 'in_progress'].includes(selectedTournament.lifecycle || selectedTournament.status) && detailExtras.clubEntries?.length >= 2 && (
+              <section className="mb-4 space-y-2"><h3 className="text-lg font-bold">{t('Shto ndeshje manualisht')}</h3><p className="text-xs text-[var(--xt-color-text-muted)]">{t('Mund të vendosësh edhe datë të kaluar për rezultatet e këtij sezoni.')}</p><LeagueManualFixtureForm tournamentId={selectedTournament.id} entries={detailExtras.clubEntries} onSaved={refreshTournamentDetail} /></section>
             )}
 
             {detailTab === 'matches' && !detailLoading && detailExtras.matches?.length > 0 && (
@@ -1872,15 +1992,15 @@ export default function TournamentSimple() {
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)]">
-                            <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)} />
-                            <span className="truncate">{participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)}</span>
+                            <UserAvatarLink user={m.homeUser} userId={m.homeUserId || m.homeUser?.id} size={28} name={m.homeName || m.homeClubEntry?.clubName || participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)} />
+                            <span className="truncate">{m.homeName || m.homeClubEntry?.clubName || participantLabel(m.homeUser, selectedTournament.participantType || 'individual', t)}</span>
                           </span>
                           <span className="shrink-0 self-center font-mono text-base font-bold text-[var(--xt-color-text)]">
                             {m.scoreHome ?? '—'} : {m.scoreAway ?? '—'}
                           </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-[var(--xt-color-text)] sm:justify-end">
-                            <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)} />
-                            <span className="truncate">{participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)}</span>
+                            <UserAvatarLink user={m.awayUser} userId={m.awayUserId || m.awayUser?.id} size={28} name={m.awayName || m.awayClubEntry?.clubName || participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)} />
+                            <span className="truncate">{m.awayName || m.awayClubEntry?.clubName || participantLabel(m.awayUser, selectedTournament.participantType || 'individual', t)}</span>
                           </span>
                         </div>
                       </button>
@@ -1894,7 +2014,7 @@ export default function TournamentSimple() {
             {detailTab === 'teams' && !detailLoading && (selectedTournament.ligaId || selectedTournament.sourceRole === 'liga') && (
               <section className="mb-8 space-y-3">
                 <div><h3 className="text-lg font-bold">{t('Ekipet dhe statistikat')}</h3><p className="text-sm text-[var(--xt-color-text-muted)]">{t('Klubet e paregjistruara ruhen sipas emrit. Lidhja me profil bëhet vetëm pasi liga ta aprovojë pretendimin e një klubi të verifikuar.')}</p></div>
-                <TournamentClubEntriesPanel entries={detailExtras.clubEntries} user={user} tournamentId={selectedTournament.id} onSaved={refreshTournamentDetail} />
+                <TournamentClubEntriesPanel entries={detailExtras.clubEntries} user={user} tournamentId={selectedTournament.id} hasFixtures={detailExtras.matches.length > 0} onSaved={refreshTournamentDetail} />
               </section>
             )}
 
@@ -2157,6 +2277,10 @@ export default function TournamentSimple() {
         canEdit={canEditMatch(matchModal.data?.match)}
         participants={selectedTournament?.participants || []}
         onSaveMatch={saveMatchReport}
+        onSaveSchedule={saveMatchSchedule}
+        onDeleteMatch={deleteMatch}
+        onSavePlayerStats={saveMatchPlayerStats}
+        user={user}
         saving={savingMatch}
       />
     </div>

@@ -8,7 +8,8 @@ function eventsFromMatchData(data) {
     ...(data?.scorersBySide?.away || []).map((row) => ({ ...row, side: 'away' })),
   ];
   return all.map((row) => ({
-    userId: String(row.userId),
+    userId: row.userId ? String(row.userId) : '',
+    athleteName: row.athleteName || '',
     minute: row.minute != null ? String(row.minute) : '',
     assistUserId: row.assistUserId ? String(row.assistUserId) : '',
     side: row.side || '',
@@ -32,7 +33,7 @@ export function countGoalsBySide(events) {
   let home = 0;
   let away = 0;
   (Array.isArray(events) ? events : []).forEach((ev) => {
-    if (!ev?.userId) return;
+    if (!ev?.userId && !ev?.athleteName?.trim()) return;
     if (ev.side === 'home') home += 1;
     else if (ev.side === 'away') away += 1;
   });
@@ -83,7 +84,7 @@ export default function MatchGoalEventsForm({
   };
 
   const addEvent = () => {
-    emit([...events, { userId: '', minute: '', assistUserId: '', side: 'home' }]);
+    emit([...events, { userId: '', athleteName: '', minute: '', assistUserId: '', side: 'home' }]);
   };
 
   const updateEvent = (index, patch) => {
@@ -117,7 +118,7 @@ export default function MatchGoalEventsForm({
         <div className="w-full sm:w-auto">
           <p className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>⚽ Golat & asistet</p>
           <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Zgjidh ekipin — pastaj anëtarët e skuadrës së turneut (gol + asist)
+            Zgjidh ekipin dhe lojtarin; për atletë pa profil shkruaj emrin manual.
           </p>
         </div>
         <button
@@ -192,16 +193,11 @@ export default function MatchGoalEventsForm({
                       <p className={`mt-1.5 text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                         Zgjidh fillimisht Vendas ose Mysafir.
                       </p>
-                    ) : sideMembers.length === 0 ? (
-                      <p className={`mt-1.5 text-xs ${isDark ? 'text-amber-300/90' : 'text-amber-700'}`}>
-                        Ky klub nuk ka lojtarë të caktuar në skuadrën e turneut.
-                      </p>
                     ) : (
-                      <ParticipantPickGrid
-                        options={scorerOptions}
-                        value={ev.userId}
-                        onSelect={(userId) => updateEvent(index, { userId, side })}
-                      />
+                      <>
+                        {sideMembers.length > 0 && <ParticipantPickGrid options={scorerOptions} value={ev.userId} onSelect={(userId) => updateEvent(index, { userId, athleteName: '', side })} />}
+                        <input aria-label="Emri i golashënuesit" value={ev.athleteName || ''} onChange={(e) => updateEvent(index, { athleteName: e.target.value, userId: '', assistUserId: '' })} placeholder={sideMembers.length ? 'Ose shkruaj emrin e atletit pa profil' : 'Shkruaj emrin e atletit të panjohur'} className={`${fieldClass} mt-2`} />
+                      </>
                     )}
                   </div>
                   <div>

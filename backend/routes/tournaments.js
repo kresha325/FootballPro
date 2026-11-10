@@ -18,6 +18,8 @@ const {
   getMatches,
   getTournamentMatchDetail,
   scheduleMatch,
+  createLeagueFixture,
+  deleteLeagueFixture,
   getTournamentStats,
   startTournamentAndGenerateMatches,
   updateMatchResultForTournament,
@@ -106,12 +108,14 @@ router.get('/:id/matches', auth.optionalAuth, getMatches);
 router.put('/matches/:matchId/score', auth, updateMatchScore);
 router.put('/matches/:matchId/result', auth, updateMatchResultForTournament);
 router.put('/matches/:matchId/schedule', auth, scheduleMatch);
+router.delete('/matches/:matchId', auth, deleteLeagueFixture);
 router.post('/matches/:matchId/events', auth, addTournamentMatchEvent);
 router.put('/matches/:matchId/lineup', auth, setTournamentMatchLineup);
 router.put('/matches/:matchId/player-stats', auth, saveTournamentPlayerStats);
 
 // Start tournament and generate matches automatically
 router.post('/:id/start', auth, startTournamentAndGenerateMatches);
+router.post('/:id/matches', auth, createLeagueFixture);
 
 // Statistics
 router.get('/:id/stats', auth.optionalAuth, getTournamentStats);

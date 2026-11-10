@@ -270,6 +270,10 @@ async function saveClubPlayerStats(req, res) {
   try {
     const entry = await db.TournamentClubEntry.findByPk(req.params.entryId, { transaction });
     if (!entry) { await transaction.rollback(); return res.status(404).json({ msg: 'Ekipi nuk u gjet.' }); }
+    if (await db.Match.count({ where: { tournamentId: entry.tournamentId }, transaction })) {
+      await transaction.rollback();
+      return res.status(409).json({ msg: 'Turneu ka ndeshje. Vendos statistikat për çdo ndeshje, brenda rezultatit zyrtar.' });
+    }
     const actor = await db.User.findByPk(req.user.id, { attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'], transaction });
     const club = entry.clubUserId ? await db.User.findByPk(entry.clubUserId, { attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'], transaction }) : null;
     const staff = actor?.role === 'coach' ? await activeAuthorizedClubStaff(actor.id, entry.clubUserId) : false;

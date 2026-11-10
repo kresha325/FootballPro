@@ -39,6 +39,10 @@ if (Match && Tournament && User) {
   // Lidhjet për homeUser dhe awayUser
   Match.belongsTo(User, { as: 'homeUser', foreignKey: 'homeUserId' });
   Match.belongsTo(User, { as: 'awayUser', foreignKey: 'awayUserId' });
+  Match.belongsTo(TournamentClubEntry, { as: 'homeClubEntry', foreignKey: 'homeClubEntryId' });
+  Match.belongsTo(TournamentClubEntry, { as: 'awayClubEntry', foreignKey: 'awayClubEntryId' });
+  TournamentClubEntry.hasMany(Match, { as: 'homeMatches', foreignKey: 'homeClubEntryId' });
+  TournamentClubEntry.hasMany(Match, { as: 'awayMatches', foreignKey: 'awayClubEntryId' });
   Match.belongsTo(Stadium, { as: 'Stadium', foreignKey: 'stadiumId' });
   Stadium.hasMany(Match, { as: 'matches', foreignKey: 'stadiumId' });
 }

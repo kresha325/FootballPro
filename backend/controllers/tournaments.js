@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const Liga = require('../models/Liga');
 const { MatchScorer } = require('../models');
+const PlayerMatchStat = require('../models/PlayerMatchStat');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const TournamentClubEntry = require('../models/TournamentClubEntry');
@@ -414,7 +415,17 @@ exports.getTournaments = async (req, res) => {
       ],
       order: [['createdAt', 'DESC']],
     });
-    const serialized = tournaments.map(serializeTournament);
+    const entryCounts = await TournamentClubEntry.findAll({
+      attributes: ['tournamentId', [sequelize.fn('COUNT', sequelize.col('id')), 'entryCount']],
+      where: { tournamentId: { [Op.in]: tournaments.map((tournament) => tournament.id) } },
+      group: ['tournamentId'],
+      raw: true,
+    });
+    const countByTournament = new Map(entryCounts.map((row) => [Number(row.tournamentId), Number(row.entryCount)]));
+    const serialized = tournaments.map((tournament) => ({
+      ...serializeTournament(tournament),
+      clubEntryCount: countByTournament.get(Number(tournament.id)) || 0,
+    }));
     const page = parseInt(req.query.page, 10);
     if (Number.isFinite(page) && page > 0) {
       const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 20, 1), 100);
@@ -839,6 +850,8 @@ exports.getMatches = async (req, res) => {
           attributes: ['id', 'firstName', 'lastName', 'role'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'club'] }],
         },
+        { model: TournamentClubEntry, as: 'homeClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
+        { model: TournamentClubEntry, as: 'awayClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
       ],
       order: [['round', 'ASC'], ['matchDate', 'ASC']],
     });
@@ -878,6 +891,8 @@ exports.getTournamentMatchDetail = async (req, res) => {
           attributes: ['id', 'firstName', 'lastName', 'role'],
           include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
         },
+        { model: TournamentClubEntry, as: 'homeClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
+        { model: TournamentClubEntry, as: 'awayClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
         {
           model: MatchScorer,
           required: false,
@@ -895,6 +910,7 @@ exports.getTournamentMatchDetail = async (req, res) => {
             },
           ],
         },
+        { model: PlayerMatchStat, as: 'playerStats', required: false, include: [{ model: User, as: 'player', attributes: ['id', 'firstName', 'lastName'], required: false }] },
       ],
     });
 
@@ -941,13 +957,12 @@ exports.scheduleMatch = async (req, res) => {
     const authz = canManageTournamentMatches(match.Tournament, req.user);
     if (!authz.ok) return res.status(authz.status).json({ msg: authz.msg });
 
+    let updated;
     try {
-      competitionService.assertScheduledDate(match.Tournament, matchDate);
+      updated = await competitionService.updateLeagueFixture({ matchId, user: req.user, payload: req.body || {} });
     } catch (guardErr) {
       return res.status(guardErr.status || 400).json({ msg: guardErr.message });
     }
-
-    await match.update({ matchDate });
 
     try {
       const { notifyMatchParticipants } = require('../utils/matchNotifications');
@@ -956,10 +971,27 @@ exports.scheduleMatch = async (req, res) => {
       console.warn('scheduleMatch notify:', notifyErr?.message || notifyErr);
     }
 
-    res.json(match);
+    res.json(updated || match);
   } catch (err) {
     console.error('Schedule match error:', err);
     res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.createLeagueFixture = async (req, res) => {
+  try {
+    const match = await competitionService.createLeagueFixture({ tournamentId: req.params.id, user: req.user, payload: req.body || {} });
+    res.status(201).json({ match });
+  } catch (err) {
+    res.status(err.status || 500).json({ msg: err.message || 'Ndeshja nuk u krijua.' });
+  }
+};
+
+exports.deleteLeagueFixture = async (req, res) => {
+  try {
+    res.json(await competitionService.deleteLeagueFixture({ matchId: req.params.matchId, user: req.user }));
+  } catch (err) {
+    res.status(err.status || 500).json({ msg: err.message || 'Ndeshja nuk u fshi.' });
   }
 };
 
@@ -987,15 +1019,16 @@ exports.getTournamentStats = async (req, res) => {
     const refreshed = await TournamentParticipant.findAll({
       where: { tournamentId: req.params.id },
     });
+    const entries = await TournamentClubEntry.findAll({ where: { tournamentId: req.params.id } });
 
     // Top scorer (goals for from standings / matches GF)
-    const topScorer = refreshed.reduce(
+    const topScorer = (entries.length ? entries : refreshed).reduce(
       (max, p) => (Number(p.goalsFor) > (Number(max?.goalsFor) || 0) ? p : max),
       null
     );
 
     // Top team by points
-    const topTeam = refreshed.reduce(
+    const topTeam = (entries.length ? entries : refreshed).reduce(
       (max, p) => (Number(p.points) > (Number(max?.points) || 0) ? p : max),
       null
     );
@@ -1005,6 +1038,8 @@ exports.getTournamentStats = async (req, res) => {
       include: [
         { model: User, as: 'homeUser', attributes: ['id', 'firstName', 'lastName'] },
         { model: User, as: 'awayUser', attributes: ['id', 'firstName', 'lastName'] },
+        { model: TournamentClubEntry, as: 'homeClubEntry', attributes: ['id', 'clubName'], required: false },
+        { model: TournamentClubEntry, as: 'awayClubEntry', attributes: ['id', 'clubName'], required: false },
       ],
       order: [['matchDate', 'DESC']],
       limit: 12,
@@ -1012,6 +1047,8 @@ exports.getTournamentStats = async (req, res) => {
 
     let topScorerName = null;
     let topTeamName = null;
+    let topScorerId = topScorer?.userId || null;
+    let topScorerGoals = topScorer?.goalsFor || 0;
     if (topScorer?.userId) {
       const u = await User.findByPk(topScorer.userId, {
         attributes: ['firstName', 'lastName'],
@@ -1019,6 +1056,25 @@ exports.getTournamentStats = async (req, res) => {
       });
       if (u) {
         topScorerName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.Profile?.club || null;
+      }
+    }
+    if (entries.length) {
+      const matchIds = matches.map((match) => match.id);
+      const scorerRows = matchIds.length ? await MatchScorer.findAll({ where: { matchId: { [Op.in]: matchIds } } }) : [];
+      const totals = new Map();
+      for (const scorer of scorerRows) {
+        const key = scorer.userId ? `u:${scorer.userId}` : `n:${scorer.athleteName || 'unknown'}`;
+        const value = totals.get(key) || { userId: scorer.userId, name: scorer.athleteName || null, goals: 0 };
+        value.goals += Number(scorer.goals || 0);
+        totals.set(key, value);
+      }
+      const top = [...totals.values()].sort((a, b) => b.goals - a.goals)[0];
+      topScorerId = top?.userId || null;
+      topScorerGoals = top?.goals || 0;
+      topScorerName = top?.name || null;
+      if (topScorerId) {
+        const scorerUser = await User.findByPk(topScorerId, { attributes: ['firstName', 'lastName'] });
+        if (scorerUser) topScorerName = [scorerUser.firstName, scorerUser.lastName].filter(Boolean).join(' ').trim() || topScorerName;
       }
     }
     if (topTeam?.userId) {
@@ -1030,18 +1086,19 @@ exports.getTournamentStats = async (req, res) => {
         topTeamName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.Profile?.club || null;
       }
     }
+    if (entries.length && topTeam) topTeamName = topTeam.clubName || null;
 
     const stats = {
-      totalParticipants: refreshed.length,
+      totalParticipants: entries.length || refreshed.length,
       totalMatches: matches.length,
       finishedMatches,
       scheduledMatches,
       totalGoals,
       avgGoalsPerMatch: finishedMatches > 0 ? (totalGoals / finishedMatches).toFixed(2) : 0,
-      topScorerId: topScorer?.userId,
-      topScorerGoals: topScorer?.goalsFor || 0,
+      topScorerId,
+      topScorerGoals,
       topScorerName,
-      topTeamId: topTeam?.userId,
+      topTeamId: topTeam?.clubUserId || topTeam?.userId,
       topTeamPoints: topTeam?.points || 0,
       topTeamName,
       recentResults: recentResults.map((m) => ({
@@ -1050,8 +1107,8 @@ exports.getTournamentStats = async (req, res) => {
         matchDate: m.matchDate,
         scoreHome: m.scoreHome,
         scoreAway: m.scoreAway,
-        homeName: m.homeUser ? [m.homeUser.firstName, m.homeUser.lastName].filter(Boolean).join(' ').trim() : '',
-        awayName: m.awayUser ? [m.awayUser.firstName, m.awayUser.lastName].filter(Boolean).join(' ').trim() : '',
+        homeName: m.homeName || m.homeClubEntry?.clubName || (m.homeUser ? [m.homeUser.firstName, m.homeUser.lastName].filter(Boolean).join(' ').trim() : ''),
+        awayName: m.awayName || m.awayClubEntry?.clubName || (m.awayUser ? [m.awayUser.firstName, m.awayUser.lastName].filter(Boolean).join(' ').trim() : ''),
       })),
     };
 

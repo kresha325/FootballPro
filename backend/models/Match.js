@@ -17,7 +17,7 @@ const Match = sequelize.define('Match', {
   },
   homeUserId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'Users',
       key: 'id',
@@ -31,6 +31,11 @@ const Match = sequelize.define('Match', {
       key: 'id',
     },
   },
+  homeClubEntryId: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'TournamentClubEntries', key: 'id' } },
+  awayClubEntryId: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'TournamentClubEntries', key: 'id' } },
+  homeName: { type: DataTypes.STRING(160), allowNull: true },
+  awayName: { type: DataTypes.STRING(160), allowNull: true },
+  winnerClubEntryId: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'TournamentClubEntries', key: 'id' } },
   scoreHome: DataTypes.INTEGER,
   scoreAway: DataTypes.INTEGER,
   matchDate: {

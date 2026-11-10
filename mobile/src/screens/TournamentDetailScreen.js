@@ -25,6 +25,10 @@ import {
   tournamentStandingsRequest,
   tournamentStatsRequest,
   updateTournamentMatchScoreRequest,
+  saveTournamentMatchPlayerStatsRequest,
+  scheduleTournamentMatchRequest,
+  createTournamentMatchRequest,
+  deleteTournamentMatchRequest,
   tournamentClubEntriesRequest,
   claimTournamentClubEntryRequest,
   saveTournamentClubPlayerStatsRequest,
@@ -73,7 +77,7 @@ function countGoalsBySide(events) {
   let home = 0;
   let away = 0;
   (Array.isArray(events) ? events : []).forEach((ev) => {
-    if (!ev?.userId) return;
+    if (!ev?.userId && !ev?.athleteName?.trim()) return;
     if (ev.side === 'home') home += 1;
     else if (ev.side === 'away') away += 1;
   });
@@ -204,6 +208,20 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const [scoreAwayInput, setScoreAwayInput] = useState('');
   const [savingScore, setSavingScore] = useState(false);
   const [goalEvents, setGoalEvents] = useState([]);
+  const [matchPlayerStats, setMatchPlayerStats] = useState([]);
+  const [savingPlayerStats, setSavingPlayerStats] = useState(false);
+  const [coachStatsSide, setCoachStatsSide] = useState('home');
+  const [matchDateInput, setMatchDateInput] = useState('');
+  const [matchVenueInput, setMatchVenueInput] = useState('');
+  const [matchRefereeInput, setMatchRefereeInput] = useState('');
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [manualFixtureOpen, setManualFixtureOpen] = useState(false);
+  const [fixturePickerSide, setFixturePickerSide] = useState(null);
+  const [fixtureHomeId, setFixtureHomeId] = useState('');
+  const [fixtureAwayId, setFixtureAwayId] = useState('');
+  const [fixtureDate, setFixtureDate] = useState('');
+  const [fixtureVenue, setFixtureVenue] = useState('');
+  const [savingFixture, setSavingFixture] = useState(false);
   const [startingTournament, setStartingTournament] = useState(false);
   const [expandedSquadClubId, setExpandedSquadClubId] = useState(null);
   const [clubEntries, setClubEntries] = useState([]);
@@ -216,7 +234,8 @@ export default function TournamentDetailScreen({ route, navigation }) {
       ...(data?.scorersBySide?.away || []).map((row) => ({ ...row, side: 'away' })),
     ];
     return all.map((row) => ({
-      userId: String(row.userId),
+      userId: row.userId ? String(row.userId) : '',
+      athleteName: row.athleteName || '',
       minute: row.minute != null ? String(row.minute) : '',
       assistUserId: row.assistUserId ? String(row.assistUserId) : '',
       side: row.side || '',
@@ -260,7 +279,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
   const isLigaTournament = !!(tournament?.ligaId || tournament?.sourceRole === 'liga');
   const displayParticipants =
     pt === 'club' ? participants.filter((p) => p.role === 'club' || p.squadCount != null) : participants;
-  const participantCount = displayParticipants.length;
+  const participantCount = isLigaTournament && clubEntries.length ? clubEntries.length : displayParticipants.length;
   const isInSquad = participants.some((p) =>
     (Array.isArray(p.squadAthletes) ? p.squadAthletes : []).some(
       (a) => String(a.id || a.userId) === String(user?.id)
@@ -347,6 +366,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
     setScoreHomeInput('');
     setScoreAwayInput('');
     setGoalEvents([]);
+    setMatchPlayerStats([]);
     setMatchModal({ open: true, loading: true, data: null, error: '' });
     try {
       const res = await tournamentMatchDetailRequest(tournamentId, matchId);
@@ -354,6 +374,11 @@ export default function TournamentDetailScreen({ route, navigation }) {
       setScoreHomeInput(m?.scoreHome != null ? String(m.scoreHome) : '');
       setScoreAwayInput(m?.scoreAway != null ? String(m.scoreAway) : '');
       setGoalEvents(parseGoalEvents(res.data));
+      const matchDate = m?.matchDate ? new Date(m.matchDate) : new Date();
+      setMatchDateInput(new Date(matchDate.getTime() - matchDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+      setMatchVenueInput(m?.venue || '');
+      setMatchRefereeInput(m?.refereeName || '');
+      setMatchPlayerStats((m?.playerStats || []).map((row) => ({ userId: row.userId ? String(row.userId) : '', athleteName: row.athleteName || '', side: row.side || 'home', minutes: String(row.minutes || 0), goals: String(row.goals || 0), assists: String(row.assists || 0), yellowCards: String(row.yellowCards || 0), redCards: String(row.redCards || 0) })));
       setMatchModal({ open: true, loading: false, data: res.data, error: '' });
     } catch (err) {
       setMatchModal({
@@ -434,6 +459,66 @@ export default function TournamentDetailScreen({ route, navigation }) {
     return Number(creatorId) === Number(user.id);
   };
 
+  const clubStatsSide = (match) => user?.role === 'club'
+    ? (Number(user.id) === Number(match?.homeUserId) ? 'home' : Number(user.id) === Number(match?.awayUserId) ? 'away' : null)
+    : null;
+  const canEditMatchPlayerStats = (match) => canEditMatchScore(match) || Boolean(clubStatsSide(match)) || user?.role === 'coach';
+  const onSaveMatchPlayerStats = async () => {
+    const match = matchModal.data?.match;
+    if (!match?.id) return;
+    const manager = canEditMatchScore(match);
+    const allowedSide = clubStatsSide(match);
+    const players = matchPlayerStats.filter((row) => manager || (allowedSide ? row.side === allowedSide : user?.role === 'coach' && row.side === coachStatsSide)).map((row) => ({ ...row, userId: row.userId ? Number(row.userId) : null }));
+    setSavingPlayerStats(true);
+    try {
+      await saveTournamentMatchPlayerStatsRequest(match.id, players);
+      Alert.alert('Ruajtur', 'Statistikat e ndeshjes u përditësuan.');
+      await openMatch(match.id);
+    } catch (err) { Alert.alert('Gabim', extractErrorMessage(err, 'Statistikat nuk u ruajtën')); }
+    finally { setSavingPlayerStats(false); }
+  };
+
+  const onSaveMatchSchedule = async () => {
+    const match = matchModal.data?.match;
+    const date = new Date(matchDateInput);
+    if (!match?.id || Number.isNaN(date.getTime())) {
+      Alert.alert('Orari', 'Shkruaj datën dhe orën në formatin e vlefshëm.');
+      return;
+    }
+    setSavingSchedule(true);
+    try {
+      await scheduleTournamentMatchRequest(match.id, { matchDate: date.toISOString(), venue: matchVenueInput, refereeName: matchRefereeInput });
+      Alert.alert('Ruajtur', 'Orari i ndeshjes u përditësua.');
+      await openMatch(match.id);
+      loadDetail();
+    } catch (err) { Alert.alert('Gabim', extractErrorMessage(err, 'Orari nuk u ruajt')); }
+    finally { setSavingSchedule(false); }
+  };
+
+  const createManualFixture = async () => {
+    const date = new Date(fixtureDate);
+    if (!fixtureHomeId || !fixtureAwayId || fixtureHomeId === fixtureAwayId || Number.isNaN(date.getTime())) {
+      Alert.alert('Ndeshja', 'Zgjidh dy ekipe të ndryshme dhe vendos datën/orën.');
+      return;
+    }
+    setSavingFixture(true);
+    try {
+      await createTournamentMatchRequest(tournamentId, { homeClubEntryId: Number(fixtureHomeId), awayClubEntryId: Number(fixtureAwayId), matchDate: date.toISOString(), venue: fixtureVenue });
+      setManualFixtureOpen(false);
+      setFixtureHomeId(''); setFixtureAwayId(''); setFixtureVenue('');
+      await loadDetail();
+    } catch (err) { Alert.alert('Gabim', extractErrorMessage(err, 'Ndeshja nuk u krijua')); }
+    finally { setSavingFixture(false); }
+  };
+
+  const deleteMatch = (matchId) => Alert.alert('Fshi ndeshjen', 'Do të fshihen edhe statistikat e saj. Të vazhdohet?', [
+    { text: 'Anulo', style: 'cancel' },
+    { text: 'Fshi', style: 'destructive', onPress: async () => {
+      try { await deleteTournamentMatchRequest(matchId); setMatchModal({ open: false, loading: false, data: null, error: '' }); await loadDetail(); }
+      catch (err) { Alert.alert('Gabim', extractErrorMessage(err, 'Ndeshja nuk u fshi')); }
+    } },
+  ]);
+
   const syncScoresFromGoals = (events) => {
     const { home, away } = countGoalsBySide(events);
     setScoreHomeInput(String(home));
@@ -442,7 +527,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
   const addGoalEvent = () => {
     setGoalEvents((prev) => {
-      const next = [...prev, { userId: '', minute: '', assistUserId: '', side: 'home' }];
+      const next = [...prev, { userId: '', athleteName: '', minute: '', assistUserId: '', side: 'home' }];
       syncScoresFromGoals(next);
       return next;
     });
@@ -497,9 +582,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
         scoreAway,
         status: 'finished',
         goalEvents: goalEvents
-          .filter((ev) => ev.userId)
+          .filter((ev) => ev.userId || ev.athleteName?.trim())
           .map((ev) => ({
-            userId: Number(ev.userId),
+            userId: ev.userId ? Number(ev.userId) : null,
+            athleteName: ev.athleteName || null,
             minute: ev.minute === '' ? null : Number(ev.minute),
             assistUserId: ev.assistUserId ? Number(ev.assistUserId) : null,
             side: ev.side || undefined,
@@ -789,7 +875,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
               const uid = row.userId || rowUser?.id;
               return (
               <TouchableOpacity
-                key={String(row.userId || row.id || idx)}
+                key={String(row.clubEntryId || row.userId || row.id || idx)}
                 style={styles.standRow}
                 activeOpacity={0.85}
                 onPress={() => uid && openUserProfile(navigation, uid)}
@@ -803,7 +889,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                 <View style={styles.standBody}>
                   <Text style={styles.standName}>
                     #{row.rank ?? row.position ?? idx + 1}{' '}
-                    {participantLabel(rowUser, pt)}
+                    {row.clubName || participantLabel(rowUser, pt)}
                   </Text>
                   <Text style={styles.standPts}>
                     {row.points ?? 0} pikë · {row.played ?? 0} ndeshje · {row.goalsFor ?? 0} GF · GD {row.goalDifference ?? 0}
@@ -840,7 +926,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                 <Text style={styles.teamEntryName}>{entry.clubName}</Text>
                 <Text style={styles.muted}>Grupi {entry.groupName || '—'} · {entry.claimStatus === 'linked' ? 'Klub i lidhur' : entry.claimStatus === 'pending' ? 'Pret aprovim nga liga' : 'Klub pa profil'}</Text>
                 <Text style={styles.teamEntryStats}>{entry.played || 0} ndeshje · {entry.wins || 0} fitore · {entry.goalsFor || 0}:{entry.goalsAgainst || 0} · {entry.points || 0} pikë</Text>
-                {isClubOwner ? (
+                {isClubOwner && matches.length === 0 ? (
                   <View style={styles.clubStatsEditor}>
                     <Text style={styles.sectionTitle}>Golat dhe asistet e lojtarëve</Text>
                     <Text style={styles.muted}>Plotëso sipas emrit. Lidhja me llogarinë e atletit bëhet vetëm kur është pjesëtar i aprovuar i klubit.</Text>
@@ -855,7 +941,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     </View>
                     {entry.playerStats?.length ? entry.playerStats.map((player) => <Text key={player.id} style={styles.muted}>{player.athleteName}: {player.goals} gola · {player.assists} asiste</Text>) : null}
                   </View>
-                ) : null}
+                ) : isClubOwner ? <Text style={styles.muted}>Turneu ka ndeshje. Plotëso statistikat te ndeshja përkatëse pasi liga ta ruajë rezultatin.</Text> : null}
                 {!entry.clubUserId && user?.role === 'club' && entry.claimStatus !== 'pending' ? <TouchableOpacity style={styles.secondaryBtn} onPress={() => requestClubEntryClaim(entry)}><Text style={styles.secondaryBtnText}>Kërko lidhjen me klubin tim</Text></TouchableOpacity> : null}
               </View>
             );
@@ -865,6 +951,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
       {tab === 'matches' ? (
         <View style={styles.card}>
+          {isLigaTournament && isCreator && ['active', 'in_progress'].includes(tournament?.lifecycle || tournament?.status) && clubEntries.length >= 2 ? <TouchableOpacity style={[styles.primaryBtn, { marginBottom: 10 }]} onPress={() => { const now = new Date(); setFixtureDate(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)); setManualFixtureOpen(true); }}><Text style={styles.primaryBtnText}>+ Shto ndeshje</Text></TouchableOpacity> : null}
           {matches.length === 0 ? (
             <Text style={styles.muted}>Nuk ka ndeshje të planifikuara.</Text>
           ) : isKnockoutType && matchesByRound.length > 0 ? (
@@ -880,10 +967,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     onPress={() => openMatch(m.id)}
                   >
                     <Text style={styles.matchTitle}>
-                      {participantLabel(m.homeUser, pt)} vs {participantLabel(m.awayUser, pt)}
+                      {m.homeName || m.homeClubEntry?.clubName || participantLabel(m.homeUser, pt)} vs {m.awayName || m.awayClubEntry?.clubName || participantLabel(m.awayUser, pt)}
                     </Text>
                     <Text style={styles.muted}>
-                      {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
+                      {m.matchDate ? new Date(m.matchDate).toLocaleString() : 'Pa datë'} · {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -893,10 +980,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
             matches.map((m) => (
               <TouchableOpacity key={String(m.id)} style={styles.matchRow} onPress={() => openMatch(m.id)}>
                 <Text style={styles.matchTitle}>
-                  {participantLabel(m.homeUser, pt)} vs {participantLabel(m.awayUser, pt)}
+                  {m.homeName || m.homeClubEntry?.clubName || participantLabel(m.homeUser, pt)} vs {m.awayName || m.awayClubEntry?.clubName || participantLabel(m.awayUser, pt)}
                 </Text>
                 <Text style={styles.muted}>
-                  {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
+                  {m.matchDate ? new Date(m.matchDate).toLocaleString() : 'Pa datë'} · {m.status} · {m.scoreHome != null ? `${m.scoreHome}-${m.scoreAway}` : 'Përcaktohet'}
                   {m.round ? ` · R${m.round}` : ''}
                 </Text>
               </TouchableOpacity>
@@ -904,6 +991,22 @@ export default function TournamentDetailScreen({ route, navigation }) {
           )}
         </View>
       ) : null}
+
+      <Modal visible={manualFixtureOpen} animationType="slide" transparent onRequestClose={() => { setManualFixtureOpen(false); setFixturePickerSide(null); }}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => { setManualFixtureOpen(false); setFixturePickerSide(null); }}><Text style={styles.modalCloseText}>Mbyll</Text></TouchableOpacity>
+            <Text style={styles.modalTitle}>Shto ndeshje</Text>
+            <Text style={styles.muted}>Mund të përdorësh datë të kaluar për ndeshjet e këtij sezoni.</Text>
+            <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 8 }]} onPress={() => setFixturePickerSide('home')}><Text style={styles.secondaryBtnText}>Vendas: {clubEntries.find((entry) => String(entry.id) === fixtureHomeId)?.clubName || 'Zgjidh klubin'}</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 8 }]} onPress={() => setFixturePickerSide('away')}><Text style={styles.secondaryBtnText}>Mysafir: {clubEntries.find((entry) => String(entry.id) === fixtureAwayId)?.clubName || 'Zgjidh klubin'}</Text></TouchableOpacity>
+            <TextInput style={[styles.input, { marginTop: 8 }]} value={fixtureDate} onChangeText={setFixtureDate} placeholder="YYYY-MM-DDTHH:mm (ora lokale)" />
+            <TextInput style={[styles.input, { marginTop: 8 }]} value={fixtureVenue} onChangeText={setFixtureVenue} placeholder="Stadiumi" />
+            {fixturePickerSide ? <ScrollView style={{ maxHeight: 220, marginTop: 8 }}>{clubEntries.map((entry) => <TouchableOpacity key={entry.id} style={styles.participantRow} onPress={() => { if (fixturePickerSide === 'home') setFixtureHomeId(String(entry.id)); else setFixtureAwayId(String(entry.id)); setFixturePickerSide(null); }}><Text style={styles.row}>{entry.clubName}</Text></TouchableOpacity>)}</ScrollView> : null}
+            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }]} disabled={savingFixture} onPress={createManualFixture}>{savingFixture ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Krijo ndeshjen</Text>}</TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={matchModal.open} animationType="slide" transparent onRequestClose={() => setMatchModal({ open: false })}>
         <View style={styles.modalBackdrop}>
@@ -917,13 +1020,27 @@ export default function TournamentDetailScreen({ route, navigation }) {
               <ScrollView>
                 <Text style={styles.modalTitle}>Ndeshja</Text>
                 <Text style={styles.row}>
-                  {participantLabel(matchModal.data.match.homeUser, pt)} vs{' '}
-                  {participantLabel(matchModal.data.match.awayUser, pt)}
+                  {matchModal.data.match.homeName || matchModal.data.match.homeClubEntry?.clubName || participantLabel(matchModal.data.match.homeUser, pt)} vs{' '}
+                  {matchModal.data.match.awayName || matchModal.data.match.awayClubEntry?.clubName || participantLabel(matchModal.data.match.awayUser, pt)}
                 </Text>
                 <Text style={styles.muted}>
                   Status: {matchModal.data.match.status}
+                  {matchModal.data.match.matchDate ? ` · ${new Date(matchModal.data.match.matchDate).toLocaleString()}` : ''}
                   {matchModal.data.match.round ? ` · Raundi ${matchModal.data.match.round}` : ''}
                 </Text>
+                {canEditMatchScore(matchModal.data.match) ? (
+                  <View style={styles.clubStatsEditor}>
+                    <Text style={styles.sectionTitle}>Orari dhe vendi</Text>
+                    <Text style={styles.muted}>Data/ora lokale: YYYY-MM-DDTHH:mm</Text>
+                    <TextInput style={styles.input} value={matchDateInput} onChangeText={setMatchDateInput} placeholder="2026-11-10T18:30" />
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={matchVenueInput} onChangeText={setMatchVenueInput} placeholder="Stadiumi / vendi" />
+                    <TextInput style={[styles.input, { marginTop: 6 }]} value={matchRefereeInput} onChangeText={setMatchRefereeInput} placeholder="Gjyqtari" />
+                    <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 8 }]} disabled={savingSchedule} onPress={onSaveMatchSchedule}>{savingSchedule ? <ActivityIndicator color="#9A6B12" size="small" /> : <Text style={styles.secondaryBtnText}>Ruaj orarin</Text>}</TouchableOpacity>
+                  </View>
+                ) : null}
+                {canEditMatchScore(matchModal.data.match) ? (
+                  isLigaTournament ? <TouchableOpacity style={styles.rejectBtn} onPress={() => deleteMatch(matchModal.data.match.id)}><Text style={styles.rejectBtnText}>Fshi ndeshjen</Text></TouchableOpacity> : null
+                ) : null}
                 {canEditMatchScore(matchModal.data.match) ? (
                   <View style={styles.scoreForm}>
                     <Text style={styles.scoreFormTitle}>Fut rezultatin</Text>
@@ -1000,11 +1117,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
                           <Text style={styles.muted}>Golashënuesi</Text>
                           {!side ? (
                             <Text style={styles.muted}>Zgjidh Vendas ose Mysafir.</Text>
-                          ) : sideMembers.length === 0 ? (
-                            <Text style={styles.muted}>
-                              Ky klub nuk ka lojtarë në skuadrën e turneut.
-                            </Text>
                           ) : (
+                            <>
+                            {sideMembers.length > 0 && (
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                               {sideMembers.map((p) => {
                                 const id = athleteId(p);
@@ -1014,7 +1129,7 @@ export default function TournamentDetailScreen({ route, navigation }) {
                                     key={`scorer-${index}-${id}`}
                                     style={[styles.chipBtn, selected && styles.chipBtnActive]}
                                     onPress={() =>
-                                      updateGoalEvent(index, { userId: String(id), side })
+                                      updateGoalEvent(index, { userId: String(id), athleteName: '', side })
                                     }
                                   >
                                     <Text
@@ -1029,6 +1144,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
                                 );
                               })}
                             </ScrollView>
+                            )}
+                            <TextInput style={styles.goalMinuteInput} placeholder="Emri i golashënuesit pa profil" value={ev.athleteName || ''} onChangeText={(v) => updateGoalEvent(index, { athleteName: v, userId: '', assistUserId: '' })} />
+                            </>
                           )}
                           <TextInput
                             style={styles.goalMinuteInput}
@@ -1101,6 +1219,32 @@ export default function TournamentDetailScreen({ route, navigation }) {
                     {'\n'}Vetëm krijuesi i ndeshjes mund të vendosë dhe ruajë statistikat.
                   </Text>
                 )}
+                {canEditMatchPlayerStats(matchModal.data.match) && matchModal.data.match.status === 'finished' ? (
+                  <View style={styles.clubStatsEditor}>
+                    <Text style={styles.sectionTitle}>Statistikat e lojtarëve</Text>
+                    <Text style={styles.muted}>Golat e regjistruar për lojtarët duhet të jenë brenda rezultatit zyrtar.</Text>
+                    {matchPlayerStats.map((row, index) => {
+                      const manager = canEditMatchScore(matchModal.data.match);
+                      const side = row.side || 'home';
+                      const ownSide = clubStatsSide(matchModal.data.match);
+                      const editable = manager || ownSide === side || (user?.role === 'coach' && coachStatsSide === side);
+                      const teamId = side === 'home' ? matchModal.data.match.homeUserId : matchModal.data.match.awayUserId;
+                      const roster = squadMembersForSide(participants, teamId);
+                      return (
+                        <View key={`match-stat-${row.userId}-${index}`} style={styles.teamEntryCard}>
+                          {manager || user?.role === 'coach' ? <View style={styles.sideRow}>{[{ key: 'home', label: matchModal.data.match.homeName || 'Vendas' }, { key: 'away', label: matchModal.data.match.awayName || 'Mysafir' }].map((opt) => <TouchableOpacity key={opt.key} onPress={() => { if (user?.role === 'coach') setCoachStatsSide(opt.key); setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, side: opt.key, userId: '' } : item)); }} style={[styles.chipBtn, side === opt.key && styles.chipBtnActive]}><Text style={[styles.chipBtnText, side === opt.key && styles.chipBtnTextActive]}>{opt.label}</Text></TouchableOpacity>)}</View> : <Text style={styles.row}>{side === 'home' ? matchModal.data.match.homeName || 'Vendas' : matchModal.data.match.awayName || 'Mysafir'}</Text>}
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>{roster.map((athlete) => { const id = athleteId(athlete); const selected = String(row.userId) === String(id); return <TouchableOpacity key={id} disabled={!editable} onPress={() => setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, userId: String(id), athleteName: '' } : item))} style={[styles.chipBtn, selected && styles.chipBtnActive]}><Text style={[styles.chipBtnText, selected && styles.chipBtnTextActive]}>{athleteLabel(athlete)}</Text></TouchableOpacity>; })}</ScrollView>
+                          <View style={styles.clubPlayerRow}>{[['minutes', 'Minuta'], ['goals', 'Gola'], ['assists', 'Asiste'], ['yellowCards', 'Të verdhë'], ['redCards', 'Të kuq']].map(([field, label]) => <TextInput key={field} accessibilityLabel={label} style={styles.statInput} editable={editable} keyboardType="number-pad" placeholder={label} value={row[field]} onChangeText={(value) => setMatchPlayerStats((all) => all.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}</View>
+                          {editable ? <TouchableOpacity onPress={() => setMatchPlayerStats((all) => all.filter((_, i) => i !== index))}><Text style={styles.rejectBtnText}>Hiq lojtarin</Text></TouchableOpacity> : null}
+                        </View>
+                      );
+                    })}
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity style={styles.secondaryBtn} onPress={() => setMatchPlayerStats((all) => [...all, { userId: '', athleteName: '', side: clubStatsSide(matchModal.data.match) || coachStatsSide || 'home', minutes: '0', goals: '0', assists: '0', yellowCards: '0', redCards: '0' }])}><Text style={styles.secondaryBtnText}>+ Shto lojtar</Text></TouchableOpacity>
+                      <TouchableOpacity style={[styles.primaryBtn, savingPlayerStats && styles.btnDisabled]} disabled={savingPlayerStats} onPress={onSaveMatchPlayerStats}>{savingPlayerStats ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Ruaj statistikat</Text>}</TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
               </ScrollView>
             ) : null}
           </View>

@@ -14,8 +14,10 @@ function normalizeGoalEvents(rawEvents, match) {
 
   const rows = [];
   for (const item of rawEvents) {
-    const userId = parseInt(item.userId, 10);
-    if (!Number.isFinite(userId)) continue;
+    const parsedUserId = parseInt(item.userId, 10);
+    const userId = Number.isFinite(parsedUserId) ? parsedUserId : null;
+    const athleteName = String(item.athleteName || '').trim().replace(/\s+/g, ' ').slice(0, 160) || null;
+    if (!userId && !athleteName) continue;
 
     const minuteRaw = item.minute;
     const minute = minuteRaw === '' || minuteRaw == null ? null : parseInt(minuteRaw, 10);
@@ -23,12 +25,14 @@ function normalizeGoalEvents(rawEvents, match) {
     const assistUserId =
       assistUserIdRaw === '' || assistUserIdRaw == null ? null : parseInt(assistUserIdRaw, 10);
 
-    const side = item.side === 'home' || item.side === 'away' ? item.side : inferSide(userId, match);
+    const side = item.side === 'home' || item.side === 'away' ? item.side : (userId ? inferSide(userId, match) : null);
+    if (!side) continue;
     const hasEventMeta = minute != null || (Number.isFinite(assistUserId) && assistUserId > 0) || side;
 
     if (hasEventMeta) {
       rows.push({
         userId,
+        athleteName,
         goals: 1,
         minute: Number.isFinite(minute) ? minute : null,
         assistUserId: Number.isFinite(assistUserId) ? assistUserId : null,
@@ -44,7 +48,8 @@ function normalizeGoalEvents(rawEvents, match) {
         goals: 1,
         minute: null,
         assistUserId: null,
-        side: inferSide(userId, match),
+        side,
+        athleteName,
       });
     }
   }

@@ -17,6 +17,8 @@ const Stream = require('../models/Stream');
 const ScoutingReport = require('../models/ScoutingReport');
 const TournamentSquadMember = require('../models/TournamentSquadMember');
 const TournamentClubEntry = require('../models/TournamentClubEntry');
+const ClubMember = require('../models/ClubMember');
+const ClubStaff = require('../models/ClubStaff');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const { saveMatchGoalEvents, syncProfileGoalAssistStats } = require('../utils/matchGoalEvents');
@@ -63,7 +65,12 @@ async function assertPlayerOnSide(match, userId, side) {
   const squad = await TournamentSquadMember.findOne({
     where: { tournamentId: match.tournamentId, athleteUserId: id, clubUserId: teamUserId },
   });
-  if (!squad) throw fail(400, 'Player is not on this team for the competition.');
+  if (squad) return;
+  if (match.tournamentId) {
+    const member = await ClubMember.findOne({ where: { clubId: teamUserId, athleteId: id, status: 'approved' } });
+    if (member) return;
+  }
+  throw fail(400, 'Player is not on this team for the competition.');
 }
 
 function plain(row) {
@@ -82,6 +89,27 @@ function acceptedParticipants(rows) {
 }
 
 async function recomputeTournamentStandings(tournamentId, transaction) {
+  const entries = await TournamentClubEntry.findAll({ where: { tournamentId }, transaction });
+  if (entries.length) {
+    const matches = (await Match.findAll({ where: { tournamentId }, transaction })).map(plain);
+    const ids = entries.map((entry) => Number(entry.id));
+    const entryByClub = new Map(entries.filter((entry) => entry.clubUserId).map((entry) => [Number(entry.clubUserId), Number(entry.id)]));
+    const entryMatches = matches.map((match) => ({
+      ...match,
+      homeUserId: match.homeClubEntryId ? Number(match.homeClubEntryId) : entryByClub.get(Number(match.homeUserId)) || null,
+      awayUserId: match.awayClubEntryId ? Number(match.awayClubEntryId) : entryByClub.get(Number(match.awayUserId)) || null,
+    }));
+    const computed = standingsFromMatches(ids, entryMatches, { headToHead: true });
+    const byId = new Map(computed.map((row) => [Number(row.userId), row]));
+    for (const entry of entries) {
+      const row = byId.get(Number(entry.id)) || {};
+      await entry.update({
+        played: row.played || 0, wins: row.wins || 0, draws: row.draws || 0, losses: row.losses || 0,
+        goalsFor: row.goalsFor || 0, goalsAgainst: row.goalsAgainst || 0, points: row.points || 0,
+      }, { transaction });
+    }
+    return computed;
+  }
   const participants = await TournamentParticipant.findAll({ where: { tournamentId }, transaction });
   if (!participants.length) return [];
   const matches = await Match.findAll({
@@ -118,12 +146,16 @@ async function createPlannedMatches(tournament, fixtures, transaction) {
   const rows = [];
   for (let i = 0; i < fixtures.length; i += 1) {
     const fixture = fixtures[i];
-    const walkover = !!fixture.walkover || fixture.awayUserId == null;
+    const walkover = !!fixture.walkover || (fixture.awayUserId == null && fixture.awayClubEntryId == null);
     const match = await Match.create(
       {
         tournamentId: tournament.id,
         homeUserId: fixture.homeUserId,
         awayUserId: walkover ? null : fixture.awayUserId,
+        homeClubEntryId: fixture.homeClubEntryId || null,
+        awayClubEntryId: walkover ? null : (fixture.awayClubEntryId || null),
+        homeName: fixture.homeName || null,
+        awayName: walkover ? null : (fixture.awayName || null),
         status: walkover ? 'walkover' : 'scheduled',
         round: fixture.round || 1,
         roundLabel: fixture.roundLabel || null,
@@ -133,6 +165,7 @@ async function createPlannedMatches(tournament, fixtures, transaction) {
         scoreHome: walkover ? null : null,
         scoreAway: walkover ? null : null,
         winnerUserId: walkover ? fixture.homeUserId : null,
+        winnerClubEntryId: walkover ? (fixture.homeClubEntryId || null) : null,
         decidedBy: walkover ? 'walkover' : null,
         publicSlug: `match-${tournament.id}-${fixture.stage || 'fixture'}-${fixture.round || 1}-${i + 1}`,
       },
@@ -199,15 +232,9 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   if (!authz.ok) throw fail(authz.status, authz.msg);
 
   const isLigaCompetition = Boolean(tournament.ligaId || tournament.sourceRole === 'liga');
-  if (isLigaCompetition) {
-    const unlinkedEntries = await TournamentClubEntry.findAll({
-      where: { tournamentId: tournament.id, clubUserId: null },
-      attributes: ['id'],
-    });
-    if (unlinkedEntries.length) {
-      throw fail(409, 'Liga nuk mund ta nisë ende orarin: klubet e futura me emër duhet të regjistrohen dhe të lidhen me profilin e tyre së pari. Statistikat e tyre ruhen deri atëherë.');
-    }
-  }
+  const clubEntries = isLigaCompetition
+    ? await TournamentClubEntry.findAll({ where: { tournamentId: tournament.id }, order: [['groupName', 'ASC'], ['clubName', 'ASC']] })
+    : [];
   const hasExistingFixtures = await Match.count({ where: { tournamentId: tournament.id } });
   if (isLigaCompetition && tournament.participantType !== 'club') {
     tournament.participantType = 'club';
@@ -239,7 +266,8 @@ async function startCompetition({ tournamentId, user, options = {} }) {
     ? participants.filter((p) => String(p.User?.role || '').toLowerCase() === 'club')
     : participants;
   const accepted = acceptedParticipants(standing);
-  const gate = assertCanStart(tournament, accepted.length);
+  const leagueEntryMode = isLigaCompetition && clubEntries.length > 0;
+  const gate = assertCanStart(tournament, leagueEntryMode ? clubEntries.length : accepted.length);
   const repairingExistingLigaSchedule = options.repairFixtures === true &&
     isLigaCompetition && tournament.type === 'league';
   if (!gate.ok && !repairingExistingLigaSchedule) throw fail(gate.status, gate.msg);
@@ -254,7 +282,7 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   const doubleRound = options.homeAndAway != null ? !!options.homeAndAway : !!tournament.homeAndAway;
   const groupCount = options.groupsCount || tournament.groupsCount || undefined;
   let plan = planCompetitionFixtures(
-    seeded.map((p) => p.userId),
+    leagueEntryMode ? clubEntries.map((entry) => entry.id) : seeded.map((p) => p.userId),
     {
       type: tournament.type,
       doubleRound,
@@ -266,18 +294,16 @@ async function startCompetition({ tournamentId, user, options = {} }) {
   // Liga-created club tournaments may have explicit group assignments. Keep
   // the existing automatic seeding for all other tournaments, but honor those
   // saved assignments when the league has selected them.
-  if (isLigaCompetition && tournament.type === 'group_knockout') {
-    const clubEntries = await TournamentClubEntry.findAll({
-      where: { tournamentId: tournament.id, clubUserId: { [Op.ne]: null }, groupName: { [Op.ne]: null } },
-      attributes: ['clubUserId', 'groupName'],
-    });
-    if (clubEntries.length) {
-      const expectedClubIds = new Set(seeded.map((participant) => Number(participant.userId)));
+  if (leagueEntryMode) {
+    if (clubEntries.length < 2) throw fail(400, 'Cakto të paktën dy ekipe për turneun.');
+    const byEntryId = new Map(clubEntries.map((entry) => [Number(entry.id), entry]));
+    const expectedClubIds = new Set(clubEntries.map((entry) => Number(entry.id)));
+    if (tournament.type === 'group_knockout') {
       const groupsByName = new Map();
       for (const entry of clubEntries) {
-        const clubId = Number(entry.clubUserId);
+        const clubId = Number(entry.id);
         if (!expectedClubIds.has(clubId)) continue;
-        const groupName = String(entry.groupName || '').trim().toUpperCase();
+        const groupName = String(entry.groupName || 'A').trim().toUpperCase();
         if (!groupsByName.has(groupName)) groupsByName.set(groupName, []);
         groupsByName.get(groupName).push(clubId);
       }
@@ -304,7 +330,27 @@ async function startCompetition({ tournamentId, user, options = {} }) {
       });
       if (!dated.ok) throw fail(400, dated.msg);
       plan = { ok: true, groups, fixtures: dated.fixtures };
+    } else if (tournament.type === 'league') {
+      const fixtures = roundRobinFixtures([...expectedClubIds], { doubleRound, stage: 'league' });
+      const dated = scheduleFixtureDates(fixtures, {
+        startDate: options.startDate || tournament.startDate,
+        endDate: options.endDate || tournament.endDate,
+      });
+      if (!dated.ok) throw fail(400, dated.msg);
+      plan = { ok: true, groups: null, fixtures: dated.fixtures };
     }
+    plan.fixtures = plan.fixtures.map((fixture) => {
+      const home = byEntryId.get(Number(fixture.homeUserId));
+      const away = fixture.awayUserId == null ? null : byEntryId.get(Number(fixture.awayUserId));
+      return { ...fixture,
+        homeUserId: home?.clubUserId || null,
+        awayUserId: away?.clubUserId || null,
+        homeClubEntryId: home?.id || null,
+        awayClubEntryId: away?.id || null,
+        homeName: home?.clubName || null,
+        awayName: away?.clubName || null,
+      };
+    });
   }
   if (!plan.ok) throw fail(400, plan.msg);
 
@@ -346,6 +392,12 @@ async function startCompetition({ tournamentId, user, options = {} }) {
         if (groupByUser[Number(participant.userId)]) {
           participant.groupName = groupByUser[Number(participant.userId)];
           await participant.save({ transaction });
+        }
+      }
+      if (leagueEntryMode) {
+        for (const entry of clubEntries) {
+          const groupName = groupByUser[Number(entry.id)];
+          if (groupName) await entry.update({ groupName }, { transaction });
         }
       }
       tournament.groupsCount = plan.groups.length;
@@ -461,31 +513,36 @@ async function recordOfficialResult({ matchId, user, payload = {} }) {
   if (!match) throw fail(404, 'Match not found');
   const tournament = match.Tournament;
   if (!tournament) throw fail(400, 'Match not part of a tournament');
+  const isLiga = Boolean(tournament.ligaId || tournament.sourceRole === 'liga');
   const authz = canFillMatchStats(tournament, user, match);
   if (!authz.ok) throw fail(authz.status, authz.msg);
   const gate = assertResultMutation(tournament);
-  if (!gate.ok) throw fail(gate.status, gate.msg);
-  if (match.status === 'finished' && resolveLifecycle(tournament) === 'completed') {
+  if (!gate.ok && !(isLiga && resolveLifecycle(tournament) === 'completed')) throw fail(gate.status, gate.msg);
+  if (match.status === 'finished' && resolveLifecycle(tournament) === 'completed' && !isLiga) {
     throw fail(409, 'Completed competition is locked. Results cannot be changed.');
   }
 
+  const validationHomeId = match.homeClubEntryId ? -Number(match.homeClubEntryId) : match.homeUserId;
+  const validationAwayId = match.awayClubEntryId ? -Number(match.awayClubEntryId) : match.awayUserId;
   const validated = validateOfficialResult({
     ...payload,
     competitionType: tournament.type,
     stage: match.stage,
     groupName: match.groupName,
-    homeUserId: match.homeUserId,
-    awayUserId: match.awayUserId,
+    homeUserId: validationHomeId,
+    awayUserId: validationAwayId,
   });
   if (!validated.ok) throw fail(validated.status, validated.msg);
 
   const goalEvents = payload.goalEvents || payload.scorers;
   if (Array.isArray(goalEvents)) {
     for (const event of goalEvents) {
-      if (!event?.userId) continue;
-      await assertPlayerOnSide(match, event.userId, event.side || (Number(event.userId) === Number(match.homeUserId) ? 'home' : 'away'));
+      if (!event?.userId && !event?.athleteName) continue;
+      const side = event.side || (event.userId ? (Number(event.userId) === Number(match.homeUserId) ? 'home' : 'away') : null);
+      if (!['home', 'away'].includes(side)) throw fail(400, 'Skuadra e golashënuesit është e detyrueshme.');
+      if (event.userId) await assertPlayerOnSide(match, event.userId, side);
       if (event.assistUserId) {
-        await assertPlayerOnSide(match, event.assistUserId, event.side || 'home');
+        await assertPlayerOnSide(match, event.assistUserId, side);
       }
     }
   }
@@ -494,6 +551,8 @@ async function recordOfficialResult({ matchId, user, payload = {} }) {
     await match.update(
       {
         ...validated.patch,
+        winnerUserId: validated.patch.winnerUserId === validationHomeId ? match.homeUserId : validated.patch.winnerUserId === validationAwayId ? match.awayUserId : null,
+        winnerClubEntryId: validated.patch.winnerUserId === validationHomeId ? (match.homeClubEntryId || null) : validated.patch.winnerUserId === validationAwayId ? (match.awayClubEntryId || null) : null,
         refereeName: payload.refereeName !== undefined ? payload.refereeName : match.refereeName,
         refereeUserId: payload.refereeUserId !== undefined ? payload.refereeUserId : match.refereeUserId,
         venue: payload.venue !== undefined ? payload.venue : match.venue,
@@ -567,10 +626,11 @@ function dateWindowError(tournament, matchDate) {
   if (!matchDate) return 'Match date is required.';
   const when = new Date(matchDate);
   if (Number.isNaN(when.getTime())) return 'Match date is invalid.';
-  if (tournament.startDate && when < new Date(tournament.startDate)) {
+  const isLiga = Boolean(tournament.ligaId || tournament.sourceRole === 'liga');
+  if (!isLiga && tournament.startDate && when < new Date(tournament.startDate)) {
     return 'Match date is before the competition starts.';
   }
-  if (tournament.endDate && when > new Date(tournament.endDate)) {
+  if (!isLiga && tournament.endDate && when > new Date(tournament.endDate)) {
     return 'Match date is after the competition ends.';
   }
   if (tournament.startDate && tournament.endDate && new Date(tournament.endDate) < new Date(tournament.startDate)) {
@@ -611,6 +671,84 @@ async function assertManualFixture({ tournament, homeUserId, awayUserId, round, 
   if (clash) throw fail(409, 'Duplicate fixture.');
 }
 
+async function createLeagueFixture({ tournamentId, user, payload = {} }) {
+  const tournament = await loadTournament(tournamentId);
+  if (!tournament) throw fail(404, 'Turneu nuk u gjet.');
+  const authz = canManageTournamentMatches(tournament, user);
+  if (!authz.ok) throw fail(authz.status, authz.msg);
+  if (!(tournament.ligaId || tournament.sourceRole === 'liga')) throw fail(400, 'Ndeshjet manuale mund t’i menaxhojë vetëm liga.');
+  if (!['active', 'in_progress'].includes(resolveLifecycle(tournament))) throw fail(409, 'Nise turneun përpara se të shtosh ndeshje manuale.');
+  const homeEntry = await TournamentClubEntry.findOne({ where: { id: payload.homeClubEntryId, tournamentId: tournament.id } });
+  const awayEntry = await TournamentClubEntry.findOne({ where: { id: payload.awayClubEntryId, tournamentId: tournament.id } });
+  if (!homeEntry || !awayEntry) throw fail(400, 'Zgjidh dy ekipe pjesëmarrëse në këtë turne.');
+  if (Number(homeEntry.id) === Number(awayEntry.id)) throw fail(400, 'Një ekip nuk mund të luajë kundër vetes.');
+  const matchDate = payload.matchDate;
+  const dateError = dateWindowError(tournament, matchDate);
+  if (dateError) throw fail(400, dateError);
+  const existing = await Match.findAll({ where: { tournamentId: tournament.id, homeClubEntryId: homeEntry.id, awayClubEntryId: awayEntry.id } });
+  if (existing.length) throw fail(409, 'Kjo ndeshje ekziston tashmë.');
+  return Match.create({
+    tournamentId: tournament.id,
+    homeUserId: homeEntry.clubUserId || null,
+    awayUserId: awayEntry.clubUserId || null,
+    homeClubEntryId: homeEntry.id,
+    awayClubEntryId: awayEntry.id,
+    homeName: homeEntry.clubName,
+    awayName: awayEntry.clubName,
+    matchDate,
+    round: Math.max(1, Number.parseInt(payload.round, 10) || 1),
+    roundLabel: String(payload.roundLabel || '').trim().slice(0, 40) || null,
+    groupName: String(payload.groupName || homeEntry.groupName || '').trim().slice(0, 8) || null,
+    stage: 'league',
+    venue: String(payload.venue || '').trim().slice(0, 160) || null,
+    refereeName: String(payload.refereeName || '').trim().slice(0, 120) || null,
+    status: 'scheduled',
+  });
+}
+
+async function deleteLeagueFixture({ matchId, user }) {
+  const match = await Match.findByPk(matchId, { include: [{ model: Tournament }] });
+  if (!match) throw fail(404, 'Ndeshja nuk u gjet.');
+  const authz = canManageTournamentMatches(match.Tournament, user);
+  if (!authz.ok) throw fail(authz.status, authz.msg);
+  if (!(match.Tournament.ligaId || match.Tournament.sourceRole === 'liga')) throw fail(400, 'Vetëm liga mund ta fshijë këtë ndeshje.');
+  const refs = await Promise.all([
+    Video.count({ where: { matchId: match.id } }), MediaItem.count({ where: { matchId: match.id } }),
+    Stream.count({ where: { matchId: match.id } }), ScoutingReport.count({ where: { matchId: match.id } }),
+  ]);
+  if (refs.some(Boolean)) throw fail(409, 'Ndeshja ka video, transmetim ose raport të lidhur dhe nuk mund të fshihet.');
+  await sequelize.transaction(async (transaction) => {
+    await Promise.all([
+      MatchScorer.destroy({ where: { matchId: match.id }, transaction }),
+      MatchEvent.destroy({ where: { matchId: match.id }, transaction }),
+      PlayerMatchStat.destroy({ where: { matchId: match.id }, transaction }),
+      Bracket.destroy({ where: { matchId: match.id }, transaction }),
+    ]);
+    await match.destroy({ transaction });
+    await recomputeTournamentStandings(match.tournamentId, transaction);
+  });
+  return { success: true };
+}
+
+async function updateLeagueFixture({ matchId, user, payload = {} }) {
+  const match = await Match.findByPk(matchId, { include: [{ model: Tournament }] });
+  if (!match) throw fail(404, 'Ndeshja nuk u gjet.');
+  const authz = canManageTournamentMatches(match.Tournament, user);
+  if (!authz.ok) throw fail(authz.status, authz.msg);
+  const patch = {};
+  if (payload.matchDate !== undefined) {
+    const dateError = dateWindowError(match.Tournament, payload.matchDate);
+    if (dateError) throw fail(400, dateError);
+    patch.matchDate = payload.matchDate;
+  }
+  if (payload.venue !== undefined) patch.venue = String(payload.venue || '').trim().slice(0, 160) || null;
+  if (payload.refereeName !== undefined) patch.refereeName = String(payload.refereeName || '').trim().slice(0, 120) || null;
+  if (payload.roundLabel !== undefined) patch.roundLabel = String(payload.roundLabel || '').trim().slice(0, 40) || null;
+  if (payload.groupName !== undefined) patch.groupName = String(payload.groupName || '').trim().slice(0, 8) || null;
+  if (Object.keys(patch).length) await match.update(patch);
+  return match;
+}
+
 function isTerminalTournament(tournament) {
   const lifecycle = resolveLifecycle(tournament);
   return lifecycle === 'completed' || lifecycle === 'cancelled';
@@ -627,6 +765,42 @@ async function getStandings(idOrSlug) {
     await demoteAthleteParticipantsOnClubTournament(tournament.id);
   }
   await recomputeTournamentStandings(tournament.id);
+  const leagueEntries = await TournamentClubEntry.findAll({
+    where: { tournamentId: tournament.id },
+    order: [['groupName', 'ASC'], ['clubName', 'ASC']],
+    include: [{ model: User, as: 'club', attributes: ['id', 'firstName', 'lastName', 'role'], required: false, include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }] }],
+  });
+  if (leagueEntries.length) {
+    const entryByClub = new Map(leagueEntries.filter((entry) => entry.clubUserId).map((entry) => [Number(entry.clubUserId), Number(entry.id)]));
+    const matches = (await Match.findAll({ where: { tournamentId: tournament.id } })).map(plain).map((match) => ({
+      ...match,
+      homeUserId: match.homeClubEntryId ? Number(match.homeClubEntryId) : entryByClub.get(Number(match.homeUserId)) || null,
+      awayUserId: match.awayClubEntryId ? Number(match.awayClubEntryId) : entryByClub.get(Number(match.awayUserId)) || null,
+    }));
+    const rows = standingsFromMatches(leagueEntries.map((entry) => entry.id), matches, { headToHead: true });
+    const byId = new Map(leagueEntries.map((entry) => [Number(entry.id), entry]));
+    const shape = (row) => {
+      const entry = byId.get(Number(row.userId));
+      return { ...row, userId: entry?.clubUserId || null, clubEntryId: entry?.id, clubName: entry?.clubName, groupName: entry?.groupName || null, User: entry?.club || null };
+    };
+    const shaped = rows.map(shape);
+    const groupNames = [...new Set(leagueEntries.map((entry) => entry.groupName).filter(Boolean))];
+    const groups = groupNames.length ? Object.fromEntries(groupNames.map((name) => {
+      const ids = leagueEntries.filter((entry) => entry.groupName === name).map((entry) => Number(entry.id));
+      return [name, standingsFromMatches(ids, matches, { headToHead: true }).map(shape)];
+    })) : null;
+    return {
+      tournamentId: tournament.id,
+      tournamentType: tournament.type,
+      lifecycle: resolveLifecycle(tournament),
+      participantType: 'club',
+      rankingMode: 'points_table',
+      tieBreakers: ['points', 'head_to_head', 'goal_difference', 'goals_scored', 'wins'],
+      caption: 'Tabela sipas pikëve (3-1-0); përfshihen klubet me profil dhe klubet e futura manualisht.',
+      rows: shaped,
+      groups,
+    };
+  }
   const participants = await TournamentParticipant.findAll({
     where: { tournamentId: tournament.id },
     include: [
@@ -708,7 +882,8 @@ async function addMatchEvent({ matchId, user, event }) {
   const authz = canFillMatchStats(match.Tournament, user, match);
   if (!authz.ok) throw fail(authz.status, authz.msg);
   const gate = assertResultMutation(match.Tournament);
-  if (!gate.ok) throw fail(gate.status, gate.msg);
+  const completedLiga = Boolean(match.Tournament.ligaId || match.Tournament.sourceRole === 'liga') && resolveLifecycle(match.Tournament) === 'completed';
+  if (!gate.ok && !completedLiga) throw fail(gate.status, gate.msg);
   const validated = validateMatchEvent(event, match);
   if (!validated.ok) throw fail(validated.status, validated.msg);
   const duplicate = await MatchEvent.findOne({
@@ -740,25 +915,78 @@ async function addMatchEvent({ matchId, user, event }) {
 async function savePlayerStats({ matchId, user, players }) {
   const match = await Match.findByPk(matchId, { include: [{ model: Tournament }] });
   if (!match) throw fail(404, 'Match not found');
-  const authz = canFillMatchStats(match.Tournament, user, match);
-  if (!authz.ok) throw fail(authz.status, authz.msg);
+  const tournament = match.Tournament;
+  const manager = canFillMatchStats(tournament, user, match);
+  const isLiga = Boolean(tournament?.ligaId || tournament?.sourceRole === 'liga');
+  const sideEntries = {};
+  if (isLiga) {
+    for (const side of ['home', 'away']) {
+      const entryId = side === 'home' ? match.homeClubEntryId : match.awayClubEntryId;
+      const clubId = side === 'home' ? match.homeUserId : match.awayUserId;
+      sideEntries[side] = entryId
+        ? await TournamentClubEntry.findByPk(entryId)
+        : (clubId ? await TournamentClubEntry.findOne({ where: { tournamentId: tournament.id, clubUserId: clubId } }) : null);
+    }
+  }
+  const entryMode = isLiga && Boolean(sideEntries.home || sideEntries.away);
+  let allowedSides = manager.ok ? ['home', 'away'] : [];
+  const unknownAllowed = manager.ok && entryMode;
+  if (!manager.ok && entryMode && (user?.role === 'club' || user?.role === 'coach')) {
+    const actor = await User.findByPk(user.id, { attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'] });
+    if (!actor || actor.bannedAt || actor.deletedAt) throw fail(403, 'Llogaria nuk është e autorizuar.');
+    for (const side of ['home', 'away']) {
+      const entry = sideEntries[side];
+      if (!entry) continue;
+      const club = entry?.clubUserId ? await User.findByPk(entry.clubUserId, { attributes: ['id', 'role', 'adminVerified', 'bannedAt', 'deletedAt'] }) : null;
+      if (!club || club.role !== 'club' || !club.adminVerified || club.bannedAt || club.deletedAt) continue;
+      let authorized = actor.role === 'club' && Number(actor.id) === Number(club.id) && actor.adminVerified === true;
+      if (actor.role === 'coach') {
+        const staff = await ClubStaff.findOne({ where: { clubId: club.id, staffId: actor.id, status: 'active', leftAt: null, staffRole: { [Op.in]: ['head_coach', 'assistant_coach', 'fitness_coach', 'goalkeeper_coach', 'technical_coach', 'tactical_coach', 'team_manager'] } } });
+        const until = staff?.contractUntil;
+        const expiry = until && String(until).toLowerCase() !== 'vazhdon'
+          ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(until) ? `${until}T23:59:59.999Z` : until)
+          : null;
+        authorized = Boolean(staff && (!expiry || (Number.isFinite(expiry.getTime()) && expiry >= new Date())));
+      }
+      if (authorized) allowedSides.push(side);
+    }
+  }
+  if (!allowedSides.length) throw fail(403, 'Vetëm liga ose klubi/stafi aktiv i skuadrës mund të vendosë statistikat.');
   const gate = assertResultMutation(match.Tournament);
-  if (!gate.ok) throw fail(gate.status, gate.msg);
+  const completedLiga = Boolean(match.Tournament.ligaId || match.Tournament.sourceRole === 'liga') && resolveLifecycle(match.Tournament) === 'completed';
+  if (!gate.ok && !completedLiga) throw fail(gate.status, gate.msg);
   if (!Array.isArray(players)) throw fail(400, 'players must be an array.');
 
   const seen = new Set();
   return sequelize.transaction(async (transaction) => {
-    const saved = [];
+    const normalizedRows = [];
     for (const row of players) {
-      const userId = Number(row.userId);
-      if (!Number.isFinite(userId)) throw fail(400, 'Each player stat needs a userId.');
-      if (seen.has(userId)) throw fail(409, 'Duplicate player statistics for this match.');
-      seen.add(userId);
-      await assertPlayerOnSide(match, userId, row.side || (userId === Number(match.homeUserId) ? 'home' : 'away'));
+      const parsedUserId = row.userId == null || row.userId === '' ? null : Number(row.userId);
+      const userId = Number.isInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : null;
+      const side = row.side === 'home' || row.side === 'away' ? row.side : null;
+      const athleteName = String(row.athleteName || '').trim().replace(/\s+/g, ' ').slice(0, 160) || null;
+      if (!side || !allowedSides.includes(side)) throw fail(403, 'Nuk mund të ndryshoni statistikat e skuadrës tjetër.');
+      if (!userId && (!unknownAllowed || !athleteName)) throw fail(400, 'Lojtari i panjohur mund të regjistrohet vetëm nga liga me emër dhe skuadër.');
+      const identity = userId ? `u:${userId}` : `n:${side}:${athleteName.toLocaleLowerCase()}`;
+      if (seen.has(identity)) throw fail(409, 'Statistikat e lojtarit janë përsëritur.');
+      seen.add(identity);
+      if (userId) {
+        const sideUserId = side === 'home' ? match.homeUserId : match.awayUserId;
+        const sideEntry = sideEntries[side];
+        if (sideEntry) {
+          const entry = sideEntry;
+          if (!entry?.clubUserId) throw fail(400, 'Për klub pa profil, shënuesi duhet regjistruar me emër dhe jo me llogari të një klubi tjetër.');
+          const member = await ClubMember.findOne({ where: { clubId: entry.clubUserId, athleteId: userId, status: 'approved' } });
+          if (!member) throw fail(403, 'Lojtari nuk është anëtar i aprovuar i klubit.');
+        } else {
+          await assertPlayerOnSide(match, userId, side);
+        }
+      }
       const payload = {
         matchId: match.id,
         userId,
-        side: row.side === 'home' || row.side === 'away' ? row.side : null,
+        athleteName,
+        side,
         started: !!row.started,
         minutes: Math.max(0, parseInt(row.minutes, 10) || 0),
         goals: Math.max(0, parseInt(row.goals, 10) || 0),
@@ -775,15 +1003,43 @@ async function savePlayerStats({ matchId, user, players }) {
         goalkeeper: !!row.goalkeeper,
         rating: row.rating == null || row.rating === '' ? null : Number(row.rating),
       };
-      const [stat] = await PlayerMatchStat.findOrCreate({
-        where: { matchId: match.id, userId },
-        defaults: payload,
-        transaction,
-      });
-      await stat.update(payload, { transaction });
-      saved.push(stat);
+      if (payload.minutes > 180 || payload.goals > 20 || payload.assists > 20 || payload.yellowCards > 5 || payload.redCards > 2) throw fail(400, 'Vlerat e statistikave janë jashtë kufijve të lejuar.');
+      normalizedRows.push(payload);
     }
-    return saved;
+    for (const side of allowedSides) {
+      const sideWhere = { matchId: match.id, side };
+      if (manager.ok) await PlayerMatchStat.destroy({ where: sideWhere, transaction });
+      else await PlayerMatchStat.destroy({ where: { ...sideWhere, userId: { [Op.in]: (await PlayerMatchStat.findAll({ where: sideWhere, attributes: ['userId'], transaction })).map((r) => r.userId).filter(Boolean) } }, transaction });
+    }
+    const officialScore = { home: Number(match.scoreHome), away: Number(match.scoreAway) };
+    if (match.status !== 'finished' || !Number.isInteger(officialScore.home) || !Number.isInteger(officialScore.away)) {
+      throw fail(409, 'Liga duhet ta ruajë rezultatin zyrtar para statistikave të lojtarëve.');
+    }
+    const scorerRows = await MatchScorer.findAll({ where: { matchId: match.id }, transaction });
+    for (const side of allowedSides) {
+      const sideUserId = Number(side === 'home' ? match.homeUserId : match.awayUserId);
+      const scorers = scorerRows.filter((scorer) => scorer.side === side || (!scorer.side && Number(scorer.userId) === sideUserId));
+      const scorerGoalCount = scorers.reduce((sum, scorer) => sum + Number(scorer.goals || 0), 0);
+      const scorerGoalsByPlayer = new Map();
+      for (const scorer of scorers) {
+        const key = scorer.userId ? `u:${scorer.userId}` : `n:${String(scorer.athleteName || '').trim().toLocaleLowerCase()}`;
+        scorerGoalsByPlayer.set(key, (scorerGoalsByPlayer.get(key) || 0) + Number(scorer.goals || 0));
+      }
+      const additionalStatGoals = normalizedRows.filter((row) => row.side === side).reduce((sum, row) => {
+        const key = row.userId ? `u:${row.userId}` : `n:${String(row.athleteName || '').trim().toLocaleLowerCase()}`;
+        return sum + Math.max(0, row.goals - (scorerGoalsByPlayer.get(key) || 0));
+      }, 0);
+      if (scorerGoalCount + additionalStatGoals > officialScore[side]) throw fail(400, `Golat e lojtarëve nuk mund të kalojnë rezultatin zyrtar të skuadrës ${side === 'home' ? 'vendase' : 'mysafire'}.`);
+      const scorerAssistsByPlayer = new Map();
+      for (const scorer of scorers) if (scorer.assistUserId) scorerAssistsByPlayer.set(`u:${scorer.assistUserId}`, (scorerAssistsByPlayer.get(`u:${scorer.assistUserId}`) || 0) + 1);
+      const scorerAssistCount = [...scorerAssistsByPlayer.values()].reduce((sum, value) => sum + value, 0);
+      const assistCount = scorerAssistCount + normalizedRows.filter((row) => row.side === side).reduce((sum, row) => {
+        const key = row.userId ? `u:${row.userId}` : `n:${String(row.athleteName || '').trim().toLocaleLowerCase()}`;
+        return sum + Math.max(0, row.assists - (scorerAssistsByPlayer.get(key) || 0));
+      }, 0);
+      if (assistCount > officialScore[side]) throw fail(400, `Asistet e lojtarëve nuk mund të kalojnë numrin e golave zyrtarë të skuadrës.`);
+    }
+    return PlayerMatchStat.bulkCreate(normalizedRows, { transaction, returning: true });
   });
 }
 
@@ -834,6 +1090,8 @@ async function publicMatchPayload(matchId) {
         attributes: ['id', 'firstName', 'lastName', 'role'],
         include: [{ model: Profile, attributes: ['profilePhoto', 'club', 'position'] }],
       },
+      { model: TournamentClubEntry, as: 'homeClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
+      { model: TournamentClubEntry, as: 'awayClubEntry', attributes: ['id', 'clubName', 'clubUserId'], required: false },
       {
         model: User,
         as: 'awayUser',
@@ -864,8 +1122,8 @@ async function publicMatchPayload(matchId) {
   return {
     ...plainMatch,
     publicPath: `/matches/${match.id}`,
-    homeName: userLabel(plainMatch.homeUser),
-    awayName: userLabel(plainMatch.awayUser),
+    homeName: plainMatch.homeName || plainMatch.homeClubEntry?.clubName || userLabel(plainMatch.homeUser),
+    awayName: plainMatch.awayName || plainMatch.awayClubEntry?.clubName || userLabel(plainMatch.awayUser),
     competition: plainMatch.Tournament
       ? {
           id: plainMatch.Tournament.id,
@@ -1002,6 +1260,9 @@ module.exports = {
   recordOfficialResult,
   updateLiveMatch,
   assertManualFixture,
+  createLeagueFixture,
+  updateLeagueFixture,
+  deleteLeagueFixture,
   assertScheduledDate: (tournament, matchDate) => {
     const message = dateWindowError(tournament, matchDate);
     if (message) throw fail(400, message);
